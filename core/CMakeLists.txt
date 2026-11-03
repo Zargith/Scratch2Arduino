@@ -4,6 +4,7 @@ include(S2ADependencies)
 configure_file(include/s2a/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated/s2a/version.hpp" @ONLY)
 
 add_library(s2a_core STATIC
+    src/boards.cpp
     src/i18n.cpp
     src/resources.cpp
     src/result.cpp
