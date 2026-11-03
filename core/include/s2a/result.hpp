@@ -20,6 +20,7 @@ enum class ErrorCode {
     UnsupportedVersion,
     InvalidCatalog,
     UnknownBoard,
+    ProcessFailed,
 };
 
 /// Translation key of the user-facing message for `code` (e.g. "error.file_not_found").

@@ -8,6 +8,7 @@ add_library(s2a_core STATIC
     src/boards.cpp
     src/archive.cpp
     src/i18n.cpp
+    src/process.cpp
     src/project.cpp
     src/resources.cpp
     src/result.cpp
@@ -19,7 +20,7 @@ target_include_directories(s2a_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
 )
 target_compile_features(s2a_core PUBLIC cxx_std_17)
-target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz)
+target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++)
 s2a_set_warnings(s2a_core)
 
 # Data compiled into the library: translations, board descriptions, block catalog.

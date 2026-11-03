@@ -22,6 +22,8 @@ std::string_view errorMessageKey(ErrorCode code) noexcept {
         return "error.invalid_catalog";
     case ErrorCode::UnknownBoard:
         return "error.unknown_board";
+    case ErrorCode::ProcessFailed:
+        return "error.process_failed";
     }
     return "error.unknown";
 }

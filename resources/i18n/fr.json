@@ -24,6 +24,7 @@
     "invalid_format": "Ce fichier ne ressemble pas à un projet Scratch2Arduino.",
     "unsupported_version": "Ce projet a été créé avec une version plus récente de Scratch2Arduino. Mets à jour le logiciel pour l'ouvrir.",
     "invalid_catalog": "La liste des blocs de Scratch2Arduino est abîmée. Réinstalle le logiciel.",
+    "process_failed": "Un outil nécessaire à Scratch2Arduino n'a pas pu être lancé. Réinstalle le logiciel.",
     "unknown_board": "Cette carte Arduino n'est pas (encore) prise en charge."
   }
 }
