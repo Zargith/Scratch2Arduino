@@ -14,6 +14,7 @@ if(NOT GTest_FOUND)
 endif()
 
 add_executable(s2a_core_tests
+    test_blocks.cpp
     test_boards.cpp
     test_i18n.cpp
     test_resources.cpp

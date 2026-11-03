@@ -1,0 +1,64 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "control",
+    "colour": "#FFAB19",
+    "name": { "fr": "Contrôle", "en": "Control" },
+    "order": 20
+  },
+  "blocks": [
+    {
+      "type": "control_wait",
+      "shape": "statement",
+      "message": { "fr": "attendre %1 secondes", "en": "wait %1 seconds" },
+      "tooltip": { "fr": "Fait une pause avant le bloc suivant.", "en": "Pauses before the next block." },
+      "args": [{ "name": "SECONDS", "kind": "number", "default": 1, "min": 0 }]
+    },
+    {
+      "type": "control_repeat",
+      "shape": "c",
+      "message": { "fr": "répéter %1 fois %2", "en": "repeat %1 times %2" },
+      "tooltip": { "fr": "Répète les blocs à l'intérieur plusieurs fois.", "en": "Repeats the blocks inside several times." },
+      "args": [
+        { "name": "TIMES", "kind": "number", "default": 10, "min": 0 },
+        { "name": "SUBSTACK", "kind": "statement" }
+      ]
+    },
+    {
+      "type": "control_forever",
+      "shape": "c",
+      "terminal": true,
+      "message": { "fr": "répéter indéfiniment %1", "en": "forever %1" },
+      "tooltip": { "fr": "Répète les blocs à l'intérieur sans jamais s'arrêter.", "en": "Repeats the blocks inside without ever stopping." },
+      "args": [{ "name": "SUBSTACK", "kind": "statement" }]
+    },
+    {
+      "type": "control_if",
+      "shape": "c",
+      "message": { "fr": "si %1 alors %2", "en": "if %1 then %2" },
+      "tooltip": { "fr": "Exécute les blocs à l'intérieur seulement si la condition est vraie.", "en": "Runs the blocks inside only if the condition is true." },
+      "args": [
+        { "name": "CONDITION", "kind": "boolean" },
+        { "name": "SUBSTACK", "kind": "statement" }
+      ]
+    },
+    {
+      "type": "control_if_else",
+      "shape": "c",
+      "message": { "fr": "si %1 alors %2 sinon %3", "en": "if %1 then %2 else %3" },
+      "tooltip": { "fr": "Exécute les premiers blocs si la condition est vraie, sinon les seconds.", "en": "Runs the first blocks if the condition is true, otherwise the second ones." },
+      "args": [
+        { "name": "CONDITION", "kind": "boolean" },
+        { "name": "SUBSTACK", "kind": "statement" },
+        { "name": "SUBSTACK2", "kind": "statement" }
+      ]
+    },
+    {
+      "type": "control_wait_until",
+      "shape": "statement",
+      "message": { "fr": "attendre jusqu'à ce que %1", "en": "wait until %1" },
+      "tooltip": { "fr": "Attend que la condition devienne vraie.", "en": "Waits until the condition becomes true." },
+      "args": [{ "name": "CONDITION", "kind": "boolean" }]
+    }
+  ]
+}

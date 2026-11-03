@@ -67,6 +67,14 @@ jobs:
           cmake --install build --config Release --prefix "$RUNNER_TEMP/s2a"
           find "$RUNNER_TEMP/s2a" -maxdepth 3 | head -n 50
 
+  data:
+    name: Data files (JSON schema)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate block catalogs
+        run: pipx run check-jsonschema --schemafile blocks/schema/catalog.schema.json blocks/catalog/*.json
+
   install-scripts:
     name: install.sh and Makefile (Linux)
     runs-on: ubuntu-24.04
