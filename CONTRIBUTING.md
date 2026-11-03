@@ -1,0 +1,39 @@
+# Contributing to Scratch2Arduino
+
+Thanks for helping! The project is in its early phases (see [`docs/roadmap.md`](docs/roadmap.md)),
+so this guide is a draft and will grow with the code.
+
+## Ways to help
+
+- **Bug reports and feature ideas**: open an issue describing what you did, what you expected and what happened
+  (OS, board, variant A or B).
+- **Translations**: the interface is French first, English second; other languages are welcome.
+- **Example projects and tutorials**: especially for classrooms and workshops.
+- **Code**: pick an item of the current roadmap phase and open a pull request.
+
+## Development setup
+
+```bash
+cmake --preset debug           # both variants (needs Qt 6 and WebKitGTK 4.1 on Linux)
+cmake --build --preset debug
+ctest --preset debug
+
+cmake --preset core-only       # core library and tests only, no GUI dependencies
+cmake --build --preset core-only && ctest --preset core-only
+```
+
+`./install.sh --help` and `make help` list the other options.
+
+## Conventions
+
+- C++17, formatted with the repository's `.clang-format`; `.clang-tidy` describes the static checks.
+- Code, comments, commit messages and developer docs in English; user-facing strings in French **and** English.
+- The editor must never raise errors while the user is building a project: validation happens on Build/Run only,
+  with friendly messages.
+- Both variants share `core/`: put logic there, keep `apps/` thin.
+- Add or update unit tests (GoogleTest, `core/tests/`) with every core change.
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`...).
+
+## License
+
+By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).

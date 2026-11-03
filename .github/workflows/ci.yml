@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_VERSION: "6.8.3"
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config qt6-base-dev libgl-dev libwebkit2gtk-4.1-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install qt ninja
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt)" >> "$GITHUB_ENV"
+
+      - name: Install Qt (Windows)
+        if: runner.os == 'Windows'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            generator=() ; werror=OFF ; prefix_path="-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR"
+          else
+            generator=(-G Ninja) ; werror=ON ; prefix_path=""
+          fi
+          cmake -S . -B build "${generator[@]}" -DCMAKE_BUILD_TYPE=Release \
+            -DS2A_BUILD_TESTS=ON -DS2A_WARNINGS_AS_ERRORS=$werror $prefix_path
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Install (smoke test)
+        shell: bash
+        run: |
+          cmake --install build --config Release --prefix "$RUNNER_TEMP/s2a"
+          find "$RUNNER_TEMP/s2a" -maxdepth 3 | head -n 50
+
+  install-scripts:
+    name: install.sh and Makefile (Linux)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install.sh --user
+        run: ./install.sh --user --yes
+
+      - name: Check installed files
+        run: |
+          test -x "$HOME/.local/bin/scratch2arduino-webview"
+          test -x "$HOME/.local/bin/scratch2arduino-native"
+          test -f "$HOME/.local/share/applications/scratch2arduino-webview.desktop"
+          test -f "$HOME/.local/share/applications/scratch2arduino-native.desktop"
+          test -f "$HOME/.local/share/icons/hicolor/scalable/apps/scratch2arduino.svg"
+
+      - name: install.sh --uninstall
+        run: |
+          ./install.sh --user --uninstall
+          test ! -e "$HOME/.local/bin/scratch2arduino-webview"
+          test ! -e "$HOME/.local/bin/scratch2arduino-native"
+
+      - name: make, make test, make install, make uninstall
+        run: |
+          make PREFIX="$RUNNER_TEMP/make-prefix"
+          make test
+          make install
+          test -x "$RUNNER_TEMP/make-prefix/bin/scratch2arduino-webview"
+          test -x "$RUNNER_TEMP/make-prefix/bin/scratch2arduino-native"
+          make uninstall
+          test ! -e "$RUNNER_TEMP/make-prefix/bin/scratch2arduino-webview"
+
+  windows-installer:
+    name: installer.exe (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer.exe
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\windows\scratch2arduino.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run installer.exe silently
+        run: |
+          $process = Start-Process -FilePath installer\windows\Output\installer.exe -Wait -PassThru `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup.log"
+          if ($process.ExitCode -ne 0) { throw "installer.exe exited with $($process.ExitCode)" }
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
+          Get-Content (Join-Path $app 'install-log.txt') -Tail 40
+          foreach ($exe in 'scratch2arduino-webview.exe', 'scratch2arduino-native.exe') {
+            if (-not (Test-Path (Join-Path $app "bin\$exe"))) { throw "$exe was not installed" }
+          }
+
+      - name: Upload installer.exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-windows
+          path: installer/windows/Output/installer.exe
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-logs
+          path: |
+            ${{ runner.temp }}/setup.log
+            C:/Program Files/Scratch2Arduino/install-log.txt
+          if-no-files-found: ignore

@@ -1,0 +1,20 @@
+# Build trees
+/build/
+/out/
+/cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+
+# Windows installer output
+/installer/windows/Output/
+
+# Frontend (variant A, Phase 3a)
+/frontend/node_modules/
+/frontend/dist/
+
+# Editors / OS
+.vscode/
+.idea/
+*.user
+.DS_Store
+Thumbs.db
