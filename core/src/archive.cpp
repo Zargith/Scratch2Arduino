@@ -74,7 +74,18 @@ Result<std::string> toArchive(const Project& project) {
         return mz_zip_writer_add_mem_ex(zip.get(), name.c_str(), data.data(), data.size(), nullptr, 0,
                                         MZ_DEFAULT_LEVEL, 0, 0) != 0;
     };
+    // Enforce the limits fromArchive() applies, so a saved project can always be reopened.
     const std::string json = toJson(project);
+    std::uint64_t total = json.size();
+    if (json.size() > kMaxEntrySize) {
+        return Error{ErrorCode::WriteFailed, "project.json is too large"};
+    }
+    for (const auto& [name, data] : project.assets) {
+        total += data.size();
+        if (data.size() > kMaxEntrySize || total > kMaxTotalSize) {
+            return Error{ErrorCode::WriteFailed, "asset '" + name + "' makes the project too large"};
+        }
+    }
     if (!add(std::string(kProjectEntry), json)) {
         return Error{ErrorCode::WriteFailed, "cannot add project.json: " + zip.lastError()};
     }
@@ -94,6 +105,9 @@ Result<std::string> toArchive(const Project& project) {
     }
     std::string bytes(static_cast<const char*>(buffer), size);
     mz_free(buffer);
+    if (bytes.size() > kMaxFileSize) {
+        return Error{ErrorCode::WriteFailed, "the archive is too large"};
+    }
     return bytes;
 }
 
@@ -116,7 +130,13 @@ Result<Project> fromArchive(std::string_view bytes) {
         if (stat.m_is_directory) {
             continue;
         }
-        const std::string name = stat.m_filename;
+        // m_filename is truncated to a fixed-size buffer: read the complete name.
+        const mz_uint nameSize = mz_zip_reader_get_filename(zip.get(), index, nullptr, 0);
+        std::string name(nameSize, '\0');
+        if (nameSize == 0 || mz_zip_reader_get_filename(zip.get(), index, name.data(), nameSize) != nameSize) {
+            return Error{ErrorCode::InvalidArchive, "unreadable zip entry name"};
+        }
+        name.pop_back(); // terminating NUL
         const bool isProject = name == kProjectEntry;
         const bool isAsset = name.rfind(std::string(kAssetsPrefix), 0) == 0;
         if (!isProject && !isAsset) {

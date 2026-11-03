@@ -209,6 +209,34 @@ TEST(Archive, RejectsWhatIsNotAProject) {
     EXPECT_EQ(fromArchive(zipWith("assets/../evil", "x")).error().code, ErrorCode::InvalidArchive);
 }
 
+TEST(Archive, KeepsLongAssetNames) {
+    // Longer than miniz's fixed 512-byte m_filename buffer; two names sharing a long prefix.
+    const std::string prefix = "images/" + std::string(600, 'a');
+    Project project = blink();
+    project.assets[prefix + "1.png"] = "one";
+    project.assets[prefix + "2.png"] = "two";
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok()) << bytes.error().detail;
+    const auto loaded = fromArchive(bytes.value());
+    ASSERT_TRUE(loaded.ok()) << loaded.error().detail;
+    EXPECT_EQ(loaded.value().assets, project.assets);
+}
+
+TEST(Archive, RefusesToSaveWhatCouldNotBeReopened) {
+    Project project = blink();
+    project.assets["huge.bin"] = std::string(65ULL * 1024 * 1024, 'x'); // over the 64 MiB entry limit
+    const auto bytes = toArchive(project);
+    ASSERT_FALSE(bytes.ok());
+    EXPECT_EQ(bytes.error().code, ErrorCode::WriteFailed);
+
+    // save() fails before touching an existing file.
+    const TempDir dir;
+    const fs::path path = dir.path() / "existing.s2a";
+    ASSERT_TRUE(save(blink(), path).ok());
+    EXPECT_EQ(save(project, path).error().code, ErrorCode::WriteFailed);
+    EXPECT_TRUE(load(path).ok());
+}
+
 TEST(Archive, RejectsUnsafeAssetNames) {
     for (const char* name : {"../escape", "/absolute", "a/../../b", "dir/", "C:evil", "back\\slash", ""}) {
         Project project = blink();
