@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zargith/Scratch2Arduino/blocks/schema/catalog.schema.json",
+  "title": "Scratch2Arduino block catalog",
+  "description": "One file per block category (blocks/catalog/<category>.json). Checked at build time by core/tests (s2a::BlockCatalog).",
+  "type": "object",
+  "required": ["category", "blocks"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "category": {
+      "type": "object",
+      "required": ["id", "colour", "name", "order"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "colour": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "name": { "$ref": "#/$defs/localized" },
+        "order": { "type": "integer", "description": "Position in the toolbox, ascending." }
+      }
+    },
+    "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "localized": {
+      "type": "object",
+      "description": "Text in every interface language. French is the default language.",
+      "required": ["fr", "en"],
+      "additionalProperties": false,
+      "properties": {
+        "fr": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["type", "shape", "message", "tooltip"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/identifier",
+          "description": "Unique block type, prefixed by its category id (pins_digital_write)."
+        },
+        "shape": {
+          "enum": ["hat", "statement", "c", "reporter", "boolean"],
+          "description": "hat: starts a script; statement: stacks; c: wraps statements; reporter: returns a number or text; boolean: returns true/false."
+        },
+        "terminal": { "type": "boolean", "description": "Nothing can be attached below (forever)." },
+        "message": {
+          "$ref": "#/$defs/localized",
+          "description": "Label with %1..%n placeholders, one per argument (any order per language)."
+        },
+        "tooltip": { "$ref": "#/$defs/localized" },
+        "args": { "type": "array", "items": { "$ref": "#/$defs/arg" } }
+      }
+    },
+    "arg": {
+      "type": "object",
+      "required": ["name", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "kind": { "enum": ["number", "text", "boolean", "pin", "dropdown", "variable", "statement"] },
+        "default": { "type": ["number", "string"] },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "capability": {
+          "enum": ["digital", "analog", "pwm", "interrupt"],
+          "description": "pin arguments only: pins offered by the selected board."
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["value", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "label": { "$ref": "#/$defs/localized" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
