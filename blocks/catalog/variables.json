@@ -1,0 +1,38 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "variables",
+    "colour": "#FF8C1A",
+    "name": { "fr": "Variables", "en": "Variables" },
+    "order": 50
+  },
+  "blocks": [
+    {
+      "type": "variables_get",
+      "shape": "reporter",
+      "message": { "fr": "%1", "en": "%1" },
+      "tooltip": { "fr": "La valeur actuelle de la variable.", "en": "The current value of the variable." },
+      "args": [{ "name": "VARIABLE", "kind": "variable" }]
+    },
+    {
+      "type": "variables_set",
+      "shape": "statement",
+      "message": { "fr": "mettre %1 à %2", "en": "set %1 to %2" },
+      "tooltip": { "fr": "Donne une nouvelle valeur à la variable.", "en": "Gives the variable a new value." },
+      "args": [
+        { "name": "VARIABLE", "kind": "variable" },
+        { "name": "VALUE", "kind": "number", "default": 0 }
+      ]
+    },
+    {
+      "type": "variables_change",
+      "shape": "statement",
+      "message": { "fr": "ajouter %2 à %1", "en": "change %1 by %2" },
+      "tooltip": { "fr": "Ajoute un nombre à la variable (un nombre négatif la fait diminuer).", "en": "Adds a number to the variable (a negative number decreases it)." },
+      "args": [
+        { "name": "VARIABLE", "kind": "variable" },
+        { "name": "VALUE", "kind": "number", "default": 1 }
+      ]
+    }
+  ]
+}

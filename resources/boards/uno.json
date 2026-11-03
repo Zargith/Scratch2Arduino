@@ -1,0 +1,18 @@
+{
+  "id": "uno",
+  "name": "Arduino Uno",
+  "fqbn": "arduino:avr:uno",
+  "platform": "arduino:avr",
+  "mcu": "ATmega328P",
+  "voltage": 5,
+  "flashBytes": 32256,
+  "ramBytes": 2048,
+  "builtinLed": "13",
+  "digitalPins": 14,
+  "analogPins": { "count": 6, "firstNumber": 14, "inputOnly": [] },
+  "pwmPins": ["3", "5", "6", "9", "10", "11"],
+  "interruptPins": ["2", "3"],
+  "i2c": { "sda": "A4", "scl": "A5" },
+  "spi": { "mosi": "11", "miso": "12", "sck": "13", "ss": "10" },
+  "usb": ["2341:0043", "2341:0001", "2A03:0043", "2341:0243", "2341:006A"]
+}

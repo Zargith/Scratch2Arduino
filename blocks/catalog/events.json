@@ -1,0 +1,20 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "events",
+    "colour": "#FFBF00",
+    "name": { "fr": "Événements", "en": "Events" },
+    "order": 10
+  },
+  "blocks": [
+    {
+      "type": "events_when_program_starts",
+      "shape": "hat",
+      "message": { "fr": "quand le programme démarre", "en": "when the program starts" },
+      "tooltip": {
+        "fr": "Les blocs placés dessous s'exécutent quand la carte démarre.",
+        "en": "The blocks below run when the board starts."
+      }
+    }
+  ]
+}

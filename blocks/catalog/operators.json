@@ -1,0 +1,104 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "operators",
+    "colour": "#59C059",
+    "name": { "fr": "Opérateurs", "en": "Operators" },
+    "order": 40
+  },
+  "blocks": [
+    {
+      "type": "operators_add",
+      "shape": "reporter",
+      "message": { "fr": "%1 + %2", "en": "%1 + %2" },
+      "tooltip": { "fr": "Additionne deux nombres.", "en": "Adds two numbers." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
+    },
+    {
+      "type": "operators_subtract",
+      "shape": "reporter",
+      "message": { "fr": "%1 - %2", "en": "%1 - %2" },
+      "tooltip": { "fr": "Soustrait le second nombre du premier.", "en": "Subtracts the second number from the first." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
+    },
+    {
+      "type": "operators_multiply",
+      "shape": "reporter",
+      "message": { "fr": "%1 × %2", "en": "%1 × %2" },
+      "tooltip": { "fr": "Multiplie deux nombres.", "en": "Multiplies two numbers." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
+    },
+    {
+      "type": "operators_divide",
+      "shape": "reporter",
+      "message": { "fr": "%1 ÷ %2", "en": "%1 ÷ %2" },
+      "tooltip": { "fr": "Divise le premier nombre par le second.", "en": "Divides the first number by the second." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
+    },
+    {
+      "type": "operators_random",
+      "shape": "reporter",
+      "message": { "fr": "nombre aléatoire entre %1 et %2", "en": "pick random %1 to %2" },
+      "tooltip": { "fr": "Choisit un nombre au hasard entre les deux valeurs.", "en": "Picks a random number between the two values." },
+      "args": [
+        { "name": "FROM", "kind": "number", "default": 1 },
+        { "name": "TO", "kind": "number", "default": 10 }
+      ]
+    },
+    {
+      "type": "operators_map",
+      "shape": "reporter",
+      "message": { "fr": "convertir %1 de %2 – %3 vers %4 – %5", "en": "map %1 from %2 – %3 to %4 – %5" },
+      "tooltip": { "fr": "Change l'échelle d'une valeur, par exemple 0–1023 (potentiomètre) vers 0–180 (servomoteur).", "en": "Rescales a value, for example 0–1023 (potentiometer) to 0–180 (servo)." },
+      "args": [
+        { "name": "VALUE", "kind": "number" },
+        { "name": "FROM_LOW", "kind": "number", "default": 0 },
+        { "name": "FROM_HIGH", "kind": "number", "default": 1023 },
+        { "name": "TO_LOW", "kind": "number", "default": 0 },
+        { "name": "TO_HIGH", "kind": "number", "default": 255 }
+      ]
+    },
+    {
+      "type": "operators_lt",
+      "shape": "boolean",
+      "message": { "fr": "%1 < %2", "en": "%1 < %2" },
+      "tooltip": { "fr": "Vrai si le premier nombre est plus petit que le second.", "en": "True if the first number is smaller than the second." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number", "default": 50 }]
+    },
+    {
+      "type": "operators_gt",
+      "shape": "boolean",
+      "message": { "fr": "%1 > %2", "en": "%1 > %2" },
+      "tooltip": { "fr": "Vrai si le premier nombre est plus grand que le second.", "en": "True if the first number is greater than the second." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number", "default": 50 }]
+    },
+    {
+      "type": "operators_equals",
+      "shape": "boolean",
+      "message": { "fr": "%1 = %2", "en": "%1 = %2" },
+      "tooltip": { "fr": "Vrai si les deux nombres sont égaux.", "en": "True if both numbers are equal." },
+      "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number", "default": 50 }]
+    },
+    {
+      "type": "operators_and",
+      "shape": "boolean",
+      "message": { "fr": "%1 et %2", "en": "%1 and %2" },
+      "tooltip": { "fr": "Vrai si les deux conditions sont vraies.", "en": "True if both conditions are true." },
+      "args": [{ "name": "OPERAND1", "kind": "boolean" }, { "name": "OPERAND2", "kind": "boolean" }]
+    },
+    {
+      "type": "operators_or",
+      "shape": "boolean",
+      "message": { "fr": "%1 ou %2", "en": "%1 or %2" },
+      "tooltip": { "fr": "Vrai si au moins une des conditions est vraie.", "en": "True if at least one condition is true." },
+      "args": [{ "name": "OPERAND1", "kind": "boolean" }, { "name": "OPERAND2", "kind": "boolean" }]
+    },
+    {
+      "type": "operators_not",
+      "shape": "boolean",
+      "message": { "fr": "non %1", "en": "not %1" },
+      "tooltip": { "fr": "Inverse la condition : vrai devient faux et faux devient vrai.", "en": "Inverts the condition: true becomes false and false becomes true." },
+      "args": [{ "name": "OPERAND", "kind": "boolean" }]
+    }
+  ]
+}

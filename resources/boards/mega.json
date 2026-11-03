@@ -1,0 +1,18 @@
+{
+  "id": "mega",
+  "name": "Arduino Mega 2560",
+  "fqbn": "arduino:avr:mega:cpu=atmega2560",
+  "platform": "arduino:avr",
+  "mcu": "ATmega2560",
+  "voltage": 5,
+  "flashBytes": 253952,
+  "ramBytes": 8192,
+  "builtinLed": "13",
+  "digitalPins": 54,
+  "analogPins": { "count": 16, "firstNumber": 54, "inputOnly": [] },
+  "pwmPins": ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "44", "45", "46"],
+  "interruptPins": ["2", "3", "18", "19", "20", "21"],
+  "i2c": { "sda": "20", "scl": "21" },
+  "spi": { "mosi": "51", "miso": "50", "sck": "52", "ss": "53" },
+  "usb": ["2341:0010", "2341:0042", "2A03:0010", "2A03:0042", "2341:0210", "2341:0242"]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "pins",
+    "colour": "#00878F",
+    "name": { "fr": "Broches", "en": "Pins" },
+    "order": 30
+  },
+  "blocks": [
+    {
+      "type": "pins_builtin_led",
+      "shape": "statement",
+      "message": { "fr": "%1 la LED intégrée", "en": "turn the built-in LED %1" },
+      "tooltip": { "fr": "Allume ou éteint la petite LED soudée sur la carte.", "en": "Turns the small LED on the board on or off." },
+      "args": [
+        {
+          "name": "STATE",
+          "kind": "dropdown",
+          "default": "ON",
+          "options": [
+            { "value": "ON", "label": { "fr": "allumer", "en": "on" } },
+            { "value": "OFF", "label": { "fr": "éteindre", "en": "off" } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "pins_digital_write",
+      "shape": "statement",
+      "message": { "fr": "mettre la broche %1 à l'état %2", "en": "set pin %1 to %2" },
+      "tooltip": { "fr": "Envoie du courant (HAUT) ou non (BAS) sur une broche, par exemple pour allumer une LED.", "en": "Sends current (HIGH) or not (LOW) to a pin, for example to light an LED." },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "13" },
+        {
+          "name": "STATE",
+          "kind": "dropdown",
+          "default": "HIGH",
+          "options": [
+            { "value": "HIGH", "label": { "fr": "HAUT", "en": "HIGH" } },
+            { "value": "LOW", "label": { "fr": "BAS", "en": "LOW" } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "pins_digital_read",
+      "shape": "boolean",
+      "message": { "fr": "la broche %1 est à l'état HAUT", "en": "pin %1 is HIGH" },
+      "tooltip": { "fr": "Vrai quand la broche reçoit du courant, par exemple quand un bouton est appuyé.", "en": "True when the pin receives current, for example when a button is pressed." },
+      "args": [{ "name": "PIN", "kind": "pin", "capability": "digital", "default": "2" }]
+    },
+    {
+      "type": "pins_analog_read",
+      "shape": "reporter",
+      "message": { "fr": "valeur analogique de la broche %1", "en": "analog value of pin %1" },
+      "tooltip": { "fr": "Mesure une tension entre 0 et 1023, par exemple la position d'un potentiomètre.", "en": "Measures a voltage between 0 and 1023, for example a potentiometer position." },
+      "args": [{ "name": "PIN", "kind": "pin", "capability": "analog", "default": "A0" }]
+    },
+    {
+      "type": "pins_analog_write",
+      "shape": "statement",
+      "message": { "fr": "mettre la sortie PWM de la broche %1 à %2", "en": "set PWM output of pin %1 to %2" },
+      "tooltip": { "fr": "Règle la puissance d'une broche PWM (~) de 0 à 255, par exemple pour faire varier une LED.", "en": "Sets the power of a PWM pin (~) from 0 to 255, for example to dim an LED." },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "pwm", "default": "9" },
+        { "name": "VALUE", "kind": "number", "default": 128, "min": 0, "max": 255 }
+      ]
+    }
+  ]
+}

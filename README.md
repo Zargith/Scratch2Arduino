@@ -2,7 +2,7 @@
 
 > Program real Arduino boards with Scratch-style blocks — no coding experience required.
 
-**Status: pre-alpha — Phase 0 (project skeleton).** Both variants build and open a welcome window; the block editor is not there yet. See the [roadmap](docs/roadmap.md).
+**Status: pre-alpha — Phase 1 done (core foundations).** Both variants build and open a welcome window; the shared core knows the boards, the blocks and the `.s2a` project format, but the block editor is not there yet. See the [roadmap](docs/roadmap.md).
 
 ---
 
@@ -89,7 +89,7 @@ Scratch2Arduino/
 ├── install.sh              # Linux/macOS one-command installer
 ├── cmake/                  # CMake modules and toolchain helpers
 ├── core/                   # s2a_core: shared C++17 library + unit tests
-├── blocks/                 # (Phase 1) data-driven block catalog (JSON, fr/en labels)
+├── blocks/                 # block catalog (JSON, fr/en labels) and its JSON schema
 ├── apps/
 │   ├── webview/            # variant A: C++ host embedding the web UI
 │   └── native/             # variant B: Qt 6 application
@@ -97,9 +97,9 @@ Scratch2Arduino/
 ├── firmware/               # (Phase 5) S2A live firmware for Arduino / ESP boards
 ├── installer/
 │   └── windows/            # installer.exe script (Inno Setup / NSIS)
-├── resources/              # icons, Linux .desktop template
+├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
 ├── examples/               # (Phase 7) example projects (.s2a)
-└── docs/                   # roadmap; later user guide, tutorials
+└── docs/                   # roadmap, block catalog guide; later user guide, tutorials
 ```
 
 ## Getting started
@@ -147,7 +147,32 @@ cmake --preset core-only && cmake --build --preset core-only   # core + tests, n
 
 ## Project files
 
-A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, settings, format version) and any assets. It can be exported, shared and re-imported in either variant. Saved **My blocks** live in the user's library folder and can be exported in the same way.
+A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported in either variant. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** will live in the user's library folder and be exported in the same way.
+
+```json
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Clignotant",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    { "x": 40, "y": 40, "blocks": [
+      { "id": "a1", "type": "events_when_program_starts" },
+      { "id": "a2", "type": "control_forever", "statements": { "SUBSTACK": [
+        { "id": "a3", "type": "pins_builtin_led", "fields": { "STATE": "ON" } },
+        { "id": "a4", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } }
+      ] } }
+    ] }
+  ]
+}
+```
+
+## Boards and blocks
+
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560.
+- Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
+- Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 
 ## Languages
 

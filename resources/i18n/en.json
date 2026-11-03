@@ -1,0 +1,29 @@
+{
+  "language": {
+    "name": "English"
+  },
+  "app": {
+    "title": "Scratch2Arduino",
+    "welcome": "Welcome to Scratch2Arduino! Plug in your Arduino board and start snapping blocks together.",
+    "coming_soon": "The block editor is coming soon.",
+    "variant": {
+      "webview": "Variant A — webview",
+      "native": "Variant B — native (Qt)"
+    }
+  },
+  "project": {
+    "default_name": "My project"
+  },
+  "error": {
+    "unknown": "Something unexpected went wrong.",
+    "file_not_found": "The file cannot be found. Was it moved or renamed?",
+    "read_failed": "The file cannot be read. Check that you are allowed to open it.",
+    "write_failed": "The file cannot be saved. Check that there is free space and that you can write to this folder.",
+    "invalid_archive": "This file is not a Scratch2Arduino project (.s2a), or it is damaged.",
+    "invalid_json": "The project content is damaged and cannot be read.",
+    "invalid_format": "This file does not look like a Scratch2Arduino project.",
+    "unsupported_version": "This project was made with a newer version of Scratch2Arduino. Update the software to open it.",
+    "invalid_catalog": "The Scratch2Arduino block list is damaged. Reinstall the software.",
+    "unknown_board": "This Arduino board is not supported (yet)."
+  }
+}

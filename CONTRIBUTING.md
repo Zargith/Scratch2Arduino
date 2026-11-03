@@ -32,6 +32,21 @@ cmake --build --preset core-only && ctest --preset core-only
   with friendly messages.
 - Both variants share `core/`: put logic there, keep `apps/` thin.
 - Add or update unit tests (GoogleTest, `core/tests/`) with every core change.
+- New blocks: see [docs/block-catalog.md](docs/block-catalog.md). New interface texts go in both
+  `resources/i18n/fr.json` and `resources/i18n/en.json` (a test fails if a key is missing in one of them).
+
+## Branches
+
+- `main`: stable states only, updated from `dev`.
+- `dev`: integration branch; open pull requests against it.
+- One branch per change: `feature/…`, `fix/…`, `docs/…`, `ci/…`, merged into `dev`.
+- `dev` is merged into `main` when its CI is green (typically at the end of a roadmap phase).
+
+## Releases
+
+Every push to `main` whose CI passes publishes the GitHub release `vX.Y.Z`, where `X.Y.Z` is the
+`VERSION` of `CMakeLists.txt`, with `installer.exe` attached (0.x versions are marked as pre-releases).
+If that tag already exists nothing is published: bump `VERSION` on `dev` before merging into `main`.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`...).
 
 ## License

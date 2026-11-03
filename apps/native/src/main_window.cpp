@@ -6,13 +6,15 @@
 #include <QString>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <string>
 #include <string_view>
 
 namespace s2a::native {
 
 namespace {
 
-QString toQString(std::string_view text) {
+QString translated(std::string_view key, Language language) {
+    const std::string text = tr(key, language);
     return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
 }
 
@@ -27,8 +29,8 @@ QLabel* makeLabel(const QString& text, const QString& style, QWidget* parent) {
 } // namespace
 
 MainWindow::MainWindow(Language language, QWidget* parent) : QMainWindow(parent) {
-    const QString appTitle = toQString(translate(Text::AppTitle, language));
-    const QString variant = toQString(translate(Text::VariantNative, language));
+    const QString appTitle = translated("app.title", language);
+    const QString variant = translated("app.variant.native", language);
     setWindowTitle(appTitle + QStringLiteral(" — ") + variant);
     resize(960, 640);
 
@@ -37,9 +39,9 @@ MainWindow::MainWindow(Language language, QWidget* parent) : QMainWindow(parent)
     layout->addStretch();
     layout->addWidget(makeLabel(
         appTitle, QStringLiteral("color: #00878f; font-size: 36px; font-weight: bold;"), central));
-    layout->addWidget(makeLabel(toQString(translate(Text::Welcome, language)),
+    layout->addWidget(makeLabel(translated("app.welcome", language),
                                 QStringLiteral("font-size: 17px;"), central));
-    layout->addWidget(makeLabel(toQString(translate(Text::ComingSoon, language)),
+    layout->addWidget(makeLabel(translated("app.coming_soon", language),
                                 QStringLiteral("font-size: 17px;"), central));
 
     auto* badge = makeLabel(variant + QStringLiteral(" · v") + QString::fromUtf8(version::kString),
