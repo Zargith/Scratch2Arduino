@@ -28,7 +28,8 @@ if(NOT TARGET s2a_miniz)
     set_target_properties(s2a_miniz PROPERTIES POSITION_INDEPENDENT_CODE ON C_STANDARD 99)
     # Only the in-memory zip APIs are used; files are read and written with std::filesystem
     # (Unicode paths on Windows).
-    target_compile_definitions(s2a_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+    # MINIZ_NO_TIME: entries get a zero timestamp, so saving the same project gives the same bytes.
+    target_compile_definitions(s2a_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_TIME MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
     if(MSVC)
         target_compile_options(s2a_miniz PRIVATE /W0)
     else()
