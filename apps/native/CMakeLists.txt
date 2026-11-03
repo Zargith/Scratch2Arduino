@@ -60,4 +60,5 @@ elseif(WIN32 OR APPLE)
     message(WARNING "Qt deployment tool not found: the installed application will need Qt in the PATH.")
 endif()
 
+s2a_bundle_arduino_cli(scratch2arduino-native)
 s2a_install_desktop_entry(scratch2arduino-native NAME "Scratch2Arduino (native)" VARIANT "native")
