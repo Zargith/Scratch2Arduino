@@ -4,7 +4,7 @@ project(Scratch2Arduino
     VERSION 0.1.0
     DESCRIPTION "Program Arduino boards with Scratch-style blocks"
     HOMEPAGE_URL "https://github.com/Zargith/Scratch2Arduino"
-    LANGUAGES CXX)
+    LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,6 +24,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 include(S2ACompilerWarnings)
 include(S2ADesktopEntry)
+include(S2AEmbedResources)
 
 # Sources are UTF-8 (French strings).
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)

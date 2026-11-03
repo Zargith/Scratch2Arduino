@@ -1,0 +1,29 @@
+{
+  "language": {
+    "name": "Français"
+  },
+  "app": {
+    "title": "Scratch2Arduino",
+    "welcome": "Bienvenue dans Scratch2Arduino ! Branche ta carte Arduino et commence à assembler des blocs.",
+    "coming_soon": "L'éditeur de blocs arrive bientôt.",
+    "variant": {
+      "webview": "Variante A — webview",
+      "native": "Variante B — native (Qt)"
+    }
+  },
+  "project": {
+    "default_name": "Mon projet"
+  },
+  "error": {
+    "unknown": "Une erreur inattendue s'est produite.",
+    "file_not_found": "Le fichier est introuvable. A-t-il été déplacé ou renommé ?",
+    "read_failed": "Impossible de lire le fichier. Vérifie que tu as le droit de l'ouvrir.",
+    "write_failed": "Impossible d'enregistrer le fichier. Vérifie qu'il reste de la place et que tu as le droit d'écrire dans ce dossier.",
+    "invalid_archive": "Ce fichier n'est pas un projet Scratch2Arduino (.s2a) ou il est abîmé.",
+    "invalid_json": "Le contenu du projet est abîmé et ne peut pas être lu.",
+    "invalid_format": "Ce fichier ne ressemble pas à un projet Scratch2Arduino.",
+    "unsupported_version": "Ce projet a été créé avec une version plus récente de Scratch2Arduino. Mets à jour le logiciel pour l'ouvrir.",
+    "invalid_catalog": "La liste des blocs de Scratch2Arduino est abîmée. Réinstalle le logiciel.",
+    "unknown_board": "Cette carte Arduino n'est pas (encore) prise en charge."
+  }
+}
