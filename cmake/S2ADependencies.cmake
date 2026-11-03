@@ -36,3 +36,18 @@ if(NOT TARGET s2a_miniz)
         target_compile_options(s2a_miniz PRIVATE -w)
     endif()
 endif()
+
+# reproc - run external programs (arduino-cli) portably, with captured output and timeouts (MIT).
+set(REPROC++ ON CACHE BOOL "" FORCE)
+set(REPROC_TEST OFF CACHE BOOL "" FORCE)
+set(REPROC_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(REPROC_INSTALL OFF CACHE BOOL "" FORCE)
+set(REPROC_MULTITHREADED ON CACHE BOOL "" FORCE)
+FetchContent_Declare(reproc
+    URL https://github.com/DaanDeMeyer/reproc/archive/refs/tags/v14.2.7.tar.gz
+    URL_HASH SHA256=77914ba566356d86986db240ecdb1762dfdd55bb1e8e127d016d9c5c4c9300e8
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SYSTEM
+    EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(reproc)

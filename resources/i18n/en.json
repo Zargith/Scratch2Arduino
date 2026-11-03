@@ -24,6 +24,7 @@
     "invalid_format": "This file does not look like a Scratch2Arduino project.",
     "unsupported_version": "This project was made with a newer version of Scratch2Arduino. Update the software to open it.",
     "invalid_catalog": "The Scratch2Arduino block list is damaged. Reinstall the software.",
+    "process_failed": "A tool needed by Scratch2Arduino could not be started. Reinstall the software.",
     "unknown_board": "This Arduino board is not supported (yet)."
   }
 }

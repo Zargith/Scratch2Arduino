@@ -95,7 +95,7 @@ TEST(DefaultTranslator, EveryErrorCodeHasAMessage) {
     for (const ErrorCode code :
          {ErrorCode::FileNotFound, ErrorCode::ReadFailed, ErrorCode::WriteFailed,
           ErrorCode::InvalidArchive, ErrorCode::InvalidJson, ErrorCode::InvalidFormat,
-          ErrorCode::UnsupportedVersion, ErrorCode::InvalidCatalog, ErrorCode::UnknownBoard}) {
+          ErrorCode::UnsupportedVersion, ErrorCode::InvalidCatalog, ErrorCode::UnknownBoard, ErrorCode::ProcessFailed}) {
         for (const Language language : s2a::kLanguages) {
             EXPECT_TRUE(s2a::defaultTranslator().has(s2a::errorMessageKey(code), language))
                 << s2a::errorMessageKey(code);
