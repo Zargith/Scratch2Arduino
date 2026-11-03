@@ -2,7 +2,7 @@
 # Scratch2Arduino installer for Linux and macOS.
 # Installs the build dependencies, builds both variants with CMake and installs them.
 #
-#   ./install.sh                    install system-wide (/usr/local on Linux, ~/Applications on macOS)
+#   ./install.sh                    install system-wide (/usr/local on Linux; ~/Applications on macOS)
 #   ./install.sh --user             install for the current user only (~/.local on Linux)
 #   ./install.sh --uninstall        remove a previous installation
 #   ./install.sh --help             all options
@@ -31,8 +31,8 @@ fail() { printf '\n\033[1;31m%s\033[0m\n' "$(say "$1" "$2")" >&2; exit 1; }
 usage() {
     say "Utilisation : ./install.sh [options]" "Usage: ./install.sh [options]"
     cat <<'USAGE'
-  --prefix DIR      installation prefix
-  --user            per-user install (Linux: ~/.local, macOS: ~)
+  --prefix DIR      installation prefix (macOS: folder receiving the .app bundles)
+  --user            per-user install (Linux: ~/.local, macOS: ~/Applications)
   --only-webview    build only variant A (webview)
   --only-native     build only variant B (Qt)
   --no-deps         do not install system dependencies
@@ -47,7 +47,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --prefix) PREFIX="${2:?--prefix needs a directory}"; shift ;;
         --prefix=*) PREFIX="${1#*=}" ;;
-        --user) if [ "$OS" = Darwin ]; then PREFIX="$HOME"; else PREFIX="$HOME/.local"; fi ;;
+        --user) if [ "$OS" = Darwin ]; then PREFIX="$HOME/Applications"; else PREFIX="$HOME/.local"; fi ;;
         --only-webview) WEBVIEW=ON; NATIVE=OFF ;;
         --only-native) WEBVIEW=OFF; NATIVE=ON ;;
         --no-deps) INSTALL_DEPS=0 ;;
@@ -61,7 +61,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$PREFIX" ]; then
-    if [ "$OS" = Darwin ]; then PREFIX="$HOME"; else PREFIX="/usr/local"; fi
+    if [ "$OS" = Darwin ]; then PREFIX="$HOME/Applications"; else PREFIX="/usr/local"; fi
 fi
 
 SUDO=""
@@ -176,7 +176,7 @@ fi
 
 step "Terminé !" "Done!"
 if [ "$OS" = Darwin ]; then
-    say "Les applications sont dans $PREFIX/Applications." "The applications are in $PREFIX/Applications."
+    say "Les applications sont dans $PREFIX." "The applications are in $PREFIX."
 else
     if [ "$WEBVIEW" = ON ]; then
         say "Lance : $PREFIX/bin/scratch2arduino-webview" "Run: $PREFIX/bin/scratch2arduino-webview"

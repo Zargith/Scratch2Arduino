@@ -138,12 +138,17 @@ jobs:
           name: installer-windows
           path: installer/windows/Output/installer.exe
 
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force -Path installer-logs | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\setup.log" installer-logs -ErrorAction SilentlyContinue
+          Copy-Item "$env:ProgramFiles\Scratch2Arduino\install-log.txt" installer-logs -ErrorAction SilentlyContinue
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: installer-logs
-          path: |
-            ${{ runner.temp }}/setup.log
-            C:/Program Files/Scratch2Arduino/install-log.txt
+          path: installer-logs
           if-no-files-found: ignore
