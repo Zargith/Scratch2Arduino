@@ -16,9 +16,8 @@ namespace {
 int run() {
     try {
         const s2a::Language language = s2a::detectSystemLanguage();
-        std::string title{s2a::translate(s2a::Text::AppTitle, language)};
-        title += " — ";
-        title += s2a::translate(s2a::Text::VariantWebview, language);
+        const std::string title =
+            s2a::tr("app.title", language) + " — " + s2a::tr("app.variant.webview", language);
 
         webview::webview window(false, nullptr);
         window.set_title(title);
