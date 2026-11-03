@@ -28,7 +28,7 @@ set_target_properties(scratch2arduino-native PROPERTIES
 
 install(TARGETS scratch2arduino-native
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    BUNDLE DESTINATION Applications
+    BUNDLE DESTINATION .  # macOS: the prefix is the Applications folder (required by Qt deploy)
 )
 
 # Windows and macOS: copy the Qt runtime next to the executable / into the bundle.
