@@ -32,6 +32,14 @@ cmake --build --preset core-only && ctest --preset core-only
   with friendly messages.
 - Both variants share `core/`: put logic there, keep `apps/` thin.
 - Add or update unit tests (GoogleTest, `core/tests/`) with every core change.
+- New blocks: see [docs/block-catalog.md](docs/block-catalog.md). New interface texts go in both
+  `resources/i18n/fr.json` and `resources/i18n/en.json` (a test fails if a key is missing in one of them).
+
+## Branches
+
+- `main`: stable states only, updated from `dev`.
+- `dev`: integration branch; open pull requests against it.
+- One branch per change: `feature/…`, `fix/…`, `docs/…`. Merge once CI is green.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`...).
 
 ## License

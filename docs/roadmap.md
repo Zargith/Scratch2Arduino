@@ -6,8 +6,12 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 
 | Phase | Status |
 |---|---|
-| 0 — Setup and tooling | In progress |
-| 1 → 12 | Not started |
+| 0 — Setup and tooling | Done |
+| 1 — Core foundations | Done |
+| 2 → 12 | Not started |
+
+Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
+`feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.
 
 ## Architecture decisions
 
