@@ -33,13 +33,31 @@ install(TARGETS scratch2arduino-native
 
 # Windows and macOS: copy the Qt runtime next to the executable / into the bundle.
 # On Linux the distribution's Qt packages are used.
-if((WIN32 OR APPLE) AND Qt6_VERSION VERSION_GREATER_EQUAL 6.5)
-    qt_generate_deploy_app_script(
-        TARGET scratch2arduino-native
-        OUTPUT_SCRIPT deploy_script
-        NO_UNSUPPORTED_PLATFORM_ERROR
-    )
-    install(SCRIPT "${deploy_script}")
+# windeployqt / macdeployqt are called directly rather than through qt_generate_deploy_app_script(),
+# whose generated script breaks on paths containing spaces ("C:/Program Files/...", Qt 6.8).
+if(WIN32 AND TARGET Qt6::windeployqt)
+    install(CODE "
+        execute_process(
+            COMMAND \"$<TARGET_FILE:Qt6::windeployqt>\" --release --no-translations
+                    --no-system-d3d-compiler --no-opengl-sw
+                    \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/$<TARGET_FILE_NAME:scratch2arduino-native>\"
+            RESULT_VARIABLE s2a_deploy_result)
+        if(NOT s2a_deploy_result EQUAL 0)
+            message(FATAL_ERROR \"windeployqt failed: \${s2a_deploy_result}\")
+        endif()
+    ")
+elseif(APPLE AND TARGET Qt6::macdeployqt)
+    install(CODE "
+        execute_process(
+            COMMAND \"$<TARGET_FILE:Qt6::macdeployqt>\"
+                    \"\${CMAKE_INSTALL_PREFIX}/scratch2arduino-native.app\" -always-overwrite
+            RESULT_VARIABLE s2a_deploy_result)
+        if(NOT s2a_deploy_result EQUAL 0)
+            message(FATAL_ERROR \"macdeployqt failed: \${s2a_deploy_result}\")
+        endif()
+    ")
+elseif(WIN32 OR APPLE)
+    message(WARNING "Qt deployment tool not found: the installed application will need Qt in the PATH.")
 endif()
 
 s2a_install_desktop_entry(scratch2arduino-native NAME "Scratch2Arduino (native)" VARIANT "native")
