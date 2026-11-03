@@ -25,6 +25,7 @@ include(GNUInstallDirs)
 include(S2ACompilerWarnings)
 include(S2ADesktopEntry)
 include(S2AEmbedResources)
+include(S2AArduinoCli)
 
 # Sources are UTF-8 (French strings).
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
