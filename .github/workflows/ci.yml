@@ -67,6 +67,16 @@ jobs:
           cmake --install build --config Release --prefix "$RUNNER_TEMP/s2a"
           find "$RUNNER_TEMP/s2a" -maxdepth 3 | head -n 50
 
+      - name: Compile Blink for every board with the installed s2a-cli
+        shell: bash
+        run: |
+          cli="$RUNNER_TEMP/s2a/bin/s2a-cli"
+          "$cli" version
+          "$cli" setup
+          for board in uno nano mega; do
+            "$cli" compile examples/sketches/blink --board "$board" --lang en --verbose
+          done
+
   data:
     name: Data files (JSON schema)
     runs-on: ubuntu-24.04

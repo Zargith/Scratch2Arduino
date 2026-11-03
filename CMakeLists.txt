@@ -17,6 +17,7 @@ endif()
 
 option(S2A_BUILD_WEBVIEW "Build variant A (C++ host + system webview)" ON)
 option(S2A_BUILD_NATIVE "Build variant B (Qt 6 native application)" ON)
+option(S2A_BUILD_CLI "Build the s2a-cli command-line tool" ON)
 option(S2A_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
 option(S2A_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
@@ -40,6 +41,10 @@ endif()
 
 add_subdirectory(core)
 
+if(S2A_BUILD_CLI)
+    add_subdirectory(tools/s2a-cli)
+endif()
+
 if(S2A_BUILD_WEBVIEW)
     add_subdirectory(apps/webview)
 endif()
@@ -58,4 +63,4 @@ endif()
 configure_file(cmake/S2AUninstall.cmake.in "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake" @ONLY)
 add_custom_target(uninstall COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake")
 
-message(STATUS "Scratch2Arduino ${PROJECT_VERSION}: webview=${S2A_BUILD_WEBVIEW} native=${S2A_BUILD_NATIVE} tests=${S2A_BUILD_TESTS}")
+message(STATUS "Scratch2Arduino ${PROJECT_VERSION}: webview=${S2A_BUILD_WEBVIEW} native=${S2A_BUILD_NATIVE} cli=${S2A_BUILD_CLI} tests=${S2A_BUILD_TESTS}")
