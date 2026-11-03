@@ -6,7 +6,9 @@ configure_file(include/s2a/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated
 add_library(s2a_core STATIC
     src/blocks.cpp
     src/boards.cpp
+    src/archive.cpp
     src/i18n.cpp
+    src/project.cpp
     src/resources.cpp
     src/result.cpp
 )
