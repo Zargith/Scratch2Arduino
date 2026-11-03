@@ -14,6 +14,7 @@ if(NOT GTest_FOUND)
 endif()
 
 add_executable(s2a_core_tests
+    test_arduino_cli.cpp
     test_blocks.cpp
     test_boards.cpp
     test_i18n.cpp
@@ -30,6 +31,11 @@ s2a_set_warnings(s2a_core_tests)
 add_executable(s2a_process_helper process_helper.cpp)
 add_dependencies(s2a_core_tests s2a_process_helper)
 target_compile_definitions(s2a_core_tests PRIVATE S2A_PROCESS_HELPER="$<TARGET_FILE:s2a_process_helper>")
+if(S2A_ARDUINO_CLI_EXECUTABLE)
+    target_compile_definitions(s2a_core_tests PRIVATE
+        S2A_BUNDLED_ARDUINO_CLI="${S2A_ARDUINO_CLI_EXECUTABLE}"
+        S2A_BUNDLED_ARDUINO_CLI_VERSION="${S2A_ARDUINO_CLI_VERSION}")
+endif()
 
 include(GoogleTest)
 gtest_discover_tests(s2a_core_tests)
