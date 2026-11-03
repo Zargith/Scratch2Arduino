@@ -5,7 +5,7 @@
   "platform": "arduino:avr",
   "mcu": "ATmega328P",
   "voltage": 5,
-  "flashBytes": 32256,
+  "flashBytes": 30720,
   "ramBytes": 2048,
   "builtinLed": "13",
   "digitalPins": 14,

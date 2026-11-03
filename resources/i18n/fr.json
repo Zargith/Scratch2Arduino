@@ -41,5 +41,19 @@
     "network_unavailable": "Impossible de télécharger les outils nécessaires. Vérifie ta connexion à Internet, puis réessaie.",
     "timeout": "L'opération a pris trop de temps et a été arrêtée. Réessaie.",
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
+  },
+  "cli": {
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli compile <dossier> [--board <id>]       compile un programme Arduino\n  s2a-cli upload <dossier> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
+    "unknown_board_short": "carte inconnue",
+    "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
+    "installing_platform": "Installation des outils pour {board} (une seule fois, cela peut prendre quelques minutes)…",
+    "sketch_missing": "Le dossier « {sketch} » ne contient pas de programme Arduino (un fichier .ino du même nom que le dossier).",
+    "compiling": "Compilation de « {sketch} » pour {board}…",
+    "compiled": "Compilation réussie : le programme occupe {text} octets sur {text_max} ({text_percent} %), les variables {data} octets sur {data_max}.",
+    "no_ports": "Aucune carte détectée. Branche ta carte Arduino avec un câble USB.",
+    "ready": "Tout est prêt !",
+    "uploading": "Envoi du programme sur la carte ({port})…",
+    "uploaded": "Le programme a été envoyé sur la carte !"
   }
 }
