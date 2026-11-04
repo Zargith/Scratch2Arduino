@@ -17,6 +17,8 @@ type WorkspaceLoadState = Parameters<typeof Blockly.serialization.workspaces.loa
 
 export interface EditorHandle {
 	save(): WorkspaceState;
+	/** Highlights blocks reported by Check/Upload and scrolls to the first; cleared by the next edit. */
+	highlight(blockIds: string[]): void;
 }
 
 interface EditorProps {
@@ -45,6 +47,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
 	useImperativeHandle(ref, () => ({
 		save: () => (workspace.current ? (Blockly.serialization.workspaces.save(workspace.current) as WorkspaceState) : {}),
+		highlight: (blockIds) => {
+			const target = workspace.current;
+			if (!target) return;
+			target.highlightBlock(null);
+			const shown = blockIds.filter((id) => target.getBlockById(id));
+			for (const id of shown) target.highlightBlock(id, true);
+			if (shown[0]) target.centerOnBlock(shown[0]);
+		},
 	}));
 
 	useEffect(() => {
@@ -89,7 +99,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 				// ScratchContinuousToolbox only redraws its flyout on request.
 				(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
 			}
-			if (!event.isUiEvent) onChangeRef.current();
+			if (!event.isUiEvent) {
+				created.highlightBlock(null);
+				onChangeRef.current();
+			}
 		});
 		workspace.current = created;
 

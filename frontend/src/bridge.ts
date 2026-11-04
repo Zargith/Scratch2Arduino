@@ -20,8 +20,11 @@ export interface Outcome {
 	ok: boolean;
 	message: string;
 	details?: string;
-	/** Blocks the compiler errors point at. */
+	/** Blocks to show: validation errors, or where the compiler errors point. */
 	blockIds?: string[];
+	/** Validation warnings: the program was built anyway. */
+	warnings?: string[];
+	warningBlockIds?: string[];
 }
 
 export interface OpenedProject {

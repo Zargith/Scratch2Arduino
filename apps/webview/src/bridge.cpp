@@ -82,7 +82,12 @@ toolchain::ArduinoCli arduinoCli(Language language) {
 }
 
 std::string outcomeJson(const toolchain::BuildResult& result) {
-    return Json{{"ok", result.ok}, {"message", result.message}, {"details", result.details}, {"blockIds", result.blockIds}}
+    return Json{{"ok", result.ok},
+                {"message", result.message},
+                {"details", result.details},
+                {"blockIds", result.blockIds},
+                {"warnings", result.warnings},
+                {"warningBlockIds", result.warningBlockIds}}
         .dump();
 }
 

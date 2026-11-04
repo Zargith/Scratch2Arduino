@@ -203,7 +203,13 @@ export function App() {
 			const project = currentProject();
 			const outcome: Outcome =
 				kind === "build" ? await bridge.build(project, language) : await bridge.upload(project, port ?? "", language);
-			setStatus({ kind: outcome.ok ? "success" : "error", message: outcome.message, details: outcome.details });
+			const warning = outcome.ok ? outcome.warnings?.[0] : undefined;
+			setStatus({
+				kind: outcome.ok ? (warning ? "info" : "success") : "error",
+				message: warning ? `${outcome.message} ⚠ ${warning}` : outcome.message,
+				details: outcome.details,
+			});
+			editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
 		} catch (error) {
 			fail(error);
 		} finally {
@@ -315,8 +321,8 @@ export function App() {
 			</AppShell.Main>
 
 			{status && (
-				// Over the workspace, between the category menu and the zoom/trash controls.
-				<div style={{ position: "fixed", left: 80, right: 110, bottom: 16, zIndex: 150 }}>
+				// Over the workspace, between the palette and the zoom/trash controls.
+				<div style={{ position: "fixed", left: 330, right: 110, bottom: 16, zIndex: 150 }}>
 					<Alert
 						color={status.kind === "error" ? "orange" : status.kind === "success" ? "green" : "blue"}
 						withCloseButton

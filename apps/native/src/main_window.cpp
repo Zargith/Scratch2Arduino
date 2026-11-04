@@ -369,7 +369,12 @@ void MainWindow::build(bool upload) {
             busy_ = false;
             checkAction_->setEnabled(true);
             uploadAction_->setEnabled(true);
-            setStatus(qt(result.message), qt(result.details), !result.ok);
+            QString message = qt(result.message);
+            if (result.ok && !result.warnings.empty()) {
+                message += QStringLiteral("  ⚠ ") + qt(result.warnings.front());
+            }
+            setStatus(message, qt(result.details), !result.ok);
+            canvas_->highlight(result.ok ? result.warningBlockIds : result.blockIds);
         });
 }
 

@@ -142,6 +142,32 @@ TEST_F(Build, UploadsWhenAPortIsGiven) {
     EXPECT_NE(result.message.find("Arduino Uno"), std::string::npos);
 }
 
+TEST_F(Build, StopsBeforeCompilingWhenTheBlocksHaveMistakes) {
+    Project project = blink();
+    Block condition;
+    condition.id = "if";
+    condition.type = "control_if"; // no condition
+    project.scripts[0].blocks.insert(project.scripts[0].blocks.begin() + 1, condition);
+    const auto result = s2a::toolchain::buildProject(cli(), project, Language::English, options);
+    EXPECT_FALSE(result.ok);
+    EXPECT_NE(result.message.find("condition"), std::string::npos) << result.message;
+    EXPECT_EQ(result.blockIds, std::vector<std::string>{"if"});
+    EXPECT_TRUE(fake.commands.empty()); // arduino-cli is not even started
+}
+
+TEST_F(Build, ReportsWarningsButStillBuilds) {
+    Project project = blink();
+    Block loose;
+    loose.id = "loose";
+    loose.type = "pins_builtin_led";
+    project.scripts.push_back({300, 0, {loose}});
+    fake.replies = {reply(kInstalled), reply(kCompileSuccess)};
+    const auto result = s2a::toolchain::buildProject(cli(), project, Language::English, options);
+    ASSERT_TRUE(result.ok) << result.message;
+    ASSERT_EQ(result.warnings.size(), 1U);
+    EXPECT_EQ(result.warningBlockIds, std::vector<std::string>{"loose"});
+}
+
 TEST_F(Build, ExplainsAnUnknownBoard) {
     Project project = blink();
     project.boardId = "abacus";
