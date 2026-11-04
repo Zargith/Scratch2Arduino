@@ -96,5 +96,28 @@
     "capability_pwm": "sortie PWM",
     "capability_interrupt": "interruption",
     "blocked": "Problèmes à corriger avant d'envoyer ton programme : {count}."
+  },
+  "editor": {
+    "new": "Nouveau",
+    "open": "Ouvrir",
+    "save": "Enregistrer",
+    "code": "Voir le code",
+    "check": "Vérifier",
+    "upload": "Téléverser",
+    "refresh": "Chercher les cartes branchées",
+    "project_name": "Nom du projet",
+    "details": "Détails techniques",
+    "no_ports": "Aucune carte branchée",
+    "no_port": "Branche ta carte Arduino puis choisis son port avant de téléverser.",
+    "building": "Vérification du programme…",
+    "uploading": "Envoi du programme sur la carte…",
+    "saved": "Projet enregistré : %1",
+    "opened": "Projet ouvert : %1",
+    "file_filter": "Projets Scratch2Arduino",
+    "make_variable": "Créer une variable",
+    "variable_prompt": "Nom de la nouvelle variable :",
+    "code_note": "Ce code est créé à partir de tes blocs. Modifie les blocs pour le changer.",
+    "unsaved_title": "Projet non enregistré",
+    "unsaved_text": "Ton projet a des modifications non enregistrées. Veux-tu les enregistrer ?"
   }
 }

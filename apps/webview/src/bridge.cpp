@@ -1,11 +1,12 @@
-#include "bridge.hpp"
-
+// Core headers first: webview.h (via bridge.hpp) brings X11 macros on Linux.
 #include "s2a/arduino_cli.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
 #include "s2a/version.hpp"
+
+#include "bridge.hpp"
 
 #include <cctype>
 #include <cstdlib>

@@ -177,6 +177,12 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
+### The native variant
+
+**Scratch2Arduino (native)** offers the same blocks and opens the same `.s2a` files, drawn by a pure C++/Qt
+canvas: drag blocks from the palette (drop them back on the palette to delete them), click a white value to
+type it, click a menu to choose a pin or an option, Ctrl + wheel to zoom, drag the background to scroll.
+
 ### Working on the block editor
 
 ```bash
