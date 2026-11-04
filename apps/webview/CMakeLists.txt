@@ -54,6 +54,9 @@ add_executable(scratch2arduino-webview WIN32 MACOSX_BUNDLE
 target_include_directories(scratch2arduino-webview PRIVATE src)
 target_include_directories(scratch2arduino-webview SYSTEM PRIVATE "${portable_file_dialogs_SOURCE_DIR}")
 target_link_libraries(scratch2arduino-webview PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
+if(WIN32)
+    target_compile_definitions(scratch2arduino-webview PRIVATE NOMINMAX)
+endif()
 s2a_set_warnings(scratch2arduino-webview)
 
 set_target_properties(scratch2arduino-webview PROPERTIES

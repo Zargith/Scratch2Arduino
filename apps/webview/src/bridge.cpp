@@ -29,10 +29,6 @@ struct UserError {
     std::string message;
 };
 
-std::string languageCode(Language language) {
-    return language == Language::English ? "en" : "fr";
-}
-
 Language languageArg(const Json& args, std::size_t index, Language fallback) {
     return index < args.size() && args[index].is_string() ? languageFromLocale(args[index].get<std::string>())
                                                          : fallback;
@@ -107,9 +103,9 @@ Bridge::~Bridge() {
 
 template <typename Work> void Bridge::async(const std::string& id, Work work) {
     const std::lock_guard<std::mutex> lock(mutex_);
-    workers_.emplace_back([this, id, work = std::move(work)]() {
+    workers_.emplace_back([this, id, task = std::move(work)]() {
         try {
-            window_.resolve(id, kResolve, work());
+            window_.resolve(id, kResolve, task());
         } catch (const UserError& error) {
             window_.resolve(id, kReject, Json(error.message).dump());
         } catch (const std::exception& error) {
@@ -120,7 +116,7 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
 
 void Bridge::bind() {
     window_.bind("s2a_hello", [this](const std::string& /*request*/) {
-        return Json{{"language", languageCode(language_)}, {"version", std::string(version::kString)}}.dump();
+        return Json{{"language", std::string(languageCode(language_))}, {"version", std::string(version::kString)}}.dump();
     });
 
     window_.bind("s2a_set_title", [this](const std::string& request) {
