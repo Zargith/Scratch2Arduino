@@ -56,11 +56,11 @@ TEST(Layout, StacksBlocksAndNestsThemInMouths) {
     EXPECT_DOUBLE_EQ(hat.bounds.x, 100);
     EXPECT_DOUBLE_EQ(hat.bounds.y, 50);
     EXPECT_DOUBLE_EQ(forever.bounds.y, hat.bounds.bottom());
-    ASSERT_EQ(forever.slots.size(), 1U);
+    ASSERT_EQ(forever.mouths.size(), 1U);
     EXPECT_DOUBLE_EQ(on.bounds.x, forever.bounds.x + metrics::kIndent);
-    EXPECT_DOUBLE_EQ(on.bounds.y, forever.slots[0].rect.y);
+    EXPECT_DOUBLE_EQ(on.bounds.y, forever.mouths[0].rect.y);
     EXPECT_DOUBLE_EQ(wait.bounds.y, on.bounds.bottom());
-    EXPECT_DOUBLE_EQ(forever.slots[0].rect.h, on.bounds.h + wait.bounds.h);
+    EXPECT_DOUBLE_EQ(forever.mouths[0].rect.h, on.bounds.h + wait.bounds.h);
     EXPECT_DOUBLE_EQ(forever.bounds.bottom(), wait.bounds.bottom() + metrics::kArm);
     EXPECT_TRUE(hat.firstInStack);
     EXPECT_TRUE(hat.hasNext);
@@ -87,11 +87,11 @@ TEST(Layout, EmptyMouthsKeepRoomToDropBlocks) {
     project.scripts.push_back({0, 0, {repeat}});
     const auto blocks = layoutProject(context(project));
     ASSERT_EQ(blocks.size(), 1U);
-    ASSERT_EQ(blocks[0].slots.size(), 1U);
-    EXPECT_DOUBLE_EQ(blocks[0].slots[0].rect.h, metrics::kMinSlot);
+    ASSERT_EQ(blocks[0].mouths.size(), 1U);
+    EXPECT_DOUBLE_EQ(blocks[0].mouths[0].rect.h, metrics::kMinSlot);
     EXPECT_DOUBLE_EQ(blocks[0].bounds.h, metrics::kRowHeight + metrics::kMinSlot + metrics::kArm);
     // The empty mouth is background: clicking there selects nothing.
-    const Rect mouth = blocks[0].slots[0].rect;
+    const Rect mouth = blocks[0].mouths[0].rect;
     EXPECT_EQ(hitBlock(blocks, {mouth.x + 10, mouth.y + 5}), -1);
     EXPECT_EQ(hitBlock(blocks, {5, 5}), 0);
 }

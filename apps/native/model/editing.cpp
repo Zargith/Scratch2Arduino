@@ -86,15 +86,6 @@ Block* findIn(Stack& stack, const std::string& id) {
     return nullptr;
 }
 
-Block* findBlock(Project& project, const std::string& id) {
-    for (project::Script& script : project.scripts) {
-        if (Block* found = findIn(script.blocks, id)) {
-            return found;
-        }
-    }
-    return nullptr;
-}
-
 /// Stack holding block `id` directly, and its index there.
 std::pair<Stack*, std::size_t> stackOf(Stack& stack, const std::string& id) {
     for (std::size_t i = 0; i < stack.size(); ++i) {
@@ -129,6 +120,15 @@ bool isStackShape(BlockShape shape) {
 }
 
 } // namespace
+
+Block* findBlock(Project& project, const std::string& id) {
+    for (project::Script& script : project.scripts) {
+        if (Block* found = findIn(script.blocks, id)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
 
 Block makeBlock(const BlockDefinition& definition, const Project& project) {
     Block block;
@@ -228,7 +228,7 @@ Drop findDrop(const std::vector<BlockGeometry>& blocks, const BlockCatalog& cata
         }
         // Into a C-block mouth.
         if (!isHat) {
-            for (const StatementSlot& slot : geometry.slots) {
+            for (const StatementSlot& slot : geometry.mouths) {
                 consider(distance(origin, {slot.rect.x, slot.rect.y}),
                          {Drop::Kind::Into, geometry.block->id, slot.name, geometry.script, {}});
             }

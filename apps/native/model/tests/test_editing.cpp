@@ -112,7 +112,7 @@ TEST(Editing, DropsFarAwayAsANewScript) {
 TEST(Editing, SnapsIntoAnEmptyMouth) {
     Project project = sample();
     const auto blocks = layoutProject(context(project));
-    const Rect mouth = byId(blocks, "repeat").slots.at(0).rect;
+    const Rect mouth = byId(blocks, "repeat").mouths.at(0).rect;
     const Stack dragged{block("new", "pins_builtin_led")};
     const Drop drop = findDrop(blocks, BlockCatalog::builtin(), dragged, {mouth.x + 3, mouth.y + 3}, 40);
     EXPECT_EQ(drop.kind, Drop::Kind::Into);

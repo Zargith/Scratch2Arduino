@@ -14,6 +14,9 @@
 /// a move that does not apply simply leaves the blocks where they are.
 namespace s2a::native {
 
+/// Block `id` anywhere in the project (stacks, mouths, inputs), or null.
+[[nodiscard]] project::Block* findBlock(project::Project& project, const std::string& id);
+
 /// New block of `definition` with its default field and input values.
 [[nodiscard]] project::Block makeBlock(const BlockDefinition& definition, const project::Project& project);
 

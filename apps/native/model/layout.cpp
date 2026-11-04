@@ -36,7 +36,7 @@ void translate(BlockGeometry& geometry, double dx, double dy) {
     for (Part& part : geometry.parts) {
         move(part.rect);
     }
-    for (StatementSlot& slot : geometry.slots) {
+    for (StatementSlot& slot : geometry.mouths) {
         move(slot.rect);
     }
 }
@@ -167,7 +167,7 @@ Rect layoutBlock(const LayoutContext& context, const Block& block, Point origin,
                 slot.rect.h = std::max(kMinSlot, layoutStack(context, stack->second, {slot.rect.x, y}, script, out));
             }
             y += slot.rect.h;
-            geometry.slots.push_back(slot);
+            geometry.mouths.push_back(slot);
             endsWithMouth = true;
             continue;
         }
@@ -204,13 +204,13 @@ Rect layoutBlock(const LayoutContext& context, const Block& block, Point origin,
         y += kArm;
     }
     width = std::max(width, reporter ? kReporterHeight : kMinWidth);
-    if (!geometry.slots.empty()) {
+    if (!geometry.mouths.empty()) {
         width = std::max(width, kIndent + kNotchX + kNotchWidth + 2 * kPadding);
     }
     for (Rect& row : geometry.rows) {
         row.w = width;
     }
-    for (StatementSlot& slot : geometry.slots) {
+    for (StatementSlot& slot : geometry.mouths) {
         slot.rect.w = width - kIndent;
     }
     geometry.bounds = {origin.x, origin.y, width, y - origin.y};
@@ -268,7 +268,7 @@ int hitBlock(const std::vector<BlockGeometry>& blocks, Point point) {
             continue;
         }
         // The empty part of a C-block mouth is background, not the block.
-        const bool inMouth = std::any_of(geometry.slots.begin(), geometry.slots.end(),
+        const bool inMouth = std::any_of(geometry.mouths.begin(), geometry.mouths.end(),
                                          [point](const StatementSlot& slot) { return slot.rect.contains(point); });
         if (!inMouth) {
             return static_cast<int>(i);

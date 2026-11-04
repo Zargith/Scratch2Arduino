@@ -5,6 +5,7 @@
 
 #include <QApplication>
 #include <QLocale>
+#include <QStringList>
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
@@ -15,6 +16,10 @@ int main(int argc, char* argv[]) {
         s2a::languageFromLocale(QLocale::system().name().toStdString());
 
     s2a::native::MainWindow window(language);
+    // A project given on the command line (double-click on a .s2a file).
+    if (const QStringList args = QApplication::arguments(); args.size() > 1) {
+        (void)window.openFile(args.at(1));
+    }
     window.show();
     return QApplication::exec();
 }

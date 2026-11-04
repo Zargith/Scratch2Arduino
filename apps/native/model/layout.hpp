@@ -76,7 +76,7 @@ struct BlockGeometry {
     Rect bounds;        ///< The block itself, C-block mouths included, following blocks excluded.
     std::vector<Rect> rows; ///< Text rows (C-blocks: one per arm), for painting.
     std::vector<Part> parts;
-    std::vector<StatementSlot> slots;
+    std::vector<StatementSlot> mouths;
     int script = -1; ///< Index of the script, -1 for blocks outside the project (palette, drag).
     bool firstInStack = false; ///< First block of a script or of a C-block mouth.
     bool hasNext = false;      ///< Another block is attached below.
