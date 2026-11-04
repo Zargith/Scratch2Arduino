@@ -6,7 +6,6 @@ import {
 	blocksTheme,
 	CREATE_VARIABLE_CALLBACK,
 	defineBlocks,
-	registerVariablesCategory,
 	setCurrentBoard,
 	toolbox,
 } from "@/blocks/definitions";
@@ -18,7 +17,6 @@ type WorkspaceLoadState = Parameters<typeof Blockly.serialization.workspaces.loa
 
 export interface EditorHandle {
 	save(): WorkspaceState;
-	load(state: WorkspaceState): void;
 }
 
 interface EditorProps {
@@ -47,18 +45,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
 	useImperativeHandle(ref, () => ({
 		save: () => (workspace.current ? (Blockly.serialization.workspaces.save(workspace.current) as WorkspaceState) : {}),
-		load: (state) => {
-			const target = workspace.current;
-			if (!target) return;
-			Blockly.Events.disable();
-			try {
-				target.clear();
-				Blockly.serialization.workspaces.load(state as WorkspaceLoadState, target);
-			} finally {
-				Blockly.Events.enable();
-			}
-			target.getToolbox()?.refreshSelection();
-		},
 	}));
 
 	useEffect(() => {
@@ -66,8 +52,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		if (!element) return;
 		Blockly.ScratchMsgs.setLocale(language);
 		defineBlocks(language);
+		const createLabel = translate(language, "variables.create");
+		const variablesOf = (state: WorkspaceState) => state.variables ?? [];
 		const created = Blockly.inject(element, {
-			toolbox: toolbox(language),
+			toolbox: toolbox(language, variablesOf(initialState), createLabel),
 			theme: blocksTheme(),
 			media: "./media/",
 			trashcan: true,
@@ -75,7 +63,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 			zoom: { controls: true, wheel: true, startScale: 0.675 },
 			grid: { spacing: 40, length: 2, colour: "#ddd" },
 		});
-		registerVariablesCategory(created, translate(language, "variables.create"));
 		created.registerButtonCallback(CREATE_VARIABLE_CALLBACK, () => {
 			Blockly.ScratchVariables.createVariable(created);
 		});
@@ -94,7 +81,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		} finally {
 			Blockly.Events.enable();
 		}
+		const variableEvents: string[] = [Blockly.Events.VAR_CREATE, Blockly.Events.VAR_DELETE, Blockly.Events.VAR_RENAME];
 		created.addChangeListener((event: Blockly.Events.Abstract) => {
+			if (variableEvents.includes(event.type)) {
+				const variables = created.getVariableMap().getVariablesOfType("").map((variable) => ({ id: variable.getId() }));
+				created.updateToolbox(toolbox(language, variables, createLabel));
+				// ScratchContinuousToolbox only redraws its flyout on request.
+				(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
+			}
 			if (!event.isUiEvent) onChangeRef.current();
 		});
 		workspace.current = created;

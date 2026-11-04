@@ -113,14 +113,6 @@ export function App() {
 		}
 	}, [fail]);
 
-	useEffect(() => {
-		if (!hasHost()) return;
-		void bridge
-			.hello()
-			.then((info) => setLanguage(info.language))
-			.catch(fail);
-		void refreshPorts();
-	}, [fail, refreshPorts]);
 
 	useEffect(() => {
 		if (!hasHost()) return;
@@ -131,9 +123,22 @@ export function App() {
 	const switchLanguage = (next: Language) => {
 		if (next === language) return;
 		initialState.current = editor.current?.save() ?? initialState.current;
+		// A project still named "My project" follows the language.
+		setName((current) => (current === translate(language, "project.untitled") ? translate(next, "project.untitled") : current));
 		setLanguage(next);
 		setEditorKey((key) => key + 1);
 	};
+	const switchLanguageRef = useRef(switchLanguage);
+	switchLanguageRef.current = switchLanguage;
+
+	useEffect(() => {
+		if (!hasHost()) return;
+		void bridge
+			.hello()
+			.then((info) => switchLanguageRef.current(info.language))
+			.catch(fail);
+		void refreshPorts();
+	}, [fail, refreshPorts]);
 
 	const newProject = () => {
 		if (dirty && !window.confirm(t("confirm.new"))) return;
@@ -204,10 +209,10 @@ export function App() {
 	};
 
 	return (
-		<AppShell header={{ height: 64 }} footer={{ height: status ? "auto" : 0 }} padding={0}>
+		<AppShell header={{ height: 64 }} padding={0}>
 			<AppShell.Header px="md">
 				<Group h="100%" gap="sm" wrap="nowrap">
-					<Title order={3} style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
+					<Title order={4} visibleFrom="xl" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
 						{t("app.title")}
 					</Title>
 					<TextInput
@@ -217,19 +222,27 @@ export function App() {
 							setName(event.currentTarget.value);
 							setDirty(true);
 						}}
-						w={180}
+						miw={120}
+						maw={200}
+						style={{ flex: 1 }}
 					/>
-					<Button.Group>
-						<Button variant="default" leftSection={<IconFilePlus size={18} />} onClick={newProject}>
-							{t("toolbar.new")}
-						</Button>
-						<Button variant="default" leftSection={<IconFolderOpen size={18} />} onClick={() => void openProject()}>
-							{t("toolbar.open")}
-						</Button>
-						<Button variant="default" leftSection={<IconDeviceFloppy size={18} />} onClick={() => void saveProject()}>
-							{t("toolbar.save")}
-						</Button>
-					</Button.Group>
+					<ActionIcon.Group>
+						<Tooltip label={t("toolbar.new")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.new")} onClick={newProject}>
+								<IconFilePlus size={18} />
+							</ActionIcon>
+						</Tooltip>
+						<Tooltip label={t("toolbar.open")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.open")} onClick={() => void openProject()}>
+								<IconFolderOpen size={18} />
+							</ActionIcon>
+						</Tooltip>
+						<Tooltip label={t("toolbar.save")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.save")} onClick={() => void saveProject()}>
+								<IconDeviceFloppy size={18} />
+							</ActionIcon>
+						</Tooltip>
+					</ActionIcon.Group>
 					<Select
 						aria-label={t("board.label")}
 						data={boards.map((board) => ({ value: board.id, label: board.name }))}
@@ -241,7 +254,9 @@ export function App() {
 							}
 						}}
 						allowDeselect={false}
-						w={170}
+						miw={130}
+						maw={190}
+						style={{ flex: 1 }}
 					/>
 					<Select
 						aria-label={t("port.label")}
@@ -249,17 +264,21 @@ export function App() {
 						data={ports.map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
-						w={190}
+						miw={130}
+						maw={240}
+						style={{ flex: 1 }}
 					/>
 					<Tooltip label={t("port.refresh")}>
 						<ActionIcon variant="default" size="lg" aria-label={t("port.refresh")} onClick={() => void refreshPorts()}>
 							<IconRefresh size={18} />
 						</ActionIcon>
 					</Tooltip>
-					<Group gap="xs" ml="auto" wrap="nowrap">
-						<Button variant="default" leftSection={<IconCode size={18} />} onClick={() => void showCode()}>
-							{t("toolbar.code")}
-						</Button>
+					<Group gap="xs" ml="auto" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<Tooltip label={t("toolbar.code")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
+								<IconCode size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Button color="green" leftSection={<IconCheck size={18} />} loading={busy} onClick={() => void run("build")}>
 							{t("toolbar.build")}
 						</Button>
@@ -293,7 +312,8 @@ export function App() {
 			</AppShell.Main>
 
 			{status && (
-				<AppShell.Footer p="xs">
+				// Over the workspace, between the category menu and the zoom/trash controls.
+				<div style={{ position: "fixed", left: 80, right: 110, bottom: 16, zIndex: 150 }}>
 					<Alert
 						color={status.kind === "error" ? "orange" : status.kind === "success" ? "green" : "blue"}
 						withCloseButton
@@ -309,7 +329,7 @@ export function App() {
 							</Spoiler>
 						)}
 					</Alert>
-				</AppShell.Footer>
+				</div>
 			)}
 
 			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">

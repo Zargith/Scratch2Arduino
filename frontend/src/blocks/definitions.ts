@@ -4,7 +4,6 @@ import * as Blockly from "scratch-blocks";
 import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, type PinCapability } from "@/catalog";
 
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
-const VARIABLES_CATEGORY_CALLBACK = "S2A_VARIABLES";
 
 let currentBoard: Board | undefined;
 
@@ -184,39 +183,35 @@ export function blocksTheme(): Blockly.Theme {
 	});
 }
 
-export function toolbox(language: Language): Blockly.utils.toolbox.ToolboxDefinition {
+/**
+ * Palette. scratch-blocks leaves rebuilding the toolbox to the host (no dynamic categories):
+ * the variables category is generated from the current variables, and the editor calls
+ * updateToolbox() again when a variable is created, renamed or deleted.
+ */
+export function toolbox(
+	language: Language,
+	variables: { id: string }[],
+	createVariableLabel: string
+): Blockly.utils.toolbox.ToolboxDefinition {
 	return {
 		kind: "categoryToolbox",
-		contents: catalog.map(({ category, blocks }) => ({
-			kind: "category",
-			name: category.name[language],
-			categorystyle: category.id,
-			colour: category.colour,
-			...(category.id === "variables"
-				? { custom: VARIABLES_CATEGORY_CALLBACK }
-				: { contents: blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) })) }),
-		})),
+		contents: catalog.map(({ category, blocks }) => {
+			const first = variables[0];
+			const contents =
+				category.id === "variables"
+					? [
+							{ kind: "button", text: createVariableLabel, callbackkey: CREATE_VARIABLE_CALLBACK },
+							...(first
+								? blocks.map((block) => ({
+										kind: "block",
+										type: block.type,
+										fields: { VARIABLE: { id: first.id } },
+										inputs: shadowInputs(block),
+									}))
+								: []),
+						]
+					: blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) }));
+			return { kind: "category", name: category.name[language], categorystyle: category.id, contents };
+		}),
 	} as Blockly.utils.toolbox.ToolboxDefinition;
-}
-
-/** Variables category: "make a variable" button, then the blocks once a variable exists. */
-export function registerVariablesCategory(workspace: Blockly.WorkspaceSvg, createLabel: string): void {
-	const blocks = catalog.find(({ category }) => category.id === "variables")?.blocks ?? [];
-	workspace.registerToolboxCategoryCallback(VARIABLES_CATEGORY_CALLBACK, (target) => {
-		const contents: Blockly.utils.toolbox.FlyoutItemInfo[] = [
-			{ kind: "button", text: createLabel, callbackkey: CREATE_VARIABLE_CALLBACK },
-		];
-		const first = target.getVariableMap().getVariablesOfType("")[0];
-		if (first) {
-			for (const block of blocks) {
-				contents.push({
-					kind: "block",
-					type: block.type,
-					fields: { VARIABLE: { id: first.getId() } },
-					inputs: shadowInputs(block),
-				} as unknown as Blockly.utils.toolbox.BlockInfo);
-			}
-		}
-		return contents;
-	});
 }
