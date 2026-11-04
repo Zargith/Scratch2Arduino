@@ -3,19 +3,25 @@
 //   s2a-cli boards                                 supported boards
 //   s2a-cli ports                                  plugged-in boards
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
-//   s2a-cli compile <sketch> [--board <id>]        compile an Arduino sketch folder
-//   s2a-cli upload <sketch> --port <port> [--board <id>]
+//   s2a-cli generate <project>                     print the Arduino code of a project
+//   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
+//   s2a-cli upload <sketch|project> --port <port> [--board <id>]
+// A project is a .s2a file or a project.json; its board is used unless --board is given.
 //   options: --lang fr|en, --verbose
 #include "s2a/arduino_cli.hpp"
 #include "s2a/boards.hpp"
+#include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/i18n.hpp"
+#include "s2a/project.hpp"
 #include "s2a/version.hpp"
 
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <set>
 #include <string>
 #include <vector>
@@ -98,9 +104,14 @@ private:
     int ensurePlatform(const ArduinoCli& cli, const s2a::Board& board) const;
     int compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path& sketch, const fs::path& build) const;
 
+    [[nodiscard]] std::optional<s2a::project::Project> loadProject(const fs::path& path) const;
+    /// Sketch folder to compile: the folder itself, or the code generated from a project.
+    [[nodiscard]] std::optional<fs::path> sketchFor(const fs::path& path, const s2a::Board*& board) const;
+
     int boards() const;
     int ports() const;
     int setup() const;
+    int generateCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
     int version() const;
@@ -218,6 +229,74 @@ int Cli::ports() const {
     return kSuccess;
 }
 
+std::optional<s2a::project::Project> Cli::loadProject(const fs::path& path) const {
+    s2a::Result<s2a::project::Project> project = [&]() -> s2a::Result<s2a::project::Project> {
+        if (path.extension() == ".json") {
+            std::ifstream file(path, std::ios::binary);
+            if (!file) {
+                return s2a::Error{s2a::ErrorCode::FileNotFound, path.u8string()};
+            }
+            std::ostringstream content;
+            content << file.rdbuf();
+            return s2a::project::fromJson(content.str());
+        }
+        return s2a::project::load(path);
+    }();
+    if (!project.ok()) {
+        fail("cli.project_invalid", {{"project", path.filename().u8string()},
+                                     {"reason", tr(s2a::errorMessageKey(project.error().code))}});
+        if (options_.verbose) {
+            std::cerr << project.error().detail << '\n';
+        }
+        return std::nullopt;
+    }
+    return std::move(project).value();
+}
+
+std::optional<fs::path> Cli::sketchFor(const fs::path& path, const s2a::Board*& board) const {
+    std::error_code error;
+    if (fs::is_directory(path, error)) {
+        return path;
+    }
+    const auto project = loadProject(path);
+    if (!project) {
+        return std::nullopt;
+    }
+    if (!options_.boardGiven) {
+        board = s2a::BoardDatabase::builtin().find(project->boardId);
+        if (board == nullptr) {
+            fail("cli.unknown_board_short");
+            return std::nullopt;
+        }
+    }
+    // "blink/project.json" is named after its folder, "blink.s2a" after the file.
+    const fs::path named = path.extension() == ".json" ? path.parent_path() : path;
+    const std::string name = s2a::codegen::identifier(named.stem().u8string());
+    const fs::path folder = s2a::toolchain::userDataDirectory() / "sketches" / name;
+    fs::create_directories(folder, error);
+    std::ofstream file(folder / (name + ".ino"), std::ios::binary | std::ios::trunc);
+    file << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), board).source;
+    if (!file) {
+        fail("cli.sketch_missing", {{"sketch", folder.u8string()}});
+        return std::nullopt;
+    }
+    return folder;
+}
+
+int Cli::generateCommand() const {
+    if (options_.positional.size() != 1) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto project = loadProject(fs::absolute(fs::u8path(options_.positional[0])));
+    if (!project) {
+        return kFailure;
+    }
+    const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    std::cout << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), selected).source;
+    return kSuccess;
+}
+
 int Cli::setup() const {
     const auto cli = arduinoCli();
     if (!cli) {
@@ -257,7 +336,11 @@ int Cli::compileCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = sketchPath(options_.positional[0]);
+    const auto folder = sketchFor(sketchPath(options_.positional[0]), selected);
+    if (!folder) {
+        return kFailure;
+    }
+    const fs::path& sketch = *folder;
     const fs::path build = buildDirectory(sketch, *selected);
     return compile(*cli, *selected, sketch, build);
 }
@@ -272,7 +355,11 @@ int Cli::uploadCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = sketchPath(options_.positional[0]);
+    const auto folder = sketchFor(sketchPath(options_.positional[0]), selected);
+    if (!folder) {
+        return kFailure;
+    }
+    const fs::path& sketch = *folder;
     const fs::path build = buildDirectory(sketch, *selected);
     if (const int status = compile(*cli, *selected, sketch, build); status != kSuccess) {
         return status;
@@ -313,6 +400,9 @@ int Cli::run() {
     }
     if (options_.command == "setup") {
         return setup();
+    }
+    if (options_.command == "generate") {
+        return generateCommand();
     }
     if (options_.command == "compile") {
         return compileCommand();

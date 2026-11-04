@@ -43,7 +43,7 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli compile <dossier> [--board <id>]       compile un programme Arduino\n  s2a-cli upload <dossier> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
     "unknown_board_short": "carte inconnue",
     "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
@@ -54,6 +54,7 @@
     "no_ports": "Aucune carte détectée. Branche ta carte Arduino avec un câble USB.",
     "ready": "Tout est prêt !",
     "uploading": "Envoi du programme sur la carte ({port})…",
-    "uploaded": "Le programme a été envoyé sur la carte !"
+    "uploaded": "Le programme a été envoyé sur la carte !",
+    "project_invalid": "Impossible d'ouvrir le projet « {project} » : {reason}"
   }
 }
