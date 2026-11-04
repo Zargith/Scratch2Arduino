@@ -44,6 +44,14 @@ jobs:
           arch: win64_msvc2022_64
           cache: true
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.20.0
+
       - name: Configure
         shell: bash
         run: |
@@ -88,11 +96,47 @@ jobs:
       - name: Validate block catalogs
         run: pipx run check-jsonschema --schemafile blocks/schema/catalog.schema.json blocks/catalog/*.json
 
+  frontend:
+    name: Block editor (frontend)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.20.0
+
+      - name: Install
+        run: pnpm --dir frontend install --frozen-lockfile
+      - name: Type check
+        run: pnpm --dir frontend typecheck
+      - name: Unit tests
+        run: pnpm --dir frontend test
+      - name: Build
+        run: |
+          pnpm --dir frontend exec vite build
+          (cd frontend/dist && zip -qr ../../scratch2arduino-frontend.zip .)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frontend
+          path: scratch2arduino-frontend.zip
+
   install-scripts:
     name: install.sh and Makefile (Linux)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.20.0
 
       - name: install.sh --user
         run: ./install.sh --user --yes
@@ -133,6 +177,19 @@ jobs:
           version: ${{ env.QT_VERSION }}
           arch: win64_msvc2022_64
           cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.20.0
+
+      - name: Build the block editor (shipped prebuilt in installer.exe)
+        run: |
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend build
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
@@ -178,7 +235,7 @@ jobs:
     name: Release (main)
     # Publishes vX.Y.Z (version from CMakeLists.txt) once every other job of a push to main passed.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, data, install-scripts, windows-installer]
+    needs: [build, data, frontend, install-scripts, windows-installer]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -207,13 +264,22 @@ jobs:
           name: installer-windows
           path: dist
 
+      - name: Download the prebuilt block editor
+        if: steps.version.outputs.exists == 'false'
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend
+          path: dist
+
       - name: Create the GitHub release
         if: steps.version.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "v$VERSION" dist/installer.exe \
+          # Builds from source without Node.js download the frontend archive (cmake/S2AFrontend.cmake).
+          mv dist/scratch2arduino-frontend.zip "dist/scratch2arduino-frontend-$VERSION.zip"
+          gh release create "v$VERSION" dist/installer.exe "dist/scratch2arduino-frontend-$VERSION.zip" \
             --target "$GITHUB_SHA" \
             --title "Scratch2Arduino $VERSION" \
             --generate-notes \

@@ -56,5 +56,16 @@
     "uploading": "Sending the program to the board ({port})…",
     "uploaded": "The program has been sent to the board!",
     "project_invalid": "Cannot open the project \"{project}\": {reason}"
+  },
+  "build": {
+    "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
+    "compiled": "Well done, your program is correct! It uses {text_percent}% of the memory of the {board} board.",
+    "uploaded": "Here we go: your program is now running on the {board} board!"
+  },
+  "webview": {
+    "open_title": "Open a project",
+    "save_title": "Save the project",
+    "file_filter": "Scratch2Arduino projects",
+    "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino."
   }
 }

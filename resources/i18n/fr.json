@@ -56,5 +56,16 @@
     "uploading": "Envoi du programme sur la carte ({port})…",
     "uploaded": "Le programme a été envoyé sur la carte !",
     "project_invalid": "Impossible d'ouvrir le projet « {project} » : {reason}"
+  },
+  "build": {
+    "unknown_board": "La carte « {board} » n'est pas connue. Choisis une carte dans la liste.",
+    "compiled": "Bravo, ton programme est correct ! Il utilise {text_percent} % de la mémoire de la carte {board}.",
+    "uploaded": "C'est parti : ton programme tourne maintenant sur la carte {board} !"
+  },
+  "webview": {
+    "open_title": "Ouvrir un projet",
+    "save_title": "Enregistrer le projet",
+    "file_filter": "Projets Scratch2Arduino",
+    "frontend_missing": "L'éditeur de blocs est introuvable. Réinstalle Scratch2Arduino."
   }
 }

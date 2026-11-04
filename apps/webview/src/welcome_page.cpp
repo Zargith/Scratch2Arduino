@@ -48,7 +48,7 @@ p { font-size: 1.15rem; line-height: 1.5; margin: 0 0 1rem; }
 
 } // namespace
 
-std::string welcomePage(Language language) {
+std::string welcomePage(Language language, std::string_view message) {
     std::string html;
     html += "<!doctype html><html lang=\"";
     html += languageCode(language);
@@ -61,7 +61,7 @@ std::string welcomePage(Language language) {
     html += "</h1><p>";
     html += escapeHtml(tr("app.welcome", language));
     html += "</p><p>";
-    html += escapeHtml(tr("app.coming_soon", language));
+    html += escapeHtml(message);
     html += "</p><span class=\"badge\">";
     html += escapeHtml(tr("app.variant.webview", language));
     html += " · v";

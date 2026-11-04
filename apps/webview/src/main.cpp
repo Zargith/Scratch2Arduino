@@ -1,3 +1,4 @@
+#include "bridge.hpp"
 #include "welcome_page.hpp"
 
 #include "s2a/i18n.hpp"
@@ -21,8 +22,16 @@ int run() {
 
         webview::webview window(false, nullptr);
         window.set_title(title);
-        window.set_size(960, 640, WEBVIEW_HINT_NONE);
-        window.set_html(s2a::webview::welcomePage(language));
+        window.set_size(1280, 800, WEBVIEW_HINT_NONE);
+        window.set_size(960, 600, WEBVIEW_HINT_MIN);
+
+        s2a::webview::Bridge bridge(window, language);
+        bridge.bind();
+        if (const auto frontend = s2a::webview::locateFrontend(); !frontend.empty()) {
+            window.navigate(s2a::webview::fileUrl(frontend / "index.html"));
+        } else {
+            window.set_html(s2a::webview::welcomePage(language, s2a::tr("webview.frontend_missing", language)));
+        }
         window.run();
         return 0;
     } catch (const std::exception& error) {

@@ -9,7 +9,8 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 0 — Setup and tooling | Done |
 | 1 — Core foundations | Done |
 | 2 — Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
-| 3 → 12 | Not started |
+| 3a — Variant A MVP (webview) | In progress: code generator, build service, scratch-blocks editor, JS ↔ C++ bridge |
+| 3b → 12 | Not started |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.

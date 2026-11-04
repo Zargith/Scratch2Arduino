@@ -1,0 +1,37 @@
+{
+  "name": "scratch2arduino-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Block editor UI of Scratch2Arduino (variant A, embedded in the native webview host)",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "5.2.8",
+    "@fontsource/space-mono": "5.2.9",
+    "@mantine/core": "9.7.4",
+    "@mantine/hooks": "9.7.4",
+    "@tabler/icons-react": "3.35.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "scratch-blocks": "2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "6.0.1",
+    "blockly": "12.4.1",
+    "jsdom": "27.2.0",
+    "typescript": "5.9.3",
+    "vite": "8.0.6",
+    "vite-plugin-singlefile": "2.3.4",
+    "vitest": "4.1.5"
+  },
+  "packageManager": "pnpm@10.20.0"
+}

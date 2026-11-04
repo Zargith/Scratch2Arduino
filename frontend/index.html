@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Scratch2Arduino</title>
+		<style>
+			html,
+			body,
+			#root {
+				height: 100%;
+				margin: 0;
+				overflow: hidden;
+			}
+			/* Flyout buttons ("make a variable"), styled like Scratch. */
+			.blocklyFlyoutButton .blocklyFlyoutButtonBackground {
+				fill: #ffffff;
+				stroke: #c6c6c6;
+			}
+			.blocklyFlyout .blocklyFlyoutButton .blocklyText {
+				fill: #575e75 !important;
+			}
+			.blocklyFlyoutButton:hover .blocklyFlyoutButtonBackground {
+				fill: #e9eef2;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
+</html>
