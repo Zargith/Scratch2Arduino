@@ -9,7 +9,14 @@
 #include <mutex>
 #include <string>
 #include <thread>
+
 #include <webview/webview.h>
+// On Linux webview.h pulls in GTK, hence X11, whose macros clash with ordinary names
+// (s2a::Status, Problem::None...).
+#undef Bool
+#undef None
+#undef Status
+#undef Success
 
 namespace s2a::webview {
 
