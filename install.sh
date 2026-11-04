@@ -91,20 +91,20 @@ install_linux_deps() {
         if [ "$ASSUME_YES" -eq 1 ]; then yes_flag=(-y); fi
         packages=(build-essential cmake git pkg-config)
         if [ "$NATIVE" = ON ]; then packages+=(qt6-base-dev libgl-dev); fi
-        if [ "$WEBVIEW" = ON ]; then packages+=(libwebkit2gtk-4.1-dev); fi
+        if [ "$WEBVIEW" = ON ]; then packages+=(libwebkit2gtk-4.1-dev zenity); fi
         ${SUDO} apt-get update
         ${SUDO} apt-get install "${yes_flag[@]}" "${packages[@]}"
     elif command -v dnf >/dev/null 2>&1; then
         if [ "$ASSUME_YES" -eq 1 ]; then yes_flag=(-y); fi
         packages=(gcc-c++ make cmake git pkgconf-pkg-config)
         if [ "$NATIVE" = ON ]; then packages+=(qt6-qtbase-devel); fi
-        if [ "$WEBVIEW" = ON ]; then packages+=(webkit2gtk4.1-devel); fi
+        if [ "$WEBVIEW" = ON ]; then packages+=(webkit2gtk4.1-devel zenity); fi
         ${SUDO} dnf install "${yes_flag[@]}" "${packages[@]}"
     elif command -v pacman >/dev/null 2>&1; then
         if [ "$ASSUME_YES" -eq 1 ]; then yes_flag=(--noconfirm); fi
         packages=(base-devel cmake git pkgconf)
         if [ "$NATIVE" = ON ]; then packages+=(qt6-base); fi
-        if [ "$WEBVIEW" = ON ]; then packages+=(webkit2gtk-4.1); fi
+        if [ "$WEBVIEW" = ON ]; then packages+=(webkit2gtk-4.1 zenity); fi
         ${SUDO} pacman -S --needed "${yes_flag[@]}" "${packages[@]}"
     else
         fail "Gestionnaire de paquets non reconnu. Installe toi-même : un compilateur C++17, CMake >= $CMAKE_MIN, pkg-config, Qt 6 (Widgets) et WebKitGTK 4.1, puis relance avec --no-deps." \

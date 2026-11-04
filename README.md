@@ -128,7 +128,11 @@ Prerequisites:
 - CMake ≥ 3.25 and a C++17 compiler (GCC, Clang or MSVC)
 - Variant A: WebKitGTK 4.1 + pkg-config on Linux (WebKit on macOS and WebView2 on Windows are built in)
 - Variant B: Qt 6 (Widgets)
-- Later phases: Node.js + pnpm (variant A frontend), `arduino-cli` (downloaded by the build)
+- Variant A block editor (`frontend/`): Node.js 20+ and pnpm (`corepack enable`) to build it; without them
+  the build downloads the prebuilt editor published with the release of the same version
+  (or point `-DS2A_FRONTEND_DIST=<folder>` at a prebuilt one). On Linux, `zenity` (or `kdialog`) shows the
+  open/save dialogs.
+- `arduino-cli` is downloaded by the build
 
 ```bash
 cmake --preset release                 # add -DS2A_BUILD_NATIVE=OFF or -DS2A_BUILD_WEBVIEW=OFF to build only one variant
@@ -150,6 +154,9 @@ s2a-cli ports                                         # plugged-in boards (port 
 s2a-cli setup                                         # download the board tools once (Internet needed)
 s2a-cli compile examples/sketches/blink --board uno
 s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 on Windows
+
+s2a-cli generate examples/projects/blink/project.json # Arduino code made from a block project
+s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the board comes from the project
 ```
 
 On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
@@ -162,12 +169,32 @@ Arduino IDE installed on the same computer.
 
 On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $USER`, then log out and back in.
 
-### First project *(Phase 3)*
+### First project
 
 1. Plug in an Arduino Uno with a USB cable.
-2. Start Scratch2Arduino and select your board and port.
-3. Drag **when program starts**, **forever**, **turn LED on pin 13 on**, **wait 1 second**, **turn LED on pin 13 off**, **wait 1 second**.
-4. Click **Upload**. The on-board LED blinks!
+2. Start **Scratch2Arduino (webview)**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
+3. Under **when the program starts**, drag **forever**, then inside it **turn the built-in LED on**, **wait 1 seconds**, **turn the built-in LED off**, **wait 1 seconds**.
+4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
+5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
+
+### The native variant
+
+**Scratch2Arduino (native)** offers the same blocks and opens the same `.s2a` files, drawn by a pure C++/Qt
+canvas: drag blocks from the palette (drop them back on the palette to delete them), click a white value to
+type it, click a menu to choose a pin or an option, Ctrl + wheel to zoom, drag the background to scroll.
+
+### Working on the block editor
+
+```bash
+cd frontend
+pnpm install
+pnpm dev        # editor in a browser (the native functions report that they need the app)
+pnpm test       # unit tests (project <-> Blockly conversion)
+pnpm build      # dist/index.html + dist/media, what the app loads
+```
+
+The app looks for the editor next to its executable (`frontend/`), in `share/scratch2arduino/frontend`
+once installed, or in the folder given by the `S2A_FRONTEND_DIR` environment variable.
 
 ## Project files
 

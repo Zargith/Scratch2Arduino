@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(Scratch2Arduino
-    VERSION 0.2.0
+    VERSION 0.3.0
     DESCRIPTION "Program Arduino boards with Scratch-style blocks"
     HOMEPAGE_URL "https://github.com/Zargith/Scratch2Arduino"
     LANGUAGES C CXX)
@@ -40,6 +40,9 @@ if(S2A_BUILD_TESTS)
 endif()
 
 add_subdirectory(core)
+if(S2A_BUILD_NATIVE OR S2A_BUILD_TESTS)
+    add_subdirectory(apps/native/model)
+endif()
 
 if(S2A_BUILD_CLI)
     add_subdirectory(tools/s2a-cli)

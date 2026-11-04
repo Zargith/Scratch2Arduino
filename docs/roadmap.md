@@ -9,7 +9,10 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 0 — Setup and tooling | Done |
 | 1 — Core foundations | Done |
 | 2 — Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
-| 3 → 12 | Not started |
+| 3a — Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
+| 3b — Variant B MVP (Qt native) | Done (block canvas, same `.s2a` files and generator; upload to be checked on real boards) |
+| 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted in both variants, compiler errors mapped to blocks |
+| 5 → 12 | Not started |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.

@@ -6,6 +6,9 @@ configure_file(include/s2a/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated
 add_library(s2a_core STATIC
     src/arduino_cli.cpp
     src/blocks.cpp
+    src/build.cpp
+    src/validator.cpp
+    src/codegen.cpp
     src/boards.cpp
     src/diagnostics.cpp
     src/archive.cpp

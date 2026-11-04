@@ -1,0 +1,28 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Clignotant",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        { "id": "start", "type": "events_when_program_starts" },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              { "id": "on", "type": "pins_builtin_led", "fields": { "STATE": "ON" } },
+              { "id": "wait1", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } },
+              { "id": "off", "type": "pins_builtin_led", "fields": { "STATE": "OFF" } },
+              { "id": "wait2", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

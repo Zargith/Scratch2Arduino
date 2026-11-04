@@ -43,7 +43,7 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli compile <dossier> [--board <id>]       compile un programme Arduino\n  s2a-cli upload <dossier> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
     "unknown_board_short": "carte inconnue",
     "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
@@ -54,6 +54,70 @@
     "no_ports": "Aucune carte détectée. Branche ta carte Arduino avec un câble USB.",
     "ready": "Tout est prêt !",
     "uploading": "Envoi du programme sur la carte ({port})…",
-    "uploaded": "Le programme a été envoyé sur la carte !"
+    "uploaded": "Le programme a été envoyé sur la carte !",
+    "project_invalid": "Impossible d'ouvrir le projet « {project} » : {reason}"
+  },
+  "build": {
+    "unknown_board": "La carte « {board} » n'est pas connue. Choisis une carte dans la liste.",
+    "compiled": "Bravo, ton programme est correct ! Il utilise {text_percent} % de la mémoire de la carte {board}.",
+    "uploaded": "C'est parti : ton programme tourne maintenant sur la carte {board} !"
+  },
+  "webview": {
+    "open_title": "Ouvrir un projet",
+    "save_title": "Enregistrer le projet",
+    "file_filter": "Projets Scratch2Arduino",
+    "frontend_missing": "L'éditeur de blocs est introuvable. Réinstalle Scratch2Arduino."
+  },
+  "validation": {
+    "no_start_block": "Ton programme ne commence nulle part.",
+    "no_start_block_hint": "Ajoute le bloc « {block} » (catégorie Événements) et accroche tes blocs dessous.",
+    "loose_blocks": "Les blocs à partir de « {block} » ne sont accrochés à aucun bloc de départ : ils ne seront pas exécutés.",
+    "loose_blocks_hint": "Accroche-les sous « quand le programme démarre », ou jette-les dans la palette s'ils ne servent pas.",
+    "empty_script": "Le bloc « {block} » n'a rien en dessous.",
+    "empty_script_hint": "Accroche des blocs dessous pour dire à la carte quoi faire.",
+    "empty_mouth": "Le bloc « {block} » est vide.",
+    "empty_mouth_hint": "Glisse des blocs à l'intérieur, sinon il ne fait rien.",
+    "blocks_after_forever": "Le bloc « {block} » est placé après « répéter indéfiniment » : il ne sera jamais exécuté.",
+    "blocks_after_forever_hint": "Mets-le avant la boucle, ou à l'intérieur si tu veux qu'il se répète.",
+    "missing_condition": "Il manque une condition dans le bloc « {block} ».",
+    "missing_condition_hint": "Glisse un bloc hexagonal (par exemple « la broche … est à l'état HAUT » ou « … > … ») dans l'emplacement vide.",
+    "invalid_number": "« {value} » n'est pas un nombre, dans le bloc « {block} ».",
+    "invalid_number_hint": "Écris un nombre, par exemple 1 ou 0,5.",
+    "invalid_pin": "La broche {pin} n'existe pas sur la carte {board} (bloc « {block} »).",
+    "invalid_pin_hint": "Clique sur le numéro de broche et choisis-en une dans la liste.",
+    "pin_capability": "La broche {pin} de la carte {board} ne sait pas faire « {capability} » (bloc « {block} »).",
+    "pin_capability_hint": "Choisis une de ces broches : {pins}.",
+    "missing_variable": "Aucune variable n'est choisie dans le bloc « {block} ».",
+    "missing_variable_hint": "Crée une variable (catégorie Variables) puis choisis-la dans le bloc.",
+    "unknown_block": "Le bloc « {block} » est inconnu de cette version de Scratch2Arduino.",
+    "unknown_block_hint": "Mets Scratch2Arduino à jour, ou remplace ce bloc.",
+    "capability_digital": "numérique",
+    "capability_analog": "lecture analogique",
+    "capability_pwm": "sortie PWM",
+    "capability_interrupt": "interruption",
+    "blocked": "Problèmes à corriger avant d'envoyer ton programme : {count}."
+  },
+  "editor": {
+    "new": "Nouveau",
+    "open": "Ouvrir",
+    "save": "Enregistrer",
+    "code": "Voir le code",
+    "check": "Vérifier",
+    "upload": "Téléverser",
+    "refresh": "Chercher les cartes branchées",
+    "project_name": "Nom du projet",
+    "details": "Détails techniques",
+    "no_ports": "Aucune carte branchée",
+    "no_port": "Branche ta carte Arduino puis choisis son port avant de téléverser.",
+    "building": "Vérification du programme…",
+    "uploading": "Envoi du programme sur la carte…",
+    "saved": "Projet enregistré : %1",
+    "opened": "Projet ouvert : %1",
+    "file_filter": "Projets Scratch2Arduino",
+    "make_variable": "Créer une variable",
+    "variable_prompt": "Nom de la nouvelle variable :",
+    "code_note": "Ce code est créé à partir de tes blocs. Modifie les blocs pour le changer.",
+    "unsaved_title": "Projet non enregistré",
+    "unsaved_text": "Ton projet a des modifications non enregistrées. Veux-tu les enregistrer ?"
   }
 }

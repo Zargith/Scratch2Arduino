@@ -17,12 +17,15 @@ add_executable(s2a_core_tests
     test_arduino_cli.cpp
     test_blocks.cpp
     test_boards.cpp
+    test_build.cpp
+    test_codegen.cpp
     test_diagnostics.cpp
     test_i18n.cpp
     test_process.cpp
     test_project.cpp
     test_resources.cpp
     test_result.cpp
+    test_validator.cpp
     test_version.cpp
 )
 target_link_libraries(s2a_core_tests PRIVATE s2a::core s2a_miniz GTest::gtest_main)
@@ -34,7 +37,8 @@ if(WIN32)
     target_link_libraries(s2a_process_helper PRIVATE shell32)
 endif()
 add_dependencies(s2a_core_tests s2a_process_helper)
-target_compile_definitions(s2a_core_tests PRIVATE S2A_PROCESS_HELPER="$<TARGET_FILE:s2a_process_helper>")
+target_compile_definitions(s2a_core_tests PRIVATE S2A_PROCESS_HELPER="$<TARGET_FILE:s2a_process_helper>"
+    S2A_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples/projects")
 if(S2A_ARDUINO_CLI_EXECUTABLE)
     target_compile_definitions(s2a_core_tests PRIVATE
         S2A_BUNDLED_ARDUINO_CLI="${S2A_ARDUINO_CLI_EXECUTABLE}"

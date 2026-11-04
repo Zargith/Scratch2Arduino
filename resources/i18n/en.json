@@ -43,7 +43,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli compile <folder> [--board <id>]        compile an Arduino sketch\n  s2a-cli upload <folder> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -54,6 +54,70 @@
     "no_ports": "No board detected. Plug your Arduino board in with a USB cable.",
     "ready": "Everything is ready!",
     "uploading": "Sending the program to the board ({port})…",
-    "uploaded": "The program has been sent to the board!"
+    "uploaded": "The program has been sent to the board!",
+    "project_invalid": "Cannot open the project \"{project}\": {reason}"
+  },
+  "build": {
+    "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
+    "compiled": "Well done, your program is correct! It uses {text_percent}% of the memory of the {board} board.",
+    "uploaded": "Here we go: your program is now running on the {board} board!"
+  },
+  "webview": {
+    "open_title": "Open a project",
+    "save_title": "Save the project",
+    "file_filter": "Scratch2Arduino projects",
+    "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino."
+  },
+  "validation": {
+    "no_start_block": "Your program does not start anywhere.",
+    "no_start_block_hint": "Add the \"{block}\" block (Events category) and attach your blocks below it.",
+    "loose_blocks": "The blocks starting with \"{block}\" are not attached to a start block: they will not run.",
+    "loose_blocks_hint": "Attach them under \"when the program starts\", or drop them on the palette if you do not need them.",
+    "empty_script": "The \"{block}\" block has nothing below it.",
+    "empty_script_hint": "Attach blocks below it to tell the board what to do.",
+    "empty_mouth": "The \"{block}\" block is empty.",
+    "empty_mouth_hint": "Put blocks inside it, otherwise it does nothing.",
+    "blocks_after_forever": "The \"{block}\" block comes after \"forever\": it will never run.",
+    "blocks_after_forever_hint": "Move it before the loop, or inside it if it should repeat.",
+    "missing_condition": "A condition is missing in the \"{block}\" block.",
+    "missing_condition_hint": "Drop a hexagonal block (for example \"pin … is HIGH\" or \"… > …\") into the empty slot.",
+    "invalid_number": "\"{value}\" is not a number, in the \"{block}\" block.",
+    "invalid_number_hint": "Type a number, for example 1 or 0.5.",
+    "invalid_pin": "Pin {pin} does not exist on the {board} board (\"{block}\" block).",
+    "invalid_pin_hint": "Click the pin number and pick one from the list.",
+    "pin_capability": "Pin {pin} of the {board} board cannot do \"{capability}\" (\"{block}\" block).",
+    "pin_capability_hint": "Pick one of these pins: {pins}.",
+    "missing_variable": "No variable is chosen in the \"{block}\" block.",
+    "missing_variable_hint": "Make a variable (Variables category), then pick it in the block.",
+    "unknown_block": "This version of Scratch2Arduino does not know the \"{block}\" block.",
+    "unknown_block_hint": "Update Scratch2Arduino, or replace this block.",
+    "capability_digital": "digital",
+    "capability_analog": "analog input",
+    "capability_pwm": "PWM output",
+    "capability_interrupt": "interrupt",
+    "blocked": "Problems to fix before your program can be sent: {count}."
+  },
+  "editor": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "code": "Show code",
+    "check": "Check",
+    "upload": "Upload",
+    "refresh": "Look for plugged-in boards",
+    "project_name": "Project name",
+    "details": "Technical details",
+    "no_ports": "No board plugged in",
+    "no_port": "Plug in your Arduino board, then pick its port before uploading.",
+    "building": "Checking the program…",
+    "uploading": "Sending the program to the board…",
+    "saved": "Project saved: %1",
+    "opened": "Project opened: %1",
+    "file_filter": "Scratch2Arduino projects",
+    "make_variable": "Make a variable",
+    "variable_prompt": "Name of the new variable:",
+    "code_note": "This code is made from your blocks. Change the blocks to change it.",
+    "unsaved_title": "Unsaved project",
+    "unsaved_text": "Your project has unsaved changes. Do you want to save them?"
   }
 }
