@@ -63,23 +63,30 @@ std::string identifyBoard(const DetectedPort& port, const BoardDatabase& boards)
     return {};
 }
 
-CommandOutcome commandOutcome(const process::Output& output, const Json& json) {
+/// Outcome of a command printing JSON. arduino-cli 1.5.1 writes its result to stdout, but a
+/// fatal error ({"error": ...}) to stderr; uploader messages are at the root on success and
+/// under "output" on failure.
+CommandOutcome commandOutcome(const process::Output& output) {
     CommandOutcome outcome;
     outcome.timedOut = output.timedOut;
     outcome.success = output.succeeded();
+    const Json out = parseOutput(output.out);
+    const Json err = parseOutput(output.err);
+    const Json& json = out.empty() ? err : out;
     outcome.error = stringOr(json, "error");
-    // upload/install: {"output": {"stdout": ..., "stderr": ...}}
-    if (json.contains("output") && json.at("output").is_object()) {
-        outcome.out = stringOr(json.at("output"), "stdout");
-        outcome.err = stringOr(json.at("output"), "stderr");
+    if (outcome.error.empty()) {
+        outcome.error = stringOr(err, "error");
     }
-    if (outcome.out.empty() && outcome.err.empty() && json.empty()) {
+    const Json& streams = json.contains("output") && json.at("output").is_object() ? json.at("output") : json;
+    outcome.out = stringOr(streams, "stdout");
+    outcome.err = stringOr(streams, "stderr");
+    if (out.empty() && err.empty()) {
         // Not JSON (crash, very old arduino-cli): keep the raw streams.
         outcome.out = output.out;
         outcome.err = output.err;
     }
     if (outcome.error.empty() && !outcome.success) {
-        outcome.error = output.err;
+        outcome.error = err.empty() ? output.err : outcome.err;
     }
     return outcome;
 }
@@ -193,13 +200,13 @@ Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) co
         return index.error();
     }
     if (!index.value().succeeded()) {
-        return commandOutcome(index.value(), parseOutput(index.value().out));
+        return commandOutcome(index.value());
     }
     auto install = run({"core", "install", std::string(platform)}, kInstallTimeout);
     if (!install.ok()) {
         return install.error();
     }
-    return commandOutcome(install.value(), parseOutput(install.value().out));
+    return commandOutcome(install.value());
 }
 
 Result<std::vector<DetectedPort>> ArduinoCli::detectPorts(const BoardDatabase& boards) const {
@@ -260,7 +267,7 @@ Result<CompileOutcome> ArduinoCli::compile(const fs::path& sketch, const Board& 
     }
     const Json json = parseOutput(output.value().out);
     CompileOutcome outcome;
-    static_cast<CommandOutcome&>(outcome) = commandOutcome(output.value(), json);
+    static_cast<CommandOutcome&>(outcome) = commandOutcome(output.value());
     outcome.out = stringOr(json, "compiler_out");
     outcome.err = stringOr(json, "compiler_err");
     if (json.empty()) {
@@ -288,7 +295,7 @@ Result<CommandOutcome> ArduinoCli::upload(const fs::path& sketch, const Board& b
     if (!output.ok()) {
         return output.error();
     }
-    return commandOutcome(output.value(), parseOutput(output.value().out));
+    return commandOutcome(output.value());
 }
 
 } // namespace s2a::toolchain
