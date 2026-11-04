@@ -1,0 +1,268 @@
+#include "s2a/live.hpp"
+
+#include <deque>
+#include <gtest/gtest.h>
+#include <map>
+#include <sstream>
+
+namespace {
+
+using namespace s2a::project;
+using s2a::BlockCatalog;
+using s2a::live::Interpreter;
+using s2a::live::PinMode;
+using std::chrono::milliseconds;
+
+/// Records what the interpreter does to the board; inputs are set by the test.
+struct FakePins final : s2a::live::Pins {
+    std::vector<std::string> log;
+    std::map<int, bool> digitalInputs;
+    std::map<int, int> analogInputs;
+
+    void setMode(int pin, PinMode mode) override {
+        log.push_back("M" + std::to_string(pin) + (mode == PinMode::Output ? "O" : "I"));
+    }
+    void digitalWrite(int pin, bool high) override { log.push_back("D" + std::to_string(pin) + (high ? "=1" : "=0")); }
+    void analogWrite(int pin, int value) override { log.push_back("P" + std::to_string(pin) + "=" + std::to_string(value)); }
+    bool digitalRead(int pin) override { return digitalInputs[pin]; }
+    int analogRead(int pin) override { return analogInputs[pin]; }
+    void reset() override { log.emplace_back("X"); }
+
+    std::vector<std::string> take() {
+        auto result = std::move(log);
+        log.clear();
+        return result;
+    }
+};
+
+Block block(std::string id, std::string type) {
+    Block result;
+    result.id = std::move(id);
+    result.type = std::move(type);
+    return result;
+}
+
+Block led(std::string id, const char* state) {
+    Block result = block(std::move(id), "pins_builtin_led");
+    result.fields["STATE"] = state;
+    return result;
+}
+
+Block wait(std::string id, const char* seconds) {
+    Block result = block(std::move(id), "control_wait");
+    result.inputs["SECONDS"].value = seconds;
+    return result;
+}
+
+Project withScript(Stack blocks) {
+    Project project;
+    project.boardId = "uno";
+    project.scripts.push_back({0, 0, std::move(blocks)});
+    return project;
+}
+
+Project blink(const char* seconds = "1") {
+    Block forever = block("loop", "control_forever");
+    forever.statements["SUBSTACK"] = {led("on", "ON"), wait("w1", "1"), led("off", "OFF"), wait("w2", seconds)};
+    return withScript({block("hat", "events_when_program_starts"), forever});
+}
+
+const s2a::Board& uno() {
+    return *s2a::BoardDatabase::builtin().find("uno");
+}
+
+TEST(Interpreter, BlinksWithoutBlockingBetweenSteps) {
+    FakePins pins;
+    Interpreter interpreter(blink(), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w1"});
+    interpreter.step(milliseconds(500));
+    EXPECT_TRUE(pins.take().empty()); // still waiting
+    interpreter.step(milliseconds(1000));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=0"});
+    interpreter.step(milliseconds(2000)); // end of the turn: the loop gives way
+    interpreter.step(milliseconds(2010));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
+    EXPECT_FALSE(interpreter.finished());
+}
+
+TEST(Interpreter, RepeatsAndFinishes) {
+    FakePins pins;
+    Block repeat = block("repeat", "control_repeat");
+    repeat.inputs["TIMES"].value = "3";
+    repeat.statements["SUBSTACK"] = {led("on", "ON")};
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), repeat, led("off", "OFF")}),
+                            BlockCatalog::builtin(), uno(), pins);
+    for (int i = 0; i < 10 && !interpreter.finished(); ++i) {
+        interpreter.step(milliseconds(i));
+    }
+    EXPECT_TRUE(interpreter.finished());
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1", "D13=1", "D13=1", "D13=0"}));
+}
+
+TEST(Interpreter, ReadsInputsForConditions) {
+    FakePins pins;
+    Block read = block("read", "pins_digital_read");
+    read.fields["PIN"] = "2";
+    Block write = block("write", "pins_digital_write");
+    write.fields = {{"PIN", "7"}, {"STATE", "HIGH"}};
+    Block until = block("until", "control_wait_until");
+    until.inputs["CONDITION"].block = read;
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), until, write}), BlockCatalog::builtin(),
+                            uno(), pins);
+    interpreter.step(milliseconds(0));
+    interpreter.step(milliseconds(10));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"M2I"}); // waiting for the button
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"until"});
+    pins.digitalInputs[2] = true;
+    interpreter.step(milliseconds(20));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M7O", "D7=1"}));
+    EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, ComputesWithVariables) {
+    FakePins pins;
+    Project project;
+    project.boardId = "uno";
+    project.variables.push_back({"v", "level", 10});
+    Block get = block("get", "variables_get");
+    get.fields["VARIABLE"] = "v";
+    Block analog = block("analog", "pins_analog_read");
+    analog.fields["PIN"] = "A0";
+    Block map = block("map", "operators_map");
+    map.inputs["VALUE"].block = analog;
+    map.inputs["FROM_LOW"].value = "0";
+    map.inputs["FROM_HIGH"].value = "1023";
+    map.inputs["TO_LOW"].value = "0";
+    map.inputs["TO_HIGH"].value = "255";
+    Block change = block("change", "variables_change");
+    change.fields["VARIABLE"] = "v";
+    change.inputs["VALUE"].block = map;
+    Block pwm = block("pwm", "pins_analog_write");
+    pwm.fields["PIN"] = "9";
+    pwm.inputs["VALUE"].block = get;
+    project.scripts.push_back({0, 0, {block("hat", "events_when_program_starts"), change, pwm}});
+    pins.analogInputs[14] = 1023; // A0 is pin 14 on an Uno
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("v"), 265);
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M14I", "M9O", "P9=255"})); // clamped to 255
+}
+
+TEST(Interpreter, RunsScriptsSideBySide) {
+    FakePins pins;
+    Project project = blink();
+    Block forever = block("loop2", "control_forever");
+    Block write = block("write", "pins_digital_write");
+    write.fields = {{"PIN", "7"}, {"STATE", "HIGH"}};
+    forever.statements["SUBSTACK"] = {write, wait("w3", "0.5")};
+    project.scripts.push_back({300, 0, {block("hat2", "events_when_program_starts"), forever}});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1", "M7O", "D7=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), (std::vector<std::string>{"w1", "w3"}));
+}
+
+TEST(Interpreter, ChangesTakeEffectWithoutRestarting) {
+    FakePins pins;
+    Project project = blink("1");
+    project.variables.push_back({"v", "count", 0});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0)); // LED on, waiting in w1
+    (void)pins.take();
+
+    // The child changes the second wait to 0.2 s while the board runs.
+    Project edited = blink("0.2");
+    edited.variables = project.variables;
+    interpreter.update(edited);
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w1"}); // same place
+    interpreter.step(milliseconds(1000)); // the wait started before the change ends as planned
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=0"});
+    interpreter.step(milliseconds(1200)); // the new duration of w2 is used
+    interpreter.step(milliseconds(1210));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
+}
+
+TEST(Interpreter, RestartsAScriptWhoseBlocksDisappeared) {
+    FakePins pins;
+    Interpreter interpreter(blink(), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    (void)pins.take();
+    Project other = withScript({block("hat", "events_when_program_starts"), led("solo", "OFF")});
+    interpreter.update(other);
+    interpreter.step(milliseconds(10));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=0"});
+    EXPECT_TRUE(interpreter.finished());
+}
+
+/// Answers like the S2A live firmware.
+struct FakeFirmware final : s2a::serial::LineTransport {
+    std::deque<std::string> pending{"S2A 1"};
+    std::vector<std::string> received;
+    bool silent = false;
+
+    s2a::Status writeLine(std::string_view line) override {
+        received.emplace_back(line);
+        if (silent) {
+            return s2a::success();
+        }
+        std::istringstream words{std::string(line)};
+        std::string command;
+        int pin = 0;
+        words >> command >> pin;
+        if (command == "?") {
+            pending.emplace_back("S2A 1");
+        } else if (command == "R") {
+            pending.push_back("r " + std::to_string(pin) + " 1");
+        } else if (command == "A") {
+            pending.push_back("a " + std::to_string(pin) + " 512");
+        } else {
+            pending.emplace_back("ok");
+        }
+        return s2a::success();
+    }
+
+    s2a::Result<std::optional<std::string>> readLine(milliseconds /*timeout*/) override {
+        if (pending.empty()) {
+            return std::optional<std::string>();
+        }
+        std::string line = pending.front();
+        pending.pop_front();
+        return std::optional<std::string>(line);
+    }
+};
+
+TEST(LiveLink, SpeaksTheFirmwareProtocol) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    link.setMode(13, PinMode::Output);
+    link.digitalWrite(13, true);
+    link.analogWrite(9, 300);
+    EXPECT_TRUE(link.digitalRead(2));
+    EXPECT_EQ(link.analogRead(14), 512);
+    link.reset();
+    EXPECT_EQ(firmware.received, (std::vector<std::string>{"M 13 O", "D 13 1", "P 9 255", "R 2", "A 14", "X"}));
+    EXPECT_FALSE(link.takeError().has_value());
+}
+
+TEST(LiveLink, ReportsABoardThatDoesNotAnswer) {
+    FakeFirmware firmware;
+    firmware.pending.clear();
+    firmware.silent = true;
+    s2a::live::LiveLink link(firmware);
+    EXPECT_FALSE(link.handshake(milliseconds(50)).ok());
+    link.digitalWrite(13, true);
+    const auto error = link.takeError();
+    ASSERT_TRUE(error.has_value());
+    EXPECT_EQ(error->code, s2a::ErrorCode::BoardNotResponding);
+}
+
+TEST(LiveLink, EmbedsTheFirmware) {
+    const auto source = s2a::live::firmwareSource();
+    EXPECT_NE(source.find("S2A 1"), std::string_view::npos);
+    EXPECT_NE(source.find("void loop()"), std::string_view::npos);
+}
+
+} // namespace

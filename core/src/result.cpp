@@ -24,6 +24,10 @@ std::string_view errorMessageKey(ErrorCode code) noexcept {
         return "error.unknown_board";
     case ErrorCode::ProcessFailed:
         return "error.process_failed";
+    case ErrorCode::PortFailed:
+        return "error.port_failed";
+    case ErrorCode::BoardNotResponding:
+        return "error.board_not_responding";
     }
     return "error.unknown";
 }

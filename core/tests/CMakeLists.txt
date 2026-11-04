@@ -21,6 +21,7 @@ add_executable(s2a_core_tests
     test_codegen.cpp
     test_diagnostics.cpp
     test_i18n.cpp
+    test_live.cpp
     test_process.cpp
     test_project.cpp
     test_resources.cpp

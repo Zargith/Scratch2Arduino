@@ -157,7 +157,12 @@ s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 
 
 s2a-cli generate examples/projects/blink/project.json # Arduino code made from a block project
 s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the board comes from the project
+s2a-cli live examples/projects/blink/project.json --port /dev/ttyACM0   # Live mode (Ctrl+C stops)
 ```
+
+**Live mode** runs the blocks on the computer and drives the board through the small *S2A live*
+firmware (`firmware/s2a_live`, sent automatically the first time): a change in the blocks takes effect
+without uploading again. Variables are printed when they change.
 
 On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
 in PowerShell `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" ports`.
