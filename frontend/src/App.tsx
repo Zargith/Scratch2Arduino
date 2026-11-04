@@ -173,7 +173,7 @@ export function App() {
 			setPath(opened.path);
 			setDirty(false);
 			reload(projectToWorkspace(opened.project));
-			setStatus({ kind: "success", message: t("status.opened", { path: opened.path }) });
+			setStatus({ kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) });
 		} catch (error) {
 			fail(error);
 		}

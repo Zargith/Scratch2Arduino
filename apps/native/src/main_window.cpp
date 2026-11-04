@@ -302,7 +302,7 @@ void MainWindow::openProject() {
         return;
     }
     const QString file = QFileDialog::getOpenFileName(this, text("editor.open"), QDir::homePath(),
-                                                      text("editor.file_filter") + QStringLiteral(" (*.s2a)"));
+                                                      text("editor.file_filter") + QStringLiteral(" (*.s2a *.json)"));
     if (!file.isEmpty()) {
         (void)openFile(file);
     }
@@ -320,7 +320,8 @@ bool MainWindow::openFile(const QString& path) {
     }
     name_->setText(qt(project.name));
     canvas_->setProject(std::move(project));
-    path_ = path;
+    // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
+    path_ = path.endsWith(QStringLiteral(".s2a")) ? path : QString();
     dirty_ = false;
     setStatus(text("editor.opened").arg(QDir::toNativeSeparators(path)));
     updateTitle();
