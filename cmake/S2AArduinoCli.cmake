@@ -11,7 +11,17 @@ set(S2A_ARDUINO_CLI_VERSION "1.5.1")
 set(S2A_ARDUINO_CLI_EXECUTABLE "")
 
 if(S2A_BUNDLE_ARDUINO_CLI)
-    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _s2a_cpu)
+    # The tool ships with the application: pick the archive for the target, not the build host.
+    set(_s2a_cpu "${CMAKE_SYSTEM_PROCESSOR}")
+    if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+        list(LENGTH CMAKE_OSX_ARCHITECTURES _s2a_arch_count)
+        if(_s2a_arch_count GREATER 1)
+            message(WARNING "Universal macOS build: arduino-cli has no universal binary, bundling the ${CMAKE_SYSTEM_PROCESSOR} one.")
+        else()
+            set(_s2a_cpu "${CMAKE_OSX_ARCHITECTURES}")
+        endif()
+    endif()
+    string(TOLOWER "${_s2a_cpu}" _s2a_cpu)
     if(WIN32)
         set(_s2a_asset "Windows_64bit.zip")
         set(_s2a_hash "fabe42e0eb04d00e776a66178299ff95a46c623dbc260f997e58fd514853dd40")
@@ -28,7 +38,7 @@ if(S2A_BUNDLE_ARDUINO_CLI)
         set(_s2a_asset "Linux_64bit.tar.gz")
         set(_s2a_hash "28a8e119c498a25607821c36cb2dc49e8463941b261a0d99091baa7bc692dd2b")
     else()
-        message(WARNING "No bundled arduino-cli for ${CMAKE_HOST_SYSTEM_PROCESSOR}: the arduino-cli found in the PATH will be used.")
+        message(WARNING "No bundled arduino-cli for ${_s2a_cpu}: the arduino-cli found in the PATH will be used.")
     endif()
 
     if(_s2a_asset)
@@ -52,10 +62,14 @@ function(s2a_bundle_arduino_cli target)
         return()
     endif()
     get_filename_component(name "${S2A_ARDUINO_CLI_EXECUTABLE}" NAME)
-    # Build tree: next to the executable (inside Contents/MacOS for a macOS bundle).
-    add_custom_command(TARGET ${target} POST_BUILD
+    # Build tree: next to the executable (inside Contents/MacOS for a macOS bundle). A target that
+    # runs on every build (copy_if_different is a no-op when up to date) rather than a POST_BUILD
+    # step, which would not run again after a reconfigure that does not relink the application.
+    add_custom_target(${target}_arduino_cli ALL
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "$<TARGET_FILE_DIR:${target}>"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${S2A_ARDUINO_CLI_EXECUTABLE}" "$<TARGET_FILE_DIR:${target}>/${name}"
         VERBATIM)
+    add_dependencies(${target}_arduino_cli ${target})
     # Install tree.
     get_target_property(is_bundle ${target} MACOSX_BUNDLE)
     if(APPLE AND is_bundle)
