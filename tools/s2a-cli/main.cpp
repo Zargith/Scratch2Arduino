@@ -3,24 +3,34 @@
 //   s2a-cli boards                                 supported boards
 //   s2a-cli ports                                  plugged-in boards
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
-//   s2a-cli compile <sketch> [--board <id>]        compile an Arduino sketch folder
-//   s2a-cli upload <sketch> --port <port> [--board <id>]
+//   s2a-cli generate <project>                     print the Arduino code of a project
+//   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
+//   s2a-cli upload <sketch|project> --port <port> [--board <id>]
+// A project is a .s2a file or a project.json; its board is used unless --board is given.
 //   options: --lang fr|en, --verbose
 #include "s2a/arduino_cli.hpp"
 #include "s2a/boards.hpp"
+#include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/i18n.hpp"
+#include "s2a/project.hpp"
 #include "s2a/version.hpp"
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <set>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 namespace {
@@ -76,9 +86,14 @@ private:
     int ensurePlatform(const ArduinoCli& cli, const s2a::Board& board) const;
     int compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path& sketch, const fs::path& build) const;
 
+    [[nodiscard]] std::optional<s2a::project::Project> loadProject(const fs::path& path) const;
+    /// Sketch folder to compile: the folder itself, or the code generated from a project.
+    [[nodiscard]] std::optional<fs::path> sketchFor(const fs::path& path, const s2a::Board*& board) const;
+
     int boards() const;
     int ports() const;
     int setup() const;
+    int generateCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
     int version() const;
@@ -196,6 +211,74 @@ int Cli::ports() const {
     return kSuccess;
 }
 
+std::optional<s2a::project::Project> Cli::loadProject(const fs::path& path) const {
+    s2a::Result<s2a::project::Project> project = [&]() -> s2a::Result<s2a::project::Project> {
+        if (path.extension() == ".json") {
+            std::ifstream file(path, std::ios::binary);
+            if (!file) {
+                return s2a::Error{s2a::ErrorCode::FileNotFound, path.u8string()};
+            }
+            std::ostringstream content;
+            content << file.rdbuf();
+            return s2a::project::fromJson(content.str());
+        }
+        return s2a::project::load(path);
+    }();
+    if (!project.ok()) {
+        fail("cli.project_invalid", {{"project", path.filename().u8string()},
+                                     {"reason", tr(s2a::errorMessageKey(project.error().code))}});
+        if (options_.verbose) {
+            std::cerr << project.error().detail << '\n';
+        }
+        return std::nullopt;
+    }
+    return std::move(project).value();
+}
+
+std::optional<fs::path> Cli::sketchFor(const fs::path& path, const s2a::Board*& board) const {
+    std::error_code error;
+    if (fs::is_directory(path, error)) {
+        return path;
+    }
+    const auto project = loadProject(path);
+    if (!project) {
+        return std::nullopt;
+    }
+    if (!options_.boardGiven) {
+        board = s2a::BoardDatabase::builtin().find(project->boardId);
+        if (board == nullptr) {
+            fail("cli.unknown_board_short");
+            return std::nullopt;
+        }
+    }
+    // "blink/project.json" is named after its folder, "blink.s2a" after the file.
+    const fs::path named = path.extension() == ".json" ? path.parent_path() : path;
+    const std::string name = s2a::codegen::identifier(named.stem().u8string());
+    const fs::path folder = s2a::toolchain::userDataDirectory() / "sketches" / name;
+    fs::create_directories(folder, error);
+    std::ofstream file(folder / (name + ".ino"), std::ios::binary | std::ios::trunc);
+    file << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), board).source;
+    if (!file) {
+        fail("cli.sketch_missing", {{"sketch", folder.u8string()}});
+        return std::nullopt;
+    }
+    return folder;
+}
+
+int Cli::generateCommand() const {
+    if (options_.positional.size() != 1) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto project = loadProject(fs::absolute(fs::u8path(options_.positional[0])));
+    if (!project) {
+        return kFailure;
+    }
+    const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    std::cout << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), selected).source;
+    return kSuccess;
+}
+
 int Cli::setup() const {
     const auto cli = arduinoCli();
     if (!cli) {
@@ -235,7 +318,11 @@ int Cli::compileCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = fs::absolute(fs::u8path(options_.positional[0]));
+    const auto folder = sketchFor(fs::absolute(fs::u8path(options_.positional[0])), selected);
+    if (!folder) {
+        return kFailure;
+    }
+    const fs::path& sketch = *folder;
     const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
     return compile(*cli, *selected, sketch, build);
 }
@@ -250,7 +337,11 @@ int Cli::uploadCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = fs::absolute(fs::u8path(options_.positional[0]));
+    const auto folder = sketchFor(fs::absolute(fs::u8path(options_.positional[0])), selected);
+    if (!folder) {
+        return kFailure;
+    }
+    const fs::path& sketch = *folder;
     const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
     if (const int status = compile(*cli, *selected, sketch, build); status != kSuccess) {
         return status;
@@ -291,6 +382,9 @@ int Cli::run() {
     }
     if (options_.command == "setup") {
         return setup();
+    }
+    if (options_.command == "generate") {
+        return generateCommand();
     }
     if (options_.command == "compile") {
         return compileCommand();
@@ -342,13 +436,40 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
     return options;
 }
 
+/// Arguments in UTF-8. On Windows argv uses the ANSI code page, so read the UTF-16
+/// command line instead (paths with accents would not be found otherwise).
+std::vector<std::string> utf8Arguments(int argc, char* argv[]) {
+#ifdef _WIN32
+    (void)argc;
+    (void)argv;
+    std::vector<std::string> result;
+    int count = 0;
+    LPWSTR* wide = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (wide == nullptr) {
+        return result;
+    }
+    for (int i = 1; i < count; ++i) {
+        const int size = WideCharToMultiByte(CP_UTF8, 0, wide[i], -1, nullptr, 0, nullptr, nullptr);
+        std::string arg(size > 1 ? static_cast<std::size_t>(size - 1) : 0U, '\0');
+        if (size > 1) {
+            WideCharToMultiByte(CP_UTF8, 0, wide[i], -1, arg.data(), size, nullptr, nullptr);
+        }
+        result.push_back(std::move(arg));
+    }
+    LocalFree(static_cast<HLOCAL>(wide));
+    return result;
+#else
+    return {argv + 1, argv + argc};
+#endif
+}
+
 } // namespace
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // accents in French messages
 #endif
-    const std::vector<std::string> args(argv + 1, argv + argc);
+    const std::vector<std::string> args = utf8Arguments(argc, argv);
     auto options = parse(args);
     if (!options) {
         std::cerr << s2a::tr("cli.usage", s2a::detectSystemLanguage()) << '\n';

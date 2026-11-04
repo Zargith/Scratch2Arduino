@@ -43,7 +43,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli compile <folder> [--board <id>]        compile an Arduino sketch\n  s2a-cli upload <folder> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -54,6 +54,7 @@
     "no_ports": "No board detected. Plug your Arduino board in with a USB cable.",
     "ready": "Everything is ready!",
     "uploading": "Sending the program to the board ({port})…",
-    "uploaded": "The program has been sent to the board!"
+    "uploaded": "The program has been sent to the board!",
+    "project_invalid": "Cannot open the project \"{project}\": {reason}"
   }
 }

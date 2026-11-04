@@ -17,6 +17,7 @@ add_executable(s2a_core_tests
     test_arduino_cli.cpp
     test_blocks.cpp
     test_boards.cpp
+    test_codegen.cpp
     test_diagnostics.cpp
     test_i18n.cpp
     test_process.cpp
