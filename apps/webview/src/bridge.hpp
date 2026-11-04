@@ -9,10 +9,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
-
-namespace webview {
-class webview;
-} // namespace webview
+#include <webview/webview.h>
 
 namespace s2a::webview {
 
