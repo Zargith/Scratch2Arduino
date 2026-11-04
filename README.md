@@ -2,7 +2,7 @@
 
 > Program real Arduino boards with Scratch-style blocks — no coding experience required.
 
-**Status: pre-alpha — Phase 1 done (core foundations).** Both variants build and open a welcome window; the shared core knows the boards, the blocks and the `.s2a` project format, but the block editor is not there yet. See the [roadmap](docs/roadmap.md).
+**Status: pre-alpha — Phase 2 done (Arduino toolchain).** Both variants build and open a welcome window; the shared core knows the boards, the blocks and the `.s2a` project format, and compiles and uploads Arduino programs through the bundled `arduino-cli` (try it with `s2a-cli`). The block editor is not there yet. See the [roadmap](docs/roadmap.md).
 
 ---
 
@@ -95,10 +95,11 @@ Scratch2Arduino/
 │   └── native/             # variant B: Qt 6 application
 ├── frontend/               # (Phase 3a) variant A UI: scratch-blocks + React (built with pnpm)
 ├── firmware/               # (Phase 5) S2A live firmware for Arduino / ESP boards
+├── tools/s2a-cli/          # command-line access to the toolchain
 ├── installer/
 │   └── windows/            # installer.exe script (Inno Setup / NSIS)
 ├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
-├── examples/               # (Phase 7) example projects (.s2a)
+├── examples/               # sketches (Blink); example projects (.s2a) in Phase 7
 └── docs/                   # roadmap, block catalog guide; later user guide, tutorials
 ```
 
@@ -137,6 +138,29 @@ cmake --install build/release
 
 cmake --preset core-only && cmake --build --preset core-only   # core + tests, no GUI dependencies
 ```
+
+### Check the toolchain with `s2a-cli`
+
+`s2a-cli` is installed next to the applications. It uses the same bundled `arduino-cli` and the same
+friendly messages, and is handy to check a classroom computer before a workshop:
+
+```bash
+s2a-cli boards                                        # supported boards
+s2a-cli ports                                         # plugged-in boards (port and board name)
+s2a-cli setup                                         # download the board tools once (Internet needed)
+s2a-cli compile examples/sketches/blink --board uno
+s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 on Windows
+```
+
+On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
+in PowerShell `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" ports`.
+
+Messages are in the system language; `--lang en` or `--lang fr` forces one, `--verbose` shows the raw tool output.
+Scratch2Arduino keeps its own copy of the Arduino cores and libraries (in `~/.local/share/Scratch2Arduino`,
+`~/Library/Application Support/Scratch2Arduino` or `%LOCALAPPDATA%\Scratch2Arduino`), so it never changes an
+Arduino IDE installed on the same computer.
+
+On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $USER`, then log out and back in.
 
 ### First project *(Phase 3)*
 

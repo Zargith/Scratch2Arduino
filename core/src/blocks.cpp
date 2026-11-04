@@ -85,7 +85,14 @@ void checkPlaceholders(const std::string& message, std::size_t argCount, const s
             issues.add(where, "'%' must be followed by an argument number");
             continue;
         }
-        const auto index = static_cast<std::size_t>(std::stoul(message.substr(pos + 1, end - pos - 1)));
+        // Bounded parsing: no block has thousands of arguments, and std::stoul would throw on overflow.
+        constexpr std::size_t kMaxDigits = 4;
+        const std::string digits = message.substr(pos + 1, end - pos - 1);
+        if (digits.size() > kMaxDigits) {
+            issues.add(where, "placeholder %" + digits + " has no matching argument");
+            continue;
+        }
+        const auto index = static_cast<std::size_t>(std::stoul(digits));
         if (index == 0 || index > argCount) {
             issues.add(where, "placeholder %" + std::to_string(index) + " has no matching argument");
         } else {

@@ -24,6 +24,36 @@
     "invalid_format": "This file does not look like a Scratch2Arduino project.",
     "unsupported_version": "This project was made with a newer version of Scratch2Arduino. Update the software to open it.",
     "invalid_catalog": "The Scratch2Arduino block list is damaged. Reinstall the software.",
+    "process_failed": "A tool needed by Scratch2Arduino could not be started. Reinstall the software.",
     "unknown_board": "This Arduino board is not supported (yet)."
+  },
+  "toolchain": {
+    "none": "Everything went fine.",
+    "platform_missing": "The tools for this board are not installed yet. They will be downloaded (only once, Internet needed).",
+    "library_missing": "The program uses the \"{library}\" library, which is not installed.",
+    "compiler_error": "The program has {count} error(s). Check the highlighted blocks.",
+    "sketch_too_big": "The program is too big for this board's memory. Try to simplify it, or use a bigger board (Arduino Mega).",
+    "not_enough_memory": "The program uses too many variables for this board's memory. Try to remove some, or use a bigger board (Arduino Mega).",
+    "port_not_found": "The board cannot be found on port {port}. Check that it is plugged in, then choose the port again.",
+    "port_busy": "Port {port} is already used by another program (serial monitor, Arduino IDE…). Close it and try again.",
+    "port_permission_denied": "You are not allowed to use port {port}. On Linux, add your account to the \"dialout\" group (sudo usermod -aG dialout $USER), then log out and back in.",
+    "board_not_responding": "The board on {port} does not respond. Check that the right board is selected, try another USB cable, or press the board's RESET button.",
+    "network_unavailable": "The required tools cannot be downloaded. Check your Internet connection, then try again.",
+    "timeout": "The operation took too long and was stopped. Try again.",
+    "unknown": "Something unexpected went wrong. The technical details can help find the problem."
+  },
+  "cli": {
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli compile <folder> [--board <id>]        compile an Arduino sketch\n  s2a-cli upload <folder> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
+    "unknown_board_short": "unknown board",
+    "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
+    "installing_platform": "Installing the tools for {board} (only once, this can take a few minutes)…",
+    "sketch_missing": "The folder \"{sketch}\" does not contain an Arduino program (a .ino file named like the folder).",
+    "compiling": "Compiling \"{sketch}\" for {board}…",
+    "compiled": "Compiled: the program uses {text} of {text_max} bytes ({text_percent}%), the variables {data} of {data_max} bytes.",
+    "no_ports": "No board detected. Plug your Arduino board in with a USB cable.",
+    "ready": "Everything is ready!",
+    "uploading": "Sending the program to the board ({port})…",
+    "uploaded": "The program has been sent to the board!"
   }
 }

@@ -24,6 +24,36 @@
     "invalid_format": "Ce fichier ne ressemble pas à un projet Scratch2Arduino.",
     "unsupported_version": "Ce projet a été créé avec une version plus récente de Scratch2Arduino. Mets à jour le logiciel pour l'ouvrir.",
     "invalid_catalog": "La liste des blocs de Scratch2Arduino est abîmée. Réinstalle le logiciel.",
+    "process_failed": "Un outil nécessaire à Scratch2Arduino n'a pas pu être lancé. Réinstalle le logiciel.",
     "unknown_board": "Cette carte Arduino n'est pas (encore) prise en charge."
+  },
+  "toolchain": {
+    "none": "Tout s'est bien passé.",
+    "platform_missing": "Les outils pour cette carte ne sont pas encore installés. Ils vont être téléchargés (une seule fois, il faut Internet).",
+    "library_missing": "Le programme utilise la bibliothèque « {library} », qui n'est pas installée.",
+    "compiler_error": "Le programme contient {count} erreur(s). Vérifie les blocs signalés.",
+    "sketch_too_big": "Le programme est trop gros pour la mémoire de cette carte. Essaie de le simplifier, ou utilise une carte plus grande (Arduino Mega).",
+    "not_enough_memory": "Le programme utilise trop de variables pour la mémoire de cette carte. Essaie d'en supprimer, ou utilise une carte plus grande (Arduino Mega).",
+    "port_not_found": "La carte n'est pas trouvée sur le port {port}. Vérifie qu'elle est bien branchée, puis choisis à nouveau le port.",
+    "port_busy": "Le port {port} est déjà utilisé par un autre programme (moniteur série, Arduino IDE…). Ferme-le puis réessaie.",
+    "port_permission_denied": "Tu n'as pas le droit d'utiliser le port {port}. Sous Linux, ajoute ton compte au groupe « dialout » (sudo usermod -aG dialout $USER), puis déconnecte-toi et reconnecte-toi.",
+    "board_not_responding": "La carte branchée sur {port} ne répond pas. Vérifie que la bonne carte est choisie, essaie un autre câble USB, ou appuie sur le bouton RESET de la carte.",
+    "network_unavailable": "Impossible de télécharger les outils nécessaires. Vérifie ta connexion à Internet, puis réessaie.",
+    "timeout": "L'opération a pris trop de temps et a été arrêtée. Réessaie.",
+    "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
+  },
+  "cli": {
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli compile <dossier> [--board <id>]       compile un programme Arduino\n  s2a-cli upload <dossier> --port <port> [--board <id>]\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
+    "unknown_board_short": "carte inconnue",
+    "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
+    "installing_platform": "Installation des outils pour {board} (une seule fois, cela peut prendre quelques minutes)…",
+    "sketch_missing": "Le dossier « {sketch} » ne contient pas de programme Arduino (un fichier .ino du même nom que le dossier).",
+    "compiling": "Compilation de « {sketch} » pour {board}…",
+    "compiled": "Compilation réussie : le programme occupe {text} octets sur {text_max} ({text_percent} %), les variables {data} octets sur {data_max}.",
+    "no_ports": "Aucune carte détectée. Branche ta carte Arduino avec un câble USB.",
+    "ready": "Tout est prêt !",
+    "uploading": "Envoi du programme sur la carte ({port})…",
+    "uploaded": "Le programme a été envoyé sur la carte !"
   }
 }

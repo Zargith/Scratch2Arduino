@@ -109,6 +109,9 @@ TEST(CatalogValidation, ChecksPlaceholders) {
     expectRejected(R"("en": "do %2 with %1")", R"("en": "do %1 with %1")", "%2 must appear exactly once");
     expectRejected(R"("en": "do %2 with %1")", R"("en": "do %2 with %3")", "%3 has no matching argument");
     expectRejected(R"("en": "do %2 with %1")", R"("en": "do %2 with %")", "must be followed by an argument number");
+    // Must be reported, not thrown (std::stoul overflow).
+    expectRejected(R"("en": "do %2 with %1")", R"("en": "do %2 with %1 %99999999999999999999999999999")",
+                   "has no matching argument");
 }
 
 TEST(CatalogValidation, ChecksIdentifiersAndColours) {

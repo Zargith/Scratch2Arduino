@@ -53,4 +53,5 @@ install(TARGETS scratch2arduino-webview
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     BUNDLE DESTINATION .  # macOS: the prefix is the Applications folder (required by Qt deploy)
 )
+s2a_bundle_arduino_cli(scratch2arduino-webview)
 s2a_install_desktop_entry(scratch2arduino-webview NAME "Scratch2Arduino (webview)" VARIANT "webview")
