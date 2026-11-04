@@ -21,6 +21,8 @@ enum class ErrorCode {
     InvalidCatalog,
     UnknownBoard,
     ProcessFailed,
+    PortFailed,         ///< The serial port cannot be opened or used.
+    BoardNotResponding, ///< The board does not answer the Live protocol.
 };
 
 /// Translation key of the user-facing message for `code` (e.g. "error.file_not_found").

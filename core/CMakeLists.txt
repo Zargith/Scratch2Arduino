@@ -9,6 +9,7 @@ add_library(s2a_core STATIC
     src/build.cpp
     src/validator.cpp
     src/codegen.cpp
+    src/live.cpp
     src/boards.cpp
     src/diagnostics.cpp
     src/archive.cpp
@@ -17,6 +18,7 @@ add_library(s2a_core STATIC
     src/project.cpp
     src/resources.cpp
     src/result.cpp
+    src/serial.cpp
 )
 add_library(s2a::core ALIAS s2a_core)
 
@@ -33,6 +35,7 @@ file(GLOB S2A_CORE_RESOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/resources/i18n/*.json"
     "${PROJECT_SOURCE_DIR}/resources/boards/*.json"
     "${PROJECT_SOURCE_DIR}/blocks/catalog/*.json"
+    "${PROJECT_SOURCE_DIR}/firmware/s2a_live/s2a_live.ino"
 )
 s2a_embed_resources(s2a_core BASE_DIR "${PROJECT_SOURCE_DIR}" FILES ${S2A_CORE_RESOURCES})
 
