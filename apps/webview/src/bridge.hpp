@@ -2,11 +2,13 @@
 
 #include "s2a/i18n.hpp"
 
+#include <atomic>
 #include <filesystem>
+#include <list>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <vector>
 
 namespace webview {
 class webview;
@@ -33,8 +35,12 @@ private:
 
     ::webview::webview& window_;
     Language language_;
+    struct Worker {
+        std::thread thread;
+        std::shared_ptr<std::atomic<bool>> done;
+    };
     std::mutex mutex_;
-    std::vector<std::thread> workers_;
+    std::list<Worker> workers_; ///< Finished ones are joined when the next call starts.
 };
 
 /// Folder holding index.html of the frontend, or empty when it cannot be found.

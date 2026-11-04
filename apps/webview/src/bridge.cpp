@@ -10,6 +10,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <exception>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
 #include <webview/webview.h>
@@ -89,21 +90,28 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
 Bridge::Bridge(::webview::webview& window, Language language) : window_(window), language_(language) {}
 
 Bridge::~Bridge() {
-    std::vector<std::thread> workers;
+    std::list<Worker> workers;
     {
         const std::lock_guard<std::mutex> lock(mutex_);
         workers.swap(workers_);
     }
-    for (std::thread& worker : workers) {
-        if (worker.joinable()) {
-            worker.join();
-        }
+    for (Worker& worker : workers) {
+        worker.thread.join();
     }
 }
 
 template <typename Work> void Bridge::async(const std::string& id, Work work) {
     const std::lock_guard<std::mutex> lock(mutex_);
-    workers_.emplace_back([this, id, task = std::move(work)]() {
+    for (auto it = workers_.begin(); it != workers_.end();) {
+        if (it->done->load()) {
+            it->thread.join();
+            it = workers_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    auto done = std::make_shared<std::atomic<bool>>(false);
+    std::thread thread([this, id, done, task = std::move(work)]() {
         try {
             window_.resolve(id, kResolve, task());
         } catch (const UserError& error) {
@@ -111,7 +119,9 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
         } catch (const std::exception& error) {
             window_.resolve(id, kReject, Json(std::string("internal error: ") + error.what()).dump());
         }
+        done->store(true);
     });
+    workers_.push_back({std::move(thread), std::move(done)});
 }
 
 void Bridge::bind() {
