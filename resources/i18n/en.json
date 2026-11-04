@@ -67,5 +67,28 @@
     "save_title": "Save the project",
     "file_filter": "Scratch2Arduino projects",
     "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino."
+  },
+  "editor": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "code": "Show code",
+    "check": "Check",
+    "upload": "Upload",
+    "refresh": "Look for plugged-in boards",
+    "project_name": "Project name",
+    "details": "Technical details",
+    "no_ports": "No board plugged in",
+    "no_port": "Plug in your Arduino board, then pick its port before uploading.",
+    "building": "Checking the program…",
+    "uploading": "Sending the program to the board…",
+    "saved": "Project saved: %1",
+    "opened": "Project opened: %1",
+    "file_filter": "Scratch2Arduino projects",
+    "make_variable": "Make a variable",
+    "variable_prompt": "Name of the new variable:",
+    "code_note": "This code is made from your blocks. Change the blocks to change it.",
+    "unsaved_title": "Unsaved project",
+    "unsaved_text": "Your project has unsaved changes. Do you want to save them?"
   }
 }

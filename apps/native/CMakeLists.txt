@@ -11,12 +11,23 @@ endif()
 
 qt_standard_project_setup()
 
-qt_add_executable(scratch2arduino-native WIN32 MACOSX_BUNDLE
-    src/main.cpp
+# The UI as a library, so that the tests drive the same canvas and window.
+qt_add_library(s2a_native_ui STATIC
+    src/canvas.cpp
+    src/canvas.hpp
     src/main_window.cpp
     src/main_window.hpp
+    src/painter.cpp
+    src/painter.hpp
 )
-target_link_libraries(scratch2arduino-native PRIVATE s2a::core Qt6::Widgets)
+target_include_directories(s2a_native_ui PUBLIC src)
+target_link_libraries(s2a_native_ui PUBLIC s2a::core s2a_native_model Qt6::Widgets)
+s2a_set_warnings(s2a_native_ui)
+
+qt_add_executable(scratch2arduino-native WIN32 MACOSX_BUNDLE
+    src/main.cpp
+)
+target_link_libraries(scratch2arduino-native PRIVATE s2a_native_ui)
 s2a_set_warnings(scratch2arduino-native)
 
 set_target_properties(scratch2arduino-native PROPERTIES
@@ -61,4 +72,18 @@ elseif(WIN32 OR APPLE)
 endif()
 
 s2a_bundle_arduino_cli(scratch2arduino-native)
+
+# UI tests (QtTest, offscreen platform): optional, as some Qt installations lack QtTest.
+if(S2A_BUILD_TESTS)
+    find_package(Qt6 COMPONENTS Test)
+    if(Qt6Test_FOUND)
+        qt_add_executable(s2a_native_ui_tests tests/test_canvas.cpp)
+        target_link_libraries(s2a_native_ui_tests PRIVATE s2a_native_ui Qt6::Test)
+        target_compile_definitions(s2a_native_ui_tests PRIVATE
+            S2A_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples/projects")
+        s2a_set_warnings(s2a_native_ui_tests)
+        add_test(NAME native_ui COMMAND s2a_native_ui_tests)
+        set_tests_properties(native_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
+endif()
 s2a_install_desktop_entry(scratch2arduino-native NAME "Scratch2Arduino (native)" VARIANT "native")

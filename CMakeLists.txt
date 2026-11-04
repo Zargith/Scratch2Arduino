@@ -40,6 +40,9 @@ if(S2A_BUILD_TESTS)
 endif()
 
 add_subdirectory(core)
+if(S2A_BUILD_NATIVE OR S2A_BUILD_TESTS)
+    add_subdirectory(apps/native/model)
+endif()
 
 if(S2A_BUILD_CLI)
     add_subdirectory(tools/s2a-cli)
