@@ -410,18 +410,32 @@ export function App() {
 
 			{status && (
 				// Over the workspace, between the palette and the zoom/trash controls.
-				<div style={{ position: "fixed", left: 330, right: 110, bottom: 16, zIndex: 150 }}>
+				<div
+					style={{
+						position: "fixed",
+						left: 330,
+						right: 110,
+						bottom: 16,
+						zIndex: 150,
+						maxHeight: "50vh",
+						overflowY: "auto",
+					}}
+				>
 					<Alert
 						color={status.kind === "error" ? "orange" : status.kind === "success" ? "green" : "blue"}
 						withCloseButton
 						onClose={() => setStatus(null)}
 						icon={busy ? <Loader size="xs" /> : undefined}
 					>
-						<Text size="sm">{status.message}</Text>
+						<Text size="sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+							{status.message}
+						</Text>
 						{status.details && (
 							<Spoiler maxHeight={0} showLabel={t("status.details")} hideLabel={t("status.details")}>
 								<ScrollArea.Autosize mah={160}>
-									<Code block>{status.details}</Code>
+									<Code block style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+										{status.details}
+									</Code>
 								</ScrollArea.Autosize>
 							</Spoiler>
 						)}

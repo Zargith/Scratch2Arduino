@@ -72,9 +72,25 @@ public:
     }
 
     Sketch run() {
+        std::size_t runnable = 0;
+        for (const project::Script& script : project_.scripts) {
+            runnable += !script.blocks.empty() && isHat(script.blocks.front()) ? 1 : 0;
+        }
+        // Several scripts must run side by side, as in Scratch: each becomes a task that gives
+        // way at every wait and every loop turn. A single script keeps the classic Arduino form.
+        tasks_ = runnable > 1;
         for (const project::Script& script : project_.scripts) {
             if (script.blocks.empty() || !isHat(script.blocks.front())) {
                 continue; // Scratch rule: loose blocks do not run.
+            }
+            if (tasks_) {
+                Body task;
+                task.mark(script.blocks.front().id);
+                for (std::size_t i = 1; i < script.blocks.size(); ++i) {
+                    statement(task, script.blocks[i], 1);
+                }
+                tasks_bodies_.push_back(std::move(task));
+                continue;
             }
             setup_.mark(script.blocks.front().id);
             const std::size_t last = script.blocks.size() - 1;
@@ -250,22 +266,34 @@ private:
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
                                 "), 0, 255));");
         } else if (type == "control_wait") {
-            helpers_.insert("wait");
-            body.add(depth, "s2a_wait(" + number(block, "SECONDS") + ");");
+            if (tasks_) {
+                body.add(depth, "S2A_WAIT(task, " + number(block, "SECONDS") + ");");
+            } else {
+                helpers_.insert("wait");
+                body.add(depth, "s2a_wait(" + number(block, "SECONDS") + ");");
+            }
         } else if (type == "control_wait_until") {
-            body.add(depth, "while (!" + parenthesized(condition(block, "CONDITION")) + ") {");
-            body.add(depth + 1, "delay(1);");
-            body.add(depth, "}");
+            if (tasks_) {
+                body.add(depth, "S2A_WAIT_UNTIL(task, " + condition(block, "CONDITION") + ");");
+            } else {
+                body.add(depth, "while (!" + parenthesized(condition(block, "CONDITION")) + ") {");
+                body.add(depth + 1, "delay(1);");
+                body.add(depth, "}");
+            }
         } else if (type == "control_repeat") {
-            const std::string counter = "i" + std::to_string(++counters_);
-            body.add(depth, "for (long " + counter + " = 0; " + counter + " < (long)(" +
-                                number(block, "TIMES") + "); ++" + counter + ") {");
+            // In a task the counter must outlive the function, which returns at each wait.
+            const std::string counter = (tasks_ ? "s2a_i" : "i") + std::to_string(++counters_);
+            body.add(depth, std::string("for (") + (tasks_ ? "" : "long ") + counter + " = 0; " + counter +
+                                " < (long)(" + number(block, "TIMES") + "); ++" + counter + ") {");
             statements(body, block, "SUBSTACK", depth + 1);
+            if (tasks_) {
+                body.add(depth + 1, "S2A_YIELD(task);");
+            }
             body.add(depth, "}");
         } else if (type == "control_forever") {
             body.add(depth, "for (;;) {");
             statements(body, block, "SUBSTACK", depth + 1);
-            body.add(depth + 1, "yield();");
+            body.add(depth + 1, tasks_ ? "S2A_YIELD(task);" : "yield();");
             body.add(depth, "}");
         } else if (type == "control_if" || type == "control_if_else") {
             body.add(depth, "if " + parenthesized(condition(block, "CONDITION")) + " {");
@@ -325,6 +353,40 @@ private:
                 "  return toLow + (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow);", "}"});
 
         Sketch sketch;
+        if (tasks_) {
+            out.insert(out.end(),
+                       {"// Every script runs a little, then lets the others run (as in Scratch):",
+                        "// a wait gives way to the other scripts instead of stopping the board.",
+                        "struct S2ATask {", "  unsigned int line;", "  unsigned long wake;", "};",
+                        "#define S2A_START(t) if ((t)->line == 0xFFFF) return; switch ((t)->line) { case 0:",
+                        "#define S2A_END(t) } (t)->line = 0xFFFF",
+                        "#define S2A_YIELD(t) do { (t)->line = __LINE__; return; case __LINE__:; } while (0)",
+                        "#define S2A_WAIT(t, seconds) do { (t)->wake = millis() + s2a_ms(seconds); "
+                        "(t)->line = __LINE__; case __LINE__: if ((long)(millis() - (t)->wake) < 0) return; } while (0)",
+                        "#define S2A_WAIT_UNTIL(t, condition) do { (t)->line = __LINE__; case __LINE__: "
+                        "if (!(condition)) return; } while (0)",
+                        "", "unsigned long s2a_ms(double seconds) {",
+                        "  return seconds > 0 ? (unsigned long)(seconds * 1000.0) : 0;", "}", ""});
+            if (counters_ > 0) {
+                std::string declaration = "long";
+                for (int i = 1; i <= counters_; ++i) {
+                    declaration += (i == 1 ? " s2a_i" : ", s2a_i") + std::to_string(i);
+                }
+                out.push_back(declaration + ";");
+                out.emplace_back("");
+            }
+            for (std::size_t i = 0; i < tasks_bodies_.size(); ++i) {
+                const std::string number = std::to_string(i + 1);
+                out.push_back("S2ATask s2a_task" + number + ";");
+                out.push_back("void s2a_script" + number + "() {");
+                out.push_back(std::string(kIndent) + "S2ATask* const task = &s2a_task" + number + ";");
+                out.push_back(std::string(kIndent) + "S2A_START(task);");
+                append(out, sketch, tasks_bodies_[i]);
+                out.push_back(std::string(kIndent) + "S2A_END(task);");
+                out.emplace_back("}");
+                out.emplace_back("");
+            }
+        }
         out.emplace_back("void setup() {");
         for (const auto& [label, mode] : pinModes_) {
             out.push_back(std::string(kIndent) + "pinMode(" + label + ", " +
@@ -338,6 +400,9 @@ private:
         out.emplace_back("");
         out.emplace_back("void loop() {");
         append(out, sketch, loop_);
+        for (std::size_t i = 0; i < tasks_bodies_.size(); ++i) {
+            out.push_back(std::string(kIndent) + "s2a_script" + std::to_string(i + 1) + "();");
+        }
         out.emplace_back("}");
 
         for (const std::string& line : out) {
@@ -360,6 +425,8 @@ private:
     const Board* board_;
     Body setup_;
     Body loop_;
+    bool tasks_ = false;
+    std::vector<Body> tasks_bodies_; ///< One per script when several scripts run side by side.
     std::map<std::string, PinMode> pinModes_;
     std::map<std::string, std::string> variables_; ///< Variable id -> C++ name.
     std::set<std::string> helpers_;

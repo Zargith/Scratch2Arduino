@@ -129,8 +129,7 @@
       "y": 40,
       "blocks": [
         { "id": "start2", "type": "events_when_program_starts" },
-        { "id": "inner", "type": "control_forever", "statements": { "SUBSTACK": [ { "id": "w3", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } } ] } },
-        { "id": "after", "type": "pins_builtin_led", "fields": { "STATE": "OFF" } }
+        { "id": "inner", "type": "control_forever", "statements": { "SUBSTACK": [ { "id": "w3", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } } ] } }
       ]
     }
   ]
