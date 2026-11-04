@@ -1,15 +1,20 @@
 #pragma once
 
 #include "s2a/i18n.hpp"
+#include "s2a/live.hpp"
 
 #include <QMainWindow>
 #include <QString>
+#include <memory>
 
 class QAction;
 class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QTableWidget;
+class QTimer;
+class QDockWidget;
 
 namespace s2a::native {
 
@@ -24,6 +29,12 @@ public:
 
     /// Opens a .s2a file (also used for a file given on the command line).
     bool openFile(const QString& path);
+
+    ~MainWindow() override;
+    MainWindow(const MainWindow&) = delete;
+    MainWindow& operator=(const MainWindow&) = delete;
+    MainWindow(MainWindow&&) = delete;
+    MainWindow& operator=(MainWindow&&) = delete;
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -42,6 +53,8 @@ private:
     bool saveProject(bool askPath);
     void showCode();
     void build(bool upload);
+    void toggleLive();
+    void pollLive();
 
     Language language_;
     Canvas* canvas_ = nullptr;
@@ -58,6 +71,12 @@ private:
     QAction* checkAction_ = nullptr;
     QAction* uploadAction_ = nullptr;
     QAction* refreshAction_ = nullptr;
+    QAction* liveAction_ = nullptr;
+    std::unique_ptr<live::Session> live_;
+    QTimer* liveTimer_ = nullptr;
+    QTimer* liveUpdate_ = nullptr;
+    QDockWidget* variablesDock_ = nullptr;
+    QTableWidget* variables_ = nullptr;
     QString path_;
     QString statusDetails_;
     bool dirty_ = false;

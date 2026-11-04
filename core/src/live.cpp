@@ -2,6 +2,7 @@
 
 #include "s2a/diagnostics.hpp"
 #include "s2a/resources.hpp"
+#include "s2a/validator.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -449,6 +450,182 @@ void Interpreter::update(project::Project project) {
         }
     }
     (void)previous;
+}
+
+// --- Session -----------------------------------------------------------------------------
+
+Session::Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
+                 Flasher flasher)
+    : board_(board), port_(std::move(port)), language_(language), opener_(std::move(opener)),
+      flasher_(std::move(flasher)) {
+    snapshot_.message = tr("live.connecting", language_, {{"port", port_}});
+    thread_ = std::thread([this, project = std::move(project)]() mutable { run(std::move(project)); });
+}
+
+Session::~Session() {
+    stop();
+    if (thread_.joinable()) {
+        thread_.join();
+    }
+}
+
+void Session::update(project::Project project) {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    pending_ = std::move(project);
+}
+
+void Session::stop() {
+    stopping_ = true;
+}
+
+Session::Snapshot Session::snapshot() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    return snapshot_;
+}
+
+bool Session::active() const {
+    const State state = snapshot().state;
+    return state == State::Connecting || state == State::Flashing || state == State::Running;
+}
+
+void Session::set(State state, std::string message, std::string details) {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    snapshot_.state = state;
+    snapshot_.message = std::move(message);
+    snapshot_.details = std::move(details);
+    if (state != State::Running) {
+        snapshot_.runningBlocks.clear();
+    }
+}
+
+void Session::run(project::Project project) {
+    // The blocks are checked first, as for an upload.
+    const auto issues = validation::validate(project, BlockCatalog::builtin(), &board_, language_);
+    if (validation::hasErrors(issues)) {
+        std::vector<std::string> blocks;
+        std::string first;
+        for (const auto& issue : issues) {
+            if (issue.severity == validation::Severity::Error) {
+                if (first.empty()) {
+                    first = validation::describe(issue, language_);
+                }
+                blocks.push_back(issue.blockId);
+            }
+        }
+        set(State::Failed, first);
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.problemBlocks = std::move(blocks);
+        return;
+    }
+
+    const auto fail = [this](const Error& error, std::string details = {}) {
+        set(State::Failed, tr(errorMessageKey(error.code), language_), error.detail + (details.empty() ? "" : "\n" + details));
+    };
+
+    auto transport = opener_(port_);
+    if (!transport.ok()) {
+        fail(transport.error());
+        return;
+    }
+    std::unique_ptr<serial::LineTransport> connection = std::move(transport).value();
+    if (!LiveLink(*connection).handshake().ok()) {
+        if (stopping_) {
+            set(State::Stopped, tr("live.stopped", language_));
+            return;
+        }
+        // No S2A live firmware on the board yet: upload it, then connect again.
+        connection.reset();
+        set(State::Flashing, tr("live.flashing", language_, {{"board", board_.name}}));
+        std::string details;
+        if (const auto flashed = flasher_(details); !flashed.ok()) {
+            fail(flashed.error(), details);
+            return;
+        }
+        transport = opener_(port_);
+        if (!transport.ok()) {
+            fail(transport.error());
+            return;
+        }
+        connection = std::move(transport).value();
+        if (const auto ready = LiveLink(*connection).handshake(); !ready.ok()) {
+            fail(ready.error());
+            return;
+        }
+    }
+
+    LiveLink link(*connection);
+    auto interpreter = std::make_unique<Interpreter>(std::move(project), BlockCatalog::builtin(), board_, link);
+    set(State::Running, tr("live.running", language_));
+    const auto start = std::chrono::steady_clock::now();
+    while (!stopping_) {
+        {
+            std::optional<project::Project> next;
+            {
+                const std::lock_guard<std::mutex> lock(mutex_);
+                next.swap(pending_);
+            }
+            if (next) {
+                interpreter->update(std::move(*next));
+            }
+        }
+        interpreter->step(std::chrono::duration_cast<milliseconds>(std::chrono::steady_clock::now() - start));
+        if (const auto error = link.takeError()) {
+            fail(*error);
+            return;
+        }
+        {
+            const std::lock_guard<std::mutex> lock(mutex_);
+            snapshot_.runningBlocks = interpreter->runningBlocks();
+            snapshot_.variables = interpreter->variables();
+        }
+        if (interpreter->finished()) {
+            // Finished, but still connected: an edit can start the blocks again.
+            set(State::Finished, tr("live.finished", language_));
+            while (!stopping_) {
+                std::this_thread::sleep_for(milliseconds(20));
+                const std::lock_guard<std::mutex> lock(mutex_);
+                if (pending_) {
+                    break;
+                }
+            }
+            if (stopping_) {
+                break;
+            }
+            {
+                const std::lock_guard<std::mutex> lock(mutex_);
+                interpreter = std::make_unique<Interpreter>(std::move(*pending_), BlockCatalog::builtin(), board_, link);
+                pending_.reset();
+            }
+            set(State::Running, tr("live.running", language_));
+            continue;
+        }
+        std::this_thread::sleep_for(milliseconds(10));
+    }
+    link.reset();
+    if (snapshot().state != State::Finished) {
+        set(State::Stopped, tr("live.stopped", language_));
+    }
+}
+
+Session::Opener Session::serialOpener() {
+    return [](const std::string& port) -> Result<std::unique_ptr<serial::LineTransport>> {
+        auto opened = serial::SerialPort::open(port, kBaud);
+        if (!opened.ok()) {
+            return opened.error();
+        }
+        return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+    };
+}
+
+Session::Flasher Session::arduinoCliFlasher(const Board& board, std::string port) {
+    return [&board, port = std::move(port)](std::string& details) -> Status {
+        const auto executable = toolchain::locateArduinoCli();
+        if (executable.empty()) {
+            return Error{ErrorCode::ProcessFailed, "arduino-cli not found"};
+        }
+        const toolchain::ArduinoCli cli(executable, toolchain::Directories::defaults());
+        return uploadFirmware(cli, board, port, toolchain::userDataDirectory(), details);
+    };
 }
 
 // --- firmware ----------------------------------------------------------------------------

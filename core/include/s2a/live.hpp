@@ -8,13 +8,17 @@
 #include "s2a/result.hpp"
 #include "s2a/serial.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 /// Live mode: the computer runs the blocks and drives the board through the S2A live firmware
@@ -126,6 +130,60 @@ private:
     std::map<std::string, double> variables_;
     std::map<int, PinMode> modes_;
     std::mt19937 random_{std::random_device{}()};
+};
+
+/// Live mode as the editors use it: connects to the board (uploading the firmware when it does
+/// not answer), then runs the interpreter on a background thread. The editor sends new versions
+/// of the blocks and reads snapshots to show the running blocks and the variables.
+class Session {
+public:
+    using Opener = std::function<Result<std::unique_ptr<serial::LineTransport>>(const std::string& port)>;
+    using Flasher = std::function<Status(std::string& details)>;
+
+    enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed };
+
+    struct Snapshot {
+        State state = State::Connecting;
+        std::string message;                    ///< For the status bar, in the user's language.
+        std::string details;                    ///< Technical details of a failure.
+        std::vector<std::string> runningBlocks;
+        std::vector<std::string> problemBlocks; ///< Validation errors that prevent starting.
+        std::map<std::string, double> variables;
+    };
+
+    Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
+            Flasher flasher);
+    Session(const Session&) = delete;
+    Session& operator=(const Session&) = delete;
+    Session(Session&&) = delete;
+    Session& operator=(Session&&) = delete;
+    /// Stops the blocks and switches the outputs off.
+    ~Session();
+
+    void update(project::Project project);
+    void stop();
+    [[nodiscard]] Snapshot snapshot() const;
+    [[nodiscard]] bool active() const;
+
+    /// Opens real serial ports.
+    [[nodiscard]] static Opener serialOpener();
+    /// Uploads the firmware with the bundled arduino-cli.
+    [[nodiscard]] static Flasher arduinoCliFlasher(const Board& board, std::string port);
+
+private:
+    void run(project::Project project);
+    void set(State state, std::string message, std::string details = {});
+
+    const Board& board_;
+    std::string port_;
+    Language language_;
+    Opener opener_;
+    Flasher flasher_;
+    mutable std::mutex mutex_;
+    Snapshot snapshot_;
+    std::optional<project::Project> pending_;
+    std::atomic<bool> stopping_{false};
+    std::thread thread_;
 };
 
 /// Source of the S2A live firmware (embedded in the application).

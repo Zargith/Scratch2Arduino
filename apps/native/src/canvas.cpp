@@ -102,6 +102,13 @@ void Canvas::highlight(std::vector<std::string> blockIds) {
     update();
 }
 
+void Canvas::setRunning(std::vector<std::string> blockIds) {
+    if (blockIds != running_) {
+        running_ = std::move(blockIds);
+        update();
+    }
+}
+
 void Canvas::zoomBy(double factor) {
     zoom_ = std::clamp(zoom_ * factor, kMinZoom, kMaxZoom);
     update();
@@ -334,6 +341,22 @@ void Canvas::paintEvent(QPaintEvent* /*event*/) {
     painter.translate(scripts.topLeft());
     painter.scale(zoom_, zoom_);
     painter.translate(-offset_);
+    // Live mode: a yellow glow under the scripts that are running.
+    std::vector<int> runningScripts;
+    for (const BlockGeometry& geometry : blocks_) {
+        if (std::find(running_.begin(), running_.end(), geometry.block->id) != running_.end()) {
+            runningScripts.push_back(geometry.script);
+        }
+    }
+    if (!runningScripts.empty()) {
+        painter.setPen(QPen(QColor(0xFF, 0xF2, 0x00), 8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(Qt::NoBrush);
+        for (const BlockGeometry& geometry : blocks_) {
+            if (std::find(runningScripts.begin(), runningScripts.end(), geometry.script) != runningScripts.end()) {
+                painter.drawPath(blockPath(geometry));
+            }
+        }
+    }
     for (const BlockGeometry& geometry : blocks_) {
         paintBlock(painter, geometry);
     }

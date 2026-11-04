@@ -19,6 +19,8 @@ export interface EditorHandle {
 	save(): WorkspaceState;
 	/** Highlights blocks reported by Check/Upload and scrolls to the first; cleared by the next edit. */
 	highlight(blockIds: string[]): void;
+	/** Live mode: the scripts holding these blocks glow, as in Scratch. */
+	showRunning(blockIds: string[]): void;
 }
 
 interface EditorProps {
@@ -44,9 +46,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	const onChangeRef = useRef(onChange);
 	onChangeRef.current = onChange;
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
+	const glowing = useRef<Set<string>>(new Set());
 
 	useImperativeHandle(ref, () => ({
 		save: () => (workspace.current ? (Blockly.serialization.workspaces.save(workspace.current) as WorkspaceState) : {}),
+		showRunning: (blockIds) => {
+			const target = workspace.current;
+			if (!target) return;
+			const roots = new Set(
+				blockIds.map((id) => target.getBlockById(id)?.getRootBlock().id).filter((id): id is string => !!id)
+			);
+			for (const id of glowing.current) {
+				if (!roots.has(id) && target.getBlockById(id)) Blockly.glowStack(id, false);
+			}
+			for (const id of roots) Blockly.glowStack(id, true);
+			glowing.current = roots;
+		},
 		highlight: (blockIds) => {
 			const target = workspace.current;
 			if (!target) return;
@@ -88,6 +103,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		Blockly.Events.disable();
 		try {
 			Blockly.serialization.workspaces.load(initialState as WorkspaceLoadState, created);
+		} catch (error) {
+			// A project the editor cannot show must not take the whole window down.
+			console.error("cannot load the project into the editor", error);
+			created.clear();
 		} finally {
 			Blockly.Events.enable();
 		}

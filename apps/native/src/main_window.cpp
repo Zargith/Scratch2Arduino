@@ -10,6 +10,10 @@
 #include "s2a/version.hpp"
 
 #include <QCloseEvent>
+#include <QDockWidget>
+#include <QHeaderView>
+#include <QTableWidget>
+#include <QTimer>
 #include <QComboBox>
 #include <QDialog>
 #include <QDir>
@@ -28,6 +32,7 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <memory>
+#include <thread>
 #include <vector>
 
 namespace s2a::native {
@@ -65,6 +70,8 @@ struct PortList {
 
 } // namespace
 
+MainWindow::~MainWindow() = default;
+
 MainWindow::MainWindow(Language language, QWidget* parent) : QMainWindow(parent), language_(language) {
     resize(1280, 800);
     buildUi();
@@ -83,7 +90,32 @@ void MainWindow::buildUi() {
     connect(canvas_, &Canvas::changed, this, [this]() {
         dirty_ = true;
         updateTitle();
+        if (live_) {
+            liveUpdate_->start(); // send the new blocks once the child stops for a moment
+        }
     });
+    liveTimer_ = new QTimer(this);
+    liveTimer_->setInterval(150);
+    connect(liveTimer_, &QTimer::timeout, this, &MainWindow::pollLive);
+    liveUpdate_ = new QTimer(this);
+    liveUpdate_->setSingleShot(true);
+    liveUpdate_->setInterval(300);
+    connect(liveUpdate_, &QTimer::timeout, this, [this]() {
+        if (live_) {
+            project::Project project = canvas_->project();
+            project.name = utf8(name_->text());
+            live_->update(std::move(project));
+        }
+    });
+    variables_ = new QTableWidget(0, 2, this);
+    variables_->horizontalHeader()->setStretchLastSection(true);
+    variables_->verticalHeader()->hide();
+    variables_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    variablesDock_ = new QDockWidget(this);
+    variablesDock_->setWidget(variables_);
+    variablesDock_->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    addDockWidget(Qt::RightDockWidgetArea, variablesDock_);
+    variablesDock_->hide();
     connect(canvas_, &Canvas::variableRequested, this, [this]() {
         bool ok = false;
         const QString name = QInputDialog::getText(this, text("editor.make_variable"), text("editor.variable_prompt"),
@@ -138,6 +170,7 @@ void MainWindow::buildUi() {
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     bar->addWidget(spacer);
     codeAction_ = bar->addAction(QString(), this, &MainWindow::showCode);
+    liveAction_ = bar->addAction(QString(), this, &MainWindow::toggleLive);
     checkAction_ = bar->addAction(QString(), this, [this]() { build(false); });
     uploadAction_ = bar->addAction(QString(), this, [this]() { build(true); });
     languageBox_ = new QComboBox(bar);
@@ -176,6 +209,9 @@ void MainWindow::retranslate() {
     codeAction_->setText(text("editor.code"));
     checkAction_->setText(text("editor.check"));
     uploadAction_->setText(text("editor.upload"));
+    liveAction_->setText(text(live_ ? "editor.stop_live" : "editor.live"));
+    variablesDock_->setWindowTitle(text("editor.variables"));
+    variables_->setHorizontalHeaderLabels({text("editor.variable"), text("editor.value")});
     refreshAction_->setToolTip(text("editor.refresh"));
     name_->setPlaceholderText(text("editor.project_name"));
     details_->setText(text("editor.details"));
@@ -376,6 +412,71 @@ void MainWindow::build(bool upload) {
             setStatus(message, qt(result.details), !result.ok);
             canvas_->highlight(result.ok ? result.warningBlockIds : result.blockIds);
         });
+}
+
+void MainWindow::toggleLive() {
+    if (live_) {
+        liveTimer_->stop();
+        live_->stop();
+        // Stopping switches the outputs off and can take a moment: not on the UI thread.
+        std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+        canvas_->setRunning({});
+        variablesDock_->hide();
+        checkAction_->setEnabled(true);
+        uploadAction_->setEnabled(true);
+        setStatus(text("live.stopped"));
+        retranslate();
+        return;
+    }
+    const std::string port = utf8(port_->currentData().toString());
+    if (port.empty()) {
+        setStatus(text("editor.no_port"), {}, true);
+        return;
+    }
+    const Board* board = BoardDatabase::builtin().find(utf8(board_->currentData().toString()));
+    if (board == nullptr) {
+        return;
+    }
+    project::Project project = canvas_->project();
+    project.name = utf8(name_->text());
+    live_ = std::make_unique<live::Session>(std::move(project), *board, port, language_, live::Session::serialOpener(),
+                                            live::Session::arduinoCliFlasher(*board, port));
+    checkAction_->setEnabled(false);
+    uploadAction_->setEnabled(false);
+    liveTimer_->start();
+    retranslate();
+}
+
+void MainWindow::pollLive() {
+    if (!live_) {
+        return;
+    }
+    const auto snapshot = live_->snapshot();
+    canvas_->setRunning(snapshot.runningBlocks);
+    const bool failed = snapshot.state == live::Session::State::Failed;
+    setStatus(qt(snapshot.message), qt(snapshot.details), failed);
+    // Variables, by name.
+    variables_->setRowCount(0);
+    for (const project::Variable& variable : canvas_->project().variables) {
+        const auto value = snapshot.variables.find(variable.id);
+        if (value == snapshot.variables.end()) {
+            continue;
+        }
+        const int row = variables_->rowCount();
+        variables_->insertRow(row);
+        variables_->setItem(row, 0, new QTableWidgetItem(qt(variable.name)));
+        variables_->setItem(row, 1, new QTableWidgetItem(QString::number(value->second)));
+    }
+    variablesDock_->setVisible(variables_->rowCount() > 0);
+    if (failed) {
+        canvas_->highlight(snapshot.problemBlocks);
+        liveTimer_->stop();
+        std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+        canvas_->setRunning({});
+        checkAction_->setEnabled(true);
+        uploadAction_->setEnabled(true);
+        retranslate();
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
