@@ -81,7 +81,25 @@ void Canvas::addVariable(const std::string& name) {
     project_.variables.push_back({project::newId(), name, 0});
     rebuildPalette();
     relayout();
+    edited();
+}
+
+void Canvas::edited() {
+    highlighted_.clear();
+    update();
     emit changed();
+}
+
+void Canvas::highlight(std::vector<std::string> blockIds) {
+    highlighted_ = std::move(blockIds);
+    for (const BlockGeometry& geometry : blocks_) {
+        if (!highlighted_.empty() && geometry.block->id == highlighted_.front()) {
+            // Bring the block near the top-left of the scripts area.
+            offset_ = QPointF(geometry.bounds.x - 60, geometry.bounds.y - 60);
+            break;
+        }
+    }
+    update();
 }
 
 void Canvas::zoomBy(double factor) {
@@ -215,7 +233,7 @@ void Canvas::finishDrag(QPointF screen) {
         applyDrop(project_, drop, std::move(drag.blocks));
     }
     relayout();
-    emit changed();
+    edited();
 }
 
 void Canvas::editPart(const std::string& blockId, const Part& part) {
@@ -269,7 +287,7 @@ void Canvas::editPart(const std::string& blockId, const Part& part) {
         }
         block->fields[part.name] = utf8(chosen->data().toString());
         relayout();
-        emit changed();
+        edited();
         return;
     }
 
@@ -287,7 +305,7 @@ void Canvas::editPart(const std::string& blockId, const Part& part) {
         connect(editor, &QLineEdit::editingFinished, this, [this, editor, blockId, name]() {
             if (project::Block* target = findBlock(project_, blockId)) {
                 target->inputs[name].value = utf8(editor->text());
-                emit changed();
+                edited();
             }
             editor->deleteLater();
             relayout();
@@ -318,6 +336,13 @@ void Canvas::paintEvent(QPaintEvent* /*event*/) {
     painter.translate(-offset_);
     for (const BlockGeometry& geometry : blocks_) {
         paintBlock(painter, geometry);
+    }
+    for (const BlockGeometry& geometry : blocks_) {
+        if (std::find(highlighted_.begin(), highlighted_.end(), geometry.block->id) != highlighted_.end()) {
+            painter.setPen(QPen(QColor(0xE5, 0x48, 0x4D), 4));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(blockPath(geometry));
+        }
     }
     if (preview_ && drag_) {
         // Where the dragged blocks will snap.

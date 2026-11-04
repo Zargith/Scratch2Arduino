@@ -31,6 +31,9 @@ public:
     void setLanguage(Language language);
     void setBoard(const std::string& boardId);
     void addVariable(const std::string& name);
+    /// Outlines these blocks and scrolls to the first one (problems found by Check/Upload).
+    /// The outline goes away at the next edit.
+    void highlight(std::vector<std::string> blockIds);
     void zoomBy(double factor);
     void resetZoom();
 
@@ -80,6 +83,7 @@ private:
     void finishDrag(QPointF screen);
     void editPart(const std::string& blockId, const Part& part);
     void paintPalette(QPainter& painter);
+    void edited();
 
     Language language_;
     project::Project project_;
@@ -102,6 +106,7 @@ private:
     std::optional<Drag> drag_;
     std::optional<Drop> preview_;
     QPointer<QLineEdit> editor_;
+    std::vector<std::string> highlighted_;
 };
 
 } // namespace s2a::native
