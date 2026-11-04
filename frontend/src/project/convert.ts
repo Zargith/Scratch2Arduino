@@ -168,11 +168,36 @@ function linked(stack: ProjectBlock[]): BlockState | undefined {
 	return next;
 }
 
+/**
+ * Blocks below a terminal block ("forever") cannot be attached in Blockly: they are moved to a
+ * script of their own next to it (they never ran anyway, and the validator warned about them).
+ */
+function splitAfterTerminal(stack: ProjectBlock[], overflow: ProjectBlock[][]): ProjectBlock[] {
+	const end = stack.findIndex((block) => findBlock(block.type)?.terminal === true);
+	const kept = end >= 0 ? stack.slice(0, end + 1) : stack;
+	if (end >= 0 && end + 1 < stack.length) overflow.push(stack.slice(end + 1));
+	return kept.map((block) =>
+		block.statements
+			? {
+					...block,
+					statements: Object.fromEntries(
+						Object.entries(block.statements).map(([name, inner]) => [name, splitAfterTerminal(inner, overflow)])
+					),
+				}
+			: block
+	);
+}
+
 export function projectToWorkspace(project: Project): WorkspaceState {
 	const blocks: BlockState[] = [];
 	for (const script of project.scripts) {
-		const first = linked(script.blocks);
+		const overflow: ProjectBlock[][] = [];
+		const first = linked(splitAfterTerminal(script.blocks, overflow));
 		if (first) blocks.push({ ...first, x: script.x, y: script.y });
+		overflow.forEach((stack, index) => {
+			const loose = linked(stack);
+			if (loose) blocks.push({ ...loose, x: script.x + 320, y: script.y + 60 * index });
+		});
 	}
 	return {
 		blocks: { languageVersion: 0, blocks },

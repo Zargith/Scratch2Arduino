@@ -1,6 +1,7 @@
 #pragma once
 
 #include "s2a/i18n.hpp"
+#include "s2a/live.hpp"
 
 #include <atomic>
 #include <filesystem>
@@ -44,7 +45,9 @@ private:
         std::shared_ptr<std::atomic<bool>> done;
     };
     std::mutex mutex_;
-    std::list<Worker> workers_; ///< Finished ones are joined when the next call starts.
+    std::list<Worker> workers_;
+    std::mutex liveMutex_;
+    std::unique_ptr<live::Session> live_; ///< Live mode, when started. ///< Finished ones are joined when the next call starts.
 };
 
 /// Folder holding index.html of the frontend, or empty when it cannot be found.

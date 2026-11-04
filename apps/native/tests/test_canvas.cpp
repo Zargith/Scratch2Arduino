@@ -95,6 +95,24 @@ private slots:
         QCOMPARE(canvas.project().scripts.at(1).blocks.at(0).statements.at("SUBSTACK").size(), std::size_t{4});
     }
 
+    void glowsTheRunningScripts() {
+        Canvas canvas(Language::French);
+        canvas.resize(900, 500);
+        canvas.show();
+        canvas.setProject(example("blink"));
+        canvas.setRunning({"wait1"});
+        const QImage image = canvas.grab().toImage();
+        // A yellow glow surrounds the script: look for it left of the hat block.
+        const QPointF hat = canvas.blockPosition("start");
+        bool yellow = false;
+        for (int dx = -6; dx <= 0 && !yellow; ++dx) {
+            const QColor colour = image.pixelColor(static_cast<int>(hat.x()) + dx, static_cast<int>(hat.y()) + 30);
+            yellow = colour.red() > 200 && colour.green() > 200 && colour.blue() < 120;
+        }
+        QVERIFY(yellow);
+        screenshot(&canvas, QStringLiteral("live-glow"));
+    }
+
     void showsEveryBlockOfTheExample() {
         s2a::native::MainWindow window(Language::French);
         window.resize(1400, 860);

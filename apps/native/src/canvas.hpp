@@ -34,6 +34,8 @@ public:
     /// Outlines these blocks and scrolls to the first one (problems found by Check/Upload).
     /// The outline goes away at the next edit.
     void highlight(std::vector<std::string> blockIds);
+    /// Live mode: the scripts holding these blocks glow, as in Scratch.
+    void setRunning(std::vector<std::string> blockIds);
     void zoomBy(double factor);
     void resetZoom();
 
@@ -107,6 +109,7 @@ private:
     std::optional<Drop> preview_;
     QPointer<QLineEdit> editor_;
     std::vector<std::string> highlighted_;
+    std::vector<std::string> running_;
 };
 
 } // namespace s2a::native

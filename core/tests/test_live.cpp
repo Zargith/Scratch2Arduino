@@ -4,6 +4,9 @@
 #include <gtest/gtest.h>
 #include <map>
 #include <sstream>
+#include <thread>
+#include <algorithm>
+#include <memory>
 
 namespace {
 
@@ -257,6 +260,89 @@ TEST(LiveLink, ReportsABoardThatDoesNotAnswer) {
     const auto error = link.takeError();
     ASSERT_TRUE(error.has_value());
     EXPECT_EQ(error->code, s2a::ErrorCode::BoardNotResponding);
+}
+
+/// A FakeFirmware owned by the session, whose received lines stay readable by the test.
+struct SharedFirmware final : s2a::serial::LineTransport {
+    std::shared_ptr<FakeFirmware> firmware;
+    explicit SharedFirmware(std::shared_ptr<FakeFirmware> shared) : firmware(std::move(shared)) {}
+    s2a::Status writeLine(std::string_view line) override { return firmware->writeLine(line); }
+    s2a::Result<std::optional<std::string>> readLine(milliseconds timeout) override { return firmware->readLine(timeout); }
+};
+
+template <typename Predicate> bool waitFor(Predicate predicate) {
+    for (int i = 0; i < 300; ++i) {
+        if (predicate()) {
+            return true;
+        }
+        std::this_thread::sleep_for(milliseconds(10));
+    }
+    return false;
+}
+
+using s2a::live::Session;
+
+TEST(Session, RunsUpdatesAndStops) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    int flashes = 0;
+    {
+        Session session(
+            blink(), uno(), "COM1", s2a::Language::English,
+            [firmware](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+                return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(firmware));
+            },
+            [&flashes](std::string&) {
+                ++flashes;
+                return s2a::success();
+            });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }));
+        ASSERT_TRUE(waitFor([&] { return !session.snapshot().runningBlocks.empty(); }));
+        EXPECT_EQ(session.snapshot().runningBlocks, std::vector<std::string>{"w1"});
+        session.update(withScript({block("hat", "events_when_program_starts"), led("solo", "OFF")}));
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Finished; }));
+        EXPECT_TRUE(session.active() == false);
+    }
+    EXPECT_EQ(flashes, 0);
+    const auto& received = firmware->received;
+    EXPECT_NE(std::find(received.begin(), received.end(), "D 13 0"), received.end());
+    EXPECT_EQ(received.back(), "X"); // outputs switched off when Live mode ends
+}
+
+TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {
+    auto silent = std::make_shared<FakeFirmware>();
+    silent->pending.clear();
+    silent->silent = true;
+    auto ready = std::make_shared<FakeFirmware>();
+    int opened = 0;
+    int flashes = 0;
+    Session session(
+        blink(), uno(), "/dev/ttyACM0", s2a::Language::French,
+        [&](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(
+                std::make_unique<SharedFirmware>(opened++ == 0 ? silent : ready));
+        },
+        [&flashes](std::string&) {
+            ++flashes;
+            return s2a::success();
+        });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }));
+    EXPECT_EQ(flashes, 1);
+    EXPECT_EQ(opened, 2);
+}
+
+TEST(Session, RefusesBlocksWithMistakes) {
+    Block condition = block("if", "control_if");
+    bool opened = false;
+    Session session(
+        withScript({block("hat", "events_when_program_starts"), condition}), uno(), "COM1", s2a::Language::English,
+        [&opened](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            opened = true;
+            return s2a::Error{s2a::ErrorCode::PortFailed, "unused"};
+        },
+        [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_EQ(session.snapshot().problemBlocks, std::vector<std::string>{"if"});
+    EXPECT_FALSE(opened);
 }
 
 TEST(LiveLink, EmbedsTheFirmware) {

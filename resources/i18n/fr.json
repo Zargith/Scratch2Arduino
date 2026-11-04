@@ -125,6 +125,18 @@
     "variable_prompt": "Nom de la nouvelle variable :",
     "code_note": "Ce code est créé à partir de tes blocs. Modifie les blocs pour le changer.",
     "unsaved_title": "Projet non enregistré",
-    "unsaved_text": "Ton projet a des modifications non enregistrées. Veux-tu les enregistrer ?"
+    "unsaved_text": "Ton projet a des modifications non enregistrées. Veux-tu les enregistrer ?",
+    "live": "Live",
+    "stop_live": "Arrêter",
+    "variables": "Variables",
+    "variable": "Variable",
+    "value": "Valeur"
+  },
+  "live": {
+    "connecting": "Connexion à la carte ({port})…",
+    "flashing": "Installation du programme Live sur la carte {board} (une seule fois, quelques secondes)…",
+    "running": "Mode Live : tes blocs s'exécutent sur la carte. Modifie-les, la carte suit !",
+    "finished": "Tous les blocs ont été exécutés. Modifie-les pour relancer.",
+    "stopped": "Mode Live arrêté."
   }
 }

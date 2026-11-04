@@ -125,6 +125,18 @@
     "variable_prompt": "Name of the new variable:",
     "code_note": "This code is made from your blocks. Change the blocks to change it.",
     "unsaved_title": "Unsaved project",
-    "unsaved_text": "Your project has unsaved changes. Do you want to save them?"
+    "unsaved_text": "Your project has unsaved changes. Do you want to save them?",
+    "live": "Live",
+    "stop_live": "Stop",
+    "variables": "Variables",
+    "variable": "Variable",
+    "value": "Value"
+  },
+  "live": {
+    "connecting": "Connecting to the board ({port})…",
+    "flashing": "Installing the Live program on the {board} board (only once, a few seconds)…",
+    "running": "Live mode: your blocks are running on the board. Change them and the board follows!",
+    "finished": "Every block has run. Change them to start again.",
+    "stopped": "Live mode stopped."
   }
 }

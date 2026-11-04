@@ -27,6 +27,17 @@ export interface Outcome {
 	warningBlockIds?: string[];
 }
 
+export type LiveState = "connecting" | "flashing" | "running" | "finished" | "stopped" | "failed";
+
+export interface LiveSnapshot {
+	state: LiveState;
+	message?: string;
+	details?: string;
+	running?: string[];
+	problems?: string[];
+	variables?: Record<string, number>;
+}
+
 export interface OpenedProject {
 	path: string;
 	project: Project;
@@ -41,6 +52,10 @@ interface HostFunctions {
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
+	s2a_live_start(project: Project, port: string, language: Language): Promise<{ ok: boolean; message?: string }>;
+	s2a_live_update(project: Project): Promise<void>;
+	s2a_live_stop(): Promise<void>;
+	s2a_live_state(): Promise<LiveSnapshot>;
 }
 
 declare global {
@@ -71,4 +86,8 @@ export const bridge = {
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
 	setTitle: (title: string) => host("s2a_set_title")(title),
+	liveStart: (project: Project, port: string, language: Language) => host("s2a_live_start")(project, port, language),
+	liveUpdate: (project: Project) => host("s2a_live_update")(project),
+	liveStop: () => host("s2a_live_stop")(),
+	liveState: () => host("s2a_live_state")(),
 };

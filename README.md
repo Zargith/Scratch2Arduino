@@ -182,6 +182,13 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
+### Live mode
+
+Click **Live** (both variants): the blocks run on the computer and drive the board through the
+*S2A live* firmware, installed automatically the first time. The running scripts glow, the variables are
+shown on the right, and any change to the blocks takes effect at once, without uploading. Click **Stop**
+to end it (the outputs are switched off). Use **Upload** to make the board run the program on its own.
+
 ### The native variant
 
 **Scratch2Arduino (native)** offers the same blocks and opens the same `.s2a` files, drawn by a pure C++/Qt
