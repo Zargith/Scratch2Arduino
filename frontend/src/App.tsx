@@ -131,14 +131,17 @@ export function App() {
 	const switchLanguageRef = useRef(switchLanguage);
 	switchLanguageRef.current = switchLanguage;
 
+	// Once, at start-up: the host tells the system language. Later language changes are the
+	// user's (the FR/EN switch) and must not be overridden.
+	const startup = useRef({ fail, refreshPorts });
 	useEffect(() => {
 		if (!hasHost()) return;
 		void bridge
 			.hello()
 			.then((info) => switchLanguageRef.current(info.language))
-			.catch(fail);
-		void refreshPorts();
-	}, [fail, refreshPorts]);
+			.catch(startup.current.fail);
+		void startup.current.refreshPorts();
+	}, []);
 
 	const newProject = () => {
 		if (dirty && !window.confirm(t("confirm.new"))) return;
