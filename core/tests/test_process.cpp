@@ -1,7 +1,9 @@
 #include "s2a/process.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <string>
 
@@ -69,6 +71,33 @@ TEST(Process, StopsProgramsThatRunTooLong) {
     EXPECT_LT(std::chrono::steady_clock::now() - start, 8s);
 }
 
+TEST(Process, StopsProgramsThatCloseTheirOutputsAndKeepRunning) {
+    Command command = helper({"quiet-sleep", "10000"});
+    command.timeout = 300ms;
+    const auto start = std::chrono::steady_clock::now();
+    const auto result = s2a::process::run(command);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result.value().timedOut);
+    EXPECT_LT(std::chrono::steady_clock::now() - start, 8s);
+}
+
+TEST(Process, OverridesInheritedEnvironmentVariables) {
+#ifdef _WIN32
+    _putenv_s("S2A_TEST_OVERRIDE", "parent");
+#else
+    setenv("S2A_TEST_OVERRIDE", "parent", 1); // NOLINT(concurrency-mt-unsafe)
+#endif
+    Command command = helper({"env", "S2A_TEST_OVERRIDE"});
+    command.env["S2A_TEST_OVERRIDE"] = "child";
+    const auto result = s2a::process::run(command);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.value().out, "child");
+    // Variables that are not overridden are still inherited.
+    const auto inherited = s2a::process::run(helper({"env", "S2A_TEST_OVERRIDE"}));
+    ASSERT_TRUE(inherited.ok());
+    EXPECT_EQ(inherited.value().out, "parent");
+}
+
 TEST(Process, FailsWhenTheProgramDoesNotExist) {
     Command command;
     command.program = std::filesystem::temp_directory_path() / "s2a-no-such-program";
@@ -85,6 +114,30 @@ TEST(Process, FindsProgramsInThePath) {
 #endif
     EXPECT_TRUE(s2a::process::findInPath("s2a-certainly-not-installed").empty());
 }
+
+#ifndef _WIN32
+TEST(Process, SkipsFilesThatAreNotExecutableInThePath) {
+    namespace fs = std::filesystem;
+    const fs::path first = fs::temp_directory_path() / "s2a-path-first";
+    const fs::path second = fs::temp_directory_path() / "s2a-path-second";
+    fs::create_directories(first);
+    fs::create_directories(second);
+    for (const fs::path& directory : {first, second}) {
+        std::ofstream(directory / "s2a-tool") << "#!/bin/sh\n";
+    }
+    fs::permissions(first / "s2a-tool", fs::perms::owner_read | fs::perms::owner_write);
+    fs::permissions(second / "s2a-tool", fs::perms::owner_all);
+
+    const char* saved = std::getenv("PATH"); // NOLINT(concurrency-mt-unsafe)
+    const std::string original = saved != nullptr ? saved : "";
+    setenv("PATH", (first.string() + ":" + second.string()).c_str(), 1); // NOLINT(concurrency-mt-unsafe)
+    const fs::path found = s2a::process::findInPath("s2a-tool");
+    setenv("PATH", original.c_str(), 1); // NOLINT(concurrency-mt-unsafe)
+    fs::remove_all(first);
+    fs::remove_all(second);
+    EXPECT_EQ(found, second / "s2a-tool");
+}
+#endif
 
 TEST(Process, KnowsTheExecutableDirectory) {
     const auto directory = s2a::process::executableDirectory();

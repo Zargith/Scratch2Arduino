@@ -18,6 +18,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -52,6 +53,23 @@ struct Options {
     bool verbose = false;
     bool boardGiven = false;
 };
+
+/// Absolute sketch folder: "." and "blink/" become the folder itself.
+fs::path sketchPath(const std::string& argument) {
+    fs::path path = fs::absolute(fs::u8path(argument)).lexically_normal();
+    if (!path.has_filename() && path.has_parent_path()) {
+        path = path.parent_path();
+    }
+    return path;
+}
+
+/// Build folder for one sketch and board. Two sketches with the same name in different
+/// folders must not share it (one compilation would upload the other's binary).
+fs::path buildDirectory(const fs::path& sketch, const s2a::Board& board) {
+    const std::size_t hash = std::hash<std::string>{}(sketch.generic_u8string());
+    return s2a::toolchain::userDataDirectory() / "build" /
+           (sketch.filename().u8string() + "-" + board.id + "-" + std::to_string(hash % 1000000007U));
+}
 
 class Cli {
 public:
@@ -318,12 +336,12 @@ int Cli::compileCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const auto folder = sketchFor(fs::absolute(fs::u8path(options_.positional[0])), selected);
+    const auto folder = sketchFor(sketchPath(options_.positional[0]), selected);
     if (!folder) {
         return kFailure;
     }
     const fs::path& sketch = *folder;
-    const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
+    const fs::path build = buildDirectory(sketch, *selected);
     return compile(*cli, *selected, sketch, build);
 }
 
@@ -337,12 +355,12 @@ int Cli::uploadCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const auto folder = sketchFor(fs::absolute(fs::u8path(options_.positional[0])), selected);
+    const auto folder = sketchFor(sketchPath(options_.positional[0]), selected);
     if (!folder) {
         return kFailure;
     }
     const fs::path& sketch = *folder;
-    const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
+    const fs::path build = buildDirectory(sketch, *selected);
     if (const int status = compile(*cli, *selected, sketch, build); status != kSuccess) {
         return status;
     }
@@ -436,8 +454,8 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
     return options;
 }
 
-/// Arguments in UTF-8. On Windows argv uses the ANSI code page, so read the UTF-16
-/// command line instead (paths with accents would not be found otherwise).
+/// Arguments in UTF-8. On Windows argv uses the ANSI code page, so read the UTF-16 command
+/// line instead (paths with accents would not be found otherwise).
 std::vector<std::string> utf8Arguments(int argc, char* argv[]) {
 #ifdef _WIN32
     (void)argc;

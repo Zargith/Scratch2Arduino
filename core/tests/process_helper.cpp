@@ -5,7 +5,9 @@
 //   process_helper env <name>           prints the value of an environment variable
 //   process_helper pwd                  prints the working directory
 //   process_helper sleep <ms>           sleeps
+//   process_helper quiet-sleep <ms>     closes stdout and stderr, then sleeps
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -79,6 +81,12 @@ int main(int argc, char* argv[]) {
     }
     if (command == "pwd") {
         std::cout << std::filesystem::current_path().u8string();
+        return 0;
+    }
+    if (command == "quiet-sleep" && argc > 2) {
+        std::fclose(stdout); // NOLINT(cppcoreguidelines-owning-memory)
+        std::fclose(stderr); // NOLINT(cppcoreguidelines-owning-memory)
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(args[2])));
         return 0;
     }
     if (command == "sleep" && argc > 2) {
