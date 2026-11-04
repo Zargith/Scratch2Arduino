@@ -30,6 +30,9 @@ s2a_set_warnings(s2a_core_tests)
 
 # Program driven by test_process.cpp.
 add_executable(s2a_process_helper process_helper.cpp)
+if(WIN32)
+    target_link_libraries(s2a_process_helper PRIVATE shell32)
+endif()
 add_dependencies(s2a_core_tests s2a_process_helper)
 target_compile_definitions(s2a_core_tests PRIVATE S2A_PROCESS_HELPER="$<TARGET_FILE:s2a_process_helper>")
 if(S2A_ARDUINO_CLI_EXECUTABLE)
