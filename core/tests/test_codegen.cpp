@@ -180,6 +180,33 @@ TEST(Codegen, AddsHelpersOnlyWhenUsed) {
     EXPECT_NE(sketch.source.find("randomSeed(micros());"), std::string::npos);
 }
 
+TEST(Codegen, RunsSeveralScriptsSideBySide) {
+    // Two "when the program starts" scripts must blink at their own pace, as in Scratch.
+    Project project = blink();
+    Block forever = block("loop2", "control_forever");
+    Block repeat = block("repeat", "control_repeat");
+    repeat.inputs["TIMES"].value = "3";
+    repeat.statements["SUBSTACK"] = {wait("w3", "0.3")};
+    forever.statements["SUBSTACK"] = {repeat};
+    project.scripts.push_back({300, 0, {block("hat2", "events_when_program_starts"), forever}});
+    const auto source = generate(project).source;
+    for (const char* expected : {"void s2a_script1() {", "void s2a_script2() {", "  s2a_script1();\n  s2a_script2();\n}",
+                                 "S2A_WAIT(task, 0.5);", "S2A_WAIT(task, 0.3);", "long s2a_i1;",
+                                 "for (s2a_i1 = 0; s2a_i1 < (long)(3); ++s2a_i1) {", "S2A_YIELD(task);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("delay("), std::string::npos) << "a wait must not block the other script";
+    // Block lines still point at the code of each block.
+    const auto sketch = generate(project);
+    EXPECT_EQ(lines(sketch.source).at(sketch.blockLines.at("w3") - 1), "      S2A_WAIT(task, 0.3);");
+}
+
+TEST(Codegen, KeepsTheClassicFormForASingleScript) {
+    const auto source = generate(blink()).source;
+    EXPECT_EQ(source.find("S2A_"), std::string::npos);
+    EXPECT_NE(source.find("void loop() {\n  digitalWrite(LED_BUILTIN, HIGH);"), std::string::npos);
+}
+
 TEST(Codegen, NumberLiterals) {
     using s2a::codegen::numberLiteral;
     EXPECT_EQ(numberLiteral("12"), "12");

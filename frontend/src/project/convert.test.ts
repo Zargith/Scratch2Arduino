@@ -53,14 +53,30 @@ function normalized(project: Project): Project {
 
 describe("project conversion", () => {
 	it("moves blocks below a forever loop to a script of their own", () => {
-		const project = roundTrip(allBlocks as Project);
-		expect(project.scripts).toHaveLength(3);
-		const second = project.scripts[1];
-		expect(second?.blocks.map((block) => block.type)).toEqual(["events_when_program_starts", "control_forever"]);
-		expect(project.scripts[2]?.blocks.map((block) => block.id)).toEqual(["after"]);
+		const project: Project = {
+			...(blink as Project),
+			scripts: [
+				{
+					x: 0,
+					y: 0,
+					blocks: [
+						{ id: "start", type: "events_when_program_starts" },
+						{ id: "loop", type: "control_forever" },
+						{ id: "after", type: "pins_builtin_led", fields: { STATE: "OFF" } },
+					],
+				},
+			],
+		};
+		const result = roundTrip(project);
+		expect(result.scripts).toHaveLength(2);
+		expect(result.scripts[0]?.blocks.map((block) => block.id)).toEqual(["start", "loop"]);
+		expect(result.scripts[1]?.blocks.map((block) => block.id)).toEqual(["after"]);
 	});
 
-	it.each([["blink", blink]])("round-trips the %s example through the Blockly state", (_name, example) => {
+	it.each([
+		["blink", blink],
+		["all-blocks", allBlocks],
+	])("round-trips the %s example through the Blockly state", (_name, example) => {
 		expect(isProject(example)).toBe(true);
 		const project = example as Project;
 		expect(roundTrip(project)).toEqual(normalized(project));
