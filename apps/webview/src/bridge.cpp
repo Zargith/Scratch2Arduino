@@ -50,7 +50,7 @@ std::string stringArg(const Json& args, std::size_t index) {
 }
 
 fs::path environmentPath(const char* name) {
-    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): read before threads start
+    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
     return value != nullptr ? fs::u8path(value) : fs::path{};
 }
 

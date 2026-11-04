@@ -29,14 +29,21 @@ if(S2A_FRONTEND_DIST)
 else()
     find_program(S2A_PNPM NAMES pnpm pnpm.cmd)
     if(S2A_PNPM)
+        # pnpm is a .cmd script on Windows: Visual Studio runs custom commands from a .bat file,
+        # where calling a .cmd without "call" ends the script after the first command.
+        if(WIN32)
+            set(_s2a_pnpm cmd /c "${S2A_PNPM}")
+        else()
+            set(_s2a_pnpm "${S2A_PNPM}")
+        endif()
         file(GLOB_RECURSE _s2a_frontend_inputs CONFIGURE_DEPENDS
             "${_s2a_frontend_source}/src/*"
             "${PROJECT_SOURCE_DIR}/blocks/catalog/*.json"
             "${PROJECT_SOURCE_DIR}/resources/boards/*.json")
         add_custom_command(
             OUTPUT "${_s2a_frontend_output}/index.html"
-            COMMAND "${S2A_PNPM}" install --frozen-lockfile
-            COMMAND "${S2A_PNPM}" exec vite build --outDir "${_s2a_frontend_output}" --emptyOutDir --logLevel warn
+            COMMAND ${_s2a_pnpm} install --frozen-lockfile
+            COMMAND ${_s2a_pnpm} exec vite build --outDir "${_s2a_frontend_output}" --emptyOutDir --logLevel warn
             WORKING_DIRECTORY "${_s2a_frontend_source}"
             DEPENDS ${_s2a_frontend_inputs}
                 "${_s2a_frontend_source}/package.json"
