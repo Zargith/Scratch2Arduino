@@ -29,7 +29,9 @@ struct BuildResult {
     bool ok = false;
     std::string message;               ///< One friendly sentence for the status bar.
     std::string details;               ///< Technical output, for "show details" and bug reports.
-    std::vector<std::string> blockIds; ///< Blocks the compiler errors point at, if any.
+    std::vector<std::string> blockIds; ///< Blocks to show: validation errors, or where the compiler errors point.
+    std::vector<std::string> warnings; ///< Validation warnings (the program was built anyway).
+    std::vector<std::string> warningBlockIds;
     std::filesystem::path sketch;      ///< Generated sketch folder.
 };
 

@@ -3,6 +3,7 @@
 #include "s2a/blocks.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
+#include "s2a/validator.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -67,6 +68,38 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         return failure(tr("build.unknown_board", language, {{"board", project.boardId}}));
     }
 
+    // Mistakes in the blocks are reported here, never while the user edits.
+    const auto issues = validation::validate(project, BlockCatalog::builtin(), board, language);
+    std::vector<std::string> warnings;
+    std::vector<std::string> warningBlockIds;
+    for (const validation::Issue& issue : issues) {
+        if (issue.severity == validation::Severity::Warning) {
+            warnings.push_back(validation::describe(issue, language));
+            warningBlockIds.push_back(issue.blockId);
+        }
+    }
+    if (validation::hasErrors(issues)) {
+        BuildResult result;
+        std::size_t errors = 0;
+        for (const validation::Issue& issue : issues) {
+            if (issue.severity == validation::Severity::Error) {
+                if (errors++ == 0) {
+                    result.message = validation::describe(issue, language);
+                }
+                if (!issue.blockId.empty()) {
+                    result.blockIds.push_back(issue.blockId);
+                }
+            }
+        }
+        result.details = tr("validation.blocked", language, {{"count", std::to_string(errors)}});
+        for (const validation::Issue& issue : issues) {
+            result.details += "\n- " + validation::describe(issue, language);
+        }
+        result.warnings = std::move(warnings);
+        result.warningBlockIds = std::move(warningBlockIds);
+        return result;
+    }
+
     // Generate the sketch. The folder and the .ino must have the same name.
     const std::string name = codegen::identifier(project.name.empty() ? "projet" : project.name);
     const fs::path sketch = options.workDirectory / "sketches" / name;
@@ -113,6 +146,11 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
     BuildResult result;
     result.sketch = sketch;
     result.details = compiled.value().out;
+    result.warnings = warnings;
+    result.warningBlockIds = warningBlockIds;
+    for (const std::string& warning : warnings) {
+        result.details = "- " + warning + "\n" + result.details;
+    }
     TranslationParams params{{"board", board->name}};
     for (const MemoryUsage& section : compiled.value().memory) {
         params.emplace_back(section.section + "_percent",
