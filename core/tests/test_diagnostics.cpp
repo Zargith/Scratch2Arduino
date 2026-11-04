@@ -152,4 +152,29 @@ TEST(Describe, EveryProblemHasATranslation) {
     }
 }
 
+TEST(Diagnostics, DownloadErrorsAreNotAlwaysNetworkProblems) {
+    CommandOutcome outcome;
+    outcome.error = "Error updating index: open /data/package_index.json: permission denied";
+    EXPECT_EQ(s2a::toolchain::diagnoseInstall(outcome).problem, Problem::Unknown);
+    outcome.error = "Error downloading index: Get \"https://downloads.arduino.cc\": dial tcp: lookup downloads.arduino.cc: no such host";
+    EXPECT_EQ(s2a::toolchain::diagnoseInstall(outcome).problem, Problem::NetworkUnavailable);
+}
+
+TEST(Diagnostics, RecognisesLinkerMemoryOverflows) {
+    s2a::toolchain::CompileOutcome outcome;
+    outcome.err = "/usr/bin/avr-ld: sketch.ino.elf section `.text' will not fit in region `text'\n"
+                  "/usr/bin/avr-ld: region `text' overflowed by 4096 bytes\ncollect2: error: ld returned 1 exit status\n";
+    EXPECT_EQ(s2a::toolchain::diagnoseCompile(outcome).problem, Problem::SketchTooBig);
+    outcome.err = "/usr/bin/avr-ld: address 0x800a1c of sketch.ino.elf section `.bss' is not within region `data'\n";
+    EXPECT_EQ(s2a::toolchain::diagnoseCompile(outcome).problem, Problem::NotEnoughMemory);
+}
+
+TEST(Diagnostics, MissingUploadFilesAreNotMissingPorts) {
+    CommandOutcome outcome;
+    outcome.err = "avrdude: can't open input file /build/sketch.ino.hex: No such file or directory\n";
+    EXPECT_NE(s2a::toolchain::diagnoseUpload(outcome, "/dev/ttyACM0").problem, Problem::PortNotFound);
+    outcome.err = "avrdude: ser_open(): can't open device \"/dev/ttyACM0\": No such file or directory\n";
+    EXPECT_EQ(s2a::toolchain::diagnoseUpload(outcome, "/dev/ttyACM0").problem, Problem::PortNotFound);
+}
+
 } // namespace

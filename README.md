@@ -159,6 +159,9 @@ s2a-cli generate examples/projects/blink/project.json # Arduino code made from a
 s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the board comes from the project
 ```
 
+On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
+in PowerShell `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" ports`.
+
 Messages are in the system language; `--lang en` or `--lang fr` forces one, `--verbose` shows the raw tool output.
 Scratch2Arduino keeps its own copy of the Arduino cores and libraries (in `~/.local/share/Scratch2Arduino`,
 `~/Library/Application Support/Scratch2Arduino` or `%LOCALAPPDATA%\Scratch2Arduino`), so it never changes an

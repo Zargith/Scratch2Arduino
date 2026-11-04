@@ -196,6 +196,30 @@ TEST(ArduinoCli, UploadsToThePort) {
     EXPECT_EQ(args.at(4), "/dev/ttyNOPE");
 }
 
+TEST(ArduinoCli, ReadsFatalErrorsWrittenToStderr) {
+    FakeRunner fake;
+    Output failure = reply("", 1);
+    failure.err = R"j({"error": "Error during Upload: Failed uploading: port not found"})j";
+    fake.replies = {failure};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto outcome = cli.upload("/s", uno(), "/b", "COM9");
+    ASSERT_TRUE(outcome.ok());
+    EXPECT_FALSE(outcome.value().success);
+    EXPECT_EQ(outcome.value().error, "Error during Upload: Failed uploading: port not found");
+    EXPECT_EQ(outcome.value().err.find('{'), std::string::npos);
+}
+
+TEST(ArduinoCli, KeepsUploaderMessagesOnSuccess) {
+    FakeRunner fake;
+    fake.replies = {reply(R"j({"stdout": "", "stderr": "avrdude: 924 bytes of flash verified\n",
+                              "updated_upload_port": null})j")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto outcome = cli.upload("/s", uno(), "/b", "COM3");
+    ASSERT_TRUE(outcome.ok());
+    EXPECT_TRUE(outcome.value().success);
+    EXPECT_NE(outcome.value().err.find("verified"), std::string::npos);
+}
+
 TEST(ArduinoCli, KeepsRawOutputWhenItIsNotJson) {
     FakeRunner fake;
     Output crash = reply("panic: something", 2);
