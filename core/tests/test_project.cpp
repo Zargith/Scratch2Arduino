@@ -271,4 +271,17 @@ TEST(ProjectFile, ReportsMissingAndUnwritableFiles) {
     EXPECT_EQ(load(garbage).error().code, ErrorCode::InvalidArchive);
 }
 
+TEST(ProjectFile, OpensABareProjectJson) {
+    const auto path = fs::temp_directory_path() / "s2a-bare-project.json";
+    {
+        std::ofstream file(path, std::ios::binary);
+        file << toJson(blink());
+    }
+    const auto loaded = load(path);
+    fs::remove(path);
+    ASSERT_TRUE(loaded.ok()) << loaded.error().detail;
+    EXPECT_EQ(loaded.value().name, blink().name);
+    EXPECT_EQ(loaded.value().scripts.size(), blink().scripts.size());
+}
+
 } // namespace

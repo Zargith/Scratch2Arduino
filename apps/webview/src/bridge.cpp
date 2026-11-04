@@ -184,7 +184,7 @@ void Bridge::bind() {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto files = pfd::open_file(tr("webview.open_title", language), projectsDirectory().u8string(),
-                                                  {tr("webview.file_filter", language), "*.s2a"})
+                                                  {tr("webview.file_filter", language), "*.s2a *.json"})
                                        .result();
                 if (files.empty()) {
                     return "null";
@@ -194,7 +194,12 @@ void Bridge::bind() {
                 if (!loaded.ok()) {
                     throw UserError{tr(errorMessageKey(loaded.error().code), language)};
                 }
-                return Json{{"path", path.u8string()}, {"project", Json::parse(project::toJson(loaded.value()))}}.dump();
+                // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
+                const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
+                return Json{{"path", savePath},
+                            {"name", path.u8string()},
+                            {"project", Json::parse(project::toJson(loaded.value()))}}
+                    .dump();
             });
         },
         nullptr);

@@ -147,6 +147,7 @@ template <typename Visitor> void forEachBlock(const Project& project, Visitor&& 
 [[nodiscard]] Status save(const Project& project, const std::filesystem::path& path);
 
 /// Opens a .s2a file.
+/// Reads a .s2a archive, or a bare project.json (as in examples/projects).
 [[nodiscard]] Result<Project> load(const std::filesystem::path& path);
 
 } // namespace s2a::project

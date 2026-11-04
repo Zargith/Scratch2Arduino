@@ -39,7 +39,10 @@ export interface LiveSnapshot {
 }
 
 export interface OpenedProject {
+	/** Where Save writes; empty for a project.json, which is never overwritten. */
 	path: string;
+	/** The file that was opened. */
+	name?: string;
 	project: Project;
 }
 
