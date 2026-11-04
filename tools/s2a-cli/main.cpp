@@ -13,6 +13,7 @@
 #include "s2a/version.hpp"
 
 #include <filesystem>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <set>
@@ -20,7 +21,11 @@
 #include <vector>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 namespace {
@@ -42,6 +47,23 @@ struct Options {
     bool verbose = false;
     bool boardGiven = false;
 };
+
+/// Absolute sketch folder: "." and "blink/" become the folder itself.
+fs::path sketchPath(const std::string& argument) {
+    fs::path path = fs::absolute(fs::u8path(argument)).lexically_normal();
+    if (!path.has_filename() && path.has_parent_path()) {
+        path = path.parent_path();
+    }
+    return path;
+}
+
+/// Build folder for one sketch and board. Two sketches with the same name in different
+/// folders must not share it (one compilation would upload the other's binary).
+fs::path buildDirectory(const fs::path& sketch, const s2a::Board& board) {
+    const std::size_t hash = std::hash<std::string>{}(sketch.generic_u8string());
+    return s2a::toolchain::userDataDirectory() / "build" /
+           (sketch.filename().u8string() + "-" + board.id + "-" + std::to_string(hash % 1000000007U));
+}
 
 class Cli {
 public:
@@ -235,8 +257,8 @@ int Cli::compileCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = fs::absolute(fs::u8path(options_.positional[0]));
-    const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
+    const fs::path sketch = sketchPath(options_.positional[0]);
+    const fs::path build = buildDirectory(sketch, *selected);
     return compile(*cli, *selected, sketch, build);
 }
 
@@ -250,8 +272,8 @@ int Cli::uploadCommand() const {
     if (selected == nullptr || !cli) {
         return kFailure;
     }
-    const fs::path sketch = fs::absolute(fs::u8path(options_.positional[0]));
-    const fs::path build = s2a::toolchain::userDataDirectory() / "build" / (sketch.filename().u8string() + "-" + selected->id);
+    const fs::path sketch = sketchPath(options_.positional[0]);
+    const fs::path build = buildDirectory(sketch, *selected);
     if (const int status = compile(*cli, *selected, sketch, build); status != kSuccess) {
         return status;
     }
@@ -342,13 +364,40 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
     return options;
 }
 
+/// Arguments in UTF-8. On Windows argv uses the ANSI code page, so read the UTF-16 command
+/// line instead (paths with accents would not be found otherwise).
+std::vector<std::string> utf8Arguments(int argc, char* argv[]) {
+#ifdef _WIN32
+    (void)argc;
+    (void)argv;
+    std::vector<std::string> result;
+    int count = 0;
+    LPWSTR* wide = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (wide == nullptr) {
+        return result;
+    }
+    for (int i = 1; i < count; ++i) {
+        const int size = WideCharToMultiByte(CP_UTF8, 0, wide[i], -1, nullptr, 0, nullptr, nullptr);
+        std::string arg(size > 1 ? static_cast<std::size_t>(size - 1) : 0U, '\0');
+        if (size > 1) {
+            WideCharToMultiByte(CP_UTF8, 0, wide[i], -1, arg.data(), size, nullptr, nullptr);
+        }
+        result.push_back(std::move(arg));
+    }
+    LocalFree(static_cast<HLOCAL>(wide));
+    return result;
+#else
+    return {argv + 1, argv + argc};
+#endif
+}
+
 } // namespace
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // accents in French messages
 #endif
-    const std::vector<std::string> args(argv + 1, argv + argc);
+    const std::vector<std::string> args = utf8Arguments(argc, argv);
     auto options = parse(args);
     if (!options) {
         std::cerr << s2a::tr("cli.usage", s2a::detectSystemLanguage()) << '\n';
