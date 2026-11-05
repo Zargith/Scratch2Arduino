@@ -46,10 +46,23 @@ FetchContent_MakeAvailable(portable_file_dialogs)
 include(S2AFrontend)
 find_package(Threads REQUIRED)
 
+# Application icon: resource of the .exe on Windows, Resources/ of the bundle on macOS.
+set(S2A_ICON_DIR "${PROJECT_SOURCE_DIR}/resources/icons")
+set(_s2a_icon_sources)
+if(WIN32)
+    configure_file(src/scratch2arduino.rc.in "${CMAKE_CURRENT_BINARY_DIR}/scratch2arduino.rc" @ONLY)
+    list(APPEND _s2a_icon_sources "${CMAKE_CURRENT_BINARY_DIR}/scratch2arduino.rc")
+elseif(APPLE)
+    set(_s2a_icns "${S2A_ICON_DIR}/scratch2arduino.icns")
+    set_source_files_properties("${_s2a_icns}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    list(APPEND _s2a_icon_sources "${_s2a_icns}")
+endif()
+
 add_executable(scratch2arduino WIN32 MACOSX_BUNDLE
     src/bridge.cpp
     src/main.cpp
     src/welcome_page.cpp
+    ${_s2a_icon_sources}
 )
 target_include_directories(scratch2arduino PRIVATE src)
 target_include_directories(scratch2arduino SYSTEM PRIVATE "${portable_file_dialogs_SOURCE_DIR}")
@@ -61,6 +74,7 @@ s2a_set_warnings(scratch2arduino)
 
 set_target_properties(scratch2arduino PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Scratch2Arduino"
+    MACOSX_BUNDLE_ICON_FILE scratch2arduino.icns
     MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.zargith.scratch2arduino"
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"

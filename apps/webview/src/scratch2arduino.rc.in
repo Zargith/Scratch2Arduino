@@ -1,0 +1,4 @@
+// Windows resources of scratch2arduino.exe (configured by CMake).
+// 32512 is IDI_APPLICATION: Explorer shows this icon for the .exe, and the webview library loads it
+// as the window icon.
+32512 ICON "@S2A_ICON_DIR@/scratch2arduino.ico"

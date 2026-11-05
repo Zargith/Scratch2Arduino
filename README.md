@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="resources/icons/scratch2arduino.png" alt="Scratch2Arduino logo" width="160">
+</p>
+
 # Scratch2Arduino
 
 > Program real Arduino boards with Scratch-style blocks — no coding experience required.

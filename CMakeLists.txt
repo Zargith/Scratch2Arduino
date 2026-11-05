@@ -46,8 +46,13 @@ endif()
 
 # Linux desktop integration (application icon).
 if(UNIX AND NOT APPLE AND S2A_BUILD_WEBVIEW)
-    install(FILES resources/icons/scratch2arduino.svg
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+    foreach(size 16 32 48 64 128 256)
+        install(FILES resources/icons/scratch2arduino-${size}.png
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
+                RENAME scratch2arduino.png)
+    endforeach()
+    install(FILES resources/icons/scratch2arduino.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
 endif()
 
 # `cmake -P <build>/cmake_uninstall.cmake` (used by `make uninstall` and `install.sh --uninstall`).

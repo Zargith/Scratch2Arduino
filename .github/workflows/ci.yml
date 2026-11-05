@@ -137,7 +137,8 @@ jobs:
         run: |
           test -x "$HOME/.local/bin/scratch2arduino"
           test -f "$HOME/.local/share/applications/scratch2arduino.desktop"
-          test -f "$HOME/.local/share/icons/hicolor/scalable/apps/scratch2arduino.svg"
+          test -f "$HOME/.local/share/icons/hicolor/256x256/apps/scratch2arduino.png"
+          test -f "$HOME/.local/share/icons/hicolor/512x512/apps/scratch2arduino.png"
 
       - name: install.sh --uninstall
         run: |

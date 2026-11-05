@@ -36,6 +36,7 @@ OutputBaseFilename=installer
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile={#SourceRoot}\resources\icons\scratch2arduino.ico
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\bin\scratch2arduino.exe
 ShowLanguageDialog=auto
