@@ -6,11 +6,16 @@ import { ActionIcon, Button, Card, CloseButton, Group, ScrollArea, Select, Text,
 import { IconPlugConnected, IconPlugConnectedX, IconSend, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 
-import { bridge } from "@/bridge";
+import { bridge, hasHost } from "@/bridge";
 import type { Language } from "@/catalog";
 import type { MessageKey } from "@/i18n";
 
 const bauds = [9600, 19200, 57600, 115200];
+
+/** Frees the port; does nothing in a plain browser (pnpm dev), where the host is missing. */
+const closePort = () => {
+	if (hasHost()) void bridge.monitorClose().catch(() => undefined);
+};
 
 interface SerialMonitorProps {
 	t: (key: MessageKey, params?: Record<string, string>) => string;
@@ -38,7 +43,7 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 
 	// Connect when wanted and the port is free; the bridge closes it for uploads and Live mode.
 	useEffect(() => {
-		if (!wanted || connected || live || busy || !port) return;
+		if (!wanted || connected || live || busy || !port || !hasHost()) return;
 		let cancelled = false;
 		void bridge
 			.monitorOpen(port, baud, language)
@@ -83,7 +88,7 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 	}, [busy, live]);
 
 	// Closing the panel frees the port.
-	useEffect(() => () => void bridge.monitorClose().catch(() => undefined), []);
+	useEffect(() => closePort, []);
 
 	const shown = live ? liveLines : lines;
 	useEffect(() => {
@@ -93,7 +98,7 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 	const disconnect = () => {
 		setWanted(false);
 		setConnected(false);
-		void bridge.monitorClose().catch(() => undefined);
+		closePort();
 	};
 
 	const send = () => {
