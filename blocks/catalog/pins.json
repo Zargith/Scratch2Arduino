@@ -43,11 +43,40 @@
       ]
     },
     {
+      "type": "pins_set_mode",
+      "shape": "statement",
+      "message": { "fr": "mettre la broche %1 en %2", "en": "set pin %1 as %2" },
+      "tooltip": { "fr": "Choisit comment une broche lit le courant. Pour un bouton branché entre la broche et GND, choisis « entrée avec résistance interne » : la broche est à l'état BAS quand le bouton est appuyé.", "en": "Chooses how a pin reads current. For a button wired between the pin and GND, choose \"input with pull-up\": the pin is LOW while the button is pressed." },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "2" },
+        {
+          "name": "MODE",
+          "kind": "dropdown",
+          "default": "INPUT_PULLUP",
+          "options": [
+            { "value": "INPUT_PULLUP", "label": { "fr": "entrée avec résistance interne (INPUT_PULLUP)", "en": "input with pull-up (INPUT_PULLUP)" } },
+            { "value": "INPUT", "label": { "fr": "entrée (INPUT)", "en": "input (INPUT)" } }
+          ]
+        }
+      ]
+    },
+    {
       "type": "pins_digital_read",
       "shape": "boolean",
-      "message": { "fr": "la broche %1 est à l'état HAUT", "en": "pin %1 is HIGH" },
-      "tooltip": { "fr": "Vrai quand la broche reçoit du courant, par exemple quand un bouton est appuyé.", "en": "True when the pin receives current, for example when a button is pressed." },
-      "args": [{ "name": "PIN", "kind": "pin", "capability": "digital", "default": "2" }]
+      "message": { "fr": "la broche %1 est à l'état %2", "en": "pin %1 is %2" },
+      "tooltip": { "fr": "Vrai quand la broche est dans l'état choisi : HAUT quand elle reçoit du courant, BAS sinon. Avec « entrée avec résistance interne », un bouton appuyé met la broche à l'état BAS.", "en": "True when the pin is in the chosen state: HIGH when it receives current, LOW otherwise. With \"input with pull-up\", a pressed button makes the pin LOW." },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "2" },
+        {
+          "name": "STATE",
+          "kind": "dropdown",
+          "default": "HIGH",
+          "options": [
+            { "value": "HIGH", "label": { "fr": "HAUT", "en": "HIGH" } },
+            { "value": "LOW", "label": { "fr": "BAS", "en": "LOW" } }
+          ]
+        }
+      ]
     },
     {
       "type": "pins_analog_read",

@@ -223,7 +223,10 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
     if (found == nullptr) {
         return -1; // the validator reports it before Live starts
     }
-    if (auto it = modes_.find(found->number); it == modes_.end() || it->second != mode) {
+    auto it = modes_.find(found->number);
+    // Reading a pin set as an input with pull-up keeps the pull-up.
+    const bool keep = it != modes_.end() && mode == PinMode::Input && it->second == PinMode::InputPullup;
+    if (!keep && (it == modes_.end() || it->second != mode)) {
         pins_.setMode(found->number, mode);
         modes_[found->number] = mode;
     }
@@ -301,7 +304,8 @@ double Interpreter::evaluate(const Block& block) {
     }
     if (type == "pins_digital_read") {
         const int number = pin(block, "PIN", PinMode::Input);
-        return number >= 0 && pins_.digitalRead(number) ? 1 : 0;
+        const bool wanted = field(block, "STATE") != "LOW";
+        return number >= 0 && pins_.digitalRead(number) == wanted ? 1 : 0;
     }
     if (type == "pins_analog_read") {
         const int number = pin(block, "PIN", PinMode::Input);
@@ -355,6 +359,12 @@ void Interpreter::run(Thread& thread, Clock now) {
         } else if (type == "pins_digital_write") {
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
                 pins_.digitalWrite(number, field(block, "STATE") != "LOW");
+            }
+        } else if (type == "pins_set_mode") {
+            if (const Pin* target = board_.findPin(field(block, "PIN")); target != nullptr) {
+                const PinMode mode = field(block, "MODE") == "INPUT" ? PinMode::Input : PinMode::InputPullup;
+                pins_.setMode(target->number, mode); // always: the block may remove the pull-up
+                modes_[target->number] = mode;
             }
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");

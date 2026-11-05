@@ -14,6 +14,7 @@
       "blocks": [
         { "id": "start", "type": "events_when_program_starts" },
         { "id": "set", "type": "variables_set", "fields": { "VARIABLE": "score" }, "inputs": { "VALUE": { "value": "0" } } },
+        { "id": "mode", "type": "pins_set_mode", "fields": { "PIN": "2", "MODE": "INPUT_PULLUP" } },
         {
           "id": "repeat",
           "type": "control_repeat",
@@ -30,7 +31,7 @@
         {
           "id": "until",
           "type": "control_wait_until",
-          "inputs": { "CONDITION": { "block": { "id": "read2", "type": "pins_digital_read", "fields": { "PIN": "2" } } } }
+          "inputs": { "CONDITION": { "block": { "id": "read2", "type": "pins_digital_read", "fields": { "PIN": "2", "STATE": "LOW" } } } }
         },
         {
           "id": "forever",
