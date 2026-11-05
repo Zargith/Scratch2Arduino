@@ -167,6 +167,17 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
     workers_.push_back({std::move(thread), std::move(done)});
 }
 
+std::string Bridge::openedJson(const fs::path& path, Language language) const {
+    auto loaded = project::load(path);
+    if (!loaded.ok()) {
+        throw UserError{tr(errorMessageKey(loaded.error().code), language)};
+    }
+    // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
+    const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
+    return Json{{"path", savePath}, {"name", path.u8string()}, {"project", Json::parse(project::toJson(loaded.value()))}}
+        .dump();
+}
+
 void Bridge::bind() {
     window_.bind("s2a_hello", [this](const std::string& /*request*/) {
         return Json{{"language", std::string(languageCode(language_))}, {"version", std::string(version::kString)}}.dump();
@@ -199,17 +210,21 @@ void Bridge::bind() {
                 if (files.empty()) {
                     return "null";
                 }
-                const fs::path path = fs::u8path(files.front());
-                auto loaded = project::load(path);
-                if (!loaded.ok()) {
-                    throw UserError{tr(errorMessageKey(loaded.error().code), language)};
+                return openedJson(fs::u8path(files.front()), language);
+            });
+        },
+        nullptr);
+    // Project given on the command line, handed to the editor once (null afterwards).
+    window_.bind(
+        "s2a_startup_project",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            fs::path path;
+            std::swap(path, startupFile_);
+            async(id, [request, path, this]() -> std::string {
+                if (path.empty()) {
+                    return "null";
                 }
-                // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
-                const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
-                return Json{{"path", savePath},
-                            {"name", path.u8string()},
-                            {"project", Json::parse(project::toJson(loaded.value()))}}
-                    .dump();
+                return openedJson(path, languageArg(Json::parse(request), 0, language_));
             });
         },
         nullptr);

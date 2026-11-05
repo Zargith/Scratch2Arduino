@@ -3,13 +3,13 @@
     Installs the prerequisites, then builds and installs Scratch2Arduino with CMake (Windows).
 
 .DESCRIPTION
-    Run by installer.exe after the sources are copied, but it can also be used on its own:
+    Run by Scratch2Arduino_installer.exe after the sources are copied, but it can also be used on its own:
         powershell -ExecutionPolicy Bypass -File installer\windows\build-and-install.ps1
 
     Updates are incremental:
       - prerequisites already on the computer (CMake, Visual Studio 2022 Build Tools, WebView2)
         are detected and not installed again; only the missing ones are installed with winget;
-      - with -StagingDir (what installer.exe passes), the new sources are compared with the
+      - with -StagingDir (what Scratch2Arduino_installer.exe passes), the new sources are compared with the
         installed ones by content, and only the changed files are replaced, so the build tree
         kept in <InstallDir>\build recompiles only what changed;
       - files of the previous version that are no longer installed are removed.
@@ -30,6 +30,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# The installer shows this output in its window: UTF-8 keeps the accents of the messages.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 # No MSBuild worker processes left running for 15 minutes after the installation.
 $env:MSBUILDDISABLENODEREUSE = '1'
 $French = $Language -in @('french', 'fr')
@@ -226,7 +228,7 @@ try {
                    "-DCMAKE_INSTALL_PREFIX=$InstallDir",
                    '-DS2A_BUILD_WEBVIEW=ON',
                    '-DS2A_BUILD_TESTS=OFF')
-    # installer.exe ships the block editor prebuilt: never rebuild it, even when Node.js is installed.
+    # Scratch2Arduino_installer.exe ships the block editor prebuilt: never rebuild it, even when Node.js is installed.
     $prebuiltFrontend = Join-Path $SourceDir 'frontend\dist'
     if (Test-Path (Join-Path $prebuiltFrontend 'index.html')) { $configure += "-DS2A_FRONTEND_DIST=$prebuiltFrontend" }
 

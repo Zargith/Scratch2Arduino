@@ -1,5 +1,5 @@
 ﻿; Scratch2Arduino - Windows installer (Inno Setup 6).
-; Builds installer.exe:  iscc installer\windows\scratch2arduino.iss
+; Builds Scratch2Arduino_installer.exe:  iscc installer\windows\scratch2arduino.iss  (Inno Setup 6.3 or later)
 ;
 ; The installer ships the sources, then runs build-and-install.ps1, which installs the missing
 ; prerequisites (CMake, Visual Studio Build Tools, WebView2) and builds Scratch2Arduino with CMake
@@ -11,9 +11,13 @@
 
 #define AppName "Scratch2Arduino"
 #ifndef AppVersion
-  #define AppVersion "0.5.0"
+  #define AppVersion "0.6.4"
 #endif
 #define SourceRoot "..\.."
+
+#if Ver < EncodeVer(6, 3, 0)
+  #error Inno Setup 6.3 or later is needed (ExecAndLogOutput shows the build in the installer window).
+#endif
 
 [Setup]
 AppId={{5640ABA3-0554-4DD2-9C29-429857852E2F}
@@ -32,7 +36,7 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=Output
-OutputBaseFilename=installer
+OutputBaseFilename=Scratch2Arduino_installer
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -40,6 +44,11 @@ SetupIconFile={#SourceRoot}\resources\icons\scratch2arduino.ico
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\bin\scratch2arduino.exe
 ShowLanguageDialog=auto
+; Created by scratch2arduino.exe (0.6.4 and later) while it runs: setup asks to close it first.
+; Older versions are found by their process name (IsAppRunning below).
+AppMutex=Scratch2ArduinoRunning
+; .s2a projects open in Scratch2Arduino when double-clicked.
+ChangesAssociations=yes
 
 [Languages]
 ; The first language is the fallback: French by default.
@@ -53,6 +62,12 @@ french.Updating=Mise à jour de Scratch2Arduino (seules les modifications sont r
 english.Updating=Updating Scratch2Arduino (only the changes are recompiled)...
 french.BuildFailed=La compilation de Scratch2Arduino a échoué.%n%nConsulte le journal :%n%1
 english.BuildFailed=Building Scratch2Arduino failed.%n%nSee the log:%n%1
+french.AppRunning=Scratch2Arduino est ouvert.%n%nEnregistre ton projet, ferme Scratch2Arduino, puis clique sur « Réessayer ».
+english.AppRunning=Scratch2Arduino is open.%n%nSave your project, close Scratch2Arduino, then click "Retry".
+french.AppRunningCancelled=Installation annulée : Scratch2Arduino est encore ouvert.
+english.AppRunningCancelled=Setup cancelled: Scratch2Arduino is still open.
+french.BuildDetails=Détails de l'installation :
+english.BuildDetails=Installation details:
 french.UpdateTitle=Mise à jour
 english.UpdateTitle=Update
 french.UpdateSubtitle=Scratch2Arduino est déjà installé sur cet ordinateur.
@@ -82,6 +97,12 @@ Name: "{group}\{#AppName}"; Filename: "{app}\bin\scratch2arduino.exe"; Check: Bi
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\bin\scratch2arduino.exe"; Tasks: desktopicon; Check: BinaryExists('scratch2arduino.exe')
 
+[Registry]
+Root: HKA; Subkey: "Software\Classes\.s2a\OpenWithProgids"; ValueType: string; ValueName: "Scratch2Arduino.Project"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project"; ValueType: string; ValueName: ""; ValueData: "Scratch2Arduino project"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\bin\scratch2arduino.exe,0"
+Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\scratch2arduino.exe"" ""%1"""
+
 [UninstallDelete]
 ; Files produced by the CMake build are not tracked by Inno Setup.
 Type: filesandordirs; Name: "{app}"
@@ -89,6 +110,47 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 var
   PreviousVersion, PreviousDir: String;
+  BuildOutput: TNewMemo;
+
+// True while scratch2arduino.exe runs (any version, even those without AppMutex).
+function IsAppRunning(): Boolean;
+var
+  Locator, Service, Processes: Variant;
+begin
+  Result := False;
+  try
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    Service := Locator.ConnectServer('.', 'root\CIMV2');
+    Processes := Service.ExecQuery('SELECT ProcessId FROM Win32_Process WHERE Name = ''scratch2arduino.exe''');
+    Result := Processes.Count > 0;
+  except
+    // WMI unavailable: the build reports a locked file if the program is still open.
+  end;
+end;
+
+// Asks to close the program until it is closed (Retry) or the user gives up (Cancel).
+function WaitUntilAppClosed(): Boolean;
+begin
+  Result := True;
+  while IsAppRunning() do
+    if SuppressibleMsgBox(CustomMessage('AppRunning'), mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then
+    begin
+      Result := False;
+      Exit;
+    end;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if not WaitUntilAppClosed() then
+    Result := CustomMessage('AppRunningCancelled');
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := WaitUntilAppClosed();
+end;
 
 function UninstallKey(): String;
 begin
@@ -109,7 +171,26 @@ begin
 end;
 
 procedure InitializeWizard();
+var
+  Caption: TNewStaticText;
 begin
+  // The build runs hidden: its output is shown here, below the progress bar.
+  Caption := TNewStaticText.Create(WizardForm);
+  Caption.Parent := WizardForm.InstallingPage;
+  Caption.Caption := CustomMessage('BuildDetails');
+  Caption.Top := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + ScaleY(12);
+  Caption.Left := 0;
+  BuildOutput := TNewMemo.Create(WizardForm);
+  BuildOutput.Parent := WizardForm.InstallingPage;
+  BuildOutput.Left := 0;
+  BuildOutput.Top := Caption.Top + Caption.Height + ScaleY(4);
+  BuildOutput.Width := WizardForm.InstallingPage.ClientWidth;
+  BuildOutput.Height := WizardForm.InstallingPage.ClientHeight - BuildOutput.Top;
+  BuildOutput.ReadOnly := True;
+  BuildOutput.ScrollBars := ssVertical;
+  BuildOutput.WordWrap := False;
+  BuildOutput.Font.Name := 'Consolas';
+  BuildOutput.Font.Size := 8;
   if FindPreviousInstall() then
     CreateOutputMsgPage(wpWelcome, CustomMessage('UpdateTitle'), CustomMessage('UpdateSubtitle'),
       FmtMessage(CustomMessage('UpdateInfo'), [PreviousVersion, PreviousDir, '{#AppVersion}']));
@@ -118,6 +199,15 @@ end;
 function BinaryExists(Name: String): Boolean;
 begin
   Result := FileExists(ExpandConstant('{app}\bin\') + Name);
+end;
+
+// Each line written by build-and-install.ps1, while it runs.
+procedure ShowBuildLine(const S: String; const Error, FirstLine: Boolean);
+begin
+  BuildOutput.Lines.Add(S);
+  BuildOutput.SelStart := Length(BuildOutput.Text); // keep the last line in view
+  if Copy(S, 1, 4) = '==> ' then
+    WizardForm.FilenameLabel.Caption := Copy(S, 5, Length(S) - 4); // the current step
 end;
 
 procedure RunBuild();
@@ -136,6 +226,13 @@ begin
             ' -InstallDir "' + ExpandConstant('{app}') + '"' +
             ' -LogFile "' + LogFile + '"' +
             ' -Language ' + ActiveLanguage();
-  if not Exec('powershell.exe', Params, '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
-    SuppressibleMsgBox(FmtMessage(CustomMessage('BuildFailed'), [LogFile]), mbError, MB_OK, IDOK);
+  WizardForm.ProgressGauge.Style := npbstMarquee; // the length of the build is not known
+  try
+    // No console window: the output goes to the memo of the installing page.
+    if not ExecAndLogOutput('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, @ShowBuildLine) or
+       (ResultCode <> 0) then
+      SuppressibleMsgBox(FmtMessage(CustomMessage('BuildFailed'), [LogFile]), mbError, MB_OK, IDOK);
+  finally
+    WizardForm.ProgressGauge.Style := npbstNormal;
+  end;
 end;

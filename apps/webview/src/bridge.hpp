@@ -36,7 +36,15 @@ public:
 
     void bind();
 
+    /// Project given to the program (file dropped on its icon, double-clicked .s2a file):
+    /// the editor opens it once it has started.
+    void setStartupFile(std::filesystem::path path) { startupFile_ = std::move(path); }
+
 private:
+    /// What "open" returns to the editor for the project at `path`.
+    [[nodiscard]] std::string openedJson(const std::filesystem::path& path, Language language) const;
+
+    std::filesystem::path startupFile_;
     template <typename Work> void async(const std::string& id, Work work);
 
     ::webview::webview& window_;

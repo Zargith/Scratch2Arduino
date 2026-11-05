@@ -32,7 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { bridge, hasHost, HostMissingError, type LiveSnapshot, type Outcome, type Port } from "@/bridge";
+import { bridge, hasHost, HostMissingError, type LiveSnapshot, type OpenedProject, type Outcome, type Port } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
 import logo from "@/logo.png";
@@ -178,11 +178,8 @@ export function App() {
 		reload(projectToWorkspace(starterProject(untitled)));
 	};
 
-	const openProject = async () => {
-		try {
-			const opened = await bridge.open(language);
-			if (!opened) return;
-			initialValues.current = Object.fromEntries(
+	const showOpened = (opened: OpenedProject) => {
+		initialValues.current = Object.fromEntries(
 				opened.project.variables.map((variable) => [variable.id, variable.initialValue])
 			);
 			setName(opened.project.name);
@@ -196,10 +193,31 @@ export function App() {
 					? { kind: "error", message: t("status.unknown_blocks"), details: unknown.join("\n") }
 					: { kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) }
 			);
+	};
+
+	const openProject = async () => {
+		try {
+			const opened = await bridge.open(language);
+			if (opened) showOpened(opened);
 		} catch (error) {
 			fail(error);
 		}
 	};
+
+	// A project dropped on the program's icon (or a double-clicked .s2a file) opens at start-up.
+	const showOpenedRef = useRef(showOpened);
+	showOpenedRef.current = showOpened;
+	useEffect(() => {
+		if (!hasHost()) return;
+		bridge
+			.startupProject(language)
+			.then((opened) => {
+				if (opened) showOpenedRef.current(opened);
+			})
+			.catch(fail);
+		// Once, when the editor starts.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const saveProject = async () => {
 		try {
