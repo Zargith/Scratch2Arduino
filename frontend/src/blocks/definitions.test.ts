@@ -16,4 +16,19 @@ describe("block definitions", () => {
 		expect(note.getTooltip()).toContain("à glisser dans un bloc du buzzer");
 		workspace.dispose();
 	});
+
+	it("speaks of the function, not of a variable, in the function menu", () => {
+		Blockly.ScratchMsgs.setLocale("fr"); // as the editor does: the "delete" entry needs it
+		defineBlocks("fr");
+		const workspace = new Blockly.Workspace();
+		workspace.getVariableMap().createVariable("clignoter", "function", "f1");
+		const define = workspace.newBlock("functions_define");
+		const field = define.getField("FUNCTION") as Blockly.FieldDropdown;
+		field.setValue("f1");
+		const labels = field.getOptions(false).map((option) => (option as unknown[])[0]);
+		expect(labels).toContain("Renommer la fonction");
+		expect(labels).toContain("Supprimer la fonction « clignoter »");
+		expect(labels.some((label) => String(label).includes("variable"))).toBe(false);
+		workspace.dispose();
+	});
 });

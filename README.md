@@ -86,7 +86,7 @@ Scratch2Arduino/
 ├── CMakeLists.txt          # top-level build, option S2A_BUILD_WEBVIEW (OFF: core only)
 ├── CMakePresets.json
 ├── Makefile                # Linux/macOS convenience wrapper around CMake
-├── install.sh              # Linux/macOS one-command installer
+├── Scratch2Arduino_installer.sh              # Linux/macOS one-command installer
 ├── cmake/                  # CMake modules and toolchain helpers
 ├── core/                   # s2a_core: shared C++17 library + unit tests
 ├── blocks/                 # block catalog (JSON, fr/en labels) and its JSON schema
@@ -96,7 +96,7 @@ Scratch2Arduino/
 ├── firmware/               # S2A live firmware for Arduino / ESP boards
 ├── tools/s2a-cli/          # command-line access to the toolchain
 ├── installer/
-│   └── windows/            # installer.exe script (Inno Setup / NSIS)
+│   └── windows/            # Scratch2Arduino_installer.exe script (Inno Setup / NSIS)
 ├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
 ├── examples/               # sketches (Blink); example projects with their wiring diagrams
 └── docs/                   # roadmap, block catalog guide; later user guide, tutorials
@@ -106,14 +106,14 @@ Scratch2Arduino/
 
 ### Windows
 
-Download **`installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
+Download **`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
 
 ### Linux (and macOS)
 
 ```bash
-./install.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
-./install.sh --user     # same, for the current user only (~/.local)
-./install.sh --uninstall
+./Scratch2Arduino_installer.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
+./Scratch2Arduino_installer.sh --user     # same, for the current user only (~/.local)
+./Scratch2Arduino_installer.sh --uninstall
 
 # or, with the dependencies already installed:
 make && sudo make install
@@ -180,6 +180,12 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 3. Under **when the program starts**, drag **forever**, then inside it **turn the built-in LED on**, **wait 1 seconds**, **turn the built-in LED off**, **wait 1 seconds**.
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
+
+### Opening a project
+
+**Open** in the top bar, or drop a project (`.s2a`, or a `project.json` of the examples) on the
+Scratch2Arduino icon or shortcut: the program starts with it. On Windows, double-clicking a `.s2a` file
+opens it too. (On macOS, dropping on the Dock icon is not supported yet: use **Open**.)
 
 ### Keyboard shortcuts
 

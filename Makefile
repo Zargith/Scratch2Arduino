@@ -7,7 +7,7 @@
 #   make debug                   Debug build in build/make-debug
 #   make PREFIX=$HOME/.local WEBVIEW=OFF   options: PREFIX, WEBVIEW, TESTS, BUILD_TYPE
 #
-# For a one-command install with dependencies, use ./install.sh instead.
+# For a one-command install with dependencies, use ./Scratch2Arduino_installer.sh instead.
 
 CMAKE      ?= cmake
 CTEST      ?= ctest

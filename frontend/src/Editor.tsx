@@ -145,9 +145,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		Blockly.ScratchVariables.setPromptHandler((message, defaultValue, callback, _title, type) => {
 			setPrompt({
 				message:
-					type === FUNCTION_TYPE
-						? translate(language, "functions.prompt")
-						: message || translate(language, "variables.prompt"),
+					type !== FUNCTION_TYPE
+						? message || translate(language, "variables.prompt")
+						: defaultValue // renaming gives the current name
+							? translate(language, "functions.rename_prompt", { name: defaultValue })
+							: translate(language, "functions.prompt"),
 				value: defaultValue,
 				resolve: (value) => {
 					if (value !== null) callback(value, []);

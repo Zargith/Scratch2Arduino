@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(Scratch2Arduino
-    VERSION 0.6.0
+    VERSION 0.6.4
     DESCRIPTION "Program Arduino boards with Scratch-style blocks"
     HOMEPAGE_URL "https://github.com/Zargith/Scratch2Arduino"
     LANGUAGES C CXX)
@@ -55,7 +55,7 @@ if(UNIX AND NOT APPLE AND S2A_BUILD_WEBVIEW)
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
 endif()
 
-# `cmake -P <build>/cmake_uninstall.cmake` (used by `make uninstall` and `install.sh --uninstall`).
+# `cmake -P <build>/cmake_uninstall.cmake` (used by `make uninstall` and `Scratch2Arduino_installer.sh --uninstall`).
 configure_file(cmake/S2AUninstall.cmake.in "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake" @ONLY)
 add_custom_target(uninstall COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake")
 

@@ -1,6 +1,7 @@
 // Turns the shared block catalog into scratch-blocks definitions, toolbox and theme.
 import * as Blockly from "scratch-blocks";
 
+import { translate } from "@/i18n";
 import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, type PinCapability } from "@/catalog";
 
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
@@ -67,6 +68,53 @@ function registerPinField(): void {
 	Blockly.fieldRegistry.register("field_s2a_pin", registrable as unknown as Blockly.fieldRegistry.RegistrableField);
 }
 
+/**
+ * Menu of the function blocks: a variable menu (functions are typed variables) whose entries speak
+ * of the function ("Rename the function", "Delete the function"), not of a variable.
+ */
+let functionLanguage: Language = "fr";
+
+function registerFunctionField(): void {
+	if (Blockly.registry.hasItem(Blockly.registry.Type.FIELD, "field_s2a_function")) return;
+	const Base = Blockly.registry.getClass(Blockly.registry.Type.FIELD, "field_variable") as unknown as typeof Blockly.FieldVariable;
+	class FunctionField extends Base {
+		constructor(...args: ConstructorParameters<typeof Blockly.FieldVariable>) {
+			super(...args);
+			const self = this as unknown as { menuGenerator_: unknown };
+			const original = self.menuGenerator_;
+			self.menuGenerator_ = function (this: Blockly.FieldVariable): Blockly.MenuOption[] {
+				const options = (typeof original === "function" ? original.call(this) : original) as Blockly.MenuOption[];
+				return options.map((option) => {
+					const id = (option as unknown[])[1];
+					if (id === Blockly.RENAME_VARIABLE_ID) {
+						return [translate(functionLanguage, "functions.rename"), id] as Blockly.MenuOption;
+					}
+					if (id === Blockly.DELETE_VARIABLE_ID) {
+						return [translate(functionLanguage, "functions.delete", { name: this.getText() }), id] as Blockly.MenuOption;
+					}
+					return option;
+				});
+			};
+		}
+
+		protected override onItemSelected_(menu: Blockly.Menu, menuItem: Blockly.MenuItem): void {
+			if (menuItem.getValue() !== Blockly.DELETE_VARIABLE_ID) {
+				super.onItemSelected_(menu, menuItem);
+				return;
+			}
+			// The confirmation ("delete its N uses?") is read while deleting: worded for a function.
+			const saved = Blockly.Msg.DELETE_VARIABLE_CONFIRMATION;
+			Blockly.Msg.DELETE_VARIABLE_CONFIRMATION = translate(functionLanguage, "functions.delete_confirm");
+			try {
+				super.onItemSelected_(menu, menuItem);
+			} finally {
+				Blockly.Msg.DELETE_VARIABLE_CONFIRMATION = saved;
+			}
+		}
+	}
+	Blockly.fieldRegistry.register("field_s2a_function", FunctionField as unknown as Blockly.fieldRegistry.RegistrableField);
+}
+
 type JsonArg = Record<string, unknown>;
 
 function argJson(block: CatalogBlock, index: number, language: Language): JsonArg {
@@ -92,7 +140,7 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 			return { type: "field_variable", name: arg.name, variable: null };
 		case "function":
 			return {
-				type: "field_variable",
+				type: "field_s2a_function",
 				name: arg.name,
 				variable: null,
 				variableTypes: [FUNCTION_TYPE],
@@ -152,6 +200,8 @@ export function blockJson(block: CatalogBlock, language: Language): Record<strin
 
 export function defineBlocks(language: Language): void {
 	registerPinField();
+	registerFunctionField();
+	functionLanguage = language;
 	for (const entry of catalog) {
 		for (const block of entry.blocks) {
 			const json = blockJson(block, language);
