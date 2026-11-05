@@ -283,6 +283,39 @@ TEST(Codegen, ReadsSensors) {
     }
 }
 
+Project withBlinkFunction() {
+    Block call = block("call", "functions_call");
+    call.fields["FUNCTION"] = "f";
+    Block forever = block("loop", "control_forever");
+    forever.statements["SUBSTACK"] = {call};
+    Project project = withScript({block("hat", "events_when_program_starts"), forever});
+    project.functions = {{"f", "clignoter vite"}};
+    Block define = block("define", "functions_define");
+    define.fields["FUNCTION"] = "f";
+    project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "0.1"), led("off", "OFF"), wait("w2", "0.1")}});
+    return project;
+}
+
+TEST(Codegen, WritesFunctionsAsCppFunctions) {
+    const auto sketch = generate(withBlinkFunction());
+    for (const char* expected : {"void s2a_function_clignoter_vite();\n", "void s2a_function_clignoter_vite() {\n"
+                                 "  digitalWrite(LED_BUILTIN, HIGH);\n  s2a_wait(0.1);\n",
+                                 "void loop() {\n  s2a_function_clignoter_vite();\n}"}) {
+        EXPECT_NE(sketch.source.find(expected), std::string::npos) << expected << "\n" << sketch.source;
+    }
+    EXPECT_EQ(lines(sketch.source).at(sketch.blockLines.at("on") - 1), "  digitalWrite(LED_BUILTIN, HIGH);");
+}
+
+TEST(Codegen, WritesFunctionsInsideScriptsThatRunSideBySide) {
+    Project project = withBlinkFunction();
+    project.scripts.push_back({600, 0, {block("hat2", "events_when_program_starts"), led("on2", "ON")}});
+    const auto source = generate(project).source;
+    EXPECT_EQ(source.find("void s2a_function_"), std::string::npos) << source;
+    EXPECT_NE(source.find("{ // clignoter vite\n      digitalWrite(LED_BUILTIN, HIGH);\n      S2A_WAIT(task, 0.1);"),
+              std::string::npos)
+        << source;
+}
+
 TEST(Codegen, UsesComponentLibraries) {
     Block temperature = block("t", "sensors_temperature");
     temperature.fields = {{"MODEL", "DHT22"}, {"PIN", "3"}};

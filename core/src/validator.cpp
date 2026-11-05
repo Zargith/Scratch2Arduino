@@ -4,6 +4,8 @@
 #include <cctype>
 #include <cmath>
 #include <locale>
+#include <map>
+#include <set>
 #include <sstream>
 
 namespace s2a::validation {
@@ -36,6 +38,7 @@ public:
         : project_(project), catalog_(catalog), board_(board), language_(language) {}
 
     std::vector<Issue> run() {
+        collectFunctions();
         bool hasStart = false;
         for (const project::Script& script : project_.scripts) {
             if (script.blocks.empty()) {
@@ -46,11 +49,21 @@ public:
             if (definition == nullptr || definition->shape != BlockShape::Hat) {
                 continue; // loose blocks are like comments: they do not run and are not checked
             }
-            hasStart = true;
+            if (first.type == kDefine) {
+                checkBlock(first);
+                const auto& defined = definitions_[functionOf(first)];
+                if (!defined.empty() && defined.front() != &first) {
+                    add(Rule::FunctionDefinedTwice, Severity::Error, first, {{"function", functionName(first)}});
+                }
+            } else {
+                hasStart = true;
+            }
             if (script.blocks.size() == 1) {
                 add(Rule::EmptyScript, Severity::Warning, first, {});
             }
+            currentFunction_ = first.type == kDefine ? functionOf(first) : std::string{};
             checkStack(script.blocks, 1);
+            currentFunction_.clear();
         }
         if (!hasStart) {
             Issue issue;
@@ -66,6 +79,71 @@ public:
     }
 
 private:
+    static constexpr std::string_view kDefine = "functions_define";
+    static constexpr std::string_view kCall = "functions_call";
+
+    std::string functionOf(const Block& block) const {
+        const auto field = block.fields.find("FUNCTION");
+        return field != block.fields.end() ? field->second : std::string{};
+    }
+
+    std::string functionName(const Block& block) const {
+        const std::string id = functionOf(block);
+        for (const project::Function& function : project_.functions) {
+            if (function.id == id) {
+                return function.name;
+            }
+        }
+        return id;
+    }
+
+    /// "define" scripts by function, and the functions each function calls.
+    void collectFunctions() {
+        for (const project::Script& script : project_.scripts) {
+            if (script.blocks.empty() || script.blocks.front().type != kDefine) {
+                continue;
+            }
+            const std::string id = functionOf(script.blocks.front());
+            definitions_[id].push_back(&script.blocks.front());
+            project::forEachBlock(script.blocks, [&](const Block& block) {
+                if (block.type == kCall) {
+                    calls_[id].insert(functionOf(block));
+                }
+            });
+        }
+    }
+
+    /// True when running `from` may run `target` again.
+    bool reaches(const std::string& from, const std::string& target) const {
+        std::set<std::string> seen;
+        std::vector<std::string> pending{from};
+        while (!pending.empty()) {
+            const std::string current = pending.back();
+            pending.pop_back();
+            if (current == target) {
+                return true;
+            }
+            if (!seen.insert(current).second) {
+                continue;
+            }
+            if (const auto found = calls_.find(current); found != calls_.end()) {
+                pending.insert(pending.end(), found->second.begin(), found->second.end());
+            }
+        }
+        return false;
+    }
+
+    void checkCall(const Block& block) {
+        const std::string id = functionOf(block);
+        if (definitions_.count(id) == 0) {
+            add(Rule::FunctionNotDefined, Severity::Error, block, {{"function", functionName(block)}});
+            return;
+        }
+        if (!currentFunction_.empty() && reaches(id, currentFunction_)) {
+            add(Rule::RecursiveFunction, Severity::Error, block, {{"function", functionName(block)}});
+        }
+    }
+
     /// Block text without its slots: "repeat %1 times %2" -> "repeat … times".
     std::string name(const BlockDefinition* definition) const {
         if (definition == nullptr) {
@@ -216,6 +294,17 @@ private:
                 }
                 break;
             }
+            case ArgKind::Function: {
+                const std::string id = functionOf(block);
+                const bool known = std::any_of(project_.functions.begin(), project_.functions.end(),
+                                               [&id](const project::Function& function) { return function.id == id; });
+                if (!known) {
+                    add(Rule::MissingFunction, Severity::Error, block, {});
+                } else if (block.type == kCall) {
+                    checkCall(block);
+                }
+                break;
+            }
             case ArgKind::Dropdown:
                 break;
             }
@@ -227,6 +316,9 @@ private:
     const Board* board_;
     Language language_;
     std::vector<Issue> issues_;
+    std::map<std::string, std::vector<const Block*>> definitions_; ///< Function id -> its "define" hats.
+    std::map<std::string, std::set<std::string>> calls_;          ///< Function id -> functions it calls.
+    std::string currentFunction_;                                 ///< Function whose body is checked.
 };
 
 } // namespace
@@ -266,6 +358,14 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.missing_variable";
     case Rule::UnknownBlock:
         return "validation.unknown_block";
+    case Rule::MissingFunction:
+        return "validation.missing_function";
+    case Rule::FunctionNotDefined:
+        return "validation.function_not_defined";
+    case Rule::FunctionDefinedTwice:
+        return "validation.function_defined_twice";
+    case Rule::RecursiveFunction:
+        return "validation.recursive_function";
     }
     return "validation.unknown_block";
 }

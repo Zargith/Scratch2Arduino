@@ -1,0 +1,200 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Feu tricolore",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "c1",
+                "type": "functions_call",
+                "fields": {
+                  "FUNCTION": "green"
+                }
+              },
+              {
+                "id": "w1",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "3"
+                  }
+                }
+              },
+              {
+                "id": "c2",
+                "type": "functions_call",
+                "fields": {
+                  "FUNCTION": "orange"
+                }
+              },
+              {
+                "id": "w2",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "1"
+                  }
+                }
+              },
+              {
+                "id": "c3",
+                "type": "functions_call",
+                "fields": {
+                  "FUNCTION": "red"
+                }
+              },
+              {
+                "id": "w3",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "3"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "x": 420,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "dgreen",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "green"
+          }
+        },
+        {
+          "id": "gr",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "12",
+            "STATE": "LOW"
+          }
+        },
+        {
+          "id": "go",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "11",
+            "STATE": "LOW"
+          }
+        },
+        {
+          "id": "gg",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "10",
+            "STATE": "HIGH"
+          }
+        }
+      ]
+    },
+    {
+      "x": 420,
+      "y": 260,
+      "blocks": [
+        {
+          "id": "dorange",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "orange"
+          }
+        },
+        {
+          "id": "or",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "12",
+            "STATE": "LOW"
+          }
+        },
+        {
+          "id": "oo",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "11",
+            "STATE": "HIGH"
+          }
+        },
+        {
+          "id": "og",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "10",
+            "STATE": "LOW"
+          }
+        }
+      ]
+    },
+    {
+      "x": 420,
+      "y": 480,
+      "blocks": [
+        {
+          "id": "dred",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "red"
+          }
+        },
+        {
+          "id": "rr",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "12",
+            "STATE": "HIGH"
+          }
+        },
+        {
+          "id": "ro",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "11",
+            "STATE": "LOW"
+          }
+        },
+        {
+          "id": "rg",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "10",
+            "STATE": "LOW"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "id": "green",
+      "name": "feu vert"
+    },
+    {
+      "id": "orange",
+      "name": "feu orange"
+    },
+    {
+      "id": "red",
+      "name": "feu rouge"
+    }
+  ]
+}
