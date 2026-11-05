@@ -20,7 +20,6 @@ enum class Severity {
 
 enum class Rule {
     NoStartBlock,       ///< No "when the program starts" script.
-    LooseBlocks,        ///< Blocks not attached under a hat never run.
     EmptyScript,        ///< A hat with nothing below.
     EmptyMouth,         ///< repeat / if / forever with nothing inside.
     BlocksAfterForever, ///< Blocks below "forever" never run.

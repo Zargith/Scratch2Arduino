@@ -75,8 +75,6 @@
   "validation": {
     "no_start_block": "Ton programme ne commence nulle part.",
     "no_start_block_hint": "Ajoute le bloc « {block} » (catégorie Événements) et accroche tes blocs dessous.",
-    "loose_blocks": "Les blocs à partir de « {block} » ne sont accrochés à aucun bloc de départ : ils ne seront pas exécutés.",
-    "loose_blocks_hint": "Accroche-les sous « quand le programme démarre », ou jette-les dans la palette s'ils ne servent pas.",
     "empty_script": "Le bloc « {block} » n'a rien en dessous.",
     "empty_script_hint": "Accroche des blocs dessous pour dire à la carte quoi faire.",
     "empty_mouth": "Le bloc « {block} » est vide.",

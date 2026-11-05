@@ -175,7 +175,12 @@ TEST_F(Build, StopsBeforeCompilingWhenTheBlocksHaveMistakes) {
 
 TEST_F(Build, ReportsWarningsButStillBuilds) {
     Project project = blink();
-    Block loose;
+    Block repeat; // empty: a warning
+    repeat.id = "repeat";
+    repeat.type = "control_repeat";
+    auto& blocks = project.scripts.front().blocks;
+    blocks.insert(blocks.begin() + 1, repeat);
+    Block loose; // not attached: like a comment, no warning
     loose.id = "loose";
     loose.type = "pins_builtin_led";
     project.scripts.push_back({300, 0, {loose}});
@@ -183,7 +188,7 @@ TEST_F(Build, ReportsWarningsButStillBuilds) {
     const auto result = s2a::toolchain::buildProject(cli(), project, Language::English, options);
     ASSERT_TRUE(result.ok) << result.message;
     ASSERT_EQ(result.warnings.size(), 1U);
-    EXPECT_EQ(result.warningBlockIds, std::vector<std::string>{"loose"});
+    EXPECT_EQ(result.warningBlockIds, std::vector<std::string>{"repeat"});
 }
 
 TEST_F(Build, ExplainsAnUnknownBoard) {

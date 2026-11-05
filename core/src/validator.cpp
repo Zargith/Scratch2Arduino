@@ -44,9 +44,7 @@ public:
             const Block& first = script.blocks.front();
             const BlockDefinition* definition = catalog_.find(first.type);
             if (definition == nullptr || definition->shape != BlockShape::Hat) {
-                // Loose blocks do not run: their content is not checked either.
-                add(Rule::LooseBlocks, Severity::Warning, first, {});
-                continue;
+                continue; // loose blocks are like comments: they do not run and are not checked
             }
             hasStart = true;
             if (script.blocks.size() == 1) {
@@ -250,8 +248,6 @@ std::string_view ruleKey(Rule rule) noexcept {
     switch (rule) {
     case Rule::NoStartBlock:
         return "validation.no_start_block";
-    case Rule::LooseBlocks:
-        return "validation.loose_blocks";
     case Rule::EmptyScript:
         return "validation.empty_script";
     case Rule::EmptyMouth:
