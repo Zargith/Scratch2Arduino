@@ -26,7 +26,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 1";
+inline constexpr std::string_view kHello = "S2A 2"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -45,7 +45,13 @@ public:
     virtual void analogWrite(int pin, int value) = 0;
     [[nodiscard]] virtual bool digitalRead(int pin) = 0;
     [[nodiscard]] virtual int analogRead(int pin) = 0;
-    /// Every output low (Live mode stopped).
+    /// Sound on a buzzer for `milliseconds` (0: until stopped); a frequency of 0 stops it.
+    virtual void tone(int pin, int frequency, int milliseconds) = 0;
+    /// Angle (0-180) of a servo.
+    virtual void servoWrite(int pin, int angle) = 0;
+    /// Distance in centimetres measured by an HC-SR04 ultrasonic sensor (400 when nothing answers).
+    [[nodiscard]] virtual double distance(int trigPin, int echoPin) = 0;
+    /// Every output low, no sound, servos released (Live mode stopped).
     virtual void reset() = 0;
 };
 
@@ -62,6 +68,9 @@ public:
     void analogWrite(int pin, int value) override;
     [[nodiscard]] bool digitalRead(int pin) override;
     [[nodiscard]] int analogRead(int pin) override;
+    void tone(int pin, int frequency, int milliseconds) override;
+    void servoWrite(int pin, int angle) override;
+    [[nodiscard]] double distance(int trigPin, int echoPin) override;
     void reset() override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
@@ -125,6 +134,8 @@ private:
     bool condition(const project::Block& block, const std::string& name);
     double evaluate(const project::Block& block);
     int pin(const project::Block& block, const std::string& name, PinMode mode);
+    /// Pin number of a pin menu, without changing its mode (-1 when invalid).
+    [[nodiscard]] int pinNumber(const project::Block& block, const std::string& name) const;
     void record(int pin, double value);
     [[nodiscard]] std::string field(const project::Block& block, const std::string& name) const;
     bool restore(Thread& thread, const std::vector<Frame>& old);

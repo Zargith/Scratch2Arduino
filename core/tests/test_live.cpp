@@ -30,7 +30,16 @@ struct FakePins final : s2a::live::Pins {
     void analogWrite(int pin, int value) override { log.push_back("P" + std::to_string(pin) + "=" + std::to_string(value)); }
     bool digitalRead(int pin) override { return digitalInputs[pin]; }
     int analogRead(int pin) override { return analogInputs[pin]; }
+    void tone(int pin, int frequency, int ms) override {
+        log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
+    }
+    void servoWrite(int pin, int angle) override { log.push_back("S" + std::to_string(pin) + "=" + std::to_string(angle)); }
+    double distance(int trig, int echo) override {
+        log.push_back("U" + std::to_string(trig) + "/" + std::to_string(echo));
+        return distanceCm;
+    }
     void reset() override { log.emplace_back("X"); }
+    double distanceCm = 400;
 
     std::vector<std::string> take() {
         auto result = std::move(log);
@@ -89,6 +98,75 @@ TEST(Interpreter, BlinksWithoutBlockingBetweenSteps) {
     interpreter.step(milliseconds(2010));
     EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
     EXPECT_FALSE(interpreter.finished());
+}
+
+TEST(Interpreter, PlaysATuneAndWaitsForTheEnd) {
+    FakePins pins;
+    Block note = block("note", "sound_note");
+    note.fields["NOTE"] = "440";
+    Block play = block("play", "sound_play_tone");
+    play.fields["PIN"] = "8";
+    play.inputs["FREQUENCY"].block = note;
+    play.inputs["SECONDS"].value = "0,5";
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), play, led("off", "OFF")}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"T8=440/500"});
+    interpreter.step(milliseconds(400));
+    EXPECT_TRUE(pins.take().empty()); // the sound is still playing
+    interpreter.step(milliseconds(500));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=0"}));
+}
+
+TEST(Interpreter, DrivesComponents) {
+    FakePins pins;
+    Block rgb = block("rgb", "lights_rgb_color");
+    rgb.fields = {{"RED_PIN", "9"}, {"GREEN_PIN", "10"}, {"BLUE_PIN", "11"}, {"COLOR", "YELLOW"}};
+    Block servo = block("servo", "motors_servo_write");
+    servo.fields["PIN"] = "3";
+    servo.inputs["ANGLE"].value = "250";
+    Block motor = block("motor", "motors_dc_run");
+    motor.fields = {{"EN_PIN", "6"}, {"IN1_PIN", "7"}, {"IN2_PIN", "4"}, {"DIRECTION", "BACKWARD"}};
+    motor.inputs["SPEED"].value = "50";
+    Block stop = block("stop", "motors_dc_stop");
+    stop.fields = {{"EN_PIN", "6"}, {"IN1_PIN", "7"}, {"IN2_PIN", "4"}};
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), rgb, servo, motor, stop}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M9O", "P9=255", "M10O", "P10=160", "M11O", "P11=0", "S3=180",
+                                                     "M6O", "M7O", "M4O", "D7=0", "D4=1", "P6=127", "D7=0", "D4=0",
+                                                     "P6=0"}));
+    EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, ReadsSensors) {
+    FakePins pins;
+    pins.distanceCm = 12.5;
+    pins.analogInputs[14] = 1023;
+    pins.digitalInputs[2] = false; // pressed: wired to GND
+    const auto setter = [](const char* id, const char* variable, Block value) {
+        Block set = block(id, "variables_set");
+        set.fields["VARIABLE"] = variable;
+        set.inputs["VALUE"].block = std::move(value);
+        return set;
+    };
+    Block distance = block("distance", "sensors_distance");
+    distance.fields = {{"TRIG_PIN", "12"}, {"ECHO_PIN", "11"}};
+    Block knob = block("knob", "sensors_potentiometer");
+    knob.fields["PIN"] = "A0";
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Project project = withScript({block("hat", "events_when_program_starts"), setter("s1", "d", distance),
+                                  setter("s2", "k", knob), setter("s3", "b", button)});
+    project.variables = {{"d", "d", 0}, {"k", "k", 0}, {"b", "b", 0}};
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"U12/11", "M14I", "M2U"}));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("d"), 12.5);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("k"), 100);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("b"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.readings().at("11"), 12.5);
+    EXPECT_DOUBLE_EQ(interpreter.readings().at("A0"), 100);
 }
 
 TEST(Interpreter, RepeatsAndFinishes) {
@@ -258,7 +336,7 @@ TEST(Interpreter, RestartsAScriptWhoseBlocksDisappeared) {
 
 /// Answers like the S2A live firmware.
 struct FakeFirmware final : s2a::serial::LineTransport {
-    std::deque<std::string> pending{"S2A 1"};
+    std::deque<std::string> pending{std::string(s2a::live::kHello)};
     std::vector<std::string> received;
     bool silent = false;
 
@@ -272,11 +350,13 @@ struct FakeFirmware final : s2a::serial::LineTransport {
         int pin = 0;
         words >> command >> pin;
         if (command == "?") {
-            pending.emplace_back("S2A 1");
+            pending.emplace_back(s2a::live::kHello);
         } else if (command == "R") {
             pending.push_back("r " + std::to_string(pin) + " 1");
         } else if (command == "A") {
             pending.push_back("a " + std::to_string(pin) + " 512");
+        } else if (command == "U") {
+            pending.push_back("u " + std::to_string(pin) + " 1234");
         } else {
             pending.emplace_back("ok");
         }
@@ -346,6 +426,18 @@ TEST(LiveLink, WaitsForABoardThatRestartsWhenThePortOpens) {
     link.setMode(6, PinMode::Input);
     EXPECT_FALSE(link.takeError().has_value()) << "the first command must reach the started firmware";
     EXPECT_EQ(firmware.received.back(), "M 6 I");
+}
+
+TEST(LiveLink, DrivesComponents) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    link.tone(8, 440, 500);
+    link.tone(8, 0, 0);
+    link.servoWrite(9, 200);
+    EXPECT_DOUBLE_EQ(link.distance(12, 11), 123.4);
+    EXPECT_EQ(firmware.received, (std::vector<std::string>{"?", "T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11"}));
+    EXPECT_FALSE(link.takeError().has_value());
 }
 
 TEST(LiveLink, ReportsABoardThatDoesNotAnswer) {
@@ -446,7 +538,7 @@ TEST(Session, RefusesBlocksWithMistakes) {
 
 TEST(LiveLink, EmbedsTheFirmware) {
     const auto source = s2a::live::firmwareSource();
-    EXPECT_NE(source.find("S2A 1"), std::string_view::npos);
+    EXPECT_NE(source.find(std::string("\"") + std::string(s2a::live::kHello) + "\""), std::string_view::npos);
     EXPECT_NE(source.find("void loop()"), std::string_view::npos);
 }
 

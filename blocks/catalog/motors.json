@@ -1,0 +1,59 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "motors",
+    "colour": "#4C97FF",
+    "name": { "fr": "Moteurs", "en": "Motors" },
+    "order": 34
+  },
+  "blocks": [
+    {
+      "type": "motors_servo_write",
+      "shape": "statement",
+      "message": { "fr": "tourner le servomoteur de la broche %1 à %2 degrés", "en": "turn the servo of pin %1 to %2 degrees" },
+      "tooltip": {
+        "fr": "Place le bras d'un servomoteur à un angle entre 0 et 180 degrés. Fil orange (ou jaune) sur la broche, rouge sur 5V, marron (ou noir) sur GND. Sur Uno et Nano, un servomoteur empêche le PWM des broches 9 et 10.",
+        "en": "Moves the arm of a servo to an angle between 0 and 180 degrees. Orange (or yellow) wire to the pin, red to 5V, brown (or black) to GND. On Uno and Nano, a servo stops PWM on pins 9 and 10."
+      },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "9" },
+        { "name": "ANGLE", "kind": "number", "default": 90, "min": 0, "max": 180 }
+      ]
+    },
+    {
+      "type": "motors_dc_run",
+      "shape": "statement",
+      "message": { "fr": "faire tourner le moteur (EN %1, IN1 %2, IN2 %3) %4 à la vitesse %5", "en": "run the motor (EN %1, IN1 %2, IN2 %3) %4 at speed %5" },
+      "tooltip": {
+        "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D…). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
+        "en": "Runs a motor wired to an H-bridge (L298N, L293D…). EN sets the speed (PWM pin ~), IN1 and IN2 choose the direction. The speed goes from 0 to 100 %."
+      },
+      "args": [
+        { "name": "EN_PIN", "kind": "pin", "capability": "pwm", "default": "6" },
+        { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "7" },
+        { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "4" },
+        {
+          "name": "DIRECTION",
+          "kind": "dropdown",
+          "default": "FORWARD",
+          "options": [
+            { "value": "FORWARD", "label": { "fr": "en avant", "en": "forward" } },
+            { "value": "BACKWARD", "label": { "fr": "en arrière", "en": "backward" } }
+          ]
+        },
+        { "name": "SPEED", "kind": "number", "default": 100, "min": 0, "max": 100 }
+      ]
+    },
+    {
+      "type": "motors_dc_stop",
+      "shape": "statement",
+      "message": { "fr": "arrêter le moteur (EN %1, IN1 %2, IN2 %3)", "en": "stop the motor (EN %1, IN1 %2, IN2 %3)" },
+      "tooltip": { "fr": "Arrête le moteur branché sur le pont en H.", "en": "Stops the motor wired to the H-bridge." },
+      "args": [
+        { "name": "EN_PIN", "kind": "pin", "capability": "pwm", "default": "6" },
+        { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "7" },
+        { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "4" }
+      ]
+    }
+  ]
+}

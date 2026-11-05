@@ -118,6 +118,24 @@ TEST_F(Build, InstallsTheBoardToolsFirstWhenMissing) {
     EXPECT_EQ(steps, (std::vector<BuildStep>{BuildStep::InstallingTools, BuildStep::Compiling}));
 }
 
+TEST_F(Build, InstallsTheLibrariesOfTheBlocksFirstWhenMissing) {
+    Project project = blink();
+    Block servo;
+    servo.id = "servo";
+    servo.type = "motors_servo_write";
+    project.scripts.front().blocks.push_back(servo);
+    project.scripts.front().blocks.erase(project.scripts.front().blocks.begin() + 1); // no forever before it
+    fake.replies = {reply(kInstalled), reply(R"j({"installed_libraries": []})j"), reply("{}"), reply("{}"),
+                    reply(kCompileSuccess)};
+    std::vector<BuildStep> steps;
+    options.progress = [&steps](BuildStep step) { steps.push_back(step); };
+    const auto result = s2a::toolchain::buildProject(cli(), project, Language::English, options);
+    ASSERT_TRUE(result.ok) << result.message << "\n" << result.details;
+    EXPECT_EQ(steps, (std::vector<BuildStep>{BuildStep::InstallingLibraries, BuildStep::Compiling}));
+    ASSERT_EQ(fake.commands.size(), 5U);
+    EXPECT_EQ(fake.commands[3].args, (std::vector<std::string>{"lib", "install", "Servo", "--json", "--no-color"}));
+}
+
 TEST_F(Build, PointsCompilerErrorsAtBlocks) {
     const auto sketch = s2a::codegen::generate(blink());
     const int line = sketch.blockLines.at("wait");

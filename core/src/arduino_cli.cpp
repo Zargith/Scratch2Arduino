@@ -1,6 +1,8 @@
 #include "s2a/arduino_cli.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <set>
 #include <nlohmann/json.hpp>
 
 namespace s2a::toolchain {
@@ -207,6 +209,88 @@ Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) co
         return install.error();
     }
     return commandOutcome(install.value());
+}
+
+Result<std::vector<std::string>> ArduinoCli::installedLibraries() const {
+    auto output = run({"lib", "list"}, kQuickTimeout);
+    if (!output.ok()) {
+        return output.error();
+    }
+    if (!output.value().succeeded()) {
+        return Error{ErrorCode::ProcessFailed, "arduino-cli lib list failed: " + output.value().err};
+    }
+    std::vector<std::string> names;
+    const Json json = parseOutput(output.value().out);
+    if (json.contains("installed_libraries") && json.at("installed_libraries").is_array()) {
+        for (const Json& entry : json.at("installed_libraries")) {
+            if (entry.contains("library") && entry.at("library").is_object()) {
+                if (std::string name = stringOr(entry.at("library"), "name"); !name.empty()) {
+                    names.push_back(std::move(name));
+                }
+            }
+        }
+    }
+    return names;
+}
+
+Result<CommandOutcome> ArduinoCli::installLibraries(const std::vector<std::string>& names) const {
+    auto index = run({"lib", "update-index"}, kInstallTimeout);
+    if (!index.ok()) {
+        return index.error();
+    }
+    if (!index.value().succeeded()) {
+        return commandOutcome(index.value());
+    }
+    std::vector<std::string> args{"lib", "install"};
+    args.insert(args.end(), names.begin(), names.end());
+    auto install = run(std::move(args), kInstallTimeout);
+    if (!install.ok()) {
+        return install.error();
+    }
+    return commandOutcome(install.value());
+}
+
+std::vector<std::string> requiredLibraries(std::string_view source) {
+    // Header -> library of the Arduino registry. Add a line here for each component library.
+    static const std::pair<std::string_view, std::string_view> kKnown[] = {
+        {"Servo.h", "Servo"},
+    };
+    std::set<std::string> found;
+    std::size_t position = 0;
+    while ((position = source.find("#include", position)) != std::string_view::npos) {
+        const std::size_t end = source.find('\n', position);
+        const std::string_view line = source.substr(position, end == std::string_view::npos ? end : end - position);
+        position += 8;
+        const std::size_t open = line.find_first_of("<\"");
+        const std::size_t close = open == std::string_view::npos ? open : line.find_first_of(">\"", open + 1);
+        if (close == std::string_view::npos) {
+            continue;
+        }
+        const std::string_view header = line.substr(open + 1, close - open - 1);
+        for (const auto& [known, library] : kKnown) {
+            if (header == known) {
+                found.emplace(library);
+            }
+        }
+    }
+    return {found.begin(), found.end()};
+}
+
+Result<std::vector<std::string>> missingLibraries(const ArduinoCli& cli, const std::vector<std::string>& required) {
+    if (required.empty()) {
+        return std::vector<std::string>{};
+    }
+    auto installed = cli.installedLibraries();
+    if (!installed.ok()) {
+        return installed.error();
+    }
+    std::vector<std::string> missing;
+    for (const std::string& name : required) {
+        if (std::find(installed.value().begin(), installed.value().end(), name) == installed.value().end()) {
+            missing.push_back(name);
+        }
+    }
+    return missing;
 }
 
 Result<std::vector<DetectedPort>> ArduinoCli::detectPorts(const BoardDatabase& boards) const {

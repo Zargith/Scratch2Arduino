@@ -1,0 +1,158 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Alarme de distance",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "distance",
+      "name": "distance",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "distance"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "measure",
+                      "type": "sensors_distance",
+                      "fields": {
+                        "TRIG_PIN": "12",
+                        "ECHO_PIN": "11"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "near",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "lt",
+                      "type": "operators_lt",
+                      "inputs": {
+                        "NUM1": {
+                          "value": "0",
+                          "block": {
+                            "id": "get",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "distance"
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "20"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "red",
+                      "type": "lights_rgb_color",
+                      "fields": {
+                        "RED_PIN": "9",
+                        "GREEN_PIN": "10",
+                        "BLUE_PIN": "6",
+                        "COLOR": "RED"
+                      }
+                    },
+                    {
+                      "id": "beep",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "880"
+                        },
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "pause",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "value": "0.1",
+                          "block": {
+                            "id": "div",
+                            "type": "operators_divide",
+                            "inputs": {
+                              "NUM1": {
+                                "value": "0",
+                                "block": {
+                                  "id": "get2",
+                                  "type": "variables_get",
+                                  "fields": {
+                                    "VARIABLE": "distance"
+                                  }
+                                }
+                              },
+                              "NUM2": {
+                                "value": "100"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "green",
+                      "type": "lights_rgb_color",
+                      "fields": {
+                        "RED_PIN": "9",
+                        "GREEN_PIN": "10",
+                        "BLUE_PIN": "6",
+                        "COLOR": "GREEN"
+                      }
+                    },
+                    {
+                      "id": "wait",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

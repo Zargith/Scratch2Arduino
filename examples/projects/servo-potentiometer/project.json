@@ -1,0 +1,101 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Potentiomètre et servomoteur",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "angle",
+      "name": "angle",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "angle"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "map",
+                      "type": "operators_map",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "knob",
+                            "type": "sensors_potentiometer",
+                            "fields": {
+                              "PIN": "A0"
+                            }
+                          }
+                        },
+                        "FROM_LOW": {
+                          "value": "0"
+                        },
+                        "FROM_HIGH": {
+                          "value": "100"
+                        },
+                        "TO_LOW": {
+                          "value": "0"
+                        },
+                        "TO_HIGH": {
+                          "value": "180"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "servo",
+                "type": "motors_servo_write",
+                "fields": {
+                  "PIN": "9"
+                },
+                "inputs": {
+                  "ANGLE": {
+                    "value": "90",
+                    "block": {
+                      "id": "get",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "angle"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "wait",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.05"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 #include "s2a/live.hpp"
 
+#include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/resources.hpp"
 #include "s2a/validator.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -192,6 +194,26 @@ int LiveLink::analogRead(int pin) {
     return value ? static_cast<int>(*value) : 0;
 }
 
+void LiveLink::tone(int pin, int frequency, int milliseconds) {
+    (void)request("T " + std::to_string(pin) + " " + std::to_string(std::clamp(frequency, 0, 65535)) + " " +
+                  std::to_string(std::max(milliseconds, 0)));
+}
+
+void LiveLink::servoWrite(int pin, int angle) {
+    (void)request("S " + std::to_string(pin) + " " + std::to_string(std::clamp(angle, 0, 180)));
+}
+
+double LiveLink::distance(int trigPin, int echoPin) {
+    // The firmware answers in millimetres: "u <trig> <mm>".
+    const auto reply = request("U " + std::to_string(trigPin) + " " + std::to_string(echoPin));
+    if (!reply) {
+        return 400;
+    }
+    const auto space = reply->find_last_of(' ');
+    const auto value = parseNumber(space == std::string::npos ? *reply : reply->substr(space + 1));
+    return value ? std::clamp(*value / 10.0, 0.0, 400.0) : 400;
+}
+
 void LiveLink::reset() {
     (void)request("X");
 }
@@ -286,6 +308,11 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
     return found->number;
 }
 
+int Interpreter::pinNumber(const Block& block, const std::string& name) const {
+    const Pin* found = board_.findPin(field(block, name));
+    return found != nullptr ? found->number : -1;
+}
+
 double Interpreter::number(const Block& block, const std::string& name) {
     if (const auto input = block.inputs.find(name); input != block.inputs.end()) {
         if (input->second.block) {
@@ -373,6 +400,39 @@ double Interpreter::evaluate(const Block& block) {
         record(number, value);
         return value;
     }
+    if (type == "sensors_button_pressed") {
+        const int number = pin(block, "PIN", PinMode::InputPullup);
+        if (number < 0) {
+            return 0;
+        }
+        const bool pressed = !pins_.digitalRead(number); // wired to GND: LOW when pressed
+        record(number, pressed ? 1 : 0);
+        return pressed ? 1 : 0;
+    }
+    if (type == "sensors_potentiometer" || type == "sensors_light") {
+        const int number = pin(block, "PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const double percent = pins_.analogRead(number) * 100.0 / 1023.0;
+        record(number, percent);
+        return percent;
+    }
+    if (type == "sensors_distance") {
+        const int trig = pinNumber(block, "TRIG_PIN");
+        const int echo = pinNumber(block, "ECHO_PIN");
+        if (trig < 0 || echo < 0) {
+            return 400;
+        }
+        modes_[trig] = PinMode::Output; // the firmware sets both pins itself
+        modes_[echo] = PinMode::Input;
+        const double centimetres = pins_.distance(trig, echo);
+        record(echo, centimetres);
+        return centimetres;
+    }
+    if (type == "sound_note") {
+        return parseNumber(field(block, "NOTE")).value_or(0);
+    }
     if (type == "variables_get") {
         const auto found = variables_.find(field(block, "VARIABLE"));
         return found != variables_.end() ? found->second : 0;
@@ -444,6 +504,59 @@ void Interpreter::run(Thread& thread, Clock now) {
             const double seconds = number(block, "SECONDS");
             thread.wakeAt = now + milliseconds(static_cast<long long>(std::max(0.0, seconds) * 1000));
             return;
+        } else if (type == "lights_rgb_color" || type == "lights_rgb_mix") {
+            std::array<int, 3> levels = codegen::colourLevels(field(block, "COLOR"));
+            if (type == "lights_rgb_mix") {
+                const char* const names[] = {"RED", "GREEN", "BLUE"};
+                for (std::size_t i = 0; i < levels.size(); ++i) {
+                    levels[i] = static_cast<int>(std::clamp(number(block, names[i]), 0.0, 255.0));
+                }
+            }
+            const char* const pins[] = {"RED_PIN", "GREEN_PIN", "BLUE_PIN"};
+            for (std::size_t i = 0; i < levels.size(); ++i) {
+                if (const int number = pin(block, pins[i], PinMode::Output); number >= 0) {
+                    pins_.analogWrite(number, levels[i]);
+                }
+            }
+        } else if (type == "sound_play_tone" || type == "sound_start_tone") {
+            const double frequency = number(block, "FREQUENCY");
+            const double seconds = type == "sound_play_tone" ? std::max(0.0, number(block, "SECONDS")) : 0;
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                modes_[number] = PinMode::Output; // tone() sets the pin
+                const int hertz = frequency < 31 ? 0 : static_cast<int>(std::min(frequency, 65535.0));
+                const auto duration = static_cast<int>(std::min(seconds * 1000, 3600000.0));
+                if (type == "sound_play_tone" && duration == 0) {
+                    pins_.tone(number, 0, 0);
+                } else {
+                    pins_.tone(number, hertz, duration); // the board stops the sound itself
+                }
+            }
+            if (type == "sound_play_tone") {
+                thread.wakeAt = now + milliseconds(static_cast<long long>(seconds * 1000));
+                return;
+            }
+        } else if (type == "sound_stop") {
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                pins_.tone(number, 0, 0);
+            }
+        } else if (type == "motors_servo_write") {
+            const double angle = number(block, "ANGLE");
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                modes_.erase(number); // the servo owns the pin now
+                pins_.servoWrite(number, static_cast<int>(std::clamp(angle, 0.0, 180.0)));
+            }
+        } else if (type == "motors_dc_run" || type == "motors_dc_stop") {
+            const bool run = type == "motors_dc_run";
+            const double speed = run ? std::clamp(number(block, "SPEED"), 0.0, 100.0) : 0;
+            const bool backward = field(block, "DIRECTION") == "BACKWARD";
+            const int en = pin(block, "EN_PIN", PinMode::Output);
+            const int in1 = pin(block, "IN1_PIN", PinMode::Output);
+            const int in2 = pin(block, "IN2_PIN", PinMode::Output);
+            if (en >= 0 && in1 >= 0 && in2 >= 0) {
+                pins_.digitalWrite(in1, run && !backward);
+                pins_.digitalWrite(in2, run && backward);
+                pins_.analogWrite(en, static_cast<int>(speed * 2.55));
+            }
         } else if (type == "control_wait_until") {
             if (!condition(block, "CONDITION")) {
                 --thread.frames.back().index; // check again at the next step
@@ -738,6 +851,19 @@ Status uploadFirmware(const toolchain::ArduinoCli& cli, const Board& board, cons
     if (auto installed = cli.isPlatformInstalled(board.platform); installed.ok() && !installed.value()) {
         if (auto outcome = cli.installPlatform(board.platform); !outcome.ok()) {
             return outcome.error();
+        }
+    }
+    if (auto missing = toolchain::missingLibraries(cli, toolchain::requiredLibraries(firmwareSource())); !missing.ok()) {
+        return missing.error();
+    } else if (!missing.value().empty()) {
+        auto outcome = cli.installLibraries(missing.value());
+        if (!outcome.ok()) {
+            return outcome.error();
+        }
+        if (const auto diagnosis = toolchain::diagnoseInstall(outcome.value());
+            diagnosis.problem != toolchain::Problem::None) {
+            details = diagnosis.technical;
+            return Error{ErrorCode::ProcessFailed, "the libraries of the live firmware cannot be installed"};
         }
     }
     const std::filesystem::path build = workDirectory / "build" / ("s2a_live-" + board.id);
