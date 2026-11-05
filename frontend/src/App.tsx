@@ -42,6 +42,7 @@ import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
 	projectToWorkspace,
+	unknownBlockTypes,
 	workspaceToProject,
 	type Project,
 	type WorkspaceState,
@@ -184,7 +185,12 @@ export function App() {
 			setPath(opened.path);
 			setDirty(false);
 			reload(projectToWorkspace(opened.project));
-			setStatus({ kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) });
+			const unknown = unknownBlockTypes(opened.project);
+			setStatus(
+				unknown.length > 0
+					? { kind: "error", message: t("status.unknown_blocks"), details: unknown.join("\n") }
+					: { kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) }
+			);
 		} catch (error) {
 			fail(error);
 		}
@@ -426,6 +432,9 @@ export function App() {
 						language={language}
 						board={findBoard(boardId)}
 						initialState={initialState.current}
+						onLoadError={(lost) =>
+							setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
+						}
 						onChange={() => {
 							setDirty(true);
 							if (!live) return;

@@ -39,6 +39,10 @@ const fr = {
 	"code.readonly": "Ce code est créé à partir de tes blocs. Modifie les blocs pour le changer.",
 	"status.saved": "Projet enregistré : {path}",
 	"status.opened": "Projet ouvert : {path}",
+	"status.unknown_blocks":
+		"Ce projet a été fait avec une version plus récente de Scratch2Arduino : certains blocs ne sont pas connus de cette version et ne sont pas affichés (le reste du projet l'est). Mets Scratch2Arduino à jour pour les voir. Attention : enregistrer maintenant les supprimerait du fichier.",
+	"status.load_failed":
+		"Une partie du projet n'a pas pu être affichée ({count} script(s)). Le fichier est peut-être abîmé ou fait avec une version plus récente de Scratch2Arduino.",
 	"status.building": "Vérification du programme…",
 	"status.uploading": "Envoi du programme sur la carte…",
 	"status.details": "Détails techniques",
@@ -89,6 +93,10 @@ const en: Record<MessageKey, string> = {
 	"code.readonly": "This code is made from your blocks. Change the blocks to change it.",
 	"status.saved": "Project saved: {path}",
 	"status.opened": "Project opened: {path}",
+	"status.unknown_blocks":
+		"This project was made with a newer Scratch2Arduino: some blocks are unknown to this version and are not shown (the rest of the project is). Update Scratch2Arduino to see them. Careful: saving now would remove them from the file.",
+	"status.load_failed":
+		"Part of the project could not be shown ({count} script(s)). The file may be damaged or made with a newer Scratch2Arduino.",
 	"status.building": "Checking the program…",
 	"status.uploading": "Sending the program to the board…",
 	"status.details": "Technical details",
