@@ -130,6 +130,22 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         }
     }
 
+    // Component libraries (Servo...), downloaded the first time a block needs them.
+    const auto missing = missingLibraries(cli, requiredLibraries(generated.source));
+    if (!missing.ok()) {
+        return failure(tr(errorMessageKey(missing.error().code), language), missing.error().detail);
+    }
+    if (!missing.value().empty()) {
+        notify(options, BuildStep::InstallingLibraries);
+        const auto outcome = cli.installLibraries(missing.value());
+        if (!outcome.ok()) {
+            return failure(tr(errorMessageKey(outcome.error().code), language), outcome.error().detail);
+        }
+        if (const Diagnosis diagnosis = diagnoseInstall(outcome.value()); diagnosis.problem != Problem::None) {
+            return explain(diagnosis, language);
+        }
+    }
+
     notify(options, BuildStep::Compiling);
     const fs::path build = options.workDirectory / "build" / (name + "-" + board->id);
     const auto compiled = cli.compile(sketch, *board, build);

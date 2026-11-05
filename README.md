@@ -189,6 +189,22 @@ the sensors read by the blocks are shown on the right with a graph of their last
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
 
+### Components
+
+Besides the *Pins* blocks, the toolbox has blocks for the parts of beginner kits; each tooltip explains
+the wiring:
+
+| Category | Blocks |
+|---|---|
+| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm |
+| Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255) |
+| Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
+| Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
+
+They work in upload and Live modes. Libraries they need (for example *Servo*) are downloaded automatically
+the first time. Example projects: [`servo-potentiometer`](examples/projects/servo-potentiometer/project.json)
+and [`distance-alarm`](examples/projects/distance-alarm/project.json).
+
 ### Serial monitor
 
 The **serial monitor** button (top bar) opens a panel showing what the board writes. Use the block

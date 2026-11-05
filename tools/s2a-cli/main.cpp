@@ -28,6 +28,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -119,6 +120,7 @@ private:
     [[nodiscard]] const s2a::Board* board() const;
     [[nodiscard]] std::optional<ArduinoCli> arduinoCli() const;
     int ensurePlatform(const ArduinoCli& cli, const s2a::Board& board) const;
+    int ensureLibraries(const ArduinoCli& cli, const fs::path& ino) const;
     int compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path& sketch, const fs::path& build) const;
 
     [[nodiscard]] std::optional<s2a::project::Project> loadProject(const fs::path& path) const;
@@ -184,6 +186,37 @@ int Cli::ensurePlatform(const ArduinoCli& cli, const s2a::Board& board) const {
     return kSuccess;
 }
 
+int Cli::ensureLibraries(const ArduinoCli& cli, const fs::path& ino) const {
+    std::ifstream file(ino, std::ios::binary);
+    const std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto missing = s2a::toolchain::missingLibraries(cli, s2a::toolchain::requiredLibraries(source));
+    if (!missing.ok()) {
+        std::cerr << tr(s2a::errorMessageKey(missing.error().code)) << '\n';
+        if (options_.verbose) {
+            std::cerr << missing.error().detail << '\n';
+        }
+        return kFailure;
+    }
+    if (missing.value().empty()) {
+        return kSuccess;
+    }
+    std::string names;
+    for (const std::string& name : missing.value()) {
+        names += (names.empty() ? "" : ", ") + name;
+    }
+    print("cli.installing_libraries", {{"libraries", names}});
+    const auto outcome = cli.installLibraries(missing.value());
+    if (!outcome.ok()) {
+        std::cerr << tr(s2a::errorMessageKey(outcome.error().code)) << '\n';
+        return kFailure;
+    }
+    if (const auto diagnosis = s2a::toolchain::diagnoseInstall(outcome.value());
+        diagnosis.problem != s2a::toolchain::Problem::None) {
+        return report(diagnosis);
+    }
+    return kSuccess;
+}
+
 int Cli::compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path& sketch, const fs::path& build) const {
     std::error_code error;
     if (!fs::is_directory(sketch, error) || !fs::exists(sketch / (sketch.filename().u8string() + ".ino"), error)) {
@@ -191,6 +224,9 @@ int Cli::compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path&
         return kFailure;
     }
     if (const int status = ensurePlatform(cli, board); status != kSuccess) {
+        return status;
+    }
+    if (const int status = ensureLibraries(cli, sketch / (sketch.filename().u8string() + ".ino")); status != kSuccess) {
         return status;
     }
     print("cli.compiling", {{"sketch", sketch.filename().u8string()}, {"board", board.name}});

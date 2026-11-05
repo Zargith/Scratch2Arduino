@@ -1,6 +1,7 @@
 #include "s2a/codegen.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <iomanip>
@@ -148,7 +149,8 @@ private:
         return "false";
     }
 
-    std::string pin(const Block& block, const std::string& name, PinMode mode) {
+    /// Pin chosen in a menu, as written in the sketch ("13", "A0"); the default when invalid.
+    std::string pinLabel(const Block& block, const std::string& name) const {
         std::string label = field(block, name);
         if (const Pin* found = board_ != nullptr ? board_->findPin(label) : nullptr) {
             label = found->label;
@@ -162,6 +164,11 @@ private:
                 label = "13";
             }
         }
+        return label;
+    }
+
+    std::string pin(const Block& block, const std::string& name, PinMode mode) {
+        const std::string label = pinLabel(block, name);
         // A pin used as an output anywhere stays an output; a pin set as an input with
         // pull-up keeps it when it is read.
         auto [it, inserted] = pinModes_.emplace(label, mode);
@@ -225,6 +232,20 @@ private:
         if (type == "pins_analog_read") {
             return "analogRead(" + pin(block, "PIN", PinMode::Input) + ")";
         }
+        if (type == "sensors_button_pressed") {
+            return "(digitalRead(" + pin(block, "PIN", PinMode::InputPullup) + ") == LOW)";
+        }
+        if (type == "sensors_potentiometer" || type == "sensors_light") {
+            return "(analogRead(" + pin(block, "PIN", PinMode::Input) + ") * 100.0 / 1023.0)";
+        }
+        if (type == "sensors_distance") {
+            helpers_.insert("distance");
+            const std::string trig = pin(block, "TRIG_PIN", PinMode::Output);
+            return "s2a_distance(" + trig + ", " + pin(block, "ECHO_PIN", PinMode::Input) + ")";
+        }
+        if (type == "sound_note") {
+            return numberLiteral(field(block, "NOTE"));
+        }
         if (type == "variables_get") {
             const std::string name = variable(block);
             return name.empty() ? "0" : name;
@@ -234,6 +255,15 @@ private:
     }
 
     // --- statements ------------------------------------------------------------------
+
+    void wait(Body& body, const std::string& seconds, int depth) {
+        if (tasks_) {
+            body.add(depth, "S2A_WAIT(task, " + seconds + ");");
+        } else {
+            helpers_.insert("wait");
+            body.add(depth, "s2a_wait(" + seconds + ");");
+        }
+    }
 
     void statements(Body& body, const Block& parent, const std::string& name, int depth) {
         auto found = parent.statements.find(name);
@@ -295,12 +325,44 @@ private:
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
                                 "), 0, 255));");
         } else if (type == "control_wait") {
-            if (tasks_) {
-                body.add(depth, "S2A_WAIT(task, " + number(block, "SECONDS") + ");");
+            wait(body, number(block, "SECONDS"), depth);
+        } else if (type == "lights_rgb_color" || type == "lights_rgb_mix") {
+            std::array<std::string, 3> levels;
+            if (type == "lights_rgb_mix") {
+                levels = {"constrain((int)(" + number(block, "RED") + "), 0, 255)",
+                          "constrain((int)(" + number(block, "GREEN") + "), 0, 255)",
+                          "constrain((int)(" + number(block, "BLUE") + "), 0, 255)"};
             } else {
-                helpers_.insert("wait");
-                body.add(depth, "s2a_wait(" + number(block, "SECONDS") + ");");
+                const auto rgb = colourLevels(field(block, "COLOR"));
+                levels = {std::to_string(rgb[0]), std::to_string(rgb[1]), std::to_string(rgb[2])};
             }
+            const char* const pins[] = {"RED_PIN", "GREEN_PIN", "BLUE_PIN"};
+            for (std::size_t i = 0; i < levels.size(); ++i) {
+                body.add(depth, "analogWrite(" + pin(block, pins[i], PinMode::Output) + ", " + levels[i] + ");");
+            }
+        } else if (type == "sound_play_tone" || type == "sound_start_tone") {
+            helpers_.insert("tone");
+            const std::string target = pin(block, "PIN", PinMode::Output);
+            body.add(depth, "s2a_tone(" + target + ", " + number(block, "FREQUENCY") + ");");
+            if (type == "sound_play_tone") {
+                wait(body, number(block, "SECONDS"), depth);
+                body.add(depth, "noTone(" + target + ");");
+            }
+        } else if (type == "sound_stop") {
+            body.add(depth, "noTone(" + pin(block, "PIN", PinMode::Output) + ");");
+        } else if (type == "motors_servo_write") {
+            const std::string servo = "s2a_servo_" + pinLabel(block, "PIN");
+            servos_.insert(pinLabel(block, "PIN"));
+            body.add(depth, servo + ".write(constrain((int)(" + number(block, "ANGLE") + "), 0, 180));");
+        } else if (type == "motors_dc_run" || type == "motors_dc_stop") {
+            helpers_.insert("motor");
+            const std::string en = pin(block, "EN_PIN", PinMode::Output);
+            const std::string in1 = pin(block, "IN1_PIN", PinMode::Output);
+            const std::string in2 = pin(block, "IN2_PIN", PinMode::Output);
+            const bool run = type == "motors_dc_run";
+            const char* direction = !run ? "0" : (field(block, "DIRECTION") == "BACKWARD" ? "-1" : "1");
+            body.add(depth, "s2a_motor(" + en + ", " + in1 + ", " + in2 + ", " + direction + ", " +
+                                (run ? number(block, "SPEED") : std::string("0")) + ");");
         } else if (type == "control_wait_until") {
             if (tasks_) {
                 body.add(depth, "S2A_WAIT_UNTIL(task, " + condition(block, "CONDITION") + ");");
@@ -359,6 +421,14 @@ private:
             out.push_back("// " + board_->name);
         }
         out.emplace_back("");
+        if (!servos_.empty()) {
+            out.emplace_back("#include <Servo.h>");
+            out.emplace_back("");
+            for (const std::string& label : servos_) {
+                out.push_back("Servo s2a_servo_" + label + ";");
+            }
+            out.emplace_back("");
+        }
 
         for (const project::Variable& variable : project_.variables) {
             out.push_back("double " + variables_.at(variable.id) + " = " +
@@ -376,6 +446,19 @@ private:
         helper(out, "wait",
                {"void s2a_wait(double seconds) {", "  if (seconds > 0) {",
                 "    delay((unsigned long)(seconds * 1000.0));", "  }", "}"});
+        helper(out, "tone",
+               {"void s2a_tone(int pin, double frequency) {", "  if (frequency < 31) {", "    noTone(pin);",
+                "  } else {", "    tone(pin, (unsigned int)min(frequency, 65535.0));", "  }", "}"});
+        helper(out, "distance",
+               {"// HC-SR04: the echo lasts 58 microseconds per centimetre; 400 cm when nothing answers.",
+                "double s2a_distance(int trig, int echo) {", "  digitalWrite(trig, LOW);",
+                "  delayMicroseconds(2);", "  digitalWrite(trig, HIGH);", "  delayMicroseconds(10);",
+                "  digitalWrite(trig, LOW);", "  unsigned long duration = pulseIn(echo, HIGH, 25000UL);",
+                "  if (duration == 0) {", "    return 400;", "  }", "  return min(duration / 58.0, 400.0);", "}"});
+        helper(out, "motor",
+               {"void s2a_motor(int en, int in1, int in2, int direction, double speed) {",
+                "  digitalWrite(in1, direction > 0 ? HIGH : LOW);", "  digitalWrite(in2, direction < 0 ? HIGH : LOW);",
+                "  analogWrite(en, direction == 0 ? 0 : constrain((int)(speed * 2.55), 0, 255));", "}"});
         helper(out, "random",
                {"long s2a_random(double from, double to) {", "  long low = (long)min(from, to);",
                 "  long high = (long)max(from, to);", "  return random(low, high + 1);", "}"});
@@ -425,7 +508,12 @@ private:
             out.push_back(std::string(kIndent) + "Serial.begin(" + std::to_string(kSerialBaud) + ");");
         }
         for (const auto& [label, mode] : pinModes_) {
-            out.push_back(std::string(kIndent) + "pinMode(" + label + ", " + modeName(mode) + ");");
+            if (servos_.count(label) == 0) { // attach() sets the pin of a servo
+                out.push_back(std::string(kIndent) + "pinMode(" + label + ", " + modeName(mode) + ");");
+            }
+        }
+        for (const std::string& label : servos_) {
+            out.push_back(std::string(kIndent) + "s2a_servo_" + label + ".attach(" + label + ");");
         }
         if (helpers_.count("random") != 0) {
             out.push_back(std::string(kIndent) + "randomSeed(micros());");
@@ -465,10 +553,21 @@ private:
     std::map<std::string, PinMode> pinModes_;
     std::map<std::string, std::string> variables_; ///< Variable id -> C++ name.
     std::set<std::string> helpers_;
+    std::set<std::string> servos_; ///< Pins driving a servo.
     int counters_ = 0;
 };
 
 } // namespace
+
+std::array<int, 3> colourLevels(std::string_view name) {
+    static const std::map<std::string_view, std::array<int, 3>> kColours = {
+        {"RED", {255, 0, 0}},     {"GREEN", {0, 255, 0}},     {"BLUE", {0, 0, 255}},
+        {"YELLOW", {255, 160, 0}}, {"CYAN", {0, 255, 255}},  {"MAGENTA", {255, 0, 255}},
+        {"WHITE", {255, 255, 255}}, {"OFF", {0, 0, 0}},
+    };
+    const auto found = kColours.find(name);
+    return found != kColours.end() ? found->second : std::array<int, 3>{0, 0, 0};
+}
 
 std::string stringLiteral(std::string_view text) {
     std::string result = "\"";
