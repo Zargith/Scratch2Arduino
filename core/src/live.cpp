@@ -91,25 +91,54 @@ std::string formatValue(double value) {
 // --- LiveLink ----------------------------------------------------------------------------
 
 Status LiveLink::handshake(milliseconds timeout) {
+    // A greeting proves that the firmware runs, but it may be an old one still waiting in the
+    // port (sent before an upload ended, for example) while the board restarts: opening the
+    // port resets most boards, and their bootloader swallows what is sent during the next
+    // second or two. So the board must also answer a "?" before the blocks start.
     const auto deadline = std::chrono::steady_clock::now() + timeout;
-    bool asked = false;
+    auto lastAsk = std::chrono::steady_clock::time_point::min();
     while (std::chrono::steady_clock::now() < deadline) {
         auto line = transport_.readLine(milliseconds(300));
         if (!line.ok()) {
             return line.error();
         }
         if (line.value() && *line.value() == kHello) {
-            return success();
+            auto confirmed = confirm();
+            if (!confirmed.ok()) {
+                return confirmed.error();
+            }
+            if (confirmed.value()) {
+                return success();
+            }
+            lastAsk = std::chrono::steady_clock::now();
+            continue; // restarting: its own greeting will come
         }
-        if (!line.value() && !asked) {
-            // No greeting yet (the board was not reset by opening the port): ask for it.
-            asked = true;
+        if (!line.value() && std::chrono::steady_clock::now() - lastAsk >= milliseconds(1000)) {
+            // Silent board: it did not restart, or the bootloader swallowed the last "?".
             if (auto sent = transport_.writeLine("?"); !sent.ok()) {
                 return sent.error();
             }
+            lastAsk = std::chrono::steady_clock::now();
         }
     }
     return Error{ErrorCode::BoardNotResponding, "no S2A live greeting"};
+}
+
+Result<bool> LiveLink::confirm() {
+    if (auto sent = transport_.writeLine("?"); !sent.ok()) {
+        return sent.error();
+    }
+    const auto deadline = std::chrono::steady_clock::now() + milliseconds(500);
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto line = transport_.readLine(milliseconds(100));
+        if (!line.ok()) {
+            return line.error();
+        }
+        if (line.value() && *line.value() == kHello) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::optional<std::string> LiveLink::request(const std::string& command) {
@@ -691,7 +720,8 @@ void Session::run(project::Project project) {
         return;
     }
     std::unique_ptr<serial::LineTransport> connection = std::move(transport).value();
-    if (!LiveLink(*connection).handshake().ok()) {
+    // No firmware yet answers within a few seconds: the reset by the port lasts 1 to 2 s.
+    if (!LiveLink(*connection).handshake(milliseconds(3500)).ok()) {
         if (stopping_) {
             set(State::Stopped, tr("live.stopped", language_));
             return;

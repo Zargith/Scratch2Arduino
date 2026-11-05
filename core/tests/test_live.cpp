@@ -383,8 +383,49 @@ TEST(LiveLink, SpeaksTheFirmwareProtocol) {
     EXPECT_TRUE(link.digitalRead(2));
     EXPECT_EQ(link.analogRead(14), 512);
     link.reset();
-    EXPECT_EQ(firmware.received, (std::vector<std::string>{"M 13 O", "D 13 1", "P 9 255", "R 2", "A 14", "X"}));
+    EXPECT_EQ(firmware.received, (std::vector<std::string>{"?", "M 13 O", "D 13 1", "P 9 255", "R 2", "A 14", "X"}));
     EXPECT_FALSE(link.takeError().has_value());
+}
+
+/// A board reset by the opening of the port: an old greeting is still in the port, and the
+/// bootloader swallows what is sent until the firmware greets again.
+struct RestartingFirmware final : s2a::serial::LineTransport {
+    std::deque<std::string> pending{std::string(s2a::live::kHello)}; // left over from before the reset
+    std::vector<std::string> received;
+    int swallowed = 0;
+    int silentReads = 3; ///< Reads before the firmware starts and greets.
+
+    s2a::Status writeLine(std::string_view line) override {
+        received.emplace_back(line);
+        if (silentReads > 0) {
+            ++swallowed; // the bootloader runs
+        } else {
+            pending.emplace_back(line == "?" ? std::string(s2a::live::kHello) : std::string("ok"));
+        }
+        return s2a::success();
+    }
+
+    s2a::Result<std::optional<std::string>> readLine(milliseconds /*timeout*/) override {
+        if (!pending.empty()) {
+            std::string line = pending.front();
+            pending.pop_front();
+            return std::optional<std::string>(line);
+        }
+        if (silentReads > 0 && --silentReads == 0) {
+            return std::optional<std::string>(std::string(s2a::live::kHello)); // the firmware starts
+        }
+        return std::optional<std::string>();
+    }
+};
+
+TEST(LiveLink, WaitsForABoardThatRestartsWhenThePortOpens) {
+    RestartingFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    EXPECT_GE(firmware.swallowed, 1); // the old greeting was not trusted
+    link.setMode(6, PinMode::Input);
+    EXPECT_FALSE(link.takeError().has_value()) << "the first command must reach the started firmware";
+    EXPECT_EQ(firmware.received.back(), "M 6 I");
 }
 
 TEST(LiveLink, DrivesComponents) {
@@ -395,7 +436,7 @@ TEST(LiveLink, DrivesComponents) {
     link.tone(8, 0, 0);
     link.servoWrite(9, 200);
     EXPECT_DOUBLE_EQ(link.distance(12, 11), 123.4);
-    EXPECT_EQ(firmware.received, (std::vector<std::string>{"T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11"}));
+    EXPECT_EQ(firmware.received, (std::vector<std::string>{"?", "T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11"}));
     EXPECT_FALSE(link.takeError().has_value());
 }
 
@@ -419,8 +460,8 @@ struct SharedFirmware final : s2a::serial::LineTransport {
     s2a::Result<std::optional<std::string>> readLine(milliseconds timeout) override { return firmware->readLine(timeout); }
 };
 
-template <typename Predicate> bool waitFor(Predicate predicate) {
-    for (int i = 0; i < 300; ++i) {
+template <typename Predicate> bool waitFor(Predicate predicate, int tenthsOfSeconds = 30) {
+    for (int i = 0; i < tenthsOfSeconds * 10; ++i) {
         if (predicate()) {
             return true;
         }
@@ -474,7 +515,8 @@ TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {
             ++flashes;
             return s2a::success();
         });
-    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }));
+    // The silent board is probed for a few seconds before the firmware is uploaded.
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }, 80));
     EXPECT_EQ(flashes, 1);
     EXPECT_EQ(opened, 2);
 }
