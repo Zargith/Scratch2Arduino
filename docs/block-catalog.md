@@ -36,7 +36,7 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
 | `message` | French **and** English. `%1`…`%n` refer to the arguments in declaration order; each appears exactly once per language, in any order (`"ajouter %2 à %1"` / `"change %1 by %2"`). |
 | `tooltip` | French and English, written for beginners. |
 | `args[].name` | `UPPER_CASE`, unique in the block. Stored in projects. |
-| `args[].kind` | `number`, `text`, `boolean` (slots), `pin`, `dropdown`, `variable` (menus), `statement` (inside a `c` block). |
+| `args[].kind` | `number`, `text`, `boolean` (slots), `pin`, `dropdown`, `variable`, `function` (menus of the project's variables and functions), `statement` (inside a `c` block). |
 | `default` | Allowed on `number`, `text`, `pin`, `dropdown` (must be one of the option values). |
 | `min` / `max` | `number` arguments only. |
 | `capability` | Required on `pin` arguments: `digital`, `analog`, `pwm` or `interrupt`. The menu lists the pins of the selected board that have it. |

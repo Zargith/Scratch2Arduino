@@ -197,6 +197,18 @@ Project projectFromJson(Json json) {
             {stringAt(node, "id", path), stringAt(node, "name", path), numberAt(node, "initialValue", path, 0)});
     }
 
+    if (json.contains("functions")) { // optional: projects without functions do not have it
+        const Json& functions = arrayAt(json, "functions", root);
+        for (std::size_t index = 0; index < functions.size(); ++index) {
+            const std::string path = "$.functions[" + std::to_string(index) + "]";
+            const Json& node = functions.at(index);
+            if (!node.is_object()) {
+                throw FormatError(path, "a function must be an object");
+            }
+            project.functions.push_back({stringAt(node, "id", path), stringAt(node, "name", path)});
+        }
+    }
+
     const Json& scripts = arrayAt(json, "scripts", root);
     for (std::size_t index = 0; index < scripts.size(); ++index) {
         const std::string path = "$.scripts[" + std::to_string(index) + "]";
@@ -247,7 +259,7 @@ std::string toJson(const Project& project) {
     for (const Script& script : project.scripts) {
         scripts.push_back({{"x", script.x}, {"y", script.y}, {"blocks", stackToJson(script.blocks)}});
     }
-    const Json json{
+    Json json{
         {"format", std::string(kFormatName)},
         {"formatVersion", kFormatVersion},
         {"name", project.name},
@@ -255,6 +267,13 @@ std::string toJson(const Project& project) {
         {"variables", std::move(variables)},
         {"scripts", std::move(scripts)},
     };
+    if (!project.functions.empty()) { // left out otherwise: older projects keep the same bytes
+        Json functions = Json::array();
+        for (const Function& function : project.functions) {
+            functions.push_back({{"id", function.id}, {"name", function.name}});
+        }
+        json["functions"] = std::move(functions);
+    }
     return json.dump(2) + "\n";
 }
 

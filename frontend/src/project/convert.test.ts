@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { findBlock } from "@/catalog";
 import allBlocks from "../../../examples/projects/all-blocks/project.json";
 import blink from "../../../examples/projects/blink/project.json";
+import trafficLight from "../../../examples/projects/traffic-light/project.json";
 import distanceAlarm from "../../../examples/projects/distance-alarm/project.json";
 import lightGauge from "../../../examples/projects/light-gauge/project.json";
 import reactionGame from "../../../examples/projects/reaction-game/project.json";
@@ -114,6 +115,7 @@ describe("project conversion", () => {
 	it.each([
 		["blink", blink],
 		["all-blocks", allBlocks],
+		["traffic-light", trafficLight],
 		["distance-alarm", distanceAlarm],
 		["servo-potentiometer", servoPotentiometer],
 		["thermometer", thermometer],

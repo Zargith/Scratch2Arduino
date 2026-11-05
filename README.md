@@ -208,6 +208,15 @@ They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor li
 `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
 button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
 
+### Functions
+
+To reuse a group of blocks, open the *Functions* category and click **Make a function**: give it a
+name, attach blocks under **define <name>**, then use **call <name>** anywhere (several times if needed).
+The blocks of the function run, then the program goes on after the call. A function does not run on its
+own at start-up, and it cannot call itself (Check explains why). In the Arduino code, each function
+becomes a C++ function. Example: [`traffic-light`](examples/projects/traffic-light/project.json), with the
+functions *feu vert*, *feu orange* and *feu rouge*.
+
 ### Serial monitor
 
 The **serial monitor** button (top bar) opens a panel showing what the board writes. Use the block

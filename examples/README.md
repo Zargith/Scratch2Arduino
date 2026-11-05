@@ -16,6 +16,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | Projet / Project | Composants / Parts |
 |---|---|
 | [Clignotant / Blink](#clignotant--blink) | aucun / none |
+| [Feu tricolore](#feu-tricolore--traffic-light) (fonctions / functions) | 3 LED, 3 × 220 Ω |
 | [Potentiomètre et servomoteur](#potentiomètre-et-servomoteur--potentiometer-and-servo) | potentiomètre, servo SG90 |
 | [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 × 220 Ω, buzzer |
 | [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16×2 I2C |
@@ -32,6 +33,21 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 ![Clignotant](projects/blink/wiring.png)
 
 La LED « L » soudée sur la carte clignote : rien à brancher. / The on-board "L" LED blinks: nothing to wire.
+
+## Feu tricolore / Traffic light
+
+![Feu tricolore](projects/traffic-light/wiring.png)
+
+Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une **fonction** (*feu vert*, *feu orange*,
+*feu rouge*) appelée par le script principal. / Green 3 s, orange 1 s, red 3 s, forever. Each colour is a
+**function** called by the main script.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| LED rouge / red, par une résistance de 220 Ω / through a 220 Ω resistor | 12 |
+| LED orange, par une résistance de 220 Ω | 11 |
+| LED verte / green, par une résistance de 220 Ω | 10 |
+| Patte courte (−) de chaque LED / short (−) leg of each LED | GND |
 
 ## Potentiomètre et servomoteur / Potentiometer and servo
 
