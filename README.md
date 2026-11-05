@@ -98,7 +98,7 @@ Scratch2Arduino/
 ├── installer/
 │   └── windows/            # installer.exe script (Inno Setup / NSIS)
 ├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
-├── examples/               # sketches (Blink); example projects (.s2a) in Phase 7
+├── examples/               # sketches (Blink); example projects with their wiring diagrams
 └── docs/                   # roadmap, block catalog guide; later user guide, tutorials
 ```
 
@@ -203,10 +203,10 @@ the wiring:
 | Screens | write a text or a value on a line of an I2C 16×2 LCD (address 0x27 or 0x3F, found automatically) or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
-*U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects in
-[`examples/projects`](examples/projects): `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 +
-LCD), `reaction-game` (LED matrix, buzzer, button, score on the OLED) and `light-gauge` (NeoPixel strip
-driven by a potentiometer).
+*U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
+**wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
+`servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
+button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
 
 ### Serial monitor
 
