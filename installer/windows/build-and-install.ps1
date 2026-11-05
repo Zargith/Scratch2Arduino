@@ -30,6 +30,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# No MSBuild worker processes left running for 15 minutes after the installation.
+$env:MSBUILDDISABLENODEREUSE = '1'
 $French = $Language -in @('french', 'fr')
 if (-not $BuildDir) { $BuildDir = Join-Path $InstallDir 'build' }
 if (-not $LogFile) { $LogFile = Join-Path $InstallDir 'install-log.txt' }
