@@ -147,7 +147,8 @@ function toBlockState(block: ProjectBlock): BlockState {
 		if (input.value !== undefined && shadowFields) {
 			shadowFields[shadowFields.TEXT !== undefined ? "TEXT" : "NUM"] = input.value;
 		}
-		if (input.block) target.block = toBlockState(input.block);
+		// A value block this version does not know is left out: the slot keeps its typed value.
+		if (input.block && findBlock(input.block.type)) target.block = toBlockState(input.block);
 	}
 	for (const [name, stack] of Object.entries(block.statements ?? {})) {
 		const first = linked(stack);
@@ -160,7 +161,9 @@ function toBlockState(block: ProjectBlock): BlockState {
 
 function linked(stack: ProjectBlock[]): BlockState | undefined {
 	let next: BlockState | undefined;
-	for (const block of [...stack].reverse()) {
+	// A block this version does not know (made by a newer Scratch2Arduino) cannot be shown:
+	// it is left out and the blocks below it move up, so the rest of the script still opens.
+	for (const block of [...stack].reverse().filter((candidate) => findBlock(candidate.type))) {
 		const state = toBlockState(block);
 		if (next) state.next = { block: next };
 		next = state;
@@ -186,6 +189,21 @@ function splitAfterTerminal(stack: ProjectBlock[], overflow: ProjectBlock[][]): 
 				}
 			: block
 	);
+}
+
+/** Block types of the project that this version does not know (they are not shown). */
+export function unknownBlockTypes(project: Project): string[] {
+	const unknown = new Set<string>();
+	const visit = (block: ProjectBlock) => {
+		if (!findBlock(block.type)) {
+			unknown.add(block.type);
+			return; // what is inside is left out with it
+		}
+		for (const input of Object.values(block.inputs ?? {})) if (input.block) visit(input.block);
+		for (const stack of Object.values(block.statements ?? {})) stack.forEach(visit);
+	};
+	project.scripts.forEach((script) => script.blocks.forEach(visit));
+	return [...unknown].sort();
 }
 
 export function projectToWorkspace(project: Project): WorkspaceState {

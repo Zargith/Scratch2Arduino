@@ -6,6 +6,7 @@ import blink from "../../../examples/projects/blink/project.json";
 import {
 	isProject,
 	projectToWorkspace,
+	unknownBlockTypes,
 	workspaceToProject,
 	type Project,
 	type ProjectBlock,
@@ -52,6 +53,38 @@ function normalized(project: Project): Project {
 }
 
 describe("project conversion", () => {
+	it("leaves out blocks this version does not know and keeps the rest of the script", () => {
+		const project: Project = {
+			...(blink as Project),
+			scripts: [
+				{
+					x: 0,
+					y: 0,
+					blocks: [
+						{ id: "hat", type: "events_when_program_starts" },
+						{ id: "future", type: "future_block", inputs: { VALUE: { value: "1" } } },
+						{
+							id: "wait",
+							type: "control_wait",
+							inputs: { SECONDS: { value: "2", block: { id: "f2", type: "future_reporter" } } },
+						},
+						{ id: "led", type: "pins_builtin_led", fields: { STATE: "ON" } },
+					],
+				},
+			],
+		};
+		expect(unknownBlockTypes(project)).toEqual(["future_block", "future_reporter"]);
+		const back = roundTrip(project);
+		expect(back.scripts).toHaveLength(1);
+		expect(back.scripts[0]?.blocks.map((block) => block.id)).toEqual(["hat", "wait", "led"]);
+		expect(back.scripts[0]?.blocks[1]?.inputs?.SECONDS).toEqual({ value: "2" });
+	});
+
+	it("knows every block of the examples", () => {
+		expect(unknownBlockTypes(allBlocks as Project)).toEqual([]);
+		expect(unknownBlockTypes(blink as Project)).toEqual([]);
+	});
+
 	it("moves blocks below a forever loop to a script of their own", () => {
 		const project: Project = {
 			...(blink as Project),

@@ -132,7 +132,7 @@
       ]
     },
     {
-      "x": 400,
+      "x": 1000,
       "y": 40,
       "blocks": [
         { "id": "start2", "type": "events_when_program_starts" },
