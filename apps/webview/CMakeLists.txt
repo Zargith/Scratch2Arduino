@@ -1,4 +1,4 @@
-# Variant A - native C++ host embedding the system webview
+# Scratch2Arduino application - native C++ host embedding the system webview
 # (WebKitGTK on Linux, WKWebView on macOS, WebView2 on Windows).
 include(FetchContent)
 
@@ -46,30 +46,30 @@ FetchContent_MakeAvailable(portable_file_dialogs)
 include(S2AFrontend)
 find_package(Threads REQUIRED)
 
-add_executable(scratch2arduino-webview WIN32 MACOSX_BUNDLE
+add_executable(scratch2arduino WIN32 MACOSX_BUNDLE
     src/bridge.cpp
     src/main.cpp
     src/welcome_page.cpp
 )
-target_include_directories(scratch2arduino-webview PRIVATE src)
-target_include_directories(scratch2arduino-webview SYSTEM PRIVATE "${portable_file_dialogs_SOURCE_DIR}")
-target_link_libraries(scratch2arduino-webview PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
+target_include_directories(scratch2arduino PRIVATE src)
+target_include_directories(scratch2arduino SYSTEM PRIVATE "${portable_file_dialogs_SOURCE_DIR}")
+target_link_libraries(scratch2arduino PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
 if(WIN32)
-    target_compile_definitions(scratch2arduino-webview PRIVATE NOMINMAX)
+    target_compile_definitions(scratch2arduino PRIVATE NOMINMAX)
 endif()
-s2a_set_warnings(scratch2arduino-webview)
+s2a_set_warnings(scratch2arduino)
 
-set_target_properties(scratch2arduino-webview PROPERTIES
-    MACOSX_BUNDLE_BUNDLE_NAME "Scratch2Arduino (webview)"
-    MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.zargith.scratch2arduino.webview"
+set_target_properties(scratch2arduino PROPERTIES
+    MACOSX_BUNDLE_BUNDLE_NAME "Scratch2Arduino"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.zargith.scratch2arduino"
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
 )
 
-install(TARGETS scratch2arduino-webview
+install(TARGETS scratch2arduino
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    BUNDLE DESTINATION .  # macOS: the prefix is the Applications folder (required by Qt deploy)
+    BUNDLE DESTINATION .  # macOS: the prefix is the Applications folder
 )
-s2a_bundle_arduino_cli(scratch2arduino-webview)
-s2a_bundle_frontend(scratch2arduino-webview)
-s2a_install_desktop_entry(scratch2arduino-webview NAME "Scratch2Arduino (webview)" VARIANT "webview")
+s2a_bundle_arduino_cli(scratch2arduino)
+s2a_bundle_frontend(scratch2arduino)
+s2a_install_desktop_entry(scratch2arduino NAME "Scratch2Arduino")

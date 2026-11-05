@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Block editor UI of Scratch2Arduino (variant A, embedded in the native webview host)",
+  "description": "Block editor UI of Scratch2Arduino (embedded in the native webview host)",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

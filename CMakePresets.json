@@ -8,19 +8,18 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "S2A_BUILD_WEBVIEW": "ON",
-        "S2A_BUILD_NATIVE": "ON",
         "S2A_BUILD_TESTS": "ON"
       }
     },
     {
       "name": "debug",
-      "displayName": "Debug (both variants)",
+      "displayName": "Debug",
       "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
     },
     {
       "name": "release",
-      "displayName": "Release (both variants)",
+      "displayName": "Release",
       "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
@@ -30,8 +29,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "S2A_BUILD_WEBVIEW": "OFF",
-        "S2A_BUILD_NATIVE": "OFF"
+        "S2A_BUILD_WEBVIEW": "OFF"
       }
     }
   ],

@@ -1,5 +1,5 @@
 // Block catalog and board database, read at build time from the same JSON files as the
-// C++ core (blocks/catalog, resources/boards): one source of truth for both variants.
+// C++ core (blocks/catalog, resources/boards): one source of truth with the C++ code generator.
 export type Language = "fr" | "en";
 export type Localized = Record<Language, string>;
 

@@ -5,11 +5,7 @@
   "app": {
     "title": "Scratch2Arduino",
     "welcome": "Welcome to Scratch2Arduino! Plug in your Arduino board and start snapping blocks together.",
-    "coming_soon": "The block editor is coming soon.",
-    "variant": {
-      "webview": "Variant A — webview",
-      "native": "Variant B — native (Qt)"
-    }
+    "coming_soon": "The block editor is coming soon."
   },
   "project": {
     "default_name": "My project"

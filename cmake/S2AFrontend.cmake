@@ -1,4 +1,4 @@
-# Block editor UI of variant A (frontend/, scratch-blocks + React), shipped as files next to the
+# Block editor UI (frontend/, scratch-blocks + React), shipped as files next to the
 # application: index.html (everything inlined) and media/ (scratch-blocks icons).
 #
 #   s2a_bundle_frontend(<target>)   copies the frontend next to <target> and installs it
