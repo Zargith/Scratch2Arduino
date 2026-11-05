@@ -52,3 +52,6 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
    (`core/src/arduino_cli.cpp`): it is then installed automatically before compiling.
 5. Use it in `examples/projects/all-blocks` (compiled for every board in CI, and round-tripped by the
    editor tests).
+6. For a new component, add an example project with its wiring diagram: draw it in
+   [`tools/wiring/wiring.py`](../tools/wiring/wiring.py) (`python3 tools/wiring/wiring.py <example>`) and
+   describe it in [`examples/README.md`](../examples/README.md).
