@@ -71,8 +71,8 @@ class LiveLink final : public Pins {
 public:
     explicit LiveLink(serial::LineTransport& transport) : transport_(transport) {}
 
-    /// Waits for the firmware greeting (after the reset caused by opening the port) or asks for it.
-    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000));
+    /// Waits until the firmware greets and answers (after the reset caused by opening the port).
+    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000));
 
     void setMode(int pin, PinMode mode) override;
     void digitalWrite(int pin, bool high) override;
@@ -93,6 +93,8 @@ public:
     [[nodiscard]] std::optional<Error> takeError();
 
 private:
+    /// True when the firmware answers a "?" now (false while the board restarts).
+    [[nodiscard]] Result<bool> confirm();
     /// Sends `command` and returns the reply line ("ok", "r 2 1"...), or nullopt on error.
     std::optional<std::string> request(const std::string& command,
                                        std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
