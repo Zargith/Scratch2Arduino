@@ -119,7 +119,16 @@ function Test-SameContent([string]$A, [string]$B) {
     $itemA = Get-Item -LiteralPath $A -Force
     $itemB = Get-Item -LiteralPath $B -Force
     if ($itemA.Length -ne $itemB.Length) { return $false }
-    return (Get-FileHash -LiteralPath $A -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $B -Algorithm SHA256).Hash
+    return (Get-Sha256 $A) -eq (Get-Sha256 $B)
+}
+
+# .NET rather than Get-FileHash: when powershell.exe is started from PowerShell 7, it inherits a
+# PSModulePath where the module providing Get-FileHash cannot be loaded.
+function Get-Sha256([string]$Path) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try { return [BitConverter]::ToString($sha.ComputeHash($stream)) }
+    finally { $stream.Dispose(); $sha.Dispose() }
 }
 
 # Makes $Target identical to $Staging while touching only the files that differ, so that unchanged
