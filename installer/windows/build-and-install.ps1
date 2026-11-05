@@ -236,9 +236,12 @@ try {
 
     $manifestPath = Join-Path $BuildDir 'install_manifest.txt'
     $previousFiles = Read-Manifest $manifestPath
-    if (-not $incremental) {
+    $legacy = @('scratch2arduino-webview.exe', 'scratch2arduino-native.exe') |
+        Where-Object { Test-Path (Join-Path $InstallDir "bin\$_") }
+    if (-not $incremental -and $legacy) {
         # Versions before 0.4 did not keep their build tree, so their file list is unknown: their
         # programs (two variants, Qt libraries) are removed with the folders they were installed in.
+        Say 'Suppression de l''ancienne version (deux variantes)' 'Removing the previous version (two variants)'
         foreach ($folder in 'bin', 'share', 'lib') {
             Remove-Item -Recurse -Force -LiteralPath (Join-Path $InstallDir $folder) -ErrorAction SilentlyContinue
         }
