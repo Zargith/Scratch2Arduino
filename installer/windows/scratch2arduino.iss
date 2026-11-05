@@ -11,7 +11,7 @@
 
 #define AppName "Scratch2Arduino"
 #ifndef AppVersion
-  #define AppVersion "0.3.0"
+  #define AppVersion "0.5.0"
 #endif
 #define SourceRoot "..\.."
 
