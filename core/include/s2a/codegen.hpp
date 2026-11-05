@@ -6,6 +6,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 
 /// Turns a block project into an Arduino sketch (.ino).
 ///
@@ -30,6 +31,13 @@ struct Sketch {
 
 /// Same, with the built-in catalog and the project's board from the built-in database.
 [[nodiscard]] Sketch generate(const project::Project& project);
+
+/// Speed of the serial monitor used by the "write to the serial monitor" block.
+inline constexpr int kSerialBaud = 9600;
+
+/// Text typed in a slot as a C++ string literal (quotes and backslashes escaped, control
+/// characters except tab and newline dropped).
+[[nodiscard]] std::string stringLiteral(std::string_view text);
 
 /// Number typed in a slot ("1,5", " 3 ", "abc") as C++ source; "0" when invalid.
 [[nodiscard]] std::string numberLiteral(const std::string& text);

@@ -160,7 +160,8 @@ s2a-cli live examples/projects/blink/project.json --port /dev/ttyACM0   # Live m
 
 **Live mode** runs the blocks on the computer and drives the board through the small *S2A live*
 firmware (`firmware/s2a_live`, sent automatically the first time): a change in the blocks takes effect
-without uploading again. Variables are printed when they change.
+without uploading again. Variables are printed when they change, and what the blocks write to the serial
+monitor is printed after `> `.
 
 On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
 in PowerShell `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" ports`.
@@ -183,9 +184,17 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 ### Live mode
 
 Click **Live**: the blocks run on the computer and drive the board through the
-*S2A live* firmware, installed automatically the first time. The running scripts glow, the variables are
-shown on the right, and any change to the blocks takes effect at once, without uploading. Click **Stop**
-to end it (the outputs are switched off). Use **Upload** to make the board run the program on its own.
+*S2A live* firmware, installed automatically the first time. The running scripts glow, the variables and
+the sensors read by the blocks are shown on the right with a graph of their last 30 seconds, and any change
+to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
+off). Use **Upload** to make the board run the program on its own.
+
+### Serial monitor
+
+The **serial monitor** button (top bar) opens a panel showing what the board writes. Use the block
+**write … to the serial monitor** (category *Serial monitor*), upload, then click **Connect** (9600 bauds,
+the speed of the generated code). A line typed at the bottom is sent to the board. Uploading pauses the
+monitor and reconnects it afterwards; in Live mode the panel shows what the blocks write.
 
 ### Working on the block editor
 

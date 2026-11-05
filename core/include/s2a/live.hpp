@@ -95,6 +95,10 @@ public:
     [[nodiscard]] std::vector<std::string> runningBlocks() const;
     /// Variable id -> current value.
     [[nodiscard]] const std::map<std::string, double>& variables() const { return variables_; }
+    /// Pin label ("A0", "2") -> last value read by the blocks (0/1 for digital pins).
+    [[nodiscard]] const std::map<std::string, double>& readings() const { return readings_; }
+    /// Lines written by "write to the serial monitor" since the last call.
+    [[nodiscard]] std::vector<std::string> takeOutput();
 
 private:
     struct Frame {
@@ -119,6 +123,7 @@ private:
     bool condition(const project::Block& block, const std::string& name);
     double evaluate(const project::Block& block);
     int pin(const project::Block& block, const std::string& name, PinMode mode);
+    void record(int pin, double value);
     [[nodiscard]] std::string field(const project::Block& block, const std::string& name) const;
     bool restore(Thread& thread, const std::vector<Frame>& old);
 
@@ -129,6 +134,8 @@ private:
     std::vector<Thread> threads_;
     std::map<std::string, double> variables_;
     std::map<int, PinMode> modes_;
+    std::map<std::string, double> readings_;
+    std::vector<std::string> output_;
     std::mt19937 random_{std::random_device{}()};
 };
 
@@ -149,7 +156,11 @@ public:
         std::vector<std::string> runningBlocks;
         std::vector<std::string> problemBlocks; ///< Validation errors that prevent starting.
         std::map<std::string, double> variables;
+        std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
+        std::vector<std::string> output;        ///< Last lines written to the serial monitor (at most kOutputLines)...
+        std::size_t outputCount = 0;            ///< ...out of this many since the start.
     };
+    static constexpr std::size_t kOutputLines = 200;
 
     Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
             Flasher flasher);

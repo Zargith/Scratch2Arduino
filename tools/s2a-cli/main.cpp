@@ -472,6 +472,9 @@ int Cli::liveCommand() const {
             std::cerr << tr(s2a::errorMessageKey(error->code)) << '\n';
             return kFailure;
         }
+        for (const std::string& line : interpreter.takeOutput()) {
+            std::cout << "> " << line << '\n'; // "write to the serial monitor"
+        }
         for (const auto& variable : project->variables) {
             const double value = interpreter.variables().at(variable.id);
             if (const auto it = shown.find(variable.id); it == shown.end() || it->second != value) {

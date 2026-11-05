@@ -118,7 +118,17 @@ const char* stateName(live::Session::State state) {
 
 } // namespace
 
+void Bridge::closeMonitor() {
+    std::unique_ptr<serial::Monitor> monitor;
+    {
+        const std::lock_guard<std::mutex> lock(monitorMutex_);
+        monitor.swap(monitor_);
+    }
+    monitor.reset(); // joins the reading thread (at most one read timeout)
+}
+
 Bridge::~Bridge() {
+    closeMonitor();
     {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         live_.reset(); // switches the outputs off
@@ -270,6 +280,7 @@ void Bridge::bind() {
             toolchain::BuildOptions options;
             if (upload) {
                 options.port = stringArg(args, 1);
+                closeMonitor(); // the editor opens it again after the upload
             }
             const auto cli = arduinoCli(language);
             return outcomeJson(toolchain::buildProject(cli, project, language, options));
@@ -288,6 +299,7 @@ void Bridge::bind() {
             if (board == nullptr || port.empty()) {
                 return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
             }
+            closeMonitor(); // Live mode needs the port; its output is shown instead
             const std::lock_guard<std::mutex> lock(liveMutex_);
             if (live_) {
                 // Stopping can take a moment (outputs switched off): not on the UI thread.
@@ -334,8 +346,58 @@ void Bridge::bind() {
                     {"details", snapshot.details},
                     {"running", snapshot.runningBlocks},
                     {"problems", snapshot.problemBlocks},
-                    {"variables", snapshot.variables}}
+                    {"variables", snapshot.variables},
+                    {"readings", snapshot.readings},
+                    {"output", snapshot.output},
+                    {"outputCount", snapshot.outputCount}}
             .dump();
+    });
+
+    // Serial monitor (outside Live mode): open, send a line, close, and read (polled).
+    window_.bind("s2a_monitor_open", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const Language language = languageArg(args, 2, language_);
+        const std::string port = stringArg(args, 0);
+        const int baud = args.size() > 1 && args[1].is_number_integer() ? args[1].get<int>() : codegen::kSerialBaud;
+        if (port.empty()) {
+            return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
+        }
+        closeMonitor();
+        auto opened = serial::Monitor::open(port, baud);
+        if (!opened.ok()) {
+            return Json{{"ok", false},
+                        {"message", tr(errorMessageKey(opened.error().code), language)},
+                        {"details", opened.error().detail}}
+                .dump();
+        }
+        const std::lock_guard<std::mutex> lock(monitorMutex_);
+        monitor_ = std::move(opened).value();
+        return Json{{"ok", true}}.dump();
+    });
+    window_.bind("s2a_monitor_send", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const std::lock_guard<std::mutex> lock(monitorMutex_);
+        if (monitor_) {
+            monitor_->send(stringArg(args, 0));
+        }
+        return std::string{};
+    });
+    window_.bind("s2a_monitor_close", [this](const std::string& /*request*/) {
+        closeMonitor();
+        return std::string{};
+    });
+    window_.bind("s2a_monitor_state", [this](const std::string& /*request*/) {
+        const std::lock_guard<std::mutex> lock(monitorMutex_);
+        if (!monitor_) {
+            return Json{{"open", false}}.dump();
+        }
+        const auto snapshot = monitor_->snapshot();
+        Json state{{"open", snapshot.open}, {"lines", snapshot.lines}, {"count", snapshot.count}};
+        if (snapshot.error) {
+            state["message"] = tr(errorMessageKey(snapshot.error->code), language_);
+            state["details"] = snapshot.error->detail;
+        }
+        return state.dump();
     });
 
     window_.bind(

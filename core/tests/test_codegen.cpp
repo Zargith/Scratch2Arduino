@@ -146,6 +146,31 @@ TEST(Codegen, ReadsHighWhenTheStateIsMissing) {
     EXPECT_NE(sketch.source.find("pinMode(4, INPUT);"), std::string::npos) << sketch.source;
 }
 
+TEST(Codegen, WritesToTheSerialMonitor) {
+    Block text = block("t", "serial_print");
+    text.inputs["VALUE"].value = "Il a dit \"salut\" \\ ok";
+    Block analog = block("a", "pins_analog_read");
+    analog.fields["PIN"] = "A0";
+    Block value = block("v", "serial_print");
+    value.inputs["VALUE"].block = analog;
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), text, value}));
+    EXPECT_NE(sketch.source.find("void setup() {\n  Serial.begin(9600);"), std::string::npos) << sketch.source;
+    EXPECT_NE(sketch.source.find(R"(Serial.println(F("Il a dit \"salut\" \\ ok"));)"), std::string::npos)
+        << sketch.source;
+    EXPECT_NE(sketch.source.find("s2a_print(analogRead(A0));"), std::string::npos) << sketch.source;
+    EXPECT_NE(sketch.source.find("void s2a_print(double value) {"), std::string::npos);
+}
+
+TEST(Codegen, OpensTheSerialPortOnlyWhenUsed) {
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts")}));
+    EXPECT_EQ(sketch.source.find("Serial"), std::string::npos) << sketch.source;
+}
+
+TEST(Codegen, EscapesStringLiterals) {
+    EXPECT_EQ(s2a::codegen::stringLiteral("a\"b\\c\nd\te\rf\x01"), R"("a\"b\\c\nd\tef")");
+    EXPECT_EQ(s2a::codegen::stringLiteral("été"), "\"été\"");
+}
+
 TEST(Codegen, UsesSafeDefaultsForMissingOrInvalidInputs) {
     Block write = block("w", "pins_analog_write");
     write.fields["PIN"] = "7; system()"; // not a pin: falls back to the default pin

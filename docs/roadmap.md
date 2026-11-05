@@ -12,7 +12,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 3a — Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
 | 3b — Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
 | 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted, compiler errors mapped to blocks |
-| 5 — Live mode and real-time debugging | In progress: firmware, protocol, interpreter, Live button in the editor (running scripts glow, variables panel); graph and serial monitor to come; to be checked on real boards |
+| 5 — Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
 | 6 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
 

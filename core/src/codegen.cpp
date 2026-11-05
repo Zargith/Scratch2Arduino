@@ -279,6 +279,17 @@ private:
                 declared = mode; // also in setup(), so that the pin is ready before it is read
             }
             body.add(depth, "pinMode(" + target + ", " + modeName(mode) + ");");
+        } else if (type == "serial_print") {
+            helpers_.insert("serial");
+            const auto input = block.inputs.find("VALUE");
+            if (input != block.inputs.end() && input->second.block) {
+                helpers_.insert("print");
+                body.add(depth, "s2a_print(" + expression(*input->second.block) + ");");
+            } else {
+                const std::string text = input != block.inputs.end() ? input->second.value : defaultValue(block, "VALUE");
+                body.add(depth, text.empty() ? std::string("Serial.println();")
+                                             : "Serial.println(F(" + stringLiteral(text) + "));");
+            }
         } else if (type == "pins_analog_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
@@ -358,6 +369,10 @@ private:
             out.emplace_back("");
         }
 
+        helper(out, "print",
+               {"void s2a_print(double value) {",
+                "  if (value == floor(value) && fabs(value) < 2000000000.0) {",
+                "    Serial.println((long)value);", "  } else {", "    Serial.println(value, 2);", "  }", "}"});
         helper(out, "wait",
                {"void s2a_wait(double seconds) {", "  if (seconds > 0) {",
                 "    delay((unsigned long)(seconds * 1000.0));", "  }", "}"});
@@ -406,6 +421,9 @@ private:
             }
         }
         out.emplace_back("void setup() {");
+        if (helpers_.count("serial") != 0) {
+            out.push_back(std::string(kIndent) + "Serial.begin(" + std::to_string(kSerialBaud) + ");");
+        }
         for (const auto& [label, mode] : pinModes_) {
             out.push_back(std::string(kIndent) + "pinMode(" + label + ", " + modeName(mode) + ");");
         }
@@ -451,6 +469,23 @@ private:
 };
 
 } // namespace
+
+std::string stringLiteral(std::string_view text) {
+    std::string result = "\"";
+    for (const char c : text) {
+        switch (c) {
+        case '"': result += "\\\""; break;
+        case '\\': result += "\\\\"; break;
+        case '\n': result += "\\n"; break;
+        case '\t': result += "\\t"; break;
+        default:
+            if (static_cast<unsigned char>(c) >= 0x20 && c != 0x7F) {
+                result += c; // UTF-8 bytes are kept: the serial monitor shows them
+            }
+        }
+    }
+    return result + "\"";
+}
 
 std::string numberLiteral(const std::string& text) {
     std::string trimmed;
