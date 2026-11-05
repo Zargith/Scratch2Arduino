@@ -178,7 +178,9 @@ jobs:
 
       - name: Build installer.exe
         run: |
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\windows\scratch2arduino.iss
+          # installer.exe takes its version from CMakeLists.txt.
+          $version = (Select-String -Path CMakeLists.txt -Pattern '^\s*VERSION ([0-9.]+)$' | Select-Object -First 1).Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer\windows\scratch2arduino.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run installer.exe silently
