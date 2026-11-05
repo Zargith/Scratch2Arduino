@@ -1,0 +1,31 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "functions",
+    "colour": "#FF6680",
+    "name": { "fr": "Fonctions", "en": "Functions" },
+    "order": 60
+  },
+  "blocks": [
+    {
+      "type": "functions_define",
+      "shape": "hat",
+      "message": { "fr": "définir %1", "en": "define %1" },
+      "tooltip": {
+        "fr": "Les blocs accrochés dessous forment une fonction : ils s'exécutent chaque fois qu'un bloc « appeler » utilise cette fonction, pas au démarrage.",
+        "en": "The blocks below make a function: they run each time a \"call\" block uses this function, not at start-up."
+      },
+      "args": [{ "name": "FUNCTION", "kind": "function" }]
+    },
+    {
+      "type": "functions_call",
+      "shape": "statement",
+      "message": { "fr": "appeler %1", "en": "call %1" },
+      "tooltip": {
+        "fr": "Exécute les blocs de la fonction, puis continue avec le bloc suivant. Pratique pour ne pas répéter les mêmes blocs à plusieurs endroits.",
+        "en": "Runs the blocks of the function, then goes on with the next block. Handy to avoid repeating the same blocks in several places."
+      },
+      "args": [{ "name": "FUNCTION", "kind": "function" }]
+    }
+  ]
+}

@@ -31,14 +31,24 @@ export interface ProjectVariable {
 	initialValue: number;
 }
 
+export interface ProjectFunction {
+	id: string;
+	name: string;
+}
+
 export interface Project {
 	format: typeof FORMAT_NAME;
 	formatVersion: number;
 	name: string;
 	board: string;
 	variables: ProjectVariable[];
+	/** Left out when the project has none (as the C++ core writes it). */
+	functions?: ProjectFunction[];
 	scripts: ProjectScript[];
 }
+
+/** Type of the Blockly variables that stand for functions (see blocks/definitions.ts). */
+const FUNCTION_TYPE = "function";
 
 // --- Blockly serialization state (subset used here) ---------------------------------
 
@@ -116,6 +126,10 @@ export function workspaceToProject(
 			name: variable.name,
 			initialValue: meta.initialValues?.[variable.id] ?? 0,
 		}));
+	const functions = (state.variables ?? [])
+		.filter((variable) => variable.type === FUNCTION_TYPE)
+		.map((variable) => ({ id: variable.id, name: variable.name }));
+	if (functions.length > 0) project.functions = functions;
 	project.scripts = (state.blocks?.blocks ?? []).map((top) => ({
 		x: Math.round(top.x ?? 0),
 		y: Math.round(top.y ?? 0),
@@ -134,7 +148,7 @@ function toBlockState(block: ProjectBlock): BlockState {
 
 	for (const [name, value] of Object.entries(block.fields ?? {})) {
 		const kind = definition?.args?.find((arg) => arg.name === name)?.kind;
-		fields[name] = kind === "variable" ? { id: value } : value;
+		fields[name] = kind === "variable" || kind === "function" ? { id: value } : value;
 	}
 	if (definition) {
 		for (const [name, { shadow }] of Object.entries(shadowInputs(definition))) {
@@ -219,7 +233,10 @@ export function projectToWorkspace(project: Project): WorkspaceState {
 	}
 	return {
 		blocks: { languageVersion: 0, blocks },
-		variables: project.variables.map((variable) => ({ id: variable.id, name: variable.name, type: "" })),
+		variables: [
+			...project.variables.map((variable) => ({ id: variable.id, name: variable.name, type: "" })),
+			...(project.functions ?? []).map((fn) => ({ id: fn.id, name: fn.name, type: FUNCTION_TYPE })),
+		],
 	};
 }
 

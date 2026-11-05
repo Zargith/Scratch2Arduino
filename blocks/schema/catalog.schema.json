@@ -61,7 +61,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
-        "kind": { "enum": ["number", "text", "boolean", "pin", "dropdown", "variable", "statement"] },
+        "kind": { "enum": ["number", "text", "boolean", "pin", "dropdown", "variable", "function", "statement"] },
         "default": { "type": ["number", "string"] },
         "min": { "type": "number" },
         "max": { "type": "number" },

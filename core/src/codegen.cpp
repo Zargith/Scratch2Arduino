@@ -70,19 +70,37 @@ public:
             used.insert(name);
             variables_[variable.id] = name;
         }
+        for (const project::Function& function : project.functions) {
+            const std::string base = "s2a_function_" + identifier(function.name);
+            std::string name = base;
+            for (int suffix = 2; used.count(name) != 0; ++suffix) {
+                name = base + "_" + std::to_string(suffix);
+            }
+            used.insert(name);
+            functions_[function.id] = name;
+        }
+        for (const project::Script& script : project.scripts) {
+            if (!script.blocks.empty() && script.blocks.front().type == kDefine) {
+                definitions_.emplace(field(script.blocks.front(), "FUNCTION"), &script);
+            }
+        }
     }
 
     Sketch run() {
         std::size_t runnable = 0;
         for (const project::Script& script : project_.scripts) {
-            runnable += !script.blocks.empty() && isHat(script.blocks.front()) ? 1 : 0;
+            runnable += !script.blocks.empty() && isStart(script.blocks.front()) ? 1 : 0;
         }
         // Several scripts must run side by side, as in Scratch: each becomes a task that gives
         // way at every wait and every loop turn. A single script keeps the classic Arduino form.
         tasks_ = runnable > 1;
         for (const project::Script& script : project_.scripts) {
-            if (script.blocks.empty() || !isHat(script.blocks.front())) {
-                continue; // Scratch rule: loose blocks do not run.
+            if (!script.blocks.empty() && script.blocks.front().type == kDefine && !tasks_) {
+                function(script);
+                continue;
+            }
+            if (script.blocks.empty() || !isStart(script.blocks.front())) {
+                continue; // Scratch rule: loose blocks do not run; functions run when called.
             }
             if (tasks_) {
                 Body task;
@@ -109,9 +127,27 @@ public:
     }
 
 private:
-    bool isHat(const Block& block) const {
+    static constexpr std::string_view kDefine = "functions_define";
+
+    /// A hat that starts a script when the program starts (not a function definition).
+    bool isStart(const Block& block) const {
         const BlockDefinition* definition = catalog_.find(block.type);
-        return definition != nullptr && definition->shape == BlockShape::Hat;
+        return definition != nullptr && definition->shape == BlockShape::Hat && block.type != kDefine;
+    }
+
+    /// A "define" script as a C++ function (single-script programs).
+    void function(const project::Script& script) {
+        const auto name = functions_.find(field(script.blocks.front(), "FUNCTION"));
+        if (name == functions_.end() || generatedFunctions_.count(name->second) != 0) {
+            return; // the validator reports a missing or duplicated function
+        }
+        generatedFunctions_.insert(name->second);
+        Body body;
+        body.mark(script.blocks.front().id);
+        for (std::size_t i = 1; i < script.blocks.size(); ++i) {
+            statement(body, script.blocks[i], 1);
+        }
+        functionBodies_.emplace_back(name->second, std::move(body));
     }
 
     // --- arguments -------------------------------------------------------------------
@@ -254,6 +290,15 @@ private:
         return definition != nullptr && definition->shape == BlockShape::Boolean ? "false" : "0";
     }
 
+    std::string functionName(const std::string& id) const {
+        for (const project::Function& function : project_.functions) {
+            if (function.id == id) {
+                return function.name;
+            }
+        }
+        return id;
+    }
+
     // --- statements ------------------------------------------------------------------
 
     void wait(Body& body, const std::string& seconds, int depth) {
@@ -394,6 +439,26 @@ private:
                 statements(body, block, "SUBSTACK2", depth + 1);
             }
             body.add(depth, "}");
+        } else if (type == "functions_call") {
+            const std::string id = field(block, "FUNCTION");
+            const auto name = functions_.find(id);
+            const auto definition = definitions_.find(id);
+            if (name == functions_.end() || definition == definitions_.end()) {
+                return; // reported by the validator
+            }
+            if (!tasks_) {
+                body.add(depth, name->second + "();");
+            } else if (inlining_.insert(id).second) {
+                // Side by side, a wait inside the function must let the other scripts run:
+                // its blocks are written here, inside the script.
+                body.add(depth, "{ // " + oneLine(functionName(id)));
+                const project::Stack& stack = definition->second->blocks;
+                for (std::size_t i = 1; i < stack.size(); ++i) {
+                    statement(body, stack[i], depth + 1);
+                }
+                body.add(depth, "}");
+                inlining_.erase(id);
+            }
         } else if (type == "variables_set" || type == "variables_change") {
             const std::string name = variable(block);
             if (!name.empty()) {
@@ -469,6 +534,19 @@ private:
                 "  return toLow + (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow);", "}"});
 
         Sketch sketch;
+        if (!functionBodies_.empty()) {
+            out.emplace_back("// Functions (\"define\" blocks), run by the \"call\" blocks.");
+            for (const auto& [name, body] : functionBodies_) {
+                out.push_back("void " + name + "();");
+            }
+            out.emplace_back("");
+            for (const auto& [name, body] : functionBodies_) {
+                out.push_back("void " + name + "() {");
+                append(out, sketch, body);
+                out.emplace_back("}");
+                out.emplace_back("");
+            }
+        }
         if (tasks_) {
             out.insert(out.end(),
                        {"// Every script runs a little, then lets the others run (as in Scratch):",
@@ -552,6 +630,11 @@ private:
     std::vector<Body> tasks_bodies_; ///< One per script when several scripts run side by side.
     std::map<std::string, PinMode> pinModes_;
     std::map<std::string, std::string> variables_; ///< Variable id -> C++ name.
+    std::map<std::string, std::string> functions_; ///< Function id -> C++ name.
+    std::map<std::string, const project::Script*> definitions_; ///< Function id -> its "define" script.
+    std::vector<std::pair<std::string, Body>> functionBodies_;  ///< Single-script programs.
+    std::set<std::string> generatedFunctions_;
+    std::set<std::string> inlining_; ///< Functions being written inside a script (no endless recursion).
     std::set<std::string> helpers_;
     std::set<std::string> servos_; ///< Pins driving a servo.
     int counters_ = 0;

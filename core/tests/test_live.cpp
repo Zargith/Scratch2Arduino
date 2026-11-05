@@ -169,6 +169,27 @@ TEST(Interpreter, ReadsSensors) {
     EXPECT_DOUBLE_EQ(interpreter.readings().at("A0"), 100);
 }
 
+TEST(Interpreter, CallsFunctionsAndComesBack) {
+    FakePins pins;
+    Block call = block("call", "functions_call");
+    call.fields["FUNCTION"] = "f";
+    Project project = withScript({block("hat", "events_when_program_starts"), call, led("after", "OFF")});
+    project.functions = {{"f", "blink"}};
+    Block define = block("define", "functions_define");
+    define.fields["FUNCTION"] = "f";
+    project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "1")}});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w"});
+    // The function changes while it waits: the script keeps its place.
+    project.scripts[1].blocks.push_back(led("added", "ON"));
+    interpreter.update(project);
+    interpreter.step(milliseconds(1000));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"D13=1", "D13=0"}));
+    EXPECT_TRUE(interpreter.finished());
+}
+
 TEST(Interpreter, RepeatsAndFinishes) {
     FakePins pins;
     Block repeat = block("repeat", "control_repeat");
