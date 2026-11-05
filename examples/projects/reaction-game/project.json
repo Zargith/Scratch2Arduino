@@ -1,0 +1,254 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Jeu de réaction",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "score",
+      "name": "score",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "zero",
+          "type": "variables_set",
+          "fields": {
+            "VARIABLE": "score"
+          },
+          "inputs": {
+            "VALUE": {
+              "value": "0"
+            }
+          }
+        },
+        {
+          "id": "hello",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "1"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "Jeu de réaction"
+            }
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "wait",
+                "type": "control_wait_until",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "not",
+                      "type": "operators_not",
+                      "inputs": {
+                        "OPERAND": {
+                          "block": {
+                            "id": "b0",
+                            "type": "sensors_button_pressed",
+                            "fields": {
+                              "PIN": "2"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "blank",
+                "type": "lights_matrix_show",
+                "fields": {
+                  "DIN_PIN": "12",
+                  "CLK_PIN": "11",
+                  "CS_PIN": "10",
+                  "IMAGE": "OFF"
+                }
+              },
+              {
+                "id": "delay",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0",
+                    "block": {
+                      "id": "rnd",
+                      "type": "operators_random",
+                      "inputs": {
+                        "FROM": {
+                          "value": "1"
+                        },
+                        "TO": {
+                          "value": "4"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "early",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "b1",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "lose",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "SAD"
+                      }
+                    },
+                    {
+                      "id": "boo",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "150"
+                        },
+                        "SECONDS": {
+                          "value": "0.5"
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "go",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "HEART"
+                      }
+                    },
+                    {
+                      "id": "beep",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "440",
+                          "block": {
+                            "id": "note",
+                            "type": "sound_note",
+                            "fields": {
+                              "NOTE": "523"
+                            }
+                          }
+                        },
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "press",
+                      "type": "control_wait_until",
+                      "inputs": {
+                        "CONDITION": {
+                          "block": {
+                            "id": "b2",
+                            "type": "sensors_button_pressed",
+                            "fields": {
+                              "PIN": "2"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "win",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "CHECK"
+                      }
+                    },
+                    {
+                      "id": "plus",
+                      "type": "variables_change",
+                      "fields": {
+                        "VARIABLE": "score"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "show",
+                      "type": "display_oled_print",
+                      "fields": {
+                        "LINE": "3"
+                      },
+                      "inputs": {
+                        "TEXT": {
+                          "value": "",
+                          "block": {
+                            "id": "g",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "score"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "pause",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

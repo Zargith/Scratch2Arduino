@@ -1,0 +1,109 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Thermomètre",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "l1",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "1"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "value": "Température (C)"
+                  }
+                }
+              },
+              {
+                "id": "l2",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "2"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "value": "",
+                    "block": {
+                      "id": "t",
+                      "type": "sensors_temperature",
+                      "fields": {
+                        "MODEL": "DHT11",
+                        "PIN": "3"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "w1",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "2"
+                  }
+                }
+              },
+              {
+                "id": "l3",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "1"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "value": "Humidité (%)"
+                  }
+                }
+              },
+              {
+                "id": "l4",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "2"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "value": "",
+                    "block": {
+                      "id": "h",
+                      "type": "sensors_humidity",
+                      "fields": {
+                        "MODEL": "DHT11",
+                        "PIN": "3"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "w2",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "2"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

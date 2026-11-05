@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
+#include <optional>
 #include <cctype>
 #include <cmath>
 #include <iomanip>
@@ -246,12 +248,92 @@ private:
         if (type == "sound_note") {
             return numberLiteral(field(block, "NOTE"));
         }
+        if (type == "sensors_temperature" || type == "sensors_humidity") {
+            const std::string label = pinLabel(block, "PIN");
+            const std::string sensor = "s2a_dht_" + label;
+            const std::string model = field(block, "MODEL") == "DHT22" ? "DHT22" : "DHT11";
+            if (dhtSensors_.insert(label).second) { // the first block gives the model of a pin
+                use("DHT.h", "DHT " + sensor + "(" + label + ", " + model + ");", sensor + ".begin();", label);
+                globals_.push_back("double " + sensor + "_last[2]; // last good temperature and humidity");
+            }
+            helpers_.insert("dht");
+            return "s2a_dht_read(" + sensor + ", " + sensor + "_last, " +
+                   (type == "sensors_humidity" ? "true" : "false") + ")";
+        }
         if (type == "variables_get") {
             const std::string name = variable(block);
             return name.empty() ? "0" : name;
         }
         const BlockDefinition* definition = catalog_.find(type);
         return definition != nullptr && definition->shape == BlockShape::Boolean ? "false" : "0";
+    }
+
+    // --- libraries -------------------------------------------------------------------
+
+    /// Declares a library object once: its header, global declaration, set-up line and pin.
+    void use(const std::string& header, const std::string& global, const std::string& init,
+             const std::string& pin = {}) {
+        includes_.insert(header);
+        if (std::find(globals_.begin(), globals_.end(), global) == globals_.end()) {
+            globals_.push_back(global);
+            if (!init.empty()) {
+                inits_.push_back(init);
+            }
+        }
+        if (!pin.empty()) {
+            ownedPins_.insert(pin);
+        }
+    }
+
+    /// A text slot as a String expression: typed text (accents removed, for screens) or the
+    /// value of a reporter written like the serial monitor does.
+    std::string displayText(const Block& block, const std::string& name) {
+        const auto input = block.inputs.find(name);
+        if (input != block.inputs.end() && input->second.block) {
+            helpers_.insert("text");
+            return "s2a_text(" + expression(*input->second.block) + ")";
+        }
+        const std::string text = input != block.inputs.end() ? input->second.value : defaultValue(block, name);
+        return "F(" + stringLiteral(asciiText(text)) + ")";
+    }
+
+    /// Value typed in a number slot (no reporter), for sizes fixed when the program starts.
+    std::optional<double> literal(const Block& block, const std::string& name) const {
+        const auto input = block.inputs.find(name);
+        if (input != block.inputs.end() && input->second.block) {
+            return std::nullopt;
+        }
+        std::istringstream stream(
+            numberLiteral(input != block.inputs.end() ? input->second.value : defaultValue(block, name)));
+        stream.imbue(std::locale::classic());
+        double value = 0;
+        stream >> value;
+        return value;
+    }
+
+    std::string strip(const Block& block) {
+        const std::string label = pinLabel(block, "PIN");
+        const std::string name = "s2a_strip_" + label;
+        const auto count = literal(block, "COUNT");
+        const int pixels = count ? std::clamp(static_cast<int>(*count), 1, 100) : 8;
+        auto& known = stripLengths_[label];
+        known = std::max(known, pixels);
+        includes_.insert("Adafruit_NeoPixel.h");
+        ownedPins_.insert(label);
+        return name;
+    }
+
+    std::string matrix(const Block& block) {
+        const std::string din = pin(block, "DIN_PIN", PinMode::Output);
+        const std::string clk = pin(block, "CLK_PIN", PinMode::Output);
+        const std::string cs = pin(block, "CS_PIN", PinMode::Output);
+        const std::string rows = "s2a_matrix_" + din + "_" + clk + "_" + cs;
+        helpers_.insert("matrix");
+        if (std::find(matrices_.begin(), matrices_.end(), rows) == matrices_.end()) {
+            matrices_.push_back(rows);
+            matrixInits_.push_back("s2a_matrix_init(" + din + ", " + clk + ", " + cs + ");");
+        }
+        return din + ", " + clk + ", " + cs + ", " + rows;
     }
 
     // --- statements ------------------------------------------------------------------
@@ -350,9 +432,61 @@ private:
             }
         } else if (type == "sound_stop") {
             body.add(depth, "noTone(" + pin(block, "PIN", PinMode::Output) + ");");
+        } else if (type == "display_lcd_print" || type == "display_lcd_clear") {
+            helpers_.insert("lcd");
+            use("LiquidCrystal_I2C.h", "LiquidCrystal_I2C* s2a_lcd = nullptr;", "s2a_lcd_begin();");
+            includes_.insert("Wire.h");
+            if (type == "display_lcd_clear") {
+                body.add(depth, "s2a_lcd->clear();");
+            } else {
+                body.add(depth, "s2a_lcd_line(" + std::string(field(block, "LINE") == "2" ? "2" : "1") + ", " +
+                                    displayText(block, "TEXT") + ");");
+            }
+        } else if (type == "display_oled_print" || type == "display_oled_clear") {
+            helpers_.insert("oled");
+            use("U8x8lib.h", "U8X8_SSD1306_128X64_NONAME_HW_I2C s2a_oled(U8X8_PIN_NONE);",
+                "s2a_oled.begin();\n  s2a_oled.setFont(u8x8_font_chroma48medium8_r);");
+            if (type == "display_oled_clear") {
+                body.add(depth, "s2a_oled.clear();");
+            } else {
+                const std::string line = field(block, "LINE");
+                const bool valid = line.size() == 1 && line[0] >= '1' && line[0] <= '8';
+                body.add(depth, "s2a_oled_line(" + (valid ? line : std::string("1")) + ", " +
+                                    displayText(block, "TEXT") + ");");
+            }
+        } else if (type == "lights_neopixel_fill" || type == "lights_neopixel_set") {
+            const std::string name = strip(block);
+            const auto rgb = colourLevels(field(block, "COLOR"));
+            const std::string colour = name + ".Color(" + std::to_string(rgb[0]) + ", " + std::to_string(rgb[1]) +
+                                       ", " + std::to_string(rgb[2]) + ")";
+            if (type == "lights_neopixel_fill") {
+                body.add(depth, name + ".fill(" + colour + ");");
+            } else {
+                helpers_.insert("pixel");
+                body.add(depth, "s2a_pixel(" + name + ", " + number(block, "INDEX") + ", " + colour + ");");
+            }
+            body.add(depth, name + ".show();");
+        } else if (type == "lights_matrix_show") {
+            const std::string target = matrix(block);
+            const auto image = matrixImage(field(block, "IMAGE"));
+            std::string bytes;
+            for (const int row : image) {
+                char hex[8];
+                std::snprintf(hex, sizeof(hex), "0x%02X", row);
+                bytes += (bytes.empty() ? "" : ", ") + std::string(hex);
+            }
+            body.add(depth, "{");
+            body.add(depth + 1, "static const byte image[8] = {" + bytes + "};");
+            body.add(depth + 1, "s2a_matrix_image(" + target + ", image);");
+            body.add(depth, "}");
+        } else if (type == "lights_matrix_dot") {
+            const std::string target = matrix(block);
+            body.add(depth, "s2a_matrix_dot(" + target + ", " + number(block, "X") + ", " + number(block, "Y") + ", " +
+                                (field(block, "STATE") == "OFF" ? "false" : "true") + ");");
         } else if (type == "motors_servo_write") {
-            const std::string servo = "s2a_servo_" + pinLabel(block, "PIN");
-            servos_.insert(pinLabel(block, "PIN"));
+            const std::string label = pinLabel(block, "PIN");
+            const std::string servo = "s2a_servo_" + label;
+            use("Servo.h", "Servo " + servo + ";", servo + ".attach(" + label + ");", label);
             body.add(depth, servo + ".write(constrain((int)(" + number(block, "ANGLE") + "), 0, 180));");
         } else if (type == "motors_dc_run" || type == "motors_dc_stop") {
             helpers_.insert("motor");
@@ -421,12 +555,22 @@ private:
             out.push_back("// " + board_->name);
         }
         out.emplace_back("");
-        if (!servos_.empty()) {
-            out.emplace_back("#include <Servo.h>");
+        for (const std::string& header : includes_) {
+            out.push_back("#include <" + header + ">");
+        }
+        if (!includes_.empty()) {
             out.emplace_back("");
-            for (const std::string& label : servos_) {
-                out.push_back("Servo s2a_servo_" + label + ";");
-            }
+        }
+        std::vector<std::string> globals = globals_;
+        for (const auto& [label, pixels] : stripLengths_) {
+            globals.push_back("Adafruit_NeoPixel s2a_strip_" + label + "(" + std::to_string(pixels) + ", " + label +
+                              ", NEO_GRB + NEO_KHZ800);");
+        }
+        for (const std::string& rows : matrices_) {
+            globals.push_back("byte " + rows + "[8]; // rows shown on the LED matrix");
+        }
+        if (!globals.empty()) {
+            out.insert(out.end(), globals.begin(), globals.end());
             out.emplace_back("");
         }
 
@@ -459,6 +603,49 @@ private:
                {"void s2a_motor(int en, int in1, int in2, int direction, double speed) {",
                 "  digitalWrite(in1, direction > 0 ? HIGH : LOW);", "  digitalWrite(in2, direction < 0 ? HIGH : LOW);",
                 "  analogWrite(en, direction == 0 ? 0 : constrain((int)(speed * 2.55), 0, 255));", "}"});
+        helper(out, "text",
+               {"String s2a_text(double value) {",
+                "  if (value == floor(value) && fabs(value) < 2000000000.0) {", "    return String((long)value);",
+                "  }", "  return String(value, 2);", "}"});
+        helper(out, "dht",
+               {"// A DHT sensor does not always answer: keep its last good value.",
+                "double s2a_dht_read(DHT& sensor, double* last, bool humidity) {",
+                "  const float value = humidity ? sensor.readHumidity() : sensor.readTemperature();",
+                "  if (!isnan(value)) {", "    last[humidity ? 1 : 0] = value;", "  }", "  return last[humidity ? 1 : 0];",
+                "}"});
+        helper(out, "lcd",
+               {"// I2C LCD modules use the address 0x27 or 0x3F.", "void s2a_lcd_begin() {", "  Wire.begin();",
+                "  Wire.beginTransmission(0x27);", "  const bool first = Wire.endTransmission() == 0;",
+                "  s2a_lcd = new LiquidCrystal_I2C(first ? 0x27 : 0x3F, 16, 2);", "  s2a_lcd->init();",
+                "  s2a_lcd->backlight();", "}", "", "void s2a_lcd_line(int row, const String& text) {",
+                "  s2a_lcd->setCursor(0, row - 1);", "  for (unsigned int i = 0; i < 16; i++) {",
+                "    s2a_lcd->print(i < text.length() ? text[i] : ' ');", "  }", "}"});
+        helper(out, "oled",
+               {"void s2a_oled_line(int row, const String& text) {", "  char line[17];",
+                "  for (unsigned int i = 0; i < 16; i++) {", "    line[i] = i < text.length() ? text[i] : ' ';", "  }",
+                "  line[16] = '\\0';", "  s2a_oled.drawString(0, row - 1, line);", "}"});
+        helper(out, "pixel",
+               {"void s2a_pixel(Adafruit_NeoPixel& strip, double number, uint32_t colour) {",
+                "  if (number >= 1 && number <= strip.numPixels()) {", "    strip.setPixelColor((int)number - 1, colour);",
+                "  }", "}"});
+        helper(out, "matrix",
+               {"// MAX7219 8x8 LED matrix: one byte per row, the left column is the high bit.",
+                "void s2a_matrix_send(int din, int clk, int cs, byte reg, byte data) {", "  digitalWrite(cs, LOW);",
+                "  shiftOut(din, clk, MSBFIRST, reg);", "  shiftOut(din, clk, MSBFIRST, data);", "  digitalWrite(cs, HIGH);",
+                "}", "", "void s2a_matrix_init(int din, int clk, int cs) {", "  digitalWrite(cs, HIGH);",
+                "  s2a_matrix_send(din, clk, cs, 0x0F, 0);", "  s2a_matrix_send(din, clk, cs, 0x09, 0);",
+                "  s2a_matrix_send(din, clk, cs, 0x0A, 4);", "  s2a_matrix_send(din, clk, cs, 0x0B, 7);",
+                "  s2a_matrix_send(din, clk, cs, 0x0C, 1);", "  for (byte row = 1; row <= 8; row++) {",
+                "    s2a_matrix_send(din, clk, cs, row, 0);", "  }", "}", "",
+                "void s2a_matrix_image(int din, int clk, int cs, byte* rows, const byte* image) {",
+                "  for (byte row = 0; row < 8; row++) {", "    rows[row] = image[row];",
+                "    s2a_matrix_send(din, clk, cs, row + 1, rows[row]);", "  }", "}", "",
+                "void s2a_matrix_dot(int din, int clk, int cs, byte* rows, double x, double y, bool on) {",
+                "  const int column = (int)x;", "  const int row = (int)y;",
+                "  if (column < 1 || column > 8 || row < 1 || row > 8) {", "    return;", "  }",
+                "  const byte bit = 0x80 >> (column - 1);",
+                "  rows[row - 1] = on ? (rows[row - 1] | bit) : (rows[row - 1] & ~bit);",
+                "  s2a_matrix_send(din, clk, cs, row, rows[row - 1]);", "}"});
         helper(out, "random",
                {"long s2a_random(double from, double to) {", "  long low = (long)min(from, to);",
                 "  long high = (long)max(from, to);", "  return random(low, high + 1);", "}"});
@@ -508,12 +695,20 @@ private:
             out.push_back(std::string(kIndent) + "Serial.begin(" + std::to_string(kSerialBaud) + ");");
         }
         for (const auto& [label, mode] : pinModes_) {
-            if (servos_.count(label) == 0) { // attach() sets the pin of a servo
+            if (ownedPins_.count(label) == 0) { // a library sets the pins it drives
                 out.push_back(std::string(kIndent) + "pinMode(" + label + ", " + modeName(mode) + ");");
             }
         }
-        for (const std::string& label : servos_) {
-            out.push_back(std::string(kIndent) + "s2a_servo_" + label + ".attach(" + label + ");");
+        std::vector<std::string> inits = inits_;
+        for (const auto& [label, pixels] : stripLengths_) {
+            const std::string name = "s2a_strip_" + label;
+            inits.push_back(name + ".begin();");
+            inits.push_back(name + ".setBrightness(64); // full brightness dazzles and draws too much current");
+            inits.push_back(name + ".show();");
+        }
+        inits.insert(inits.end(), matrixInits_.begin(), matrixInits_.end());
+        for (const std::string& line : inits) {
+            out.push_back(std::string(kIndent) + line);
         }
         if (helpers_.count("random") != 0) {
             out.push_back(std::string(kIndent) + "randomSeed(micros());");
@@ -553,11 +748,61 @@ private:
     std::map<std::string, PinMode> pinModes_;
     std::map<std::string, std::string> variables_; ///< Variable id -> C++ name.
     std::set<std::string> helpers_;
-    std::set<std::string> servos_; ///< Pins driving a servo.
+    std::set<std::string> includes_;    ///< Library headers.
+    std::vector<std::string> globals_;  ///< Library objects, in order of first use.
+    std::vector<std::string> inits_;    ///< Their set-up, in setup().
+    std::set<std::string> ownedPins_;   ///< Pins set up by a library (no pinMode()).
+    std::set<std::string> dhtSensors_;  ///< Pins of DHT sensors.
+    std::map<std::string, int> stripLengths_; ///< NeoPixel pin -> number of LEDs.
+    std::vector<std::string> matrices_;       ///< Row arrays of the LED matrices.
+    std::vector<std::string> matrixInits_;
     int counters_ = 0;
 };
 
 } // namespace
+
+std::array<int, 8> matrixImage(std::string_view name) {
+    static const std::map<std::string_view, std::array<int, 8>> kImages = {
+        {"HEART", {0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18}},
+        {"SMILE", {0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C}},
+        {"SAD", {0x3C, 0x42, 0xA5, 0x81, 0x99, 0xA5, 0x42, 0x3C}},
+        {"ARROW_UP", {0x18, 0x3C, 0x7E, 0xFF, 0x18, 0x18, 0x18, 0x18}},
+        {"ARROW_DOWN", {0x18, 0x18, 0x18, 0x18, 0xFF, 0x7E, 0x3C, 0x18}},
+        {"ARROW_LEFT", {0x10, 0x30, 0x70, 0xFF, 0xFF, 0x70, 0x30, 0x10}},
+        {"ARROW_RIGHT", {0x08, 0x0C, 0x0E, 0xFF, 0xFF, 0x0E, 0x0C, 0x08}},
+        {"CHECK", {0x00, 0x01, 0x03, 0x06, 0x8C, 0xD8, 0x70, 0x20}},
+        {"CROSS", {0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81}},
+        {"FULL", {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
+    };
+    const auto found = kImages.find(name);
+    return found != kImages.end() ? found->second : std::array<int, 8>{};
+}
+
+std::string asciiText(std::string_view text) {
+    // Accented Latin letters (UTF-8 C3 80..C3 BF) lose their accent; other characters become '?'.
+    static constexpr std::string_view kLatin1 = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTs"
+                                                "aaaaaaaceeeeiiiidnooooo/ouuuuyty";
+    std::string result;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const auto c = static_cast<unsigned char>(text[i]);
+        if (c < 0x80) {
+            if (c >= 0x20 && c != 0x7F) {
+                result += static_cast<char>(c);
+            }
+        } else if (c == 0xC3 && i + 1 < text.size() && static_cast<unsigned char>(text[i + 1]) >= 0x80 &&
+                   static_cast<unsigned char>(text[i + 1]) <= 0xBF) {
+            result += kLatin1[static_cast<unsigned char>(text[++i]) - 0x80];
+        } else if (c == 0xC5 && i + 1 < text.size() && (text[i + 1] == '\x92' || text[i + 1] == '\x93')) {
+            result += text[++i] == '\x92' ? "OE" : "oe"; // Œ œ
+        } else if (c >= 0xC0) {
+            result += '?';
+            while (i + 1 < text.size() && (static_cast<unsigned char>(text[i + 1]) & 0xC0U) == 0x80U) {
+                ++i;
+            }
+        }
+    }
+    return result;
+}
 
 std::array<int, 3> colourLevels(std::string_view name) {
     static const std::map<std::string_view, std::array<int, 3>> kColours = {
