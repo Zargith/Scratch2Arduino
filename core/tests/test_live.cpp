@@ -303,8 +303,49 @@ TEST(LiveLink, SpeaksTheFirmwareProtocol) {
     EXPECT_TRUE(link.digitalRead(2));
     EXPECT_EQ(link.analogRead(14), 512);
     link.reset();
-    EXPECT_EQ(firmware.received, (std::vector<std::string>{"M 13 O", "D 13 1", "P 9 255", "R 2", "A 14", "X"}));
+    EXPECT_EQ(firmware.received, (std::vector<std::string>{"?", "M 13 O", "D 13 1", "P 9 255", "R 2", "A 14", "X"}));
     EXPECT_FALSE(link.takeError().has_value());
+}
+
+/// A board reset by the opening of the port: an old greeting is still in the port, and the
+/// bootloader swallows what is sent until the firmware greets again.
+struct RestartingFirmware final : s2a::serial::LineTransport {
+    std::deque<std::string> pending{std::string(s2a::live::kHello)}; // left over from before the reset
+    std::vector<std::string> received;
+    int swallowed = 0;
+    int silentReads = 3; ///< Reads before the firmware starts and greets.
+
+    s2a::Status writeLine(std::string_view line) override {
+        received.emplace_back(line);
+        if (silentReads > 0) {
+            ++swallowed; // the bootloader runs
+        } else {
+            pending.emplace_back(line == "?" ? std::string(s2a::live::kHello) : std::string("ok"));
+        }
+        return s2a::success();
+    }
+
+    s2a::Result<std::optional<std::string>> readLine(milliseconds /*timeout*/) override {
+        if (!pending.empty()) {
+            std::string line = pending.front();
+            pending.pop_front();
+            return std::optional<std::string>(line);
+        }
+        if (silentReads > 0 && --silentReads == 0) {
+            return std::optional<std::string>(std::string(s2a::live::kHello)); // the firmware starts
+        }
+        return std::optional<std::string>();
+    }
+};
+
+TEST(LiveLink, WaitsForABoardThatRestartsWhenThePortOpens) {
+    RestartingFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    EXPECT_GE(firmware.swallowed, 1); // the old greeting was not trusted
+    link.setMode(6, PinMode::Input);
+    EXPECT_FALSE(link.takeError().has_value()) << "the first command must reach the started firmware";
+    EXPECT_EQ(firmware.received.back(), "M 6 I");
 }
 
 TEST(LiveLink, ReportsABoardThatDoesNotAnswer) {
