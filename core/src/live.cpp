@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <locale>
 #include <sstream>
 
@@ -69,6 +70,18 @@ const Block* findIn(const Stack& stack, const std::string& id) {
         }
     }
     return nullptr;
+}
+
+/// Value printed like the board does it (s2a_print): integers without decimals, else 2 decimals.
+std::string formatValue(double value) {
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());
+    if (value == std::floor(value) && std::fabs(value) < 2e9) {
+        stream << static_cast<long long>(value);
+    } else {
+        stream << std::fixed << std::setprecision(2) << value;
+    }
+    return stream.str();
 }
 
 } // namespace
@@ -218,6 +231,17 @@ std::string Interpreter::field(const Block& block, const std::string& name) cons
     return arg != nullptr ? arg->defaultValue : std::string{};
 }
 
+void Interpreter::record(int pin, double value) {
+    const Pin* found = board_.findPin(pin);
+    readings_[found != nullptr ? found->label : std::to_string(pin)] = value;
+}
+
+std::vector<std::string> Interpreter::takeOutput() {
+    std::vector<std::string> lines;
+    lines.swap(output_);
+    return lines;
+}
+
 int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) {
     const Pin* found = board_.findPin(field(block, name));
     if (found == nullptr) {
@@ -304,12 +328,21 @@ double Interpreter::evaluate(const Block& block) {
     }
     if (type == "pins_digital_read") {
         const int number = pin(block, "PIN", PinMode::Input);
-        const bool wanted = field(block, "STATE") != "LOW";
-        return number >= 0 && pins_.digitalRead(number) == wanted ? 1 : 0;
+        if (number < 0) {
+            return 0;
+        }
+        const bool high = pins_.digitalRead(number);
+        record(number, high ? 1 : 0);
+        return high == (field(block, "STATE") != "LOW") ? 1 : 0;
     }
     if (type == "pins_analog_read") {
         const int number = pin(block, "PIN", PinMode::Input);
-        return number >= 0 ? pins_.analogRead(number) : 0;
+        if (number < 0) {
+            return 0;
+        }
+        const int value = pins_.analogRead(number);
+        record(number, value);
+        return value;
     }
     if (type == "variables_get") {
         const auto found = variables_.find(field(block, "VARIABLE"));
@@ -365,6 +398,13 @@ void Interpreter::run(Thread& thread, Clock now) {
                 const PinMode mode = field(block, "MODE") == "INPUT" ? PinMode::Input : PinMode::InputPullup;
                 pins_.setMode(target->number, mode); // always: the block may remove the pull-up
                 modes_[target->number] = mode;
+            }
+        } else if (type == "serial_print") {
+            const auto input = block.inputs.find("VALUE");
+            if (input != block.inputs.end() && input->second.block) {
+                output_.push_back(formatValue(evaluate(*input->second.block)));
+            } else {
+                output_.push_back(input != block.inputs.end() ? input->second.value : field(block, "VALUE"));
             }
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");
@@ -587,6 +627,15 @@ void Session::run(project::Project project) {
             const std::lock_guard<std::mutex> lock(mutex_);
             snapshot_.runningBlocks = interpreter->runningBlocks();
             snapshot_.variables = interpreter->variables();
+            snapshot_.readings = interpreter->readings();
+            for (std::string& line : interpreter->takeOutput()) {
+                snapshot_.output.push_back(std::move(line));
+                ++snapshot_.outputCount;
+            }
+            if (snapshot_.output.size() > kOutputLines) {
+                snapshot_.output.erase(snapshot_.output.begin(),
+                                       snapshot_.output.end() - static_cast<std::ptrdiff_t>(kOutputLines));
+            }
         }
         if (interpreter->finished()) {
             // Finished, but still connected: an edit can start the blocks again.

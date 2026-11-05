@@ -159,6 +159,28 @@ TEST(Interpreter, SetsAPlainInputAfterAPullup) {
     EXPECT_EQ(pins.take(), (std::vector<std::string>{"M3U", "M3I"}));
 }
 
+TEST(Interpreter, WritesLinesAndRecordsReadings) {
+    FakePins pins;
+    pins.analogInputs[14] = 512; // A0 on an Uno
+    Block text = block("text", "serial_print");
+    text.inputs["VALUE"].value = "mesure";
+    Block analog = block("analog", "pins_analog_read");
+    analog.fields["PIN"] = "A0";
+    Block value = block("value", "serial_print");
+    value.inputs["VALUE"].block = analog;
+    Block divide = block("divide", "operators_divide");
+    divide.inputs["NUM1"].value = "1";
+    divide.inputs["NUM2"].value = "3";
+    Block third = block("third", "serial_print");
+    third.inputs["VALUE"].block = divide;
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), text, value, third}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(interpreter.takeOutput(), (std::vector<std::string>{"mesure", "512", "0.33"}));
+    EXPECT_TRUE(interpreter.takeOutput().empty());
+    EXPECT_EQ(interpreter.readings(), (std::map<std::string, double>{{"A0", 512}}));
+}
+
 TEST(Interpreter, ComputesWithVariables) {
     FakePins pins;
     Project project;

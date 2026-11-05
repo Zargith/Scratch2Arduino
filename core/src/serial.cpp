@@ -238,4 +238,68 @@ Result<std::optional<std::string>> SerialPort::readLine(std::chrono::millisecond
 
 SerialPort::SerialPort(std::unique_ptr<Handle> handle) : handle_(std::move(handle)) {}
 
+Monitor::Monitor(std::unique_ptr<LineTransport> transport) : transport_(std::move(transport)) {
+    snapshot_.open = true;
+    thread_ = std::thread([this] { run(); });
+}
+
+Monitor::~Monitor() {
+    stopping_ = true;
+    if (thread_.joinable()) {
+        thread_.join();
+    }
+}
+
+Result<std::unique_ptr<Monitor>> Monitor::open(const std::string& port, int baud) {
+    auto opened = SerialPort::open(port, baud);
+    if (!opened.ok()) {
+        return opened.error();
+    }
+    return std::make_unique<Monitor>(std::move(opened).value());
+}
+
+void Monitor::send(std::string line) {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    outgoing_.push_back(std::move(line));
+}
+
+Monitor::Snapshot Monitor::snapshot() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    return snapshot_;
+}
+
+void Monitor::run() {
+    const auto fail = [this](Error error) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.open = false;
+        snapshot_.error = std::move(error);
+    };
+    while (!stopping_) {
+        std::deque<std::string> outgoing;
+        {
+            const std::lock_guard<std::mutex> lock(mutex_);
+            outgoing.swap(outgoing_);
+        }
+        for (const std::string& line : outgoing) {
+            if (const auto sent = transport_->writeLine(line); !sent.ok()) {
+                fail(sent.error());
+                return;
+            }
+        }
+        auto received = transport_->readLine(std::chrono::milliseconds(50));
+        if (!received.ok()) {
+            fail(received.error());
+            return;
+        }
+        if (auto line = std::move(received).value()) {
+            const std::lock_guard<std::mutex> lock(mutex_);
+            snapshot_.lines.push_back(std::move(*line));
+            ++snapshot_.count;
+            if (snapshot_.lines.size() > kMaxLines) {
+                snapshot_.lines.erase(snapshot_.lines.begin());
+            }
+        }
+    }
+}
+
 } // namespace s2a::serial

@@ -14,6 +14,7 @@
       "blocks": [
         { "id": "start", "type": "events_when_program_starts" },
         { "id": "set", "type": "variables_set", "fields": { "VARIABLE": "score" }, "inputs": { "VALUE": { "value": "0" } } },
+        { "id": "hello", "type": "serial_print", "inputs": { "VALUE": { "value": "Bonjour \"Arduino\" !" } } },
         { "id": "mode", "type": "pins_set_mode", "fields": { "PIN": "2", "MODE": "INPUT_PULLUP" } },
         {
           "id": "repeat",
@@ -58,6 +59,11 @@
                     }
                   }
                 }
+              },
+              {
+                "id": "print",
+                "type": "serial_print",
+                "inputs": { "VALUE": { "value": "", "block": { "id": "getlum2", "type": "variables_get", "fields": { "VARIABLE": "lum" } } } }
               },
               {
                 "id": "aw",

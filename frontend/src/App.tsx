@@ -12,6 +12,7 @@ import {
 	SegmentedControl,
 	Select,
 	Spoiler,
+	Stack,
 	Text,
 	TextInput,
 	Title,
@@ -26,6 +27,7 @@ import {
 	IconPlayerPlay,
 	IconPlayerStop,
 	IconRefresh,
+	IconTerminal2,
 	IconUpload,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -34,6 +36,8 @@ import { bridge, hasHost, HostMissingError, type LiveSnapshot, type Outcome, typ
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
 import logo from "@/logo.png";
+import { SerialMonitor } from "@/SerialMonitor";
+import { Sparkline } from "@/Sparkline";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
@@ -42,6 +46,9 @@ import {
 	type Project,
 	type WorkspaceState,
 } from "@/project/convert";
+
+/** Points kept per graph: 30 s at one snapshot every 200 ms. */
+const historyLength = 150;
 
 interface Status {
 	kind: "info" | "success" | "error";
@@ -79,6 +86,9 @@ export function App() {
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
+	const history = useRef<Map<string, number[]>>(new Map());
+	const [monitorShown, setMonitorShown] = useState(false);
 
 	const currentProject = useCallback(
 		(): Project =>
@@ -243,6 +253,7 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			history.current = new Map();
 			setLive(true);
 		} catch (error) {
 			fail(error);
@@ -256,6 +267,14 @@ export function App() {
 			void bridge
 				.liveState()
 				.then((snapshot) => {
+					const record = (key: string, value: number) => {
+						const values = history.current.get(key) ?? [];
+						values.push(value);
+						if (values.length > historyLength) values.shift();
+						history.current.set(key, values);
+					};
+					for (const [id, value] of Object.entries(snapshot.variables ?? {})) record(`var:${id}`, value);
+					for (const [pin, value] of Object.entries(snapshot.readings ?? {})) record(`pin:${pin}`, value);
 					setLiveSnapshot(snapshot);
 					setVariableNames(
 						new Map((editor.current?.save().variables ?? []).map((variable) => [variable.id, variable.name] as const))
@@ -276,7 +295,18 @@ export function App() {
 		return () => clearInterval(timer);
 	}, [live, fail]);
 
-	const shownVariables = Object.entries(liveSnapshot?.variables ?? {});
+	const liveRows = [
+		...Object.entries(liveSnapshot?.variables ?? {}).map(([id, value]) => ({
+			key: `var:${id}`,
+			label: variableNames.get(id) ?? id,
+			value,
+		})),
+		...Object.entries(liveSnapshot?.readings ?? {}).map(([pin, value]) => ({
+			key: `pin:${pin}`,
+			label: t("live.pin", { pin }),
+			value,
+		})),
+	];
 
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
@@ -345,6 +375,17 @@ export function App() {
 						</ActionIcon>
 					</Tooltip>
 					<Group gap="xs" ml="auto" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<Tooltip label={t("monitor.toggle")}>
+							<ActionIcon
+								variant={monitorShown ? "filled" : "default"}
+								size="lg"
+								aria-label={t("monitor.toggle")}
+								aria-pressed={monitorShown}
+								onClick={() => setMonitorShown((shown) => !shown)}
+							>
+								<IconTerminal2 size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("toolbar.code")}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
 								<IconCode size={18} />
@@ -396,18 +437,39 @@ export function App() {
 				</div>
 			</AppShell.Main>
 
-			{live && shownVariables.length > 0 && (
-				<Card withBorder shadow="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150, minWidth: 180 }}>
-					<Text fw={700} size="sm" mb={4}>
-						{t("live.variables")}
-					</Text>
-					{shownVariables.map(([id, value]) => (
-						<Group key={id} justify="space-between" gap="lg">
-							<Text size="sm">{variableNames.get(id) ?? id}</Text>
-							<Code>{Number.isInteger(value) ? value : value.toFixed(2)}</Code>
-						</Group>
-					))}
-				</Card>
+			{((live && liveRows.length > 0) || monitorShown) && (
+				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
+					{live && liveRows.length > 0 && (
+						<Card withBorder shadow="sm" w={360}>
+							<Text fw={700} size="sm" mb={4}>
+								{t("live.title")}
+							</Text>
+							{liveRows.map((row) => (
+								<Group key={row.key} justify="space-between" gap="sm" wrap="nowrap">
+									<Text size="sm" truncate style={{ flex: 1 }}>
+										{row.label}
+									</Text>
+									<Sparkline values={history.current.get(row.key) ?? []} label={row.label} />
+									<Code style={{ minWidth: 56, textAlign: "right" }}>
+										{Number.isInteger(row.value) ? row.value : row.value.toFixed(2)}
+									</Code>
+								</Group>
+							))}
+						</Card>
+					)}
+					{monitorShown && (
+						<SerialMonitor
+							t={t}
+							language={language}
+							port={port}
+							live={live}
+							liveLines={liveSnapshot?.output ?? []}
+							busy={busy}
+							onError={(message, details) => setStatus({ kind: "error", message, details })}
+							onClose={() => setMonitorShown(false)}
+						/>
+					)}
+				</Stack>
 			)}
 
 			{status && (
