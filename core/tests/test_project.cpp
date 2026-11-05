@@ -132,6 +132,18 @@ TEST(ProjectJson, RoundTripsExactly) {
     EXPECT_EQ(forever.statements.at("SUBSTACK").at(1).inputs.at("SECONDS").block->type, "operators_add");
 }
 
+TEST(ProjectJson, RoundTripsFunctionsAndLeavesThemOutWhenThereAreNone) {
+    Project project = blink();
+    EXPECT_EQ(toJson(project).find("\"functions\""), std::string::npos) << "older projects keep their bytes";
+    project.functions.push_back({"f1", "clignoter vite"});
+    const std::string json = toJson(project);
+    const auto parsed = fromJson(json);
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    ASSERT_EQ(parsed.value().functions.size(), 1U);
+    EXPECT_EQ(parsed.value().functions[0].name, "clignoter vite");
+    EXPECT_EQ(toJson(parsed.value()), json);
+}
+
 TEST(ProjectJson, IsReadableAndVersioned) {
     const std::string json = toJson(blink());
     EXPECT_NE(json.find("\"format\": \"scratch2arduino-project\""), std::string::npos);

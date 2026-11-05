@@ -4,6 +4,9 @@ import * as Blockly from "scratch-blocks";
 import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, type PinCapability } from "@/catalog";
 
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
+export const CREATE_FUNCTION_CALLBACK = "S2A_CREATE_FUNCTION";
+/** Functions are Blockly variables of this type: named, renamed and deleted like variables. */
+export const FUNCTION_TYPE = "function";
 
 let currentBoard: Board | undefined;
 
@@ -87,6 +90,14 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 			return { type: "field_s2a_pin", name: arg.name, capability: arg.capability, value: String(arg.default ?? "13") };
 		case "variable":
 			return { type: "field_variable", name: arg.name, variable: null };
+		case "function":
+			return {
+				type: "field_variable",
+				name: arg.name,
+				variable: null,
+				variableTypes: [FUNCTION_TYPE],
+				defaultType: FUNCTION_TYPE,
+			};
 	}
 }
 
@@ -203,26 +214,40 @@ export function blocksTheme(): Blockly.Theme {
 export function toolbox(
 	language: Language,
 	variables: { id: string }[],
-	createVariableLabel: string
+	labels: { createVariable: string; createFunction: string },
+	functions: { id: string }[] = []
 ): Blockly.utils.toolbox.ToolboxDefinition {
+	// Variables and functions: a "create" button, then the blocks set to the first one.
+	const named = (blocks: CatalogBlock[], field: string, first: { id: string } | undefined, button: object) => [
+		button,
+		...(first
+			? blocks.map((block) => ({
+					kind: "block",
+					type: block.type,
+					fields: { [field]: { id: first.id } },
+					inputs: shadowInputs(block),
+				}))
+			: []),
+	];
 	return {
 		kind: "categoryToolbox",
 		contents: catalog.map(({ category, blocks }) => {
-			const first = variables[0];
-			const contents =
-				category.id === "variables"
-					? [
-							{ kind: "button", text: createVariableLabel, callbackkey: CREATE_VARIABLE_CALLBACK },
-							...(first
-								? blocks.map((block) => ({
-										kind: "block",
-										type: block.type,
-										fields: { VARIABLE: { id: first.id } },
-										inputs: shadowInputs(block),
-									}))
-								: []),
-						]
-					: blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) }));
+			let contents: object[];
+			if (category.id === "variables") {
+				contents = named(blocks, "VARIABLE", variables[0], {
+					kind: "button",
+					text: labels.createVariable,
+					callbackkey: CREATE_VARIABLE_CALLBACK,
+				});
+			} else if (category.id === "functions") {
+				contents = named(blocks, "FUNCTION", functions[0], {
+					kind: "button",
+					text: labels.createFunction,
+					callbackkey: CREATE_FUNCTION_CALLBACK,
+				});
+			} else {
+				contents = blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) }));
+			}
 			return { kind: "category", name: category.name[language], categorystyle: category.id, contents };
 		}),
 	} as Blockly.utils.toolbox.ToolboxDefinition;

@@ -4,7 +4,7 @@ export type Language = "fr" | "en";
 export type Localized = Record<Language, string>;
 
 export type BlockShape = "hat" | "statement" | "c" | "reporter" | "boolean";
-export type ArgKind = "number" | "text" | "boolean" | "pin" | "dropdown" | "variable" | "statement";
+export type ArgKind = "number" | "text" | "boolean" | "pin" | "dropdown" | "variable" | "function" | "statement";
 export type PinCapability = "digital" | "analog" | "pwm" | "interrupt";
 
 export interface BlockArg {

@@ -288,6 +288,19 @@ def rgb_led(c: Canvas, board: Breadboard, column: int, row: str = "c"):
     return holes
 
 
+def led(c: Canvas, board: Breadboard, column: int, colour: str, row: str = "c"):
+    """5 mm LED: + leg (longest, anode) in `column`, - leg in the next column."""
+    plus, minus = board.hole(column, row), board.hole(column + 1, row)
+    cx, top = (plus[0] + minus[0]) / 2, plus[1] - 58
+    leg(c, (cx - 4, top + 30), plus)
+    leg(c, (cx + 4, top + 30), minus)
+    c.rect(cx - 14, top + 22, 28, 8, colour, outline=darker(colour), radius=2)
+    c.rect(cx - 12, top - 4, 24, 30, colour, outline=darker(colour), radius=12)
+    c.circle(cx - 4, top + 6, 3, "#FFFFFF")
+    c.text(plus[0] - 8, plus[1] + 1, "+", 10, "#455A64", bold=True, anchor="mm")
+    return plus, minus
+
+
 def buzzer(c: Canvas, board: Breadboard, column: int, row: str = "c"):
     """Piezo buzzer, + leg in `column`, - leg two columns further."""
     plus, minus = board.hole(column, row), board.hole(column + 2, row)
@@ -555,6 +568,21 @@ def light_gauge(c: Canvas):
                 strip["GND"]), BLACK)
 
 
+def traffic_light(c: Canvas):
+    uno = Uno(c, 60, 380)
+    board = Breadboard(c, 720, 480, 24)
+    power_rails(c, uno, board, uno.y + uno.h + 60)
+    for index, (pin, colour, wire) in enumerate((("12", "#E53935", RED), ("11", "#FB8C00", ORANGE),
+                                                 ("10", "#43A047", GREEN))):
+        column = 5 + index * 5
+        led(c, board, column, colour)
+        resistor(c, board.hole(column, "e"), board.hole(column, "f"), "220 Ω" if index == 0 else "")
+        c.wire(path(board.hole(column + 1, "e"), ("y", board.rail("bot-", column + 1)[1])), BLACK)
+        lane, lane_x = 340 - index * 15, 680 + index * 12
+        target = board.hole(column, "ghi"[index])  # one row per wire, so that none hides another
+        c.wire(path(uno.pin(pin), ("y", lane), ("x", lane_x), ("y", target[1]), target), wire)
+
+
 EXAMPLES = {
     "blink": blink,
     "servo-potentiometer": servo_potentiometer,
@@ -562,6 +590,7 @@ EXAMPLES = {
     "thermometer": thermometer,
     "reaction-game": reaction_game,
     "light-gauge": light_gauge,
+    "traffic-light": traffic_light,
 }
 
 

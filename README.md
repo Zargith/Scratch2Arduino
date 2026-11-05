@@ -181,6 +181,19 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
+### Keyboard shortcuts
+
+| Shortcut (⌘ instead of Ctrl on a Mac) | Action |
+|---|---|
+| Ctrl+S | Save the project |
+| Ctrl+C / Ctrl+X | Copy / cut the selected block, with the blocks below it |
+| Ctrl+V | Paste |
+| Ctrl+Z | Undo |
+| Ctrl+Y or Ctrl+Shift+Z | Redo |
+| Delete or Backspace | Delete the selected block |
+
+While typing in a field (a number, a text, the project name), these keys act on the text instead.
+
 ### Live mode
 
 Click **Live**: the blocks run on the computer and drive the board through the
@@ -207,6 +220,15 @@ They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor li
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
 `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
 button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
+
+### Functions
+
+To reuse a group of blocks, open the *Functions* category and click **Make a function**: give it a
+name, attach blocks under **define <name>**, then use **call <name>** anywhere (several times if needed).
+The blocks of the function run, then the program goes on after the call. A function does not run on its
+own at start-up, and it cannot call itself (Check explains why). In the Arduino code, each function
+becomes a C++ function. Example: [`traffic-light`](examples/projects/traffic-light/project.json), with the
+functions *feu vert*, *feu orange* and *feu rouge*.
 
 ### Serial monitor
 

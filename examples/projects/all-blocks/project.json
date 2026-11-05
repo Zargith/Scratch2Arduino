@@ -406,6 +406,13 @@
           "statements": {
             "SUBSTACK": [
               {
+                "id": "cflash",
+                "type": "functions_call",
+                "fields": {
+                  "FUNCTION": "flash"
+                }
+              },
+              {
                 "id": "w3",
                 "type": "control_wait",
                 "inputs": {
@@ -791,6 +798,48 @@
           "type": "display_oled_clear"
         }
       ]
+    },
+    {
+      "x": 40,
+      "y": 1400,
+      "blocks": [
+        {
+          "id": "dflash",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "flash"
+          }
+        },
+        {
+          "id": "fon",
+          "type": "pins_builtin_led",
+          "fields": {
+            "STATE": "ON"
+          }
+        },
+        {
+          "id": "fw",
+          "type": "control_wait",
+          "inputs": {
+            "SECONDS": {
+              "value": "0.1"
+            }
+          }
+        },
+        {
+          "id": "foff",
+          "type": "pins_builtin_led",
+          "fields": {
+            "STATE": "OFF"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "id": "flash",
+      "name": "flash"
     }
   ]
 }

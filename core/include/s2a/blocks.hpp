@@ -37,6 +37,7 @@ enum class ArgKind {
     Pin,       ///< Pin menu, filtered by capability for the selected board.
     Dropdown,  ///< Fixed menu.
     Variable,  ///< Variable menu.
+    Function,  ///< Function menu (functions of the project).
     Statement, ///< Stack of blocks inside a C-block.
 };
 

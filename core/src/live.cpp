@@ -23,6 +23,9 @@ using project::Stack;
 using std::chrono::milliseconds;
 
 constexpr int kStepBudget = 500; ///< Blocks run per script and step before giving way.
+constexpr std::string_view kDefine = "functions_define";
+constexpr const char* kFunctionSlot = "#function"; ///< Frame slot of a function body (parent = its "define" hat).
+constexpr std::size_t kMaxFrames = 200;
 
 std::optional<double> parseNumber(const std::string& text) {
     std::string trimmed;
@@ -287,6 +290,9 @@ void Interpreter::start() {
         const BlockDefinition* definition = catalog_.find(script.blocks.front().type);
         if (definition == nullptr || definition->shape != BlockShape::Hat) {
             continue; // loose blocks do not run
+        }
+        if (script.blocks.front().type == kDefine) {
+            continue; // a function runs when it is called
         }
         Thread thread;
         thread.hat = script.blocks.front().id;
@@ -685,6 +691,19 @@ void Interpreter::run(Thread& thread, Clock now) {
             }
         } else if (type == "control_if_else") {
             enter(condition(block, "CONDITION") ? "SUBSTACK" : "SUBSTACK2", 0, false);
+        } else if (type == "functions_call") {
+            const std::string id = field(block, "FUNCTION");
+            for (const project::Script& script : project_.scripts) {
+                if (!script.blocks.empty() && script.blocks.front().type == kDefine &&
+                    field(script.blocks.front(), "FUNCTION") == id) {
+                    // Like the mouth of an if: the blocks of the function, then back after the call.
+                    // The validator refuses recursion; the limit only protects from a mistake.
+                    if (thread.frames.size() < kMaxFrames) {
+                        thread.frames.push_back({&script.blocks, 1, {}, script.blocks.front().id, kFunctionSlot, 0});
+                    }
+                    break;
+                }
+            }
         } else if (type == "variables_set" || type == "variables_change") {
             const std::string id = field(block, "VARIABLE");
             if (auto found = variables_.find(id); found != variables_.end()) {
@@ -714,7 +733,13 @@ bool Interpreter::restore(Thread& thread, const std::vector<Frame>& old) {
                     break;
                 }
             }
-            if (parent != nullptr) {
+            if (frame.slot == kFunctionSlot) {
+                for (const project::Script& script : project_.scripts) {
+                    if (!script.blocks.empty() && script.blocks.front().id == frame.parent) {
+                        stack = &script.blocks;
+                    }
+                }
+            } else if (parent != nullptr) {
                 if (const auto it = parent->statements.find(frame.slot); it != parent->statements.end()) {
                     stack = &it->second;
                 }
