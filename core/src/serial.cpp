@@ -85,6 +85,7 @@ Result<std::unique_ptr<SerialPort>> SerialPort::open(const std::string& port, in
     timeouts.ReadIntervalTimeout = MAXDWORD; // ReadFile returns at once with what is there
     timeouts.WriteTotalTimeoutConstant = 1000;
     SetCommTimeouts(handle, &timeouts);
+    PurgeComm(handle, PURGE_RXCLEAR | PURGE_TXCLEAR); // nothing left over from a previous program
     auto data = std::make_unique<Handle>();
     data->handle = handle;
     data->name = port;
