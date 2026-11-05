@@ -23,7 +23,8 @@ struct FakePins final : s2a::live::Pins {
     std::map<int, int> analogInputs;
 
     void setMode(int pin, PinMode mode) override {
-        log.push_back("M" + std::to_string(pin) + (mode == PinMode::Output ? "O" : "I"));
+        log.push_back("M" + std::to_string(pin) +
+                      (mode == PinMode::Output ? "O" : (mode == PinMode::InputPullup ? "U" : "I")));
     }
     void digitalWrite(int pin, bool high) override { log.push_back("D" + std::to_string(pin) + (high ? "=1" : "=0")); }
     void analogWrite(int pin, int value) override { log.push_back("P" + std::to_string(pin) + "=" + std::to_string(value)); }
@@ -122,6 +123,40 @@ TEST(Interpreter, ReadsInputsForConditions) {
     interpreter.step(milliseconds(20));
     EXPECT_EQ(pins.take(), (std::vector<std::string>{"M7O", "D7=1"}));
     EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, ReadsAButtonWithPullupAsLow) {
+    FakePins pins;
+    Block mode = block("mode", "pins_set_mode");
+    mode.fields = {{"PIN", "2"}, {"MODE", "INPUT_PULLUP"}};
+    Block read = block("read", "pins_digital_read");
+    read.fields = {{"PIN", "2"}, {"STATE", "LOW"}};
+    Block write = block("write", "pins_digital_write");
+    write.fields = {{"PIN", "7"}, {"STATE", "HIGH"}};
+    Block until = block("until", "control_wait_until");
+    until.inputs["CONDITION"].block = read;
+    pins.digitalInputs[2] = true; // released: the pull-up keeps the pin HIGH
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), mode, until, write}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    interpreter.step(milliseconds(10));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"M2U"}); // reading keeps the pull-up
+    pins.digitalInputs[2] = false; // pressed
+    interpreter.step(milliseconds(20));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M7O", "D7=1"}));
+    EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, SetsAPlainInputAfterAPullup) {
+    FakePins pins;
+    Block pullup = block("pullup", "pins_set_mode");
+    pullup.fields = {{"PIN", "3"}, {"MODE", "INPUT_PULLUP"}};
+    Block plain = block("plain", "pins_set_mode");
+    plain.fields = {{"PIN", "3"}, {"MODE", "INPUT"}};
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), pullup, plain}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M3U", "M3I"}));
 }
 
 TEST(Interpreter, ComputesWithVariables) {

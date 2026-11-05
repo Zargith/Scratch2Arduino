@@ -20,7 +20,7 @@ using project::Stack;
 
 constexpr std::string_view kIndent = "  ";
 
-enum class PinMode { Input, Output };
+enum class PinMode { Input, InputPullup, Output };
 
 std::string formatNumber(double value) {
     std::ostringstream stream;
@@ -162,10 +162,11 @@ private:
                 label = "13";
             }
         }
-        // A pin used as an output anywhere stays an output.
+        // A pin used as an output anywhere stays an output; a pin set as an input with
+        // pull-up keeps it when it is read.
         auto [it, inserted] = pinModes_.emplace(label, mode);
-        if (!inserted && mode == PinMode::Output) {
-            it->second = PinMode::Output;
+        if (!inserted && mode != PinMode::Input && it->second != PinMode::Output) {
+            it->second = mode;
         }
         return label;
     }
@@ -218,7 +219,8 @@ private:
                    number(block, "TO_HIGH") + ")";
         }
         if (type == "pins_digital_read") {
-            return "(digitalRead(" + pin(block, "PIN", PinMode::Input) + ") == HIGH)";
+            return "(digitalRead(" + pin(block, "PIN", PinMode::Input) + ") == " +
+                   (field(block, "STATE") == "LOW" ? "LOW" : "HIGH") + ")";
         }
         if (type == "pins_analog_read") {
             return "analogRead(" + pin(block, "PIN", PinMode::Input) + ")";
@@ -243,6 +245,15 @@ private:
         }
     }
 
+    static const char* modeName(PinMode mode) {
+        switch (mode) {
+        case PinMode::Output: return "OUTPUT";
+        case PinMode::InputPullup: return "INPUT_PULLUP";
+        case PinMode::Input: break;
+        }
+        return "INPUT";
+    }
+
     static std::string parenthesized(const std::string& condition) {
         if (condition.size() >= 2 && condition.front() == '(' && condition.back() == ')') {
             return condition;
@@ -261,6 +272,13 @@ private:
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "digitalWrite(" + target + ", " +
                                 (field(block, "STATE") == "LOW" ? "LOW" : "HIGH") + ");");
+        } else if (type == "pins_set_mode") {
+            const PinMode mode = field(block, "MODE") == "INPUT" ? PinMode::Input : PinMode::InputPullup;
+            const std::string target = pin(block, "PIN", mode);
+            if (PinMode& declared = pinModes_[target]; declared != PinMode::Output) {
+                declared = mode; // also in setup(), so that the pin is ready before it is read
+            }
+            body.add(depth, "pinMode(" + target + ", " + modeName(mode) + ");");
         } else if (type == "pins_analog_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
@@ -389,8 +407,7 @@ private:
         }
         out.emplace_back("void setup() {");
         for (const auto& [label, mode] : pinModes_) {
-            out.push_back(std::string(kIndent) + "pinMode(" + label + ", " +
-                          (mode == PinMode::Output ? "OUTPUT" : "INPUT") + ");");
+            out.push_back(std::string(kIndent) + "pinMode(" + label + ", " + modeName(mode) + ");");
         }
         if (helpers_.count("random") != 0) {
             out.push_back(std::string(kIndent) + "randomSeed(micros());");

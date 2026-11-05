@@ -119,6 +119,33 @@ TEST(Codegen, DeclaresPinModesFromUsage) {
         << sketch.source;
 }
 
+TEST(Codegen, ReadsTheChosenStateWithThePinMode) {
+    Block mode = block("m", "pins_set_mode");
+    mode.fields = {{"PIN", "2"}, {"MODE", "INPUT_PULLUP"}};
+    Block write = block("w", "pins_digital_write");
+    write.fields = {{"PIN", "7"}, {"STATE", "HIGH"}};
+    Block read = block("r", "pins_digital_read");
+    read.fields = {{"PIN", "2"}, {"STATE", "LOW"}};
+    Block condition = block("if", "control_if");
+    condition.inputs["CONDITION"].block = read;
+    condition.statements["SUBSTACK"] = {write};
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), mode, condition}));
+    // Declared in setup() (before any read) and where the block is.
+    EXPECT_NE(sketch.source.find("void setup() {\n  pinMode(2, INPUT_PULLUP);"), std::string::npos) << sketch.source;
+    EXPECT_EQ(sketch.source.find("pinMode(2, INPUT);"), std::string::npos) << sketch.source;
+    EXPECT_NE(sketch.source.find("  if (digitalRead(2) == LOW) {"), std::string::npos) << sketch.source;
+}
+
+TEST(Codegen, ReadsHighWhenTheStateIsMissing) {
+    Block read = block("r", "pins_digital_read"); // projects saved before the state menu existed
+    read.fields["PIN"] = "4";
+    Block condition = block("if", "control_if");
+    condition.inputs["CONDITION"].block = read;
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), condition}));
+    EXPECT_NE(sketch.source.find("if (digitalRead(4) == HIGH) {"), std::string::npos) << sketch.source;
+    EXPECT_NE(sketch.source.find("pinMode(4, INPUT);"), std::string::npos) << sketch.source;
+}
+
 TEST(Codegen, UsesSafeDefaultsForMissingOrInvalidInputs) {
     Block write = block("w", "pins_analog_write");
     write.fields["PIN"] = "7; system()"; // not a pin: falls back to the default pin
