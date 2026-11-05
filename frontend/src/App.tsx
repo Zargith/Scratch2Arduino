@@ -33,6 +33,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge, hasHost, HostMissingError, type LiveSnapshot, type Outcome, type Port } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
+import logo from "@/logo.png";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
@@ -281,6 +282,7 @@ export function App() {
 		<AppShell header={{ height: 64 }} padding={0}>
 			<AppShell.Header px="md">
 				<Group h="100%" gap="sm" wrap="nowrap">
+					<img src={logo} alt="" width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
 					<Title order={4} visibleFrom="xl" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
 						{t("app.title")}
 					</Title>
