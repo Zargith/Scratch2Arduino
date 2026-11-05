@@ -148,6 +148,18 @@ export function defineBlocks(language: Language): void {
 				init(this: Blockly.Block) {
 					this.jsonInit(json);
 					this.setStyle(block.category);
+					// Menus whose options explain themselves (a note gives its frequency): the
+					// pointer over the menu shows the chosen option, elsewhere the block's tooltip.
+					for (const arg of block.args ?? []) {
+						// Blockly takes the first option: start on the catalog default instead.
+						if (arg.kind === "dropdown" && arg.default !== undefined) {
+							this.getField(arg.name)?.setValue(String(arg.default));
+						}
+						const tips = new Map((arg.options ?? []).map((option) => [option.value, option.tooltip?.[language]]));
+						const field = this.getField(arg.name);
+						if (!field || ![...tips.values()].some(Boolean)) continue;
+						field.setTooltip(() => tips.get(String(field.getValue())) ?? block.tooltip?.[language] ?? "");
+					}
 				},
 			};
 		}

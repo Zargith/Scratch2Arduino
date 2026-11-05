@@ -3,51 +3,103 @@
   "category": {
     "id": "sound",
     "colour": "#CF63CF",
-    "name": { "fr": "Son", "en": "Sound" },
+    "name": {
+      "fr": "Son",
+      "en": "Sound"
+    },
     "order": 33
   },
   "blocks": [
     {
       "type": "sound_play_tone",
       "shape": "statement",
-      "message": { "fr": "jouer %2 Hz pendant %3 secondes sur le buzzer de la broche %1", "en": "play %2 Hz for %3 seconds on the buzzer of pin %1" },
+      "message": {
+        "fr": "jouer %2 Hz pendant %3 secondes sur le buzzer de la broche %1",
+        "en": "play %2 Hz for %3 seconds on the buzzer of pin %1"
+      },
       "tooltip": {
         "fr": "Fait sonner un buzzer, puis attend la fin du son avant de passer au bloc suivant. Plus le nombre de Hz est grand, plus le son est aigu (440 Hz est le la de la musique).",
         "en": "Plays a sound on a buzzer and waits until it ends before the next block. The more Hz, the higher the sound (440 Hz is the musical A)."
       },
       "args": [
-        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" },
-        { "name": "FREQUENCY", "kind": "number", "default": 440, "min": 31, "max": 20000 },
-        { "name": "SECONDS", "kind": "number", "default": 0.5, "min": 0 }
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "8"
+        },
+        {
+          "name": "FREQUENCY",
+          "kind": "number",
+          "default": 440,
+          "min": 31,
+          "max": 20000
+        },
+        {
+          "name": "SECONDS",
+          "kind": "number",
+          "default": 0.5,
+          "min": 0
+        }
       ]
     },
     {
       "type": "sound_start_tone",
       "shape": "statement",
-      "message": { "fr": "faire sonner le buzzer de la broche %1 à %2 Hz", "en": "start the buzzer of pin %1 at %2 Hz" },
+      "message": {
+        "fr": "faire sonner le buzzer de la broche %1 à %2 Hz",
+        "en": "start the buzzer of pin %1 at %2 Hz"
+      },
       "tooltip": {
         "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise « arrêter le buzzer » pour le faire taire. Un seul buzzer peut sonner à la fois.",
         "en": "The buzzer keeps sounding and the program goes on at once. Use \"stop the buzzer\" to silence it. Only one buzzer can sound at a time."
       },
       "args": [
-        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" },
-        { "name": "FREQUENCY", "kind": "number", "default": 440, "min": 31, "max": 20000 }
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "8"
+        },
+        {
+          "name": "FREQUENCY",
+          "kind": "number",
+          "default": 440,
+          "min": 31,
+          "max": 20000
+        }
       ]
     },
     {
       "type": "sound_stop",
       "shape": "statement",
-      "message": { "fr": "arrêter le buzzer de la broche %1", "en": "stop the buzzer of pin %1" },
-      "tooltip": { "fr": "Fait taire le buzzer.", "en": "Silences the buzzer." },
-      "args": [{ "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" }]
+      "message": {
+        "fr": "arrêter le buzzer de la broche %1",
+        "en": "stop the buzzer of pin %1"
+      },
+      "tooltip": {
+        "fr": "Fait taire le buzzer.",
+        "en": "Silences the buzzer."
+      },
+      "args": [
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "8"
+        }
+      ]
     },
     {
       "type": "sound_note",
       "shape": "reporter",
-      "message": { "fr": "note %1", "en": "note %1" },
+      "message": {
+        "fr": "note %1",
+        "en": "note %1"
+      },
       "tooltip": {
-        "fr": "Le nombre de Hz d'une note de musique, à glisser dans un bloc du buzzer.",
-        "en": "The number of Hz of a musical note, to drop into a buzzer block."
+        "fr": "Le nombre de Hz d'une note de musique, à glisser dans un bloc du buzzer. Le nombre après la note est son octave : plus il est grand, plus la note est aiguë. ♯ (dièse) est le demi-ton au-dessus. Laisse le pointeur sur la note pour voir sa fréquence.",
+        "en": "The number of Hz of a musical note, to drop into a buzzer block. The number after the note is its octave: the bigger, the higher the note. ♯ (sharp) is the semitone above. Leave the pointer on the note to see its frequency."
       },
       "args": [
         {
@@ -55,14 +107,413 @@
           "kind": "dropdown",
           "default": "262",
           "options": [
-            { "value": "262", "label": { "fr": "do", "en": "C" } },
-            { "value": "294", "label": { "fr": "ré", "en": "D" } },
-            { "value": "330", "label": { "fr": "mi", "en": "E" } },
-            { "value": "349", "label": { "fr": "fa", "en": "F" } },
-            { "value": "392", "label": { "fr": "sol", "en": "G" } },
-            { "value": "440", "label": { "fr": "la", "en": "A" } },
-            { "value": "494", "label": { "fr": "si", "en": "B" } },
-            { "value": "523", "label": { "fr": "do aigu", "en": "high C" } }
+            {
+              "value": "131",
+              "label": {
+                "fr": "do 3",
+                "en": "C3"
+              },
+              "tooltip": {
+                "fr": "do 3 : 131 Hz",
+                "en": "C3: 131 Hz"
+              }
+            },
+            {
+              "value": "139",
+              "label": {
+                "fr": "do♯ 3",
+                "en": "C♯3"
+              },
+              "tooltip": {
+                "fr": "do♯ 3 : 139 Hz",
+                "en": "C♯3: 139 Hz"
+              }
+            },
+            {
+              "value": "147",
+              "label": {
+                "fr": "ré 3",
+                "en": "D3"
+              },
+              "tooltip": {
+                "fr": "ré 3 : 147 Hz",
+                "en": "D3: 147 Hz"
+              }
+            },
+            {
+              "value": "156",
+              "label": {
+                "fr": "ré♯ 3",
+                "en": "D♯3"
+              },
+              "tooltip": {
+                "fr": "ré♯ 3 : 156 Hz",
+                "en": "D♯3: 156 Hz"
+              }
+            },
+            {
+              "value": "165",
+              "label": {
+                "fr": "mi 3",
+                "en": "E3"
+              },
+              "tooltip": {
+                "fr": "mi 3 : 165 Hz",
+                "en": "E3: 165 Hz"
+              }
+            },
+            {
+              "value": "175",
+              "label": {
+                "fr": "fa 3",
+                "en": "F3"
+              },
+              "tooltip": {
+                "fr": "fa 3 : 175 Hz",
+                "en": "F3: 175 Hz"
+              }
+            },
+            {
+              "value": "185",
+              "label": {
+                "fr": "fa♯ 3",
+                "en": "F♯3"
+              },
+              "tooltip": {
+                "fr": "fa♯ 3 : 185 Hz",
+                "en": "F♯3: 185 Hz"
+              }
+            },
+            {
+              "value": "196",
+              "label": {
+                "fr": "sol 3",
+                "en": "G3"
+              },
+              "tooltip": {
+                "fr": "sol 3 : 196 Hz",
+                "en": "G3: 196 Hz"
+              }
+            },
+            {
+              "value": "208",
+              "label": {
+                "fr": "sol♯ 3",
+                "en": "G♯3"
+              },
+              "tooltip": {
+                "fr": "sol♯ 3 : 208 Hz",
+                "en": "G♯3: 208 Hz"
+              }
+            },
+            {
+              "value": "220",
+              "label": {
+                "fr": "la 3",
+                "en": "A3"
+              },
+              "tooltip": {
+                "fr": "la 3 : 220 Hz",
+                "en": "A3: 220 Hz"
+              }
+            },
+            {
+              "value": "233",
+              "label": {
+                "fr": "la♯ 3",
+                "en": "A♯3"
+              },
+              "tooltip": {
+                "fr": "la♯ 3 : 233 Hz",
+                "en": "A♯3: 233 Hz"
+              }
+            },
+            {
+              "value": "247",
+              "label": {
+                "fr": "si 3",
+                "en": "B3"
+              },
+              "tooltip": {
+                "fr": "si 3 : 247 Hz",
+                "en": "B3: 247 Hz"
+              }
+            },
+            {
+              "value": "262",
+              "label": {
+                "fr": "do 4",
+                "en": "C4"
+              },
+              "tooltip": {
+                "fr": "do 4 : 262 Hz",
+                "en": "C4: 262 Hz"
+              }
+            },
+            {
+              "value": "277",
+              "label": {
+                "fr": "do♯ 4",
+                "en": "C♯4"
+              },
+              "tooltip": {
+                "fr": "do♯ 4 : 277 Hz",
+                "en": "C♯4: 277 Hz"
+              }
+            },
+            {
+              "value": "294",
+              "label": {
+                "fr": "ré 4",
+                "en": "D4"
+              },
+              "tooltip": {
+                "fr": "ré 4 : 294 Hz",
+                "en": "D4: 294 Hz"
+              }
+            },
+            {
+              "value": "311",
+              "label": {
+                "fr": "ré♯ 4",
+                "en": "D♯4"
+              },
+              "tooltip": {
+                "fr": "ré♯ 4 : 311 Hz",
+                "en": "D♯4: 311 Hz"
+              }
+            },
+            {
+              "value": "330",
+              "label": {
+                "fr": "mi 4",
+                "en": "E4"
+              },
+              "tooltip": {
+                "fr": "mi 4 : 330 Hz",
+                "en": "E4: 330 Hz"
+              }
+            },
+            {
+              "value": "349",
+              "label": {
+                "fr": "fa 4",
+                "en": "F4"
+              },
+              "tooltip": {
+                "fr": "fa 4 : 349 Hz",
+                "en": "F4: 349 Hz"
+              }
+            },
+            {
+              "value": "370",
+              "label": {
+                "fr": "fa♯ 4",
+                "en": "F♯4"
+              },
+              "tooltip": {
+                "fr": "fa♯ 4 : 370 Hz",
+                "en": "F♯4: 370 Hz"
+              }
+            },
+            {
+              "value": "392",
+              "label": {
+                "fr": "sol 4",
+                "en": "G4"
+              },
+              "tooltip": {
+                "fr": "sol 4 : 392 Hz",
+                "en": "G4: 392 Hz"
+              }
+            },
+            {
+              "value": "415",
+              "label": {
+                "fr": "sol♯ 4",
+                "en": "G♯4"
+              },
+              "tooltip": {
+                "fr": "sol♯ 4 : 415 Hz",
+                "en": "G♯4: 415 Hz"
+              }
+            },
+            {
+              "value": "440",
+              "label": {
+                "fr": "la 4",
+                "en": "A4"
+              },
+              "tooltip": {
+                "fr": "la 4 : 440 Hz — le la du diapason",
+                "en": "A4: 440 Hz — the tuning A"
+              }
+            },
+            {
+              "value": "466",
+              "label": {
+                "fr": "la♯ 4",
+                "en": "A♯4"
+              },
+              "tooltip": {
+                "fr": "la♯ 4 : 466 Hz",
+                "en": "A♯4: 466 Hz"
+              }
+            },
+            {
+              "value": "494",
+              "label": {
+                "fr": "si 4",
+                "en": "B4"
+              },
+              "tooltip": {
+                "fr": "si 4 : 494 Hz",
+                "en": "B4: 494 Hz"
+              }
+            },
+            {
+              "value": "523",
+              "label": {
+                "fr": "do 5",
+                "en": "C5"
+              },
+              "tooltip": {
+                "fr": "do 5 : 523 Hz",
+                "en": "C5: 523 Hz"
+              }
+            },
+            {
+              "value": "554",
+              "label": {
+                "fr": "do♯ 5",
+                "en": "C♯5"
+              },
+              "tooltip": {
+                "fr": "do♯ 5 : 554 Hz",
+                "en": "C♯5: 554 Hz"
+              }
+            },
+            {
+              "value": "587",
+              "label": {
+                "fr": "ré 5",
+                "en": "D5"
+              },
+              "tooltip": {
+                "fr": "ré 5 : 587 Hz",
+                "en": "D5: 587 Hz"
+              }
+            },
+            {
+              "value": "622",
+              "label": {
+                "fr": "ré♯ 5",
+                "en": "D♯5"
+              },
+              "tooltip": {
+                "fr": "ré♯ 5 : 622 Hz",
+                "en": "D♯5: 622 Hz"
+              }
+            },
+            {
+              "value": "659",
+              "label": {
+                "fr": "mi 5",
+                "en": "E5"
+              },
+              "tooltip": {
+                "fr": "mi 5 : 659 Hz",
+                "en": "E5: 659 Hz"
+              }
+            },
+            {
+              "value": "698",
+              "label": {
+                "fr": "fa 5",
+                "en": "F5"
+              },
+              "tooltip": {
+                "fr": "fa 5 : 698 Hz",
+                "en": "F5: 698 Hz"
+              }
+            },
+            {
+              "value": "740",
+              "label": {
+                "fr": "fa♯ 5",
+                "en": "F♯5"
+              },
+              "tooltip": {
+                "fr": "fa♯ 5 : 740 Hz",
+                "en": "F♯5: 740 Hz"
+              }
+            },
+            {
+              "value": "784",
+              "label": {
+                "fr": "sol 5",
+                "en": "G5"
+              },
+              "tooltip": {
+                "fr": "sol 5 : 784 Hz",
+                "en": "G5: 784 Hz"
+              }
+            },
+            {
+              "value": "831",
+              "label": {
+                "fr": "sol♯ 5",
+                "en": "G♯5"
+              },
+              "tooltip": {
+                "fr": "sol♯ 5 : 831 Hz",
+                "en": "G♯5: 831 Hz"
+              }
+            },
+            {
+              "value": "880",
+              "label": {
+                "fr": "la 5",
+                "en": "A5"
+              },
+              "tooltip": {
+                "fr": "la 5 : 880 Hz",
+                "en": "A5: 880 Hz"
+              }
+            },
+            {
+              "value": "932",
+              "label": {
+                "fr": "la♯ 5",
+                "en": "A♯5"
+              },
+              "tooltip": {
+                "fr": "la♯ 5 : 932 Hz",
+                "en": "A♯5: 932 Hz"
+              }
+            },
+            {
+              "value": "988",
+              "label": {
+                "fr": "si 5",
+                "en": "B5"
+              },
+              "tooltip": {
+                "fr": "si 5 : 988 Hz",
+                "en": "B5: 988 Hz"
+              }
+            },
+            {
+              "value": "1047",
+              "label": {
+                "fr": "do 6",
+                "en": "C6"
+              },
+              "tooltip": {
+                "fr": "do 6 : 1047 Hz",
+                "en": "C6: 1047 Hz"
+              }
+            }
           ]
         }
       ]

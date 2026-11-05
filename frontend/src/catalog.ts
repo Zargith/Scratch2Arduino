@@ -12,7 +12,8 @@ export interface BlockArg {
 	kind: ArgKind;
 	default?: string | number;
 	capability?: PinCapability;
-	options?: { value: string; label: Localized }[];
+	/** `tooltip`: shown over the menu when this option is chosen (the block keeps its own tooltip). */
+	options?: { value: string; label: Localized; tooltip?: Localized }[];
 }
 
 export interface BlockDefinition {

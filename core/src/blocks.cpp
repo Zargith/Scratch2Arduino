@@ -184,7 +184,10 @@ BlockArg parseArg(const Json& node, const std::string& where, Issues& issues) {
             std::set<std::string> values;
             for (const Json& option : node.at("options")) {
                 DropdownOption parsed{stringField(option, "value").value_or(""),
-                                      localized(option, "label", at, issues)};
+                                      localized(option, "label", at, issues), std::nullopt};
+                if (option.contains("tooltip")) {
+                    parsed.tooltip = localized(option, "tooltip", at, issues);
+                }
                 if (parsed.value.empty() || !values.insert(parsed.value).second) {
                     issues.add(at, "option values must be unique and non-empty");
                 }

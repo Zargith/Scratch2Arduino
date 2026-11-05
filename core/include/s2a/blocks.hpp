@@ -43,6 +43,7 @@ enum class ArgKind {
 struct DropdownOption {
     std::string value;
     LocalizedText label;
+    std::optional<LocalizedText> tooltip; ///< Shown over the menu when this option is chosen.
 };
 
 struct BlockArg {

@@ -78,7 +78,11 @@
             "additionalProperties": false,
             "properties": {
               "value": { "type": "string", "minLength": 1 },
-              "label": { "$ref": "#/$defs/localized" }
+              "label": { "$ref": "#/$defs/localized" },
+              "tooltip": {
+                "$ref": "#/$defs/localized",
+                "description": "Shown when the pointer is over the menu of a block with this option chosen (the block keeps its own tooltip)."
+              }
             }
           }
         }
