@@ -368,8 +368,8 @@ struct SharedFirmware final : s2a::serial::LineTransport {
     s2a::Result<std::optional<std::string>> readLine(milliseconds timeout) override { return firmware->readLine(timeout); }
 };
 
-template <typename Predicate> bool waitFor(Predicate predicate) {
-    for (int i = 0; i < 300; ++i) {
+template <typename Predicate> bool waitFor(Predicate predicate, int tenthsOfSeconds = 30) {
+    for (int i = 0; i < tenthsOfSeconds * 10; ++i) {
         if (predicate()) {
             return true;
         }
@@ -423,7 +423,8 @@ TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {
             ++flashes;
             return s2a::success();
         });
-    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }));
+    // The silent board is probed for a few seconds before the firmware is uploaded.
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }, 80));
     EXPECT_EQ(flashes, 1);
     EXPECT_EQ(opened, 2);
 }

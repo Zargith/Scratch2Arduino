@@ -607,7 +607,8 @@ void Session::run(project::Project project) {
         return;
     }
     std::unique_ptr<serial::LineTransport> connection = std::move(transport).value();
-    if (!LiveLink(*connection).handshake().ok()) {
+    // No firmware yet answers within a few seconds: the reset by the port lasts 1 to 2 s.
+    if (!LiveLink(*connection).handshake(milliseconds(3500)).ok()) {
         if (stopping_) {
             set(State::Stopped, tr("live.stopped", language_));
             return;
