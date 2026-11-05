@@ -3,6 +3,7 @@ import {
 	Alert,
 	AppShell,
 	Button,
+	Card,
 	Code,
 	Group,
 	Loader,
@@ -22,14 +23,17 @@ import {
 	IconDeviceFloppy,
 	IconFilePlus,
 	IconFolderOpen,
+	IconPlayerPlay,
+	IconPlayerStop,
 	IconRefresh,
 	IconUpload,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { bridge, hasHost, HostMissingError, type Outcome, type Port } from "@/bridge";
+import { bridge, hasHost, HostMissingError, type LiveSnapshot, type Outcome, type Port } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
+import logo from "@/logo.png";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
@@ -71,6 +75,10 @@ export function App() {
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [code, setCode] = useState<string | null>(null);
+	const [live, setLive] = useState(false);
+	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
+	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const currentProject = useCallback(
 		(): Project =>
@@ -166,7 +174,7 @@ export function App() {
 			setPath(opened.path);
 			setDirty(false);
 			reload(projectToWorkspace(opened.project));
-			setStatus({ kind: "success", message: t("status.opened", { path: opened.path }) });
+			setStatus({ kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) });
 		} catch (error) {
 			fail(error);
 		}
@@ -217,10 +225,64 @@ export function App() {
 		}
 	};
 
+	const toggleLive = async () => {
+		if (live) {
+			await bridge.liveStop().catch(fail);
+			setLive(false);
+			editor.current?.showRunning([]);
+			return;
+		}
+		if (!port) {
+			setStatus({ kind: "info", message: t("status.no_port") });
+			return;
+		}
+		try {
+			const started = await bridge.liveStart(currentProject(), port, language);
+			if (!started.ok) {
+				setStatus({ kind: "error", message: started.message ?? "" });
+				return;
+			}
+			setLiveSnapshot(null);
+			setLive(true);
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	// While Live mode runs: show what the board does.
+	useEffect(() => {
+		if (!live) return;
+		const timer = setInterval(() => {
+			void bridge
+				.liveState()
+				.then((snapshot) => {
+					setLiveSnapshot(snapshot);
+					setVariableNames(
+						new Map((editor.current?.save().variables ?? []).map((variable) => [variable.id, variable.name] as const))
+					);
+					editor.current?.showRunning(snapshot.running ?? []);
+					if (snapshot.state === "failed") {
+						setStatus({ kind: "error", message: snapshot.message ?? "", details: snapshot.details });
+						editor.current?.highlight(snapshot.problems ?? []);
+						setLive(false);
+					} else if (snapshot.state === "stopped") {
+						setLive(false);
+					} else if (snapshot.message) {
+						setStatus({ kind: "info", message: snapshot.message });
+					}
+				})
+				.catch(fail);
+		}, 200);
+		return () => clearInterval(timer);
+	}, [live, fail]);
+
+	const shownVariables = Object.entries(liveSnapshot?.variables ?? {});
+
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
 			<AppShell.Header px="md">
 				<Group h="100%" gap="sm" wrap="nowrap">
+					<img src={logo} alt="" width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
 					<Title order={4} visibleFrom="xl" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
 						{t("app.title")}
 					</Title>
@@ -288,10 +350,18 @@ export function App() {
 								<IconCode size={18} />
 							</ActionIcon>
 						</Tooltip>
-						<Button color="green" leftSection={<IconCheck size={18} />} loading={busy} onClick={() => void run("build")}>
+						<Button
+							color={live ? "pink" : "blue"}
+							variant={live ? "filled" : "light"}
+							leftSection={live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />}
+							onClick={() => void toggleLive()}
+						>
+							{t(live ? "toolbar.stop_live" : "toolbar.live")}
+						</Button>
+						<Button color="green" leftSection={<IconCheck size={18} />} loading={busy} disabled={live} onClick={() => void run("build")}>
 							{t("toolbar.build")}
 						</Button>
-						<Button color="orange" leftSection={<IconUpload size={18} />} loading={busy} onClick={() => void run("upload")}>
+						<Button color="orange" leftSection={<IconUpload size={18} />} loading={busy} disabled={live} onClick={() => void run("upload")}>
 							{t("toolbar.upload")}
 						</Button>
 						<SegmentedControl
@@ -315,25 +385,59 @@ export function App() {
 						language={language}
 						board={findBoard(boardId)}
 						initialState={initialState.current}
-						onChange={() => setDirty(true)}
+						onChange={() => {
+							setDirty(true);
+							if (!live) return;
+							// Live mode: send the new blocks once the child stops dragging for a moment.
+							if (liveUpdate.current) clearTimeout(liveUpdate.current);
+							liveUpdate.current = setTimeout(() => void bridge.liveUpdate(currentProject()).catch(fail), 300);
+						}}
 					/>
 				</div>
 			</AppShell.Main>
 
+			{live && shownVariables.length > 0 && (
+				<Card withBorder shadow="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150, minWidth: 180 }}>
+					<Text fw={700} size="sm" mb={4}>
+						{t("live.variables")}
+					</Text>
+					{shownVariables.map(([id, value]) => (
+						<Group key={id} justify="space-between" gap="lg">
+							<Text size="sm">{variableNames.get(id) ?? id}</Text>
+							<Code>{Number.isInteger(value) ? value : value.toFixed(2)}</Code>
+						</Group>
+					))}
+				</Card>
+			)}
+
 			{status && (
 				// Over the workspace, between the palette and the zoom/trash controls.
-				<div style={{ position: "fixed", left: 330, right: 110, bottom: 16, zIndex: 150 }}>
+				<div
+					style={{
+						position: "fixed",
+						left: 330,
+						right: 110,
+						bottom: 16,
+						zIndex: 150,
+						maxHeight: "50vh",
+						overflowY: "auto",
+					}}
+				>
 					<Alert
 						color={status.kind === "error" ? "orange" : status.kind === "success" ? "green" : "blue"}
 						withCloseButton
 						onClose={() => setStatus(null)}
 						icon={busy ? <Loader size="xs" /> : undefined}
 					>
-						<Text size="sm">{status.message}</Text>
+						<Text size="sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+							{status.message}
+						</Text>
 						{status.details && (
 							<Spoiler maxHeight={0} showLabel={t("status.details")} hideLabel={t("status.details")}>
 								<ScrollArea.Autosize mah={160}>
-									<Code block>{status.details}</Code>
+									<Code block style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+										{status.details}
+									</Code>
 								</ScrollArea.Autosize>
 							</Spoiler>
 						)}

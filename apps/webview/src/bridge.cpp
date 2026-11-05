@@ -2,6 +2,7 @@
 #include "s2a/arduino_cli.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
+#include "s2a/live.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
 #include "s2a/version.hpp"
@@ -95,7 +96,33 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
 
 Bridge::Bridge(::webview::webview& window, Language language) : window_(window), language_(language) {}
 
+namespace {
+
+const char* stateName(live::Session::State state) {
+    switch (state) {
+    case live::Session::State::Connecting:
+        return "connecting";
+    case live::Session::State::Flashing:
+        return "flashing";
+    case live::Session::State::Running:
+        return "running";
+    case live::Session::State::Finished:
+        return "finished";
+    case live::Session::State::Stopped:
+        return "stopped";
+    case live::Session::State::Failed:
+        return "failed";
+    }
+    return "stopped";
+}
+
+} // namespace
+
 Bridge::~Bridge() {
+    {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        live_.reset(); // switches the outputs off
+    }
     std::list<Worker> workers;
     {
         const std::lock_guard<std::mutex> lock(mutex_);
@@ -157,7 +184,7 @@ void Bridge::bind() {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto files = pfd::open_file(tr("webview.open_title", language), projectsDirectory().u8string(),
-                                                  {tr("webview.file_filter", language), "*.s2a"})
+                                                  {tr("webview.file_filter", language), "*.s2a *.json"})
                                        .result();
                 if (files.empty()) {
                     return "null";
@@ -167,7 +194,12 @@ void Bridge::bind() {
                 if (!loaded.ok()) {
                     throw UserError{tr(errorMessageKey(loaded.error().code), language)};
                 }
-                return Json{{"path", path.u8string()}, {"project", Json::parse(project::toJson(loaded.value()))}}.dump();
+                // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
+                const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
+                return Json{{"path", savePath},
+                            {"name", path.u8string()},
+                            {"project", Json::parse(project::toJson(loaded.value()))}}
+                    .dump();
             });
         },
         nullptr);
@@ -243,6 +275,69 @@ void Bridge::bind() {
             return outcomeJson(toolchain::buildProject(cli, project, language, options));
         });
     };
+    // Live mode: start (async: the session object is created at once, connection runs on its
+    // own thread), update the blocks, stop, and read the state (polled by the editor).
+    window_.bind("s2a_live_start", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const Language language = languageArg(args, 2, language_);
+        std::string message;
+        try {
+            project::Project project = projectArg(args, 0, language);
+            const Board* board = BoardDatabase::builtin().find(project.boardId);
+            const std::string port = stringArg(args, 1);
+            if (board == nullptr || port.empty()) {
+                return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
+            }
+            const std::lock_guard<std::mutex> lock(liveMutex_);
+            if (live_) {
+                // Stopping can take a moment (outputs switched off): not on the UI thread.
+                std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+            }
+            live_ = std::make_unique<live::Session>(std::move(project), *board, port, language,
+                                                    live::Session::serialOpener(),
+                                                    live::Session::arduinoCliFlasher(*board, port));
+            return Json{{"ok", true}}.dump();
+        } catch (const UserError& error) {
+            message = error.message;
+        }
+        return Json{{"ok", false}, {"message", message}}.dump();
+    });
+    window_.bind("s2a_live_update", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        try {
+            project::Project project = projectArg(args, 0, language_);
+            const std::lock_guard<std::mutex> lock(liveMutex_);
+            if (live_) {
+                live_->update(std::move(project));
+            }
+        } catch (const UserError&) {
+            // Half-built blocks are simply ignored until they make a valid project.
+        }
+        return std::string{};
+    });
+    window_.bind("s2a_live_stop", [this](const std::string& /*request*/) {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (live_) {
+            live_->stop();
+            std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+        }
+        return std::string{};
+    });
+    window_.bind("s2a_live_state", [this](const std::string& /*request*/) {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (!live_) {
+            return Json{{"state", "stopped"}}.dump();
+        }
+        const auto snapshot = live_->snapshot();
+        return Json{{"state", stateName(snapshot.state)},
+                    {"message", snapshot.message},
+                    {"details", snapshot.details},
+                    {"running", snapshot.runningBlocks},
+                    {"problems", snapshot.problemBlocks},
+                    {"variables", snapshot.variables}}
+            .dump();
+    });
+
     window_.bind(
         "s2a_build",
         [build](const std::string& id, const std::string& request, void* /*arg*/) { build(id, request, false); },

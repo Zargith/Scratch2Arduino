@@ -6,6 +6,7 @@
 //   s2a-cli generate <project>                     print the Arduino code of a project
 //   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
 //   s2a-cli upload <sketch|project> --port <port> [--board <id>]
+//   s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)
 // A project is a .s2a file or a project.json; its board is used unless --board is given.
 //   options: --lang fr|en, --verbose
 #include "s2a/arduino_cli.hpp"
@@ -13,17 +14,26 @@
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/i18n.hpp"
+#include "s2a/live.hpp"
 #include "s2a/project.hpp"
+#include "s2a/serial.hpp"
+#include "s2a/validator.hpp"
 #include "s2a/version.hpp"
 
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifdef _WIN32
@@ -52,7 +62,14 @@ struct Options {
     Language language = s2a::detectSystemLanguage();
     bool verbose = false;
     bool boardGiven = false;
+    double seconds = 0; ///< live: stop after this many seconds (0 = until Ctrl+C).
 };
+
+std::atomic<bool> stopRequested{false};
+
+extern "C" void onInterrupt(int /*signal*/) {
+    stopRequested = true;
+}
 
 /// Absolute sketch folder: "." and "blink/" become the folder itself.
 fs::path sketchPath(const std::string& argument) {
@@ -114,6 +131,7 @@ private:
     int generateCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
+    int liveCommand() const;
     int version() const;
 
     Options options_;
@@ -378,6 +396,96 @@ int Cli::uploadCommand() const {
     return kSuccess;
 }
 
+int Cli::liveCommand() const {
+    using namespace std::chrono;
+    if (options_.positional.size() != 1 || options_.port.empty()) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto project = loadProject(fs::absolute(fs::u8path(options_.positional[0])));
+    if (!project) {
+        return kFailure;
+    }
+    const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    if (selected == nullptr) {
+        fail("cli.unknown_board_short");
+        return kFailure;
+    }
+    const auto issues = s2a::validation::validate(*project, s2a::BlockCatalog::builtin(), selected, options_.language);
+    for (const auto& issue : issues) {
+        std::cerr << (issue.severity == s2a::validation::Severity::Error ? "✗ " : "⚠ ")
+                  << s2a::validation::describe(issue, options_.language) << '\n';
+    }
+    if (s2a::validation::hasErrors(issues)) {
+        return kFailure;
+    }
+
+    print("cli.live_connecting", {{"port", options_.port}});
+    auto port = s2a::serial::SerialPort::open(options_.port, s2a::live::kBaud);
+    if (port.ok()) {
+        s2a::live::LiveLink probe(*port.value());
+        if (!probe.handshake().ok()) {
+            port.value().reset(); // free the port for the upload
+            const auto cli = arduinoCli();
+            if (!cli) {
+                return kFailure;
+            }
+            print("cli.live_flashing", {{"board", selected->name}});
+            std::string details;
+            if (const auto flashed = s2a::live::uploadFirmware(*cli, *selected, options_.port,
+                                                               s2a::toolchain::userDataDirectory(), details);
+                !flashed.ok()) {
+                std::cerr << tr(s2a::errorMessageKey(flashed.error().code)) << '\n';
+                if (options_.verbose) {
+                    std::cerr << flashed.error().detail << '\n' << details << '\n';
+                }
+                return kFailure;
+            }
+            port = s2a::serial::SerialPort::open(options_.port, s2a::live::kBaud);
+        }
+    }
+    if (!port.ok()) {
+        std::cerr << tr(s2a::errorMessageKey(port.error().code)) << '\n';
+        if (options_.verbose) {
+            std::cerr << port.error().detail << '\n';
+        }
+        return kFailure;
+    }
+    s2a::live::LiveLink link(*port.value());
+    if (const auto ready = link.handshake(); !ready.ok()) {
+        std::cerr << tr(s2a::errorMessageKey(ready.error().code)) << '\n';
+        return kFailure;
+    }
+
+    print("cli.live_running");
+    std::signal(SIGINT, onInterrupt);
+    s2a::live::Interpreter interpreter(*project, s2a::BlockCatalog::builtin(), *selected, link);
+    const auto start = steady_clock::now();
+    std::map<std::string, double> shown;
+    while (!stopRequested && !interpreter.finished()) {
+        const auto now = duration_cast<milliseconds>(steady_clock::now() - start);
+        if (options_.seconds > 0 && now.count() > options_.seconds * 1000) {
+            break;
+        }
+        interpreter.step(now);
+        if (const auto error = link.takeError()) {
+            std::cerr << tr(s2a::errorMessageKey(error->code)) << '\n';
+            return kFailure;
+        }
+        for (const auto& variable : project->variables) {
+            const double value = interpreter.variables().at(variable.id);
+            if (const auto it = shown.find(variable.id); it == shown.end() || it->second != value) {
+                std::cout << variable.name << " = " << value << '\n';
+                shown[variable.id] = value;
+            }
+        }
+        std::this_thread::sleep_for(milliseconds(10));
+    }
+    link.reset();
+    print(interpreter.finished() ? "cli.live_finished" : "cli.live_stopped");
+    return kSuccess;
+}
+
 int Cli::version() const {
     std::cout << s2a::version::kAppName << ' ' << s2a::version::kString << '\n';
     const fs::path executable = s2a::toolchain::locateArduinoCli();
@@ -406,6 +514,9 @@ int Cli::run() {
     }
     if (options_.command == "compile") {
         return compileCommand();
+    }
+    if (options_.command == "live") {
+        return liveCommand();
     }
     if (options_.command == "upload") {
         return uploadCommand();
@@ -443,6 +554,12 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
                 return std::nullopt;
             }
             options.language = s2a::languageFromLocale(*language);
+        } else if (arg == "--seconds") {
+            const auto seconds = value();
+            if (!seconds) {
+                return std::nullopt;
+            }
+            options.seconds = std::atof(seconds->c_str());
         } else if (arg == "--verbose" || arg == "-v") {
             options.verbose = true;
         } else if (options.command.empty()) {

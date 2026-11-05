@@ -5,11 +5,7 @@
   "app": {
     "title": "Scratch2Arduino",
     "welcome": "Welcome to Scratch2Arduino! Plug in your Arduino board and start snapping blocks together.",
-    "coming_soon": "The block editor is coming soon.",
-    "variant": {
-      "webview": "Variant A — webview",
-      "native": "Variant B — native (Qt)"
-    }
+    "coming_soon": "The block editor is coming soon."
   },
   "project": {
     "default_name": "My project"
@@ -25,7 +21,9 @@
     "unsupported_version": "This project was made with a newer version of Scratch2Arduino. Update the software to open it.",
     "invalid_catalog": "The Scratch2Arduino block list is damaged. Reinstall the software.",
     "process_failed": "A tool needed by Scratch2Arduino could not be started. Reinstall the software.",
-    "unknown_board": "This Arduino board is not supported (yet)."
+    "unknown_board": "This Arduino board is not supported (yet).",
+    "port_failed": "The board's port cannot be used. Check the cable, and that no other program (serial monitor, Arduino IDE) is using the board.",
+    "board_not_responding": "The board does not answer. Unplug it, plug it back in, then try again."
   },
   "toolchain": {
     "none": "Everything went fine.",
@@ -43,7 +41,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -55,7 +53,12 @@
     "ready": "Everything is ready!",
     "uploading": "Sending the program to the board ({port})…",
     "uploaded": "The program has been sent to the board!",
-    "project_invalid": "Cannot open the project \"{project}\": {reason}"
+    "project_invalid": "Cannot open the project \"{project}\": {reason}",
+    "live_connecting": "Connecting to the board ({port})…",
+    "live_flashing": "Installing the Live program on the {board} board (only once)…",
+    "live_running": "Live mode: the blocks are running on the board. Ctrl+C to stop.",
+    "live_stopped": "Live mode stopped.",
+    "live_finished": "Every block has run."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
@@ -118,6 +121,18 @@
     "variable_prompt": "Name of the new variable:",
     "code_note": "This code is made from your blocks. Change the blocks to change it.",
     "unsaved_title": "Unsaved project",
-    "unsaved_text": "Your project has unsaved changes. Do you want to save them?"
+    "unsaved_text": "Your project has unsaved changes. Do you want to save them?",
+    "live": "Live",
+    "stop_live": "Stop",
+    "variables": "Variables",
+    "variable": "Variable",
+    "value": "Value"
+  },
+  "live": {
+    "connecting": "Connecting to the board ({port})…",
+    "flashing": "Installing the Live program on the {board} board (only once, a few seconds)…",
+    "running": "Live mode: your blocks are running on the board. Change them and the board follows!",
+    "finished": "Every block has run. Change them to start again.",
+    "stopped": "Live mode stopped."
   }
 }

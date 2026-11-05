@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="resources/icons/scratch2arduino.png" alt="Scratch2Arduino logo" width="160">
+</p>
+
 # Scratch2Arduino
 
 > Program real Arduino boards with Scratch-style blocks — no coding experience required.
 
-**Status: pre-alpha — Phase 2 done (Arduino toolchain).** Both variants build and open a welcome window; the shared core knows the boards, the blocks and the `.s2a` project format, and compiles and uploads Arduino programs through the bundled `arduino-cli` (try it with `s2a-cli`). The block editor is not there yet. See the [roadmap](docs/roadmap.md).
+**Status: pre-alpha — Phase 5 in progress (Live mode).** The block editor builds, checks and uploads programs through the bundled `arduino-cli`, and Live mode drives a connected board in real time. See the [roadmap](docs/roadmap.md).
 
 ---
 
@@ -34,29 +38,25 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Libraries | Access to the Arduino library ecosystem through `arduino-cli` |
 | Languages | French (default) and English, more to come |
 
-## Two variants
+## How it is built
 
-Scratch2Arduino is developed as **two applications that share the same core** and open the same project files:
+Scratch2Arduino is a **native C++ application embedding the system webview** (WebKitGTK on Linux,
+WKWebView on macOS, WebView2 on Windows). The block editor — [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks)
+(Blockly 12) with the `tools-react-components` theme (React + Mantine) — is bundled **offline** inside the
+application: no server, no browser, no internet needed. All the logic (projects, blocks, code generation,
+`arduino-cli`, serial port, Live mode) lives in the C++ core.
 
-| | **A — `webview`** | **B — `native`** |
-|---|---|---|
-| UI technology | C++ host + system webview (bundled offline) | Qt 6 (Widgets/QML), pure C++ |
-| Block editor | [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks) (Blockly 12) | Custom Qt block canvas |
-| Design | `@epitech/tools-react-components` theme (React + Mantine) | Qt styling matching the same palette |
-| Strengths | Reuses the familiar Scratch look and a mature editor | Single technology stack, no web runtime |
-| Trade-offs | JS ↔ C++ bridge, frontend build with Node/pnpm | Block editor written from scratch |
-
-Both variants will be compared once they reach the same feature level (see roadmap, Phase 12) to decide whether to keep both.
+A Qt variant drawing its own block canvas was prototyped up to version 0.3 and then dropped, to keep a single
+editor with the same look as the other tools.
 
 ## Architecture
 
 ```
-            ┌───────────────────────┐   ┌───────────────────────┐
-            │ apps/webview (A)      │   │ apps/native (B)       │
-            │ webview + scratch-    │   │ Qt 6 block canvas     │
-            │ blocks + React UI     │   │                       │
-            └──────────┬────────────┘   └──────────┬────────────┘
-                       └─────────────┬─────────────┘
+                          ┌─────────────────────┐
+                          │ apps/webview        │
+                          │ webview + scratch-  │
+                          │ blocks + React UI   │
+                          └──────────┬──────────┘
                           ┌──────────▼──────────┐
                           │  core/ (s2a_core)   │
                           │  project model .s2a │
@@ -83,7 +83,7 @@ Both variants will be compared once they reach the same feature level (see roadm
 
 ```
 Scratch2Arduino/
-├── CMakeLists.txt          # top-level build, options S2A_BUILD_WEBVIEW / S2A_BUILD_NATIVE
+├── CMakeLists.txt          # top-level build, option S2A_BUILD_WEBVIEW (OFF: core only)
 ├── CMakePresets.json
 ├── Makefile                # Linux/macOS convenience wrapper around CMake
 ├── install.sh              # Linux/macOS one-command installer
@@ -91,10 +91,9 @@ Scratch2Arduino/
 ├── core/                   # s2a_core: shared C++17 library + unit tests
 ├── blocks/                 # block catalog (JSON, fr/en labels) and its JSON schema
 ├── apps/
-│   ├── webview/            # variant A: C++ host embedding the web UI
-│   └── native/             # variant B: Qt 6 application
-├── frontend/               # (Phase 3a) variant A UI: scratch-blocks + React (built with pnpm)
-├── firmware/               # (Phase 5) S2A live firmware for Arduino / ESP boards
+│   └── webview/            # the application: C++ host embedding the web UI
+├── frontend/               # block editor UI: scratch-blocks + React (built with pnpm)
+├── firmware/               # S2A live firmware for Arduino / ESP boards
 ├── tools/s2a-cli/          # command-line access to the toolchain
 ├── installer/
 │   └── windows/            # installer.exe script (Inno Setup / NSIS)
@@ -126,16 +125,15 @@ sudo make uninstall
 Prerequisites:
 
 - CMake ≥ 3.25 and a C++17 compiler (GCC, Clang or MSVC)
-- Variant A: WebKitGTK 4.1 + pkg-config on Linux (WebKit on macOS and WebView2 on Windows are built in)
-- Variant B: Qt 6 (Widgets)
-- Variant A block editor (`frontend/`): Node.js 20+ and pnpm (`corepack enable`) to build it; without them
+- WebKitGTK 4.1 + pkg-config on Linux (WebKit on macOS and WebView2 on Windows are built in)
+- Block editor (`frontend/`): Node.js 20+ and pnpm (`corepack enable`) to build it; without them
   the build downloads the prebuilt editor published with the release of the same version
   (or point `-DS2A_FRONTEND_DIST=<folder>` at a prebuilt one). On Linux, `zenity` (or `kdialog`) shows the
   open/save dialogs.
 - `arduino-cli` is downloaded by the build
 
 ```bash
-cmake --preset release                 # add -DS2A_BUILD_NATIVE=OFF or -DS2A_BUILD_WEBVIEW=OFF to build only one variant
+cmake --preset release
 cmake --build --preset release
 ctest --preset release
 cmake --install build/release
@@ -145,7 +143,7 @@ cmake --preset core-only && cmake --build --preset core-only   # core + tests, n
 
 ### Check the toolchain with `s2a-cli`
 
-`s2a-cli` is installed next to the applications. It uses the same bundled `arduino-cli` and the same
+`s2a-cli` is installed next to the application. It uses the same bundled `arduino-cli` and the same
 friendly messages, and is handy to check a classroom computer before a workshop:
 
 ```bash
@@ -157,7 +155,12 @@ s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 
 
 s2a-cli generate examples/projects/blink/project.json # Arduino code made from a block project
 s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the board comes from the project
+s2a-cli live examples/projects/blink/project.json --port /dev/ttyACM0   # Live mode (Ctrl+C stops)
 ```
+
+**Live mode** runs the blocks on the computer and drives the board through the small *S2A live*
+firmware (`firmware/s2a_live`, sent automatically the first time): a change in the blocks takes effect
+without uploading again. Variables are printed when they change.
 
 On Windows the installer does not add Scratch2Arduino to the `PATH`: call it with its full path, for example
 in PowerShell `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" ports`.
@@ -172,23 +175,24 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 ### First project
 
 1. Plug in an Arduino Uno with a USB cable.
-2. Start **Scratch2Arduino (webview)**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
+2. Start **Scratch2Arduino**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
 3. Under **when the program starts**, drag **forever**, then inside it **turn the built-in LED on**, **wait 1 seconds**, **turn the built-in LED off**, **wait 1 seconds**.
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
-### The native variant
+### Live mode
 
-**Scratch2Arduino (native)** offers the same blocks and opens the same `.s2a` files, drawn by a pure C++/Qt
-canvas: drag blocks from the palette (drop them back on the palette to delete them), click a white value to
-type it, click a menu to choose a pin or an option, Ctrl + wheel to zoom, drag the background to scroll.
+Click **Live**: the blocks run on the computer and drive the board through the
+*S2A live* firmware, installed automatically the first time. The running scripts glow, the variables are
+shown on the right, and any change to the blocks takes effect at once, without uploading. Click **Stop**
+to end it (the outputs are switched off). Use **Upload** to make the board run the program on its own.
 
 ### Working on the block editor
 
 ```bash
 cd frontend
 pnpm install
-pnpm dev        # editor in a browser (the native functions report that they need the app)
+pnpm dev        # editor in a browser (the functions of the C++ host report that they need the app)
 pnpm test       # unit tests (project <-> Blockly conversion)
 pnpm build      # dist/index.html + dist/media, what the app loads
 ```
@@ -198,7 +202,7 @@ once installed, or in the folder given by the `S2A_FRONTEND_DIR` environment var
 
 ## Project files
 
-A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported in either variant. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** will live in the user's library folder and be exported in the same way.
+A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** will live in the user's library folder and be exported in the same way.
 
 ```json
 {
@@ -239,4 +243,4 @@ Bug reports, feature requests, translations, example projects and code are welco
 
 ## Acknowledgements
 
-Built on [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks) / [Blockly](https://github.com/RaspberryPiFoundation/blockly), [arduino-cli](https://github.com/arduino/arduino-cli), [webview](https://github.com/webview/webview) and [Qt](https://www.qt.io/).
+Built on [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks) / [Blockly](https://github.com/RaspberryPiFoundation/blockly), [arduino-cli](https://github.com/arduino/arduino-cli) and [webview](https://github.com/webview/webview).

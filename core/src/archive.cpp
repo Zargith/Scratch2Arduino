@@ -222,6 +222,11 @@ Result<Project> load(const std::filesystem::path& path) {
     if (in.bad()) {
         return Error{ErrorCode::ReadFailed, "cannot read " + path.u8string()};
     }
+    // A .s2a file is a zip archive ("PK"); a bare project.json (the examples) is read as is.
+    if (bytes.rfind("PK", 0) != 0 && bytes.find_first_not_of(" \t\r\n") != std::string::npos &&
+        bytes[bytes.find_first_not_of(" \t\r\n")] == '{') {
+        return fromJson(bytes);
+    }
     return fromArchive(bytes);
 }
 

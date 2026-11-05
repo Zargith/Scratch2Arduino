@@ -10,21 +10,22 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 1 — Core foundations | Done |
 | 2 — Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
 | 3a — Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
-| 3b — Variant B MVP (Qt native) | Done (block canvas, same `.s2a` files and generator; upload to be checked on real boards) |
-| 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted in both variants, compiler errors mapped to blocks |
-| 5 → 12 | Not started |
+| 3b — Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
+| 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted, compiler errors mapped to blocks |
+| 5 — Live mode and real-time debugging | In progress: firmware, protocol, interpreter, Live button in the editor (running scripts glow, variables panel); graph and serial monitor to come; to be checked on real boards |
+| 6 → 11 | Not started |
+| 12 — Variant comparison | Dropped (only the webview application is kept) |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.
 
 ## Architecture decisions
 
-- **Two variants, one core.** Two desktop applications are built side by side and open the same `.s2a` project files:
-  - **A — `apps/webview`**: native C++ host embedding a system webview (library `webview/webview`, CEF as optional fallback). The UI (`frontend/`) is built from `scratch-blocks` + the `tools-react-components` theme and bundled **offline** inside the app (no server, no browser).
-  - **B — `apps/native`**: pure C++ Qt 6 (Widgets/QML) application with a custom block canvas and Qt SerialPort.
-- **`core/` — `s2a_core` (C++17 static library)**, shared by both:
+- **One application: `apps/webview`** — native C++ host embedding a system webview (library `webview/webview`, CEF as optional fallback). The UI (`frontend/`) is built from `scratch-blocks` + the `tools-react-components` theme and bundled **offline** inside the app (no server, no browser).
+  - Decision of 2026-11-05: the Qt 6 native variant (B, `apps/native`, custom block canvas), built up to v0.3.0, is dropped to keep a single editor with the style of `tools-react-components`. Phases 3b and 12 are closed accordingly.
+- **`core/` — `s2a_core` (C++17 static library)**, holding all the logic (tested without a GUI):
   - project model and `.s2a` format (zip: `project.json` + assets + format version) → export / re-import;
-  - data-driven block catalog (`blocks/*.json`, fr/en labels) — converted to Blockly JSON for A, rendered by Qt for B;
+  - data-driven block catalog (`blocks/*.json`, fr/en labels) — converted to Blockly JSON for the editor;
   - validator run **only** on Build/Run, returning kid-friendly localized errors tied to block IDs (the editor never raises errors);
   - code generator (block tree → Arduino C++ `.ino`);
   - toolchain wrapper around a bundled `arduino-cli` (board detection, compile, upload, library install);
@@ -34,16 +35,16 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
 - **Text languages**: read-only view of generated C++ first, then Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS`) driving the board through the live protocol.
-- **Install**: Windows `installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs prerequisites and runs CMake configure/build/install; Linux/macOS `install.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
+- **Install**: Windows `installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `install.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
 ## Roadmap
 
-Each phase lists its **goal**, **deliverables** and **done when** criteria. Phases 3a and 3b can run in parallel once Phase 2 is done.
+Each phase lists its **goal**, **deliverables** and **done when** criteria.
 
 ### Phase 0 — Setup and tooling
 - **Goal**: an empty but buildable project on all three OS.
-- **Deliverables**: `git init` and the planned layout; top-level `CMakeLists.txt` with options `S2A_BUILD_WEBVIEW` / `S2A_BUILD_NATIVE`, `CMakePresets.json`; first `install.sh`, `Makefile` and `installer/windows` script; CI (GitHub Actions) on Windows, Linux, macOS; `.clang-format`, `.clang-tidy`, `.editorconfig`; license; CONTRIBUTING draft.
+- **Deliverables**: `git init` and the planned layout; top-level `CMakeLists.txt` with option `S2A_BUILD_WEBVIEW`, `CMakePresets.json`; first `install.sh`, `Makefile` and `installer/windows` script; CI (GitHub Actions) on Windows, Linux, macOS; `.clang-format`, `.clang-tidy`, `.editorconfig`; license; CONTRIBUTING draft.
 - **Done when**: CI builds a "hello window" for each variant on the three OS, and `./install.sh` / `make install` / `installer.exe` each install it.
 
 ### Phase 1 — Core foundations
@@ -61,7 +62,8 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria. Phas
 - **Deliverables**: webview host; `frontend/` (pnpm + Vite/webpack) embedding `scratch-blocks` with the `tools-react-components` theme; JS ↔ C++ bridge (project, build, serial); basic blocks (events, digital/analog write & read, wait, repeat/forever, if/else, variables, math, logic); save / open; board and port picker; Build and Upload buttons; code generator for these blocks.
 - **Done when**: a beginner builds Blink with blocks and uploads it; the project reopens identically.
 
-### Phase 3b — Variant B MVP (Qt native)
+### Phase 3b — Variant B MVP (Qt native) — dropped
+- **Dropped on 2026-11-05** (done in v0.3.0, then removed: only the webview application is kept).
 - **Goal**: same MVP in pure C++/Qt.
 - **Deliverables**: Qt window; block canvas (render, drag-and-drop, snapping, palette, zoom/scroll); same block catalog and code generator from `core/`; save / open the same `.s2a` files; Build and Upload.
 - **Done when**: a project created in A opens, edits and uploads in B, and the other way round.
@@ -106,7 +108,8 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria. Phas
 - **Deliverables**: final Windows `installer.exe` (prerequisite check/installation, CMake build & install, shortcuts, uninstaller, signed); final `install.sh` (dependency install via apt / dnf / pacman / brew) and `Makefile` (`make`, `make install`, `make uninstall`); macOS bundle; update check; release process and changelog; CONTRIBUTING, issue templates.
 - **Done when**: CI produces release artifacts for the three OS, installed and smoke-tested on clean machines.
 
-### Phase 12 — Variant comparison
+### Phase 12 — Variant comparison — dropped
+- **Dropped on 2026-11-05**: decision taken early, only the webview application is kept.
 - **Goal**: decide the long-term direction.
 - **Deliverables**: comparison of A and B once both finish Phase 6 — tests with children, performance, binary size, maintainability, contributor friendliness.
 - **Done when**: a written decision (keep both, or focus on one).
@@ -124,12 +127,11 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria. Phas
 
 ## Resources
 
-- [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks) (Blockly 12, TypeScript) — block editor for variant A.
-- `@epitech/tools-react-components` (React + Mantine, fr/en locales) — design system for variant A.
+- [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks) (Blockly 12, TypeScript) — block editor.
+- `@epitech/tools-react-components` (React + Mantine, fr/en locales) — design system.
 - [arduino-cli](https://github.com/arduino/arduino-cli) — compile, upload, board and library management.
 - [Firmata](https://github.com/firmata/protocol) — inspiration for the live protocol.
-- [webview/webview](https://github.com/webview/webview) — native webview for variant A; [CEF](https://bitbucket.org/chromiumembedded/cef) as fallback.
-- [Qt 6](https://www.qt.io/) — variant B UI and serial port.
+- [webview/webview](https://github.com/webview/webview) — native webview for the application; [CEF](https://bitbucket.org/chromiumembedded/cef) as fallback.
 - [pocketpy](https://github.com/pocketpy/pocketpy), [QuickJS](https://bellard.org/quickjs/) — embedded Python and JavaScript.
 - [GoogleTest](https://github.com/google/googletest) — C++ unit tests.
 - [Inno Setup](https://jrsoftware.org/isinfo.php) / [NSIS](https://nsis.sourceforge.io/) — Windows installer.

@@ -52,6 +52,27 @@ function normalized(project: Project): Project {
 }
 
 describe("project conversion", () => {
+	it("moves blocks below a forever loop to a script of their own", () => {
+		const project: Project = {
+			...(blink as Project),
+			scripts: [
+				{
+					x: 0,
+					y: 0,
+					blocks: [
+						{ id: "start", type: "events_when_program_starts" },
+						{ id: "loop", type: "control_forever" },
+						{ id: "after", type: "pins_builtin_led", fields: { STATE: "OFF" } },
+					],
+				},
+			],
+		};
+		const result = roundTrip(project);
+		expect(result.scripts).toHaveLength(2);
+		expect(result.scripts[0]?.blocks.map((block) => block.id)).toEqual(["start", "loop"]);
+		expect(result.scripts[1]?.blocks.map((block) => block.id)).toEqual(["after"]);
+	});
+
 	it.each([
 		["blink", blink],
 		["all-blocks", allBlocks],

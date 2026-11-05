@@ -63,8 +63,7 @@ std::string welcomePage(Language language, std::string_view message) {
     html += "</p><p>";
     html += escapeHtml(message);
     html += "</p><span class=\"badge\">";
-    html += escapeHtml(tr("app.variant.webview", language));
-    html += " · v";
+    html += "v";
     html += version::kString;
     html += "</span></main></body></html>";
     return html;
