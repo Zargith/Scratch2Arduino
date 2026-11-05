@@ -85,6 +85,7 @@ Result<std::unique_ptr<SerialPort>> SerialPort::open(const std::string& port, in
     timeouts.ReadIntervalTimeout = MAXDWORD; // ReadFile returns at once with what is there
     timeouts.WriteTotalTimeoutConstant = 1000;
     SetCommTimeouts(handle, &timeouts);
+    PurgeComm(handle, PURGE_RXCLEAR | PURGE_TXCLEAR); // nothing left over from a previous program
     auto data = std::make_unique<Handle>();
     data->handle = handle;
     data->name = port;
@@ -237,5 +238,69 @@ Result<std::optional<std::string>> SerialPort::readLine(std::chrono::millisecond
 #endif
 
 SerialPort::SerialPort(std::unique_ptr<Handle> handle) : handle_(std::move(handle)) {}
+
+Monitor::Monitor(std::unique_ptr<LineTransport> transport) : transport_(std::move(transport)) {
+    snapshot_.open = true;
+    thread_ = std::thread([this] { run(); });
+}
+
+Monitor::~Monitor() {
+    stopping_ = true;
+    if (thread_.joinable()) {
+        thread_.join();
+    }
+}
+
+Result<std::unique_ptr<Monitor>> Monitor::open(const std::string& port, int baud) {
+    auto opened = SerialPort::open(port, baud);
+    if (!opened.ok()) {
+        return opened.error();
+    }
+    return std::make_unique<Monitor>(std::move(opened).value());
+}
+
+void Monitor::send(std::string line) {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    outgoing_.push_back(std::move(line));
+}
+
+Monitor::Snapshot Monitor::snapshot() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    return snapshot_;
+}
+
+void Monitor::run() {
+    const auto fail = [this](Error error) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.open = false;
+        snapshot_.error = std::move(error);
+    };
+    while (!stopping_) {
+        std::deque<std::string> outgoing;
+        {
+            const std::lock_guard<std::mutex> lock(mutex_);
+            outgoing.swap(outgoing_);
+        }
+        for (const std::string& line : outgoing) {
+            if (const auto sent = transport_->writeLine(line); !sent.ok()) {
+                fail(sent.error());
+                return;
+            }
+        }
+        auto received = transport_->readLine(std::chrono::milliseconds(50));
+        if (!received.ok()) {
+            fail(received.error());
+            return;
+        }
+        if (auto line = std::move(received).value()) {
+            const std::lock_guard<std::mutex> lock(mutex_);
+            snapshot_.lines.push_back(std::move(*line));
+            ++snapshot_.count;
+            if (snapshot_.lines.size() > kMaxLines) {
+                snapshot_.lines.erase(snapshot_.lines.begin());
+            }
+        }
+    }
+}
 
 } // namespace s2a::serial

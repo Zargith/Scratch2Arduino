@@ -9,25 +9,90 @@
 //   P <pin> <0-255> PWM write (analogWrite)                              -> "ok"
 //   R <pin>         digital read                                         -> "r <pin> <0|1>"
 //   A <pin>         analog read                                          -> "a <pin> <0-1023>"
-//   X               every output LOW (Live mode stopped)                 -> "ok"
+//   T <pin> <hz> <ms> buzzer sound for <ms> milliseconds (0: until stopped),
+//                   a frequency of 0 stops it                            -> "ok"
+//   S <pin> <0-180> servo angle (the pin is attached to a servo)         -> "ok"
+//   U <trig> <echo> HC-SR04 ultrasonic distance in millimetres
+//                   (4000 when nothing answers)                          -> "u <trig> <mm>"
+//   X               every output LOW, no sound, servos released          -> "ok"
 //
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
 // "! <command>" so that the computer never waits forever.
 
+#include <Servo.h>
+
 const long kBaud = 115200;
-const char* const kHello = "S2A 1";
+const char* const kHello = "S2A 2";
 const int kMaxLine = 32;
 const int kMaxPins = 70;
+const int kMaxServos = 8;
 
 char line[kMaxLine + 1];
 int length = 0;
 bool output[kMaxPins];
+Servo servos[kMaxServos];
+int servoPins[kMaxServos];
+int tonePin = -1;
+
+// Gives the pin back to digitalWrite/analogWrite when a servo was using it.
+void releaseServo(int pin) {
+  for (int i = 0; i < kMaxServos; i++) {
+    if (servoPins[i] == pin) {
+      servos[i].detach();
+      servoPins[i] = -1;
+    }
+  }
+}
+
+bool writeServo(int pin, int angle) {
+  int free = -1;
+  for (int i = 0; i < kMaxServos; i++) {
+    if (servoPins[i] == pin) {
+      servos[i].write(angle);
+      return true;
+    }
+    if (servoPins[i] < 0 && free < 0) {
+      free = i;
+    }
+  }
+  if (free < 0) {
+    return false;
+  }
+  servoPins[free] = pin;
+  output[pin] = false;
+  servos[free].attach(pin);
+  servos[free].write(angle);
+  return true;
+}
+
+void stopTone() {
+  if (tonePin >= 0) {
+    noTone(tonePin);
+    tonePin = -1;
+  }
+}
+
+long distanceMillimetres(int trig, int echo) {
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+  output[trig] = true;
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  const unsigned long duration = pulseIn(echo, HIGH, 25000UL);
+  if (duration == 0) {
+    return 4000;
+  }
+  return min((long)(duration * 10UL / 58UL), 4000L);
+}
 
 void reply(const char* text) {
   Serial.println(text);
 }
 
-void reply(char kind, int pin, int value) {
+void reply(char kind, int pin, long value) {
   Serial.print(kind);
   Serial.print(' ');
   Serial.print(pin);
@@ -70,6 +135,12 @@ void execute(const char* command) {
     reply(kHello);
     return;
   case 'X':
+    stopTone();
+    for (int i = 0; i < kMaxServos; i++) {
+      if (servoPins[i] >= 0) {
+        releaseServo(servoPins[i]);
+      }
+    }
     for (int i = 0; i < kMaxPins && i < NUM_DIGITAL_PINS; i++) {
       if (output[i]) {
         digitalWrite(i, LOW);
@@ -84,6 +155,10 @@ void execute(const char* command) {
       }
       const char mode = command[position];
       if (mode == 'O' || mode == 'I' || mode == 'U') {
+        releaseServo(pin);
+        if (pin == tonePin) {
+          stopTone();
+        }
         pinMode(pin, mode == 'O' ? OUTPUT : (mode == 'U' ? INPUT_PULLUP : INPUT));
         output[pin] = mode == 'O';
         reply("ok");
@@ -105,6 +180,47 @@ void execute(const char* command) {
       return;
     }
     break;
+  case 'T': {
+    long duration = 0;
+    if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &value) &&
+        readNumber(command, &position, &duration)) {
+      if (tonePin >= 0 && tonePin != pin) {
+        stopTone(); // one sound at a time
+      }
+      if (value <= 0) {
+        noTone(pin);
+        tonePin = -1;
+      } else {
+        releaseServo(pin);
+        output[pin] = true;
+        tonePin = pin;
+        if (duration > 0) {
+          tone(pin, (unsigned int)constrain(value, 31L, 65535L), (unsigned long)duration);
+        } else {
+          tone(pin, (unsigned int)constrain(value, 31L, 65535L));
+        }
+      }
+      reply("ok");
+      return;
+    }
+    break;
+  }
+  case 'S':
+    if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &value) &&
+        writeServo(pin, constrain(value, 0, 180))) {
+      reply("ok");
+      return;
+    }
+    break;
+  case 'U': {
+    long echo = 0;
+    if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &echo) &&
+        validPin(echo)) {
+      reply('u', pin, distanceMillimetres(pin, echo));
+      return;
+    }
+    break;
+  }
   case 'R':
     if (readNumber(command, &position, &pin) && validPin(pin)) {
       reply('r', pin, digitalRead(pin) == HIGH ? 1 : 0);
@@ -126,6 +242,9 @@ void setup() {
   Serial.begin(kBaud);
   for (int i = 0; i < kMaxPins; i++) {
     output[i] = false;
+  }
+  for (int i = 0; i < kMaxServos; i++) {
+    servoPins[i] = -1;
   }
   reply(kHello);
 }

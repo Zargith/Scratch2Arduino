@@ -1,13 +1,16 @@
 #include "s2a/live.hpp"
 
+#include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/resources.hpp"
 #include "s2a/validator.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <locale>
 #include <sstream>
 
@@ -71,30 +74,71 @@ const Block* findIn(const Stack& stack, const std::string& id) {
     return nullptr;
 }
 
+/// Value printed like the board does it (s2a_print): integers without decimals, else 2 decimals.
+std::string formatValue(double value) {
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());
+    if (value == std::floor(value) && std::fabs(value) < 2e9) {
+        stream << static_cast<long long>(value);
+    } else {
+        stream << std::fixed << std::setprecision(2) << value;
+    }
+    return stream.str();
+}
+
 } // namespace
 
 // --- LiveLink ----------------------------------------------------------------------------
 
 Status LiveLink::handshake(milliseconds timeout) {
+    // A greeting proves that the firmware runs, but it may be an old one still waiting in the
+    // port (sent before an upload ended, for example) while the board restarts: opening the
+    // port resets most boards, and their bootloader swallows what is sent during the next
+    // second or two. So the board must also answer a "?" before the blocks start.
     const auto deadline = std::chrono::steady_clock::now() + timeout;
-    bool asked = false;
+    auto lastAsk = std::chrono::steady_clock::time_point::min();
     while (std::chrono::steady_clock::now() < deadline) {
         auto line = transport_.readLine(milliseconds(300));
         if (!line.ok()) {
             return line.error();
         }
         if (line.value() && *line.value() == kHello) {
-            return success();
+            auto confirmed = confirm();
+            if (!confirmed.ok()) {
+                return confirmed.error();
+            }
+            if (confirmed.value()) {
+                return success();
+            }
+            lastAsk = std::chrono::steady_clock::now();
+            continue; // restarting: its own greeting will come
         }
-        if (!line.value() && !asked) {
-            // No greeting yet (the board was not reset by opening the port): ask for it.
-            asked = true;
+        if (!line.value() && std::chrono::steady_clock::now() - lastAsk >= milliseconds(1000)) {
+            // Silent board: it did not restart, or the bootloader swallowed the last "?".
             if (auto sent = transport_.writeLine("?"); !sent.ok()) {
                 return sent.error();
             }
+            lastAsk = std::chrono::steady_clock::now();
         }
     }
     return Error{ErrorCode::BoardNotResponding, "no S2A live greeting"};
+}
+
+Result<bool> LiveLink::confirm() {
+    if (auto sent = transport_.writeLine("?"); !sent.ok()) {
+        return sent.error();
+    }
+    const auto deadline = std::chrono::steady_clock::now() + milliseconds(500);
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto line = transport_.readLine(milliseconds(100));
+        if (!line.ok()) {
+            return line.error();
+        }
+        if (line.value() && *line.value() == kHello) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::optional<std::string> LiveLink::request(const std::string& command) {
@@ -148,6 +192,26 @@ int LiveLink::analogRead(int pin) {
     const auto space = reply->find_last_of(' ');
     const auto value = parseNumber(space == std::string::npos ? *reply : reply->substr(space + 1));
     return value ? static_cast<int>(*value) : 0;
+}
+
+void LiveLink::tone(int pin, int frequency, int milliseconds) {
+    (void)request("T " + std::to_string(pin) + " " + std::to_string(std::clamp(frequency, 0, 65535)) + " " +
+                  std::to_string(std::max(milliseconds, 0)));
+}
+
+void LiveLink::servoWrite(int pin, int angle) {
+    (void)request("S " + std::to_string(pin) + " " + std::to_string(std::clamp(angle, 0, 180)));
+}
+
+double LiveLink::distance(int trigPin, int echoPin) {
+    // The firmware answers in millimetres: "u <trig> <mm>".
+    const auto reply = request("U " + std::to_string(trigPin) + " " + std::to_string(echoPin));
+    if (!reply) {
+        return 400;
+    }
+    const auto space = reply->find_last_of(' ');
+    const auto value = parseNumber(space == std::string::npos ? *reply : reply->substr(space + 1));
+    return value ? std::clamp(*value / 10.0, 0.0, 400.0) : 400;
 }
 
 void LiveLink::reset() {
@@ -218,6 +282,17 @@ std::string Interpreter::field(const Block& block, const std::string& name) cons
     return arg != nullptr ? arg->defaultValue : std::string{};
 }
 
+void Interpreter::record(int pin, double value) {
+    const Pin* found = board_.findPin(pin);
+    readings_[found != nullptr ? found->label : std::to_string(pin)] = value;
+}
+
+std::vector<std::string> Interpreter::takeOutput() {
+    std::vector<std::string> lines;
+    lines.swap(output_);
+    return lines;
+}
+
 int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) {
     const Pin* found = board_.findPin(field(block, name));
     if (found == nullptr) {
@@ -231,6 +306,11 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
         modes_[found->number] = mode;
     }
     return found->number;
+}
+
+int Interpreter::pinNumber(const Block& block, const std::string& name) const {
+    const Pin* found = board_.findPin(field(block, name));
+    return found != nullptr ? found->number : -1;
 }
 
 double Interpreter::number(const Block& block, const std::string& name) {
@@ -304,12 +384,54 @@ double Interpreter::evaluate(const Block& block) {
     }
     if (type == "pins_digital_read") {
         const int number = pin(block, "PIN", PinMode::Input);
-        const bool wanted = field(block, "STATE") != "LOW";
-        return number >= 0 && pins_.digitalRead(number) == wanted ? 1 : 0;
+        if (number < 0) {
+            return 0;
+        }
+        const bool high = pins_.digitalRead(number);
+        record(number, high ? 1 : 0);
+        return high == (field(block, "STATE") != "LOW") ? 1 : 0;
     }
     if (type == "pins_analog_read") {
         const int number = pin(block, "PIN", PinMode::Input);
-        return number >= 0 ? pins_.analogRead(number) : 0;
+        if (number < 0) {
+            return 0;
+        }
+        const int value = pins_.analogRead(number);
+        record(number, value);
+        return value;
+    }
+    if (type == "sensors_button_pressed") {
+        const int number = pin(block, "PIN", PinMode::InputPullup);
+        if (number < 0) {
+            return 0;
+        }
+        const bool pressed = !pins_.digitalRead(number); // wired to GND: LOW when pressed
+        record(number, pressed ? 1 : 0);
+        return pressed ? 1 : 0;
+    }
+    if (type == "sensors_potentiometer" || type == "sensors_light") {
+        const int number = pin(block, "PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const double percent = pins_.analogRead(number) * 100.0 / 1023.0;
+        record(number, percent);
+        return percent;
+    }
+    if (type == "sensors_distance") {
+        const int trig = pinNumber(block, "TRIG_PIN");
+        const int echo = pinNumber(block, "ECHO_PIN");
+        if (trig < 0 || echo < 0) {
+            return 400;
+        }
+        modes_[trig] = PinMode::Output; // the firmware sets both pins itself
+        modes_[echo] = PinMode::Input;
+        const double centimetres = pins_.distance(trig, echo);
+        record(echo, centimetres);
+        return centimetres;
+    }
+    if (type == "sound_note") {
+        return parseNumber(field(block, "NOTE")).value_or(0);
     }
     if (type == "variables_get") {
         const auto found = variables_.find(field(block, "VARIABLE"));
@@ -366,6 +488,13 @@ void Interpreter::run(Thread& thread, Clock now) {
                 pins_.setMode(target->number, mode); // always: the block may remove the pull-up
                 modes_[target->number] = mode;
             }
+        } else if (type == "serial_print") {
+            const auto input = block.inputs.find("VALUE");
+            if (input != block.inputs.end() && input->second.block) {
+                output_.push_back(formatValue(evaluate(*input->second.block)));
+            } else {
+                output_.push_back(input != block.inputs.end() ? input->second.value : field(block, "VALUE"));
+            }
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
@@ -375,6 +504,59 @@ void Interpreter::run(Thread& thread, Clock now) {
             const double seconds = number(block, "SECONDS");
             thread.wakeAt = now + milliseconds(static_cast<long long>(std::max(0.0, seconds) * 1000));
             return;
+        } else if (type == "lights_rgb_color" || type == "lights_rgb_mix") {
+            std::array<int, 3> levels = codegen::colourLevels(field(block, "COLOR"));
+            if (type == "lights_rgb_mix") {
+                const char* const names[] = {"RED", "GREEN", "BLUE"};
+                for (std::size_t i = 0; i < levels.size(); ++i) {
+                    levels[i] = static_cast<int>(std::clamp(number(block, names[i]), 0.0, 255.0));
+                }
+            }
+            const char* const pins[] = {"RED_PIN", "GREEN_PIN", "BLUE_PIN"};
+            for (std::size_t i = 0; i < levels.size(); ++i) {
+                if (const int number = pin(block, pins[i], PinMode::Output); number >= 0) {
+                    pins_.analogWrite(number, levels[i]);
+                }
+            }
+        } else if (type == "sound_play_tone" || type == "sound_start_tone") {
+            const double frequency = number(block, "FREQUENCY");
+            const double seconds = type == "sound_play_tone" ? std::max(0.0, number(block, "SECONDS")) : 0;
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                modes_[number] = PinMode::Output; // tone() sets the pin
+                const int hertz = frequency < 31 ? 0 : static_cast<int>(std::min(frequency, 65535.0));
+                const auto duration = static_cast<int>(std::min(seconds * 1000, 3600000.0));
+                if (type == "sound_play_tone" && duration == 0) {
+                    pins_.tone(number, 0, 0);
+                } else {
+                    pins_.tone(number, hertz, duration); // the board stops the sound itself
+                }
+            }
+            if (type == "sound_play_tone") {
+                thread.wakeAt = now + milliseconds(static_cast<long long>(seconds * 1000));
+                return;
+            }
+        } else if (type == "sound_stop") {
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                pins_.tone(number, 0, 0);
+            }
+        } else if (type == "motors_servo_write") {
+            const double angle = number(block, "ANGLE");
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                modes_.erase(number); // the servo owns the pin now
+                pins_.servoWrite(number, static_cast<int>(std::clamp(angle, 0.0, 180.0)));
+            }
+        } else if (type == "motors_dc_run" || type == "motors_dc_stop") {
+            const bool run = type == "motors_dc_run";
+            const double speed = run ? std::clamp(number(block, "SPEED"), 0.0, 100.0) : 0;
+            const bool backward = field(block, "DIRECTION") == "BACKWARD";
+            const int en = pin(block, "EN_PIN", PinMode::Output);
+            const int in1 = pin(block, "IN1_PIN", PinMode::Output);
+            const int in2 = pin(block, "IN2_PIN", PinMode::Output);
+            if (en >= 0 && in1 >= 0 && in2 >= 0) {
+                pins_.digitalWrite(in1, run && !backward);
+                pins_.digitalWrite(in2, run && backward);
+                pins_.analogWrite(en, static_cast<int>(speed * 2.55));
+            }
         } else if (type == "control_wait_until") {
             if (!condition(block, "CONDITION")) {
                 --thread.frames.back().index; // check again at the next step
@@ -538,7 +720,8 @@ void Session::run(project::Project project) {
         return;
     }
     std::unique_ptr<serial::LineTransport> connection = std::move(transport).value();
-    if (!LiveLink(*connection).handshake().ok()) {
+    // No firmware yet answers within a few seconds: the reset by the port lasts 1 to 2 s.
+    if (!LiveLink(*connection).handshake(milliseconds(3500)).ok()) {
         if (stopping_) {
             set(State::Stopped, tr("live.stopped", language_));
             return;
@@ -587,6 +770,15 @@ void Session::run(project::Project project) {
             const std::lock_guard<std::mutex> lock(mutex_);
             snapshot_.runningBlocks = interpreter->runningBlocks();
             snapshot_.variables = interpreter->variables();
+            snapshot_.readings = interpreter->readings();
+            for (std::string& line : interpreter->takeOutput()) {
+                snapshot_.output.push_back(std::move(line));
+                ++snapshot_.outputCount;
+            }
+            if (snapshot_.output.size() > kOutputLines) {
+                snapshot_.output.erase(snapshot_.output.begin(),
+                                       snapshot_.output.end() - static_cast<std::ptrdiff_t>(kOutputLines));
+            }
         }
         if (interpreter->finished()) {
             // Finished, but still connected: an edit can start the blocks again.
@@ -659,6 +851,19 @@ Status uploadFirmware(const toolchain::ArduinoCli& cli, const Board& board, cons
     if (auto installed = cli.isPlatformInstalled(board.platform); installed.ok() && !installed.value()) {
         if (auto outcome = cli.installPlatform(board.platform); !outcome.ok()) {
             return outcome.error();
+        }
+    }
+    if (auto missing = toolchain::missingLibraries(cli, toolchain::requiredLibraries(firmwareSource())); !missing.ok()) {
+        return missing.error();
+    } else if (!missing.value().empty()) {
+        auto outcome = cli.installLibraries(missing.value());
+        if (!outcome.ok()) {
+            return outcome.error();
+        }
+        if (const auto diagnosis = toolchain::diagnoseInstall(outcome.value());
+            diagnosis.problem != toolchain::Problem::None) {
+            details = diagnosis.technical;
+            return Error{ErrorCode::ProcessFailed, "the libraries of the live firmware cannot be installed"};
         }
     }
     const std::filesystem::path build = workDirectory / "build" / ("s2a_live-" + board.id);

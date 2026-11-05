@@ -36,6 +36,21 @@ export interface LiveSnapshot {
 	running?: string[];
 	problems?: string[];
 	variables?: Record<string, number>;
+	/** Sensor values read by the blocks, by pin label ("A0", "2"). */
+	readings?: Record<string, number>;
+	/** Last lines written by "write to the serial monitor"... */
+	output?: string[];
+	/** ...out of this many since Live mode started. */
+	outputCount?: number;
+}
+
+export interface MonitorState {
+	open: boolean;
+	lines?: string[];
+	count?: number;
+	/** Why the connection stopped (board unplugged...), for the user. */
+	message?: string;
+	details?: string;
 }
 
 export interface OpenedProject {
@@ -59,6 +74,10 @@ interface HostFunctions {
 	s2a_live_update(project: Project): Promise<void>;
 	s2a_live_stop(): Promise<void>;
 	s2a_live_state(): Promise<LiveSnapshot>;
+	s2a_monitor_open(port: string, baud: number, language: Language): Promise<{ ok: boolean; message?: string; details?: string }>;
+	s2a_monitor_send(line: string): Promise<void>;
+	s2a_monitor_close(): Promise<void>;
+	s2a_monitor_state(): Promise<MonitorState>;
 }
 
 declare global {
@@ -93,4 +112,8 @@ export const bridge = {
 	liveUpdate: (project: Project) => host("s2a_live_update")(project),
 	liveStop: () => host("s2a_live_stop")(),
 	liveState: () => host("s2a_live_state")(),
+	monitorOpen: (port: string, baud: number, language: Language) => host("s2a_monitor_open")(port, baud, language),
+	monitorSend: (line: string) => host("s2a_monitor_send")(line),
+	monitorClose: () => host("s2a_monitor_close")(),
+	monitorState: () => host("s2a_monitor_state")(),
 };

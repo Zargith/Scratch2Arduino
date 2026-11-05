@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(Scratch2Arduino
-    VERSION 0.5.0
+    VERSION 0.6.0
     DESCRIPTION "Program Arduino boards with Scratch-style blocks"
     HOMEPAGE_URL "https://github.com/Zargith/Scratch2Arduino"
     LANGUAGES C CXX)

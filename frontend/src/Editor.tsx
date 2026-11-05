@@ -29,6 +29,8 @@ interface EditorProps {
 	/** State restored when the editor is created (language switch, project opened). */
 	initialState: WorkspaceState;
 	onChange(): void;
+	/** Some scripts could not be shown (the others are). */
+	onLoadError?(lostScripts: number): void;
 }
 
 interface PromptRequest {
@@ -38,13 +40,15 @@ interface PromptRequest {
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-	{ language, board, initialState, onChange },
+	{ language, board, initialState, onChange, onLoadError },
 	ref
 ) {
 	const container = useRef<HTMLDivElement>(null);
 	const workspace = useRef<Blockly.WorkspaceSvg | null>(null);
 	const onChangeRef = useRef(onChange);
 	onChangeRef.current = onChange;
+	const onLoadErrorRef = useRef(onLoadError);
+	onLoadErrorRef.current = onLoadError;
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
 	const glowing = useRef<Set<string>>(new Set());
 
@@ -104,9 +108,27 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		try {
 			Blockly.serialization.workspaces.load(initialState as WorkspaceLoadState, created);
 		} catch (error) {
-			// A project the editor cannot show must not take the whole window down.
+			// A project the editor cannot show must not take the whole window down: show what can
+			// be shown, script by script, and tell how many scripts are missing.
 			console.error("cannot load the project into the editor", error);
 			created.clear();
+			let lost = 0;
+			try {
+				Blockly.serialization.workspaces.load(
+					{ ...initialState, blocks: { languageVersion: 0, blocks: [] } } as WorkspaceLoadState,
+					created
+				);
+			} catch {
+				created.clear();
+			}
+			for (const top of initialState.blocks?.blocks ?? []) {
+				try {
+					Blockly.serialization.blocks.append(top as Parameters<typeof Blockly.serialization.blocks.append>[0], created);
+				} catch {
+					lost += 1;
+				}
+			}
+			onLoadErrorRef.current?.(Math.max(lost, 1));
 		} finally {
 			Blockly.Events.enable();
 		}

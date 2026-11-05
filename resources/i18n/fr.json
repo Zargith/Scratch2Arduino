@@ -46,6 +46,7 @@
     "unknown_board_short": "carte inconnue",
     "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
     "installing_platform": "Installation des outils pour {board} (une seule fois, cela peut prendre quelques minutes)…",
+    "installing_libraries": "Installation des bibliothèques {libraries} (une seule fois)…",
     "sketch_missing": "Le dossier « {sketch} » ne contient pas de programme Arduino (un fichier .ino du même nom que le dossier).",
     "compiling": "Compilation de « {sketch} » pour {board}…",
     "compiled": "Compilation réussie : le programme occupe {text} octets sur {text_max} ({text_percent} %), les variables {data} octets sur {data_max}.",

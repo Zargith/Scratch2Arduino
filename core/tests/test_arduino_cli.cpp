@@ -250,4 +250,31 @@ TEST(BundledArduinoCli, ReportsItsVersion) {
 }
 #endif
 
+TEST(ArduinoCli, ListsAndInstallsLibraries) {
+    FakeRunner fake;
+    fake.replies = {reply(R"({"installed_libraries":[{"library":{"name":"Servo","version":"1.3.0"}}]})"),
+                    reply(R"({"installed_libraries":[]})"), reply("{}"), reply("{}")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto installed = cli.installedLibraries();
+    ASSERT_TRUE(installed.ok());
+    EXPECT_EQ(installed.value(), std::vector<std::string>{"Servo"});
+    const auto missing = s2a::toolchain::missingLibraries(cli, {"Servo"});
+    ASSERT_TRUE(missing.ok());
+    EXPECT_EQ(missing.value(), std::vector<std::string>{"Servo"});
+    const auto outcome = cli.installLibraries(missing.value());
+    ASSERT_TRUE(outcome.ok());
+    EXPECT_TRUE(outcome.value().success);
+    ASSERT_EQ(fake.commands.size(), 4U);
+    EXPECT_EQ(fake.commands[2].args.at(1), "update-index");
+    EXPECT_EQ(fake.commands[3].args.at(2), "Servo");
+}
+
+TEST(ArduinoCli, FindsTheLibrariesASketchNeeds) {
+    using s2a::toolchain::requiredLibraries;
+    EXPECT_TRUE(requiredLibraries("void setup() {}\n").empty());
+    EXPECT_EQ(requiredLibraries("#include <Servo.h>\n#include \"Servo.h\"\n#include <Wire.h>\n"),
+              std::vector<std::string>{"Servo"});
+    EXPECT_TRUE(requiredLibraries("// #include <Servo2.h>").empty());
+}
+
 } // namespace

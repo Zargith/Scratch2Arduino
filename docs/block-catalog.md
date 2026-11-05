@@ -45,4 +45,10 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
 
 1. Add it to the right `blocks/catalog/<category>.json` (or create a category file with a new `order`).
 2. Run the tests: `cmake --preset core-only && cmake --build --preset core-only && ctest --preset core-only`.
-3. Code generation and live-mode support come with the block in later phases (see the [roadmap](roadmap.md)).
+3. Generate its Arduino code in `core/src/codegen.cpp` and run it in Live mode in `core/src/live.cpp`
+   (`Interpreter`); when Live mode needs a new board command, add it to the firmware
+   (`firmware/s2a_live`) and to `LiveLink`, and change `kHello` so that older firmware is uploaded again.
+4. When the generated code includes an Arduino library, add its header to `requiredLibraries`
+   (`core/src/arduino_cli.cpp`): it is then installed automatically before compiling.
+5. Use it in `examples/projects/all-blocks` (compiled for every board in CI, and round-tripped by the
+   editor tests).

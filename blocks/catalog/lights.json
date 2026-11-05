@@ -1,0 +1,57 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "lights",
+    "colour": "#E6A100",
+    "name": { "fr": "Lumières", "en": "Lights" },
+    "order": 32
+  },
+  "blocks": [
+    {
+      "type": "lights_rgb_color",
+      "shape": "statement",
+      "message": { "fr": "mettre la LED RGB (R %1, V %2, B %3) en %4", "en": "set the RGB LED (R %1, G %2, B %3) to %4" },
+      "tooltip": {
+        "fr": "Allume une LED RGB d'une couleur. Branche ses pattes rouge (R), verte (V) et bleue (B) sur trois broches PWM (~), chacune avec une résistance, et la patte la plus longue sur GND.",
+        "en": "Lights an RGB LED in a colour. Wire its red (R), green (G) and blue (B) legs to three PWM pins (~), each through a resistor, and the longest leg to GND."
+      },
+      "args": [
+        { "name": "RED_PIN", "kind": "pin", "capability": "pwm", "default": "9" },
+        { "name": "GREEN_PIN", "kind": "pin", "capability": "pwm", "default": "10" },
+        { "name": "BLUE_PIN", "kind": "pin", "capability": "pwm", "default": "11" },
+        {
+          "name": "COLOR",
+          "kind": "dropdown",
+          "default": "RED",
+          "options": [
+            { "value": "RED", "label": { "fr": "rouge", "en": "red" } },
+            { "value": "GREEN", "label": { "fr": "vert", "en": "green" } },
+            { "value": "BLUE", "label": { "fr": "bleu", "en": "blue" } },
+            { "value": "YELLOW", "label": { "fr": "jaune", "en": "yellow" } },
+            { "value": "CYAN", "label": { "fr": "cyan", "en": "cyan" } },
+            { "value": "MAGENTA", "label": { "fr": "magenta", "en": "magenta" } },
+            { "value": "WHITE", "label": { "fr": "blanc", "en": "white" } },
+            { "value": "OFF", "label": { "fr": "éteint", "en": "off" } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "lights_rgb_mix",
+      "shape": "statement",
+      "message": { "fr": "mettre la LED RGB (R %1, V %2, B %3) à rouge %4 vert %5 bleu %6", "en": "set the RGB LED (R %1, G %2, B %3) to red %4 green %5 blue %6" },
+      "tooltip": {
+        "fr": "Mélange les trois couleurs de la LED RGB : chaque valeur va de 0 (éteint) à 255 (à fond). Par exemple rouge 255, vert 128, bleu 0 donne de l'orange.",
+        "en": "Mixes the three colours of the RGB LED: each value goes from 0 (off) to 255 (full). For example red 255, green 128, blue 0 makes orange."
+      },
+      "args": [
+        { "name": "RED_PIN", "kind": "pin", "capability": "pwm", "default": "9" },
+        { "name": "GREEN_PIN", "kind": "pin", "capability": "pwm", "default": "10" },
+        { "name": "BLUE_PIN", "kind": "pin", "capability": "pwm", "default": "11" },
+        { "name": "RED", "kind": "number", "default": 255, "min": 0, "max": 255 },
+        { "name": "GREEN", "kind": "number", "default": 128, "min": 0, "max": 255 },
+        { "name": "BLUE", "kind": "number", "default": 0, "min": 0, "max": 255 }
+      ]
+    }
+  ]
+}

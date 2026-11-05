@@ -4,8 +4,10 @@
 #include "s2a/boards.hpp"
 #include "s2a/project.hpp"
 
+#include <array>
 #include <map>
 #include <string>
+#include <string_view>
 
 /// Turns a block project into an Arduino sketch (.ino).
 ///
@@ -30,6 +32,16 @@ struct Sketch {
 
 /// Same, with the built-in catalog and the project's board from the built-in database.
 [[nodiscard]] Sketch generate(const project::Project& project);
+
+/// Speed of the serial monitor used by the "write to the serial monitor" block.
+inline constexpr int kSerialBaud = 9600;
+
+/// Red, green and blue levels (0-255) of a colour of the RGB LED menu ("RED"...); off when unknown.
+[[nodiscard]] std::array<int, 3> colourLevels(std::string_view name);
+
+/// Text typed in a slot as a C++ string literal (quotes and backslashes escaped, control
+/// characters except tab and newline dropped).
+[[nodiscard]] std::string stringLiteral(std::string_view text);
 
 /// Number typed in a slot ("1,5", " 3 ", "abc") as C++ source; "0" when invalid.
 [[nodiscard]] std::string numberLiteral(const std::string& text);

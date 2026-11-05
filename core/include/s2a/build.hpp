@@ -14,7 +14,8 @@
 namespace s2a::toolchain {
 
 enum class BuildStep {
-    InstallingTools, ///< First build for a board family: downloading its core.
+    InstallingTools,     ///< First build for a board family: downloading its core.
+    InstallingLibraries, ///< First build using a component library (Servo...): downloading it.
     Compiling,
     Uploading,
 };

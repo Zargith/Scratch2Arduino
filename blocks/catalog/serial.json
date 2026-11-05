@@ -1,0 +1,18 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "serial",
+    "colour": "#5CB1D6",
+    "name": { "fr": "Moniteur série", "en": "Serial monitor" },
+    "order": 35
+  },
+  "blocks": [
+    {
+      "type": "serial_print",
+      "shape": "statement",
+      "message": { "fr": "écrire %1 sur le moniteur série", "en": "write %1 to the serial monitor" },
+      "tooltip": { "fr": "Envoie un texte ou une valeur à l'ordinateur : ouvre le moniteur série pour le lire. Pratique pour voir ce que mesure un capteur.", "en": "Sends a text or a value to the computer: open the serial monitor to read it. Handy to see what a sensor measures." },
+      "args": [{ "name": "VALUE", "kind": "text", "default": "Bonjour !" }]
+    }
+  ]
+}

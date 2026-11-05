@@ -81,6 +81,12 @@ public:
     /// Downloads and installs a platform (needs the internet, once per platform).
     [[nodiscard]] Result<CommandOutcome> installPlatform(std::string_view platform) const;
 
+    /// Names of the Arduino libraries installed in the private folder ("Servo"...).
+    [[nodiscard]] Result<std::vector<std::string>> installedLibraries() const;
+
+    /// Downloads and installs libraries by name (needs the internet, once per library).
+    [[nodiscard]] Result<CommandOutcome> installLibraries(const std::vector<std::string>& names) const;
+
     /// Serial ports, with the matching board of `boards` when it can be recognised.
     [[nodiscard]] Result<std::vector<DetectedPort>> detectPorts(const BoardDatabase& boards = BoardDatabase::builtin()) const;
 
@@ -100,5 +106,12 @@ private:
     Directories directories_;
     process::Runner runner_;
 };
+
+/// Arduino libraries (registry names) a sketch includes, for the libraries Scratch2Arduino
+/// knows how to install ("#include <Servo.h>" -> "Servo"). Sorted, without duplicates.
+[[nodiscard]] std::vector<std::string> requiredLibraries(std::string_view source);
+
+/// The libraries of `required` that are not installed yet.
+[[nodiscard]] Result<std::vector<std::string>> missingLibraries(const ArduinoCli& cli, const std::vector<std::string>& required);
 
 } // namespace s2a::toolchain

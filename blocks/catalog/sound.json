@@ -1,0 +1,71 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "sound",
+    "colour": "#CF63CF",
+    "name": { "fr": "Son", "en": "Sound" },
+    "order": 33
+  },
+  "blocks": [
+    {
+      "type": "sound_play_tone",
+      "shape": "statement",
+      "message": { "fr": "jouer %2 Hz pendant %3 secondes sur le buzzer de la broche %1", "en": "play %2 Hz for %3 seconds on the buzzer of pin %1" },
+      "tooltip": {
+        "fr": "Fait sonner un buzzer, puis attend la fin du son avant de passer au bloc suivant. Plus le nombre de Hz est grand, plus le son est aigu (440 Hz est le la de la musique).",
+        "en": "Plays a sound on a buzzer and waits until it ends before the next block. The more Hz, the higher the sound (440 Hz is the musical A)."
+      },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" },
+        { "name": "FREQUENCY", "kind": "number", "default": 440, "min": 31, "max": 20000 },
+        { "name": "SECONDS", "kind": "number", "default": 0.5, "min": 0 }
+      ]
+    },
+    {
+      "type": "sound_start_tone",
+      "shape": "statement",
+      "message": { "fr": "faire sonner le buzzer de la broche %1 à %2 Hz", "en": "start the buzzer of pin %1 at %2 Hz" },
+      "tooltip": {
+        "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise « arrêter le buzzer » pour le faire taire. Un seul buzzer peut sonner à la fois.",
+        "en": "The buzzer keeps sounding and the program goes on at once. Use \"stop the buzzer\" to silence it. Only one buzzer can sound at a time."
+      },
+      "args": [
+        { "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" },
+        { "name": "FREQUENCY", "kind": "number", "default": 440, "min": 31, "max": 20000 }
+      ]
+    },
+    {
+      "type": "sound_stop",
+      "shape": "statement",
+      "message": { "fr": "arrêter le buzzer de la broche %1", "en": "stop the buzzer of pin %1" },
+      "tooltip": { "fr": "Fait taire le buzzer.", "en": "Silences the buzzer." },
+      "args": [{ "name": "PIN", "kind": "pin", "capability": "digital", "default": "8" }]
+    },
+    {
+      "type": "sound_note",
+      "shape": "reporter",
+      "message": { "fr": "note %1", "en": "note %1" },
+      "tooltip": {
+        "fr": "Le nombre de Hz d'une note de musique, à glisser dans un bloc du buzzer.",
+        "en": "The number of Hz of a musical note, to drop into a buzzer block."
+      },
+      "args": [
+        {
+          "name": "NOTE",
+          "kind": "dropdown",
+          "default": "262",
+          "options": [
+            { "value": "262", "label": { "fr": "do", "en": "C" } },
+            { "value": "294", "label": { "fr": "ré", "en": "D" } },
+            { "value": "330", "label": { "fr": "mi", "en": "E" } },
+            { "value": "349", "label": { "fr": "fa", "en": "F" } },
+            { "value": "392", "label": { "fr": "sol", "en": "G" } },
+            { "value": "440", "label": { "fr": "la", "en": "A" } },
+            { "value": "494", "label": { "fr": "si", "en": "B" } },
+            { "value": "523", "label": { "fr": "do aigu", "en": "high C" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

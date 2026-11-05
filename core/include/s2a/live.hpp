@@ -26,7 +26,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 1";
+inline constexpr std::string_view kHello = "S2A 2"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -45,7 +45,13 @@ public:
     virtual void analogWrite(int pin, int value) = 0;
     [[nodiscard]] virtual bool digitalRead(int pin) = 0;
     [[nodiscard]] virtual int analogRead(int pin) = 0;
-    /// Every output low (Live mode stopped).
+    /// Sound on a buzzer for `milliseconds` (0: until stopped); a frequency of 0 stops it.
+    virtual void tone(int pin, int frequency, int milliseconds) = 0;
+    /// Angle (0-180) of a servo.
+    virtual void servoWrite(int pin, int angle) = 0;
+    /// Distance in centimetres measured by an HC-SR04 ultrasonic sensor (400 when nothing answers).
+    [[nodiscard]] virtual double distance(int trigPin, int echoPin) = 0;
+    /// Every output low, no sound, servos released (Live mode stopped).
     virtual void reset() = 0;
 };
 
@@ -54,20 +60,25 @@ class LiveLink final : public Pins {
 public:
     explicit LiveLink(serial::LineTransport& transport) : transport_(transport) {}
 
-    /// Waits for the firmware greeting (after the reset caused by opening the port) or asks for it.
-    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000));
+    /// Waits until the firmware greets and answers (after the reset caused by opening the port).
+    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000));
 
     void setMode(int pin, PinMode mode) override;
     void digitalWrite(int pin, bool high) override;
     void analogWrite(int pin, int value) override;
     [[nodiscard]] bool digitalRead(int pin) override;
     [[nodiscard]] int analogRead(int pin) override;
+    void tone(int pin, int frequency, int milliseconds) override;
+    void servoWrite(int pin, int angle) override;
+    [[nodiscard]] double distance(int trigPin, int echoPin) override;
     void reset() override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();
 
 private:
+    /// True when the firmware answers a "?" now (false while the board restarts).
+    [[nodiscard]] Result<bool> confirm();
     /// Sends `command` and returns the reply line ("ok", "r 2 1"...), or nullopt on error.
     std::optional<std::string> request(const std::string& command);
 
@@ -95,6 +106,10 @@ public:
     [[nodiscard]] std::vector<std::string> runningBlocks() const;
     /// Variable id -> current value.
     [[nodiscard]] const std::map<std::string, double>& variables() const { return variables_; }
+    /// Pin label ("A0", "2") -> last value read by the blocks (0/1 for digital pins).
+    [[nodiscard]] const std::map<std::string, double>& readings() const { return readings_; }
+    /// Lines written by "write to the serial monitor" since the last call.
+    [[nodiscard]] std::vector<std::string> takeOutput();
 
 private:
     struct Frame {
@@ -119,6 +134,9 @@ private:
     bool condition(const project::Block& block, const std::string& name);
     double evaluate(const project::Block& block);
     int pin(const project::Block& block, const std::string& name, PinMode mode);
+    /// Pin number of a pin menu, without changing its mode (-1 when invalid).
+    [[nodiscard]] int pinNumber(const project::Block& block, const std::string& name) const;
+    void record(int pin, double value);
     [[nodiscard]] std::string field(const project::Block& block, const std::string& name) const;
     bool restore(Thread& thread, const std::vector<Frame>& old);
 
@@ -129,6 +147,8 @@ private:
     std::vector<Thread> threads_;
     std::map<std::string, double> variables_;
     std::map<int, PinMode> modes_;
+    std::map<std::string, double> readings_;
+    std::vector<std::string> output_;
     std::mt19937 random_{std::random_device{}()};
 };
 
@@ -149,7 +169,11 @@ public:
         std::vector<std::string> runningBlocks;
         std::vector<std::string> problemBlocks; ///< Validation errors that prevent starting.
         std::map<std::string, double> variables;
+        std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
+        std::vector<std::string> output;        ///< Last lines written to the serial monitor (at most kOutputLines)...
+        std::size_t outputCount = 0;            ///< ...out of this many since the start.
     };
+    static constexpr std::size_t kOutputLines = 200;
 
     Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
             Flasher flasher);
