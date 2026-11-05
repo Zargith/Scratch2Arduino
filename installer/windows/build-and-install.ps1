@@ -5,23 +5,27 @@
 .DESCRIPTION
     Run by installer.exe after the sources are copied, but it can also be used on its own:
         powershell -ExecutionPolicy Bypass -File installer\windows\build-and-install.ps1
-    Missing tools are installed with winget: CMake, Visual Studio 2022 Build Tools (C++),
-    the WebView2 runtime (variant A) and Qt 6 through aqtinstall (variant B).
+
+    Updates are incremental:
+      - prerequisites already on the computer (CMake, Visual Studio 2022 Build Tools, WebView2)
+        are detected and not installed again; only the missing ones are installed with winget;
+      - with -StagingDir (what installer.exe passes), the new sources are compared with the
+        installed ones by content, and only the changed files are replaced, so the build tree
+        kept in <InstallDir>\build recompiles only what changed;
+      - files of the previous version that are no longer installed are removed.
+    -CleanBuild forces a full rebuild.
 #>
 [CmdletBinding()]
 param(
     [string]$SourceDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
+    [string]$StagingDir = '',
     [string]$InstallDir = (Join-Path $env:ProgramFiles 'Scratch2Arduino'),
     [string]$BuildDir = '',
     [string]$LogFile = '',
-    [switch]$NoWebview,
-    [switch]$NoNative,
     [switch]$NoDeps,
-    [switch]$KeepBuild,
+    [switch]$CleanBuild,
     [ValidateSet('french', 'english', 'fr', 'en')]
-    [string]$Language = 'french',
-    [string]$QtVersion = '6.8.3',
-    [string]$QtRoot = 'C:\Qt'
+    [string]$Language = 'french'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -106,95 +110,151 @@ function Test-WebView2 {
     return $false
 }
 
-function Find-Qt {
-    foreach ($candidate in @($env:QT_ROOT_DIR, $env:Qt6_DIR)) {
-        if ($candidate -and (Test-Path $candidate)) { return $candidate }
-    }
-    if (Test-Path $QtRoot) {
-        $found = Get-ChildItem -Path $QtRoot -Directory -Filter '6.*' -ErrorAction SilentlyContinue |
-            Sort-Object { [version]($_.Name -replace '[^0-9.]', '') } -Descending |
-            ForEach-Object { Get-ChildItem -Path $_.FullName -Directory -Filter 'msvc20*_64' } |
-            Select-Object -First 1
-        if ($found) { return $found.FullName }
-    }
-    return $null
+function Get-RelativeFiles([string]$Root) {
+    $prefix = $Root.TrimEnd('\').Length + 1
+    Get-ChildItem -Path $Root -Recurse -File -Force | ForEach-Object { $_.FullName.Substring($prefix) }
 }
 
-function Install-Qt {
-    $python = Get-Command py -ErrorAction SilentlyContinue
-    if (-not $python) { $python = Get-Command python -ErrorAction SilentlyContinue }
-    if (-not $python) {
-        Install-WithWinget 'Python.Python.3.12'
-        $python = Get-Command py -ErrorAction SilentlyContinue
-        if (-not $python) { $python = Get-Command python -ErrorAction SilentlyContinue }
-        if (-not $python) { Fail 'Python est introuvable après son installation.' 'Python not found after installing it.' }
+function Test-SameContent([string]$A, [string]$B) {
+    $itemA = Get-Item -LiteralPath $A -Force
+    $itemB = Get-Item -LiteralPath $B -Force
+    if ($itemA.Length -ne $itemB.Length) { return $false }
+    return (Get-FileHash -LiteralPath $A -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $B -Algorithm SHA256).Hash
+}
+
+# Makes $Target identical to $Staging while touching only the files that differ, so that unchanged
+# files keep their dates and the kept build tree does not recompile them. Returns the change count.
+function Sync-Sources([string]$Staging, [string]$Target) {
+    New-Item -ItemType Directory -Force -Path $Target | Out-Null
+    $now = Get-Date
+    $changed = 0
+    $wanted = @{}
+    foreach ($relative in Get-RelativeFiles $Staging) {
+        $wanted[$relative.ToLowerInvariant()] = $true
+        $from = Join-Path $Staging $relative
+        $to = Join-Path $Target $relative
+        if ((Test-Path -LiteralPath $to) -and (Test-SameContent $from $to)) { continue }
+        New-Item -ItemType Directory -Force -Path (Split-Path $to) | Out-Null
+        Copy-Item -LiteralPath $from -Destination $to -Force
+        # A changed file must look newer than the objects built from its previous content.
+        (Get-Item -LiteralPath $to -Force).LastWriteTime = $now
+        $changed++
     }
-    Say "Installation de Qt $QtVersion (cela peut être long)..." "Installing Qt $QtVersion (this can take a while)..."
-    Invoke-Native $python.Source @('-m', 'pip', 'install', '--upgrade', '--quiet', 'aqtinstall')
-    Invoke-Native $python.Source @('-m', 'aqt', 'install-qt', 'windows', 'desktop', $QtVersion,
-                                   'win64_msvc2022_64', '--outputdir', $QtRoot)
+    foreach ($relative in Get-RelativeFiles $Target) {
+        if (-not $wanted.ContainsKey($relative.ToLowerInvariant())) {
+            Remove-Item -LiteralPath (Join-Path $Target $relative) -Force
+            $changed++
+        }
+    }
+    Get-ChildItem -Path $Target -Recurse -Directory -Force | Sort-Object { $_.FullName.Length } -Descending |
+        Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Force) } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+    return $changed
+}
+
+function Read-Manifest([string]$Path) {
+    if (Test-Path -LiteralPath $Path) { return @(Get-Content -LiteralPath $Path -Encoding UTF8) }
+    return @()
 }
 
 try {
     Set-Content -Path $LogFile -Value "Scratch2Arduino build - $(Get-Date -Format s)" -Encoding UTF8
-    $buildWebview = -not $NoWebview
-    $buildNative = -not $NoNative
-    if (-not $buildWebview -and -not $buildNative) {
-        Fail 'Aucune variante sélectionnée.' 'No variant selected.'
+
+    if (Get-Process -Name 'scratch2arduino' -ErrorAction SilentlyContinue) {
+        Fail 'Scratch2Arduino est ouvert : ferme-le puis relance l''installation.' `
+             'Scratch2Arduino is running: close it, then run the installer again.'
     }
 
-    # --- Prerequisites ----------------------------------------------------------
+    # --- Prerequisites (only the missing ones are installed) --------------------
     Say 'Vérification des prérequis' 'Checking prerequisites'
     $cmake = Find-CMake
-    if (-not $cmake) {
+    if ($cmake) {
+        Say "CMake déjà installé : $cmake" "CMake already installed: $cmake"
+    } else {
         if ($NoDeps) { Fail 'CMake est introuvable.' 'CMake not found.' }
         Install-WithWinget 'Kitware.CMake'
         $cmake = Find-CMake
         if (-not $cmake) { Fail 'CMake est introuvable après son installation.' 'CMake not found after installing it.' }
     }
 
-    if (-not (Test-VisualStudio)) {
+    if (Test-VisualStudio) {
+        Say 'Compilateur C++ (Visual Studio) déjà installé' 'C++ compiler (Visual Studio) already installed'
+    } else {
         if ($NoDeps) { Fail 'Le compilateur C++ de Visual Studio est introuvable.' 'Visual Studio C++ compiler not found.' }
         Install-WithWinget 'Microsoft.VisualStudio.2022.BuildTools' @('--override',
             '--wait --quiet --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended')
         if (-not (Test-VisualStudio)) { Fail "L'installation de Visual Studio Build Tools a échoué." 'Visual Studio Build Tools installation failed.' }
     }
 
-    if ($buildWebview -and -not (Test-WebView2) -and -not $NoDeps) {
+    if (Test-WebView2) {
+        Say 'WebView2 déjà installé' 'WebView2 already installed'
+    } elseif (-not $NoDeps) {
         Install-WithWinget 'Microsoft.EdgeWebView2Runtime'
     }
 
-    $qtDir = $null
-    if ($buildNative) {
-        $qtDir = Find-Qt
-        if (-not $qtDir) {
-            if ($NoDeps) { Fail 'Qt 6 est introuvable.' 'Qt 6 not found.' }
-            Install-Qt
-            $qtDir = Find-Qt
-            if (-not $qtDir) { Fail "Qt 6 est introuvable après son installation." 'Qt 6 not found after installing it.' }
-        }
-        Say "Qt trouvé : $qtDir" "Found Qt: $qtDir"
+    # --- Sources: replace only what changed --------------------------------------
+    if ($StagingDir) {
+        Say 'Mise à jour des sources' 'Updating the sources'
+        $changed = Sync-Sources $StagingDir $SourceDir
+        Remove-Item -Recurse -Force -LiteralPath $StagingDir -ErrorAction SilentlyContinue
+        Say "$changed fichier(s) modifié(s)" "$changed file(s) changed"
     }
 
     # --- Configure, build, install ----------------------------------------------
-    $onOff = { param($value) if ($value) { 'ON' } else { 'OFF' } }
+    if ($CleanBuild -and (Test-Path $BuildDir)) {
+        Say 'Recompilation complète demandée' 'Full rebuild requested'
+        Remove-Item -Recurse -Force -LiteralPath $BuildDir
+    }
+    $incremental = Test-Path (Join-Path $BuildDir 'CMakeCache.txt')
+    if ($incremental) {
+        Say 'Compilation précédente trouvée : seules les modifications seront recompilées' `
+            'Previous build found: only the changes will be recompiled'
+    }
+
     $configure = @('-S', $SourceDir, '-B', $BuildDir,
                    "-DCMAKE_INSTALL_PREFIX=$InstallDir",
-                   "-DS2A_BUILD_WEBVIEW=$(& $onOff $buildWebview)",
-                   "-DS2A_BUILD_NATIVE=$(& $onOff $buildNative)",
+                   '-DS2A_BUILD_WEBVIEW=ON',
                    '-DS2A_BUILD_TESTS=OFF')
-    if ($qtDir) { $configure += "-DCMAKE_PREFIX_PATH=$qtDir" }
+    # installer.exe ships the block editor prebuilt: never rebuild it, even when Node.js is installed.
+    $prebuiltFrontend = Join-Path $SourceDir 'frontend\dist'
+    if (Test-Path (Join-Path $prebuiltFrontend 'index.html')) { $configure += "-DS2A_FRONTEND_DIST=$prebuiltFrontend" }
 
     Say 'Configuration (CMake)' 'Configuring (CMake)'
-    Invoke-Native $cmake $configure
+    try {
+        Invoke-Native $cmake $configure
+    } catch {
+        if (-not $incremental) { throw }
+        # A kept build tree can become unusable (Visual Studio or CMake updated): start again from scratch.
+        Say 'La compilation précédente est inutilisable : recompilation complète' `
+            'The previous build cannot be reused: full rebuild'
+        Remove-Item -Recurse -Force -LiteralPath $BuildDir
+        Invoke-Native $cmake $configure
+    }
+
     Say 'Compilation' 'Building'
     Invoke-Native $cmake @('--build', $BuildDir, '--config', 'Release', '--parallel')
+
+    $manifestPath = Join-Path $BuildDir 'install_manifest.txt'
+    $previousFiles = Read-Manifest $manifestPath
+    if (-not $incremental) {
+        # Versions before 0.4 did not keep their build tree, so their file list is unknown: their
+        # programs (two variants, Qt libraries) are removed with the folders they were installed in.
+        foreach ($folder in 'bin', 'share', 'lib') {
+            Remove-Item -Recurse -Force -LiteralPath (Join-Path $InstallDir $folder) -ErrorAction SilentlyContinue
+        }
+    }
     Say "Installation dans $InstallDir" "Installing into $InstallDir"
     Invoke-Native $cmake @('--install', $BuildDir, '--config', 'Release')
 
-    if (-not $KeepBuild) {
-        Remove-Item -Recurse -Force -Path $BuildDir -ErrorAction SilentlyContinue
+    # Remove what the previous version installed and this one no longer does.
+    $installed = @{}
+    foreach ($file in Read-Manifest $manifestPath) { $installed[$file.ToLowerInvariant()] = $true }
+    foreach ($file in $previousFiles) {
+        if ($file -and -not $installed.ContainsKey($file.ToLowerInvariant()) -and (Test-Path -LiteralPath $file)) {
+            Remove-Item -LiteralPath $file -Force
+        }
     }
+
     Say 'Scratch2Arduino est installé !' 'Scratch2Arduino is installed!'
     exit 0
 }
