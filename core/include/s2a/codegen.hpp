@@ -4,6 +4,7 @@
 #include "s2a/boards.hpp"
 #include "s2a/project.hpp"
 
+#include <array>
 #include <map>
 #include <string>
 #include <string_view>
@@ -34,6 +35,9 @@ struct Sketch {
 
 /// Speed of the serial monitor used by the "write to the serial monitor" block.
 inline constexpr int kSerialBaud = 9600;
+
+/// Red, green and blue levels (0-255) of a colour of the RGB LED menu ("RED"...); off when unknown.
+[[nodiscard]] std::array<int, 3> colourLevels(std::string_view name);
 
 /// Text typed in a slot as a C++ string literal (quotes and backslashes escaped, control
 /// characters except tab and newline dropped).

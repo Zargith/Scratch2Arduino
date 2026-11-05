@@ -46,6 +46,7 @@
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
     "installing_platform": "Installing the tools for {board} (only once, this can take a few minutes)…",
+    "installing_libraries": "Installing the {libraries} libraries (only once)…",
     "sketch_missing": "The folder \"{sketch}\" does not contain an Arduino program (a .ino file named like the folder).",
     "compiling": "Compiling \"{sketch}\" for {board}…",
     "compiled": "Compiled: the program uses {text} of {text_max} bytes ({text_percent}%), the variables {data} of {data_max} bytes.",

@@ -4,35 +4,120 @@
   "name": "Tous les blocs",
   "board": "uno",
   "variables": [
-    { "id": "score", "name": "score", "initialValue": 0 },
-    { "id": "lum", "name": "luminosité", "initialValue": 0 }
+    {
+      "id": "score",
+      "name": "score",
+      "initialValue": 0
+    },
+    {
+      "id": "lum",
+      "name": "luminosité",
+      "initialValue": 0
+    }
   ],
   "scripts": [
     {
       "x": 40,
       "y": 40,
       "blocks": [
-        { "id": "start", "type": "events_when_program_starts" },
-        { "id": "set", "type": "variables_set", "fields": { "VARIABLE": "score" }, "inputs": { "VALUE": { "value": "0" } } },
-        { "id": "hello", "type": "serial_print", "inputs": { "VALUE": { "value": "Bonjour \"Arduino\" !" } } },
-        { "id": "mode", "type": "pins_set_mode", "fields": { "PIN": "2", "MODE": "INPUT_PULLUP" } },
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "set",
+          "type": "variables_set",
+          "fields": {
+            "VARIABLE": "score"
+          },
+          "inputs": {
+            "VALUE": {
+              "value": "0"
+            }
+          }
+        },
+        {
+          "id": "hello",
+          "type": "serial_print",
+          "inputs": {
+            "VALUE": {
+              "value": "Bonjour \"Arduino\" !"
+            }
+          }
+        },
+        {
+          "id": "mode",
+          "type": "pins_set_mode",
+          "fields": {
+            "PIN": "2",
+            "MODE": "INPUT_PULLUP"
+          }
+        },
         {
           "id": "repeat",
           "type": "control_repeat",
-          "inputs": { "TIMES": { "value": "3" } },
+          "inputs": {
+            "TIMES": {
+              "value": "3"
+            }
+          },
           "statements": {
             "SUBSTACK": [
-              { "id": "dw1", "type": "pins_digital_write", "fields": { "PIN": "7", "STATE": "HIGH" } },
-              { "id": "w1", "type": "control_wait", "inputs": { "SECONDS": { "value": "0,2" } } },
-              { "id": "dw2", "type": "pins_digital_write", "fields": { "PIN": "7", "STATE": "LOW" } },
-              { "id": "change", "type": "variables_change", "fields": { "VARIABLE": "score" }, "inputs": { "VALUE": { "value": "1" } } }
+              {
+                "id": "dw1",
+                "type": "pins_digital_write",
+                "fields": {
+                  "PIN": "7",
+                  "STATE": "HIGH"
+                }
+              },
+              {
+                "id": "w1",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0,2"
+                  }
+                }
+              },
+              {
+                "id": "dw2",
+                "type": "pins_digital_write",
+                "fields": {
+                  "PIN": "7",
+                  "STATE": "LOW"
+                }
+              },
+              {
+                "id": "change",
+                "type": "variables_change",
+                "fields": {
+                  "VARIABLE": "score"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "1"
+                  }
+                }
+              }
             ]
           }
         },
         {
           "id": "until",
           "type": "control_wait_until",
-          "inputs": { "CONDITION": { "block": { "id": "read2", "type": "pins_digital_read", "fields": { "PIN": "2", "STATE": "LOW" } } } }
+          "inputs": {
+            "CONDITION": {
+              "block": {
+                "id": "read2",
+                "type": "pins_digital_read",
+                "fields": {
+                  "PIN": "2",
+                  "STATE": "LOW"
+                }
+              }
+            }
+          }
         },
         {
           "id": "forever",
@@ -42,7 +127,9 @@
               {
                 "id": "setlum",
                 "type": "variables_set",
-                "fields": { "VARIABLE": "lum" },
+                "fields": {
+                  "VARIABLE": "lum"
+                },
                 "inputs": {
                   "VALUE": {
                     "value": "0",
@@ -50,11 +137,28 @@
                       "id": "map",
                       "type": "operators_map",
                       "inputs": {
-                        "VALUE": { "value": "0", "block": { "id": "ar", "type": "pins_analog_read", "fields": { "PIN": "A0" } } },
-                        "FROM_LOW": { "value": "0" },
-                        "FROM_HIGH": { "value": "1023" },
-                        "TO_LOW": { "value": "0" },
-                        "TO_HIGH": { "value": "255" }
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "ar",
+                            "type": "pins_analog_read",
+                            "fields": {
+                              "PIN": "A0"
+                            }
+                          }
+                        },
+                        "FROM_LOW": {
+                          "value": "0"
+                        },
+                        "FROM_HIGH": {
+                          "value": "1023"
+                        },
+                        "TO_LOW": {
+                          "value": "0"
+                        },
+                        "TO_HIGH": {
+                          "value": "255"
+                        }
                       }
                     }
                   }
@@ -63,13 +167,37 @@
               {
                 "id": "print",
                 "type": "serial_print",
-                "inputs": { "VALUE": { "value": "", "block": { "id": "getlum2", "type": "variables_get", "fields": { "VARIABLE": "lum" } } } }
+                "inputs": {
+                  "VALUE": {
+                    "value": "",
+                    "block": {
+                      "id": "getlum2",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "lum"
+                      }
+                    }
+                  }
+                }
               },
               {
                 "id": "aw",
                 "type": "pins_analog_write",
-                "fields": { "PIN": "9" },
-                "inputs": { "VALUE": { "value": "0", "block": { "id": "getlum", "type": "variables_get", "fields": { "VARIABLE": "lum" } } } }
+                "fields": {
+                  "PIN": "9"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "getlum",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "lum"
+                      }
+                    }
+                  }
+                }
               },
               {
                 "id": "ifelse",
@@ -80,14 +208,73 @@
                       "id": "and",
                       "type": "operators_and",
                       "inputs": {
-                        "OPERAND1": { "block": { "id": "gt", "type": "operators_gt", "inputs": { "NUM1": { "block": { "id": "g1", "type": "variables_get", "fields": { "VARIABLE": "lum" } } }, "NUM2": { "value": "100" } } } },
+                        "OPERAND1": {
+                          "block": {
+                            "id": "gt",
+                            "type": "operators_gt",
+                            "inputs": {
+                              "NUM1": {
+                                "block": {
+                                  "id": "g1",
+                                  "type": "variables_get",
+                                  "fields": {
+                                    "VARIABLE": "lum"
+                                  }
+                                }
+                              },
+                              "NUM2": {
+                                "value": "100"
+                              }
+                            }
+                          }
+                        },
                         "OPERAND2": {
                           "block": {
                             "id": "or",
                             "type": "operators_or",
                             "inputs": {
-                              "OPERAND1": { "block": { "id": "lt", "type": "operators_lt", "inputs": { "NUM1": { "block": { "id": "g2", "type": "variables_get", "fields": { "VARIABLE": "score" } } }, "NUM2": { "value": "10" } } } },
-                              "OPERAND2": { "block": { "id": "not", "type": "operators_not", "inputs": { "OPERAND": { "block": { "id": "eq", "type": "operators_equals", "inputs": { "NUM1": { "value": "1" }, "NUM2": { "value": "2" } } } } } } }
+                              "OPERAND1": {
+                                "block": {
+                                  "id": "lt",
+                                  "type": "operators_lt",
+                                  "inputs": {
+                                    "NUM1": {
+                                      "block": {
+                                        "id": "g2",
+                                        "type": "variables_get",
+                                        "fields": {
+                                          "VARIABLE": "score"
+                                        }
+                                      }
+                                    },
+                                    "NUM2": {
+                                      "value": "10"
+                                    }
+                                  }
+                                }
+                              },
+                              "OPERAND2": {
+                                "block": {
+                                  "id": "not",
+                                  "type": "operators_not",
+                                  "inputs": {
+                                    "OPERAND": {
+                                      "block": {
+                                        "id": "eq",
+                                        "type": "operators_equals",
+                                        "inputs": {
+                                          "NUM1": {
+                                            "value": "1"
+                                          },
+                                          "NUM2": {
+                                            "value": "2"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -96,14 +283,40 @@
                   }
                 },
                 "statements": {
-                  "SUBSTACK": [ { "id": "ledon", "type": "pins_builtin_led", "fields": { "STATE": "ON" } } ],
-                  "SUBSTACK2": [ { "id": "ledoff", "type": "pins_builtin_led", "fields": { "STATE": "OFF" } } ]
+                  "SUBSTACK": [
+                    {
+                      "id": "ledon",
+                      "type": "pins_builtin_led",
+                      "fields": {
+                        "STATE": "ON"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "ledoff",
+                      "type": "pins_builtin_led",
+                      "fields": {
+                        "STATE": "OFF"
+                      }
+                    }
+                  ]
                 }
               },
               {
                 "id": "if",
                 "type": "control_if",
-                "inputs": { "CONDITION": { "block": { "id": "r2", "type": "pins_digital_read", "fields": { "PIN": "2" } } } },
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "r2",
+                      "type": "pins_digital_read",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                },
                 "statements": {
                   "SUBSTACK": [
                     {
@@ -116,8 +329,56 @@
                             "id": "div",
                             "type": "operators_divide",
                             "inputs": {
-                              "NUM1": { "block": { "id": "rnd", "type": "operators_random", "inputs": { "FROM": { "value": "1" }, "TO": { "value": "10" } } } },
-                              "NUM2": { "block": { "id": "mul", "type": "operators_multiply", "inputs": { "NUM1": { "block": { "id": "sub", "type": "operators_subtract", "inputs": { "NUM1": { "value": "12" }, "NUM2": { "value": "2" } } } }, "NUM2": { "block": { "id": "add", "type": "operators_add", "inputs": { "NUM1": { "value": "0.5" }, "NUM2": { "value": "0.5" } } } } } } }
+                              "NUM1": {
+                                "block": {
+                                  "id": "rnd",
+                                  "type": "operators_random",
+                                  "inputs": {
+                                    "FROM": {
+                                      "value": "1"
+                                    },
+                                    "TO": {
+                                      "value": "10"
+                                    }
+                                  }
+                                }
+                              },
+                              "NUM2": {
+                                "block": {
+                                  "id": "mul",
+                                  "type": "operators_multiply",
+                                  "inputs": {
+                                    "NUM1": {
+                                      "block": {
+                                        "id": "sub",
+                                        "type": "operators_subtract",
+                                        "inputs": {
+                                          "NUM1": {
+                                            "value": "12"
+                                          },
+                                          "NUM2": {
+                                            "value": "2"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "NUM2": {
+                                      "block": {
+                                        "id": "add",
+                                        "type": "operators_add",
+                                        "inputs": {
+                                          "NUM1": {
+                                            "value": "0.5"
+                                          },
+                                          "NUM2": {
+                                            "value": "0.5"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -135,8 +396,264 @@
       "x": 1000,
       "y": 40,
       "blocks": [
-        { "id": "start2", "type": "events_when_program_starts" },
-        { "id": "inner", "type": "control_forever", "statements": { "SUBSTACK": [ { "id": "w3", "type": "control_wait", "inputs": { "SECONDS": { "value": "1" } } } ] } }
+        {
+          "id": "start2",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "inner",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "w3",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "x": 1500,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start3",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "rgbc",
+          "type": "lights_rgb_color",
+          "fields": {
+            "RED_PIN": "3",
+            "GREEN_PIN": "5",
+            "BLUE_PIN": "6",
+            "COLOR": "MAGENTA"
+          }
+        },
+        {
+          "id": "rgbm",
+          "type": "lights_rgb_mix",
+          "fields": {
+            "RED_PIN": "3",
+            "GREEN_PIN": "5",
+            "BLUE_PIN": "6"
+          },
+          "inputs": {
+            "RED": {
+              "value": "0",
+              "block": {
+                "id": "mulpot",
+                "type": "operators_multiply",
+                "inputs": {
+                  "NUM1": {
+                    "value": "0",
+                    "block": {
+                      "id": "pot1",
+                      "type": "sensors_potentiometer",
+                      "fields": {
+                        "PIN": "A0"
+                      }
+                    }
+                  },
+                  "NUM2": {
+                    "value": "2,55"
+                  }
+                }
+              }
+            },
+            "GREEN": {
+              "value": "0"
+            },
+            "BLUE": {
+              "value": "0",
+              "block": {
+                "id": "light1",
+                "type": "sensors_light",
+                "fields": {
+                  "PIN": "A1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "servo",
+          "type": "motors_servo_write",
+          "fields": {
+            "PIN": "10"
+          },
+          "inputs": {
+            "ANGLE": {
+              "value": "90"
+            }
+          }
+        },
+        {
+          "id": "tune",
+          "type": "sound_play_tone",
+          "fields": {
+            "PIN": "8"
+          },
+          "inputs": {
+            "FREQUENCY": {
+              "value": "440",
+              "block": {
+                "id": "note",
+                "type": "sound_note",
+                "fields": {
+                  "NOTE": "392"
+                }
+              }
+            },
+            "SECONDS": {
+              "value": "0.2"
+            }
+          }
+        },
+        {
+          "id": "loop3",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "near",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "lt",
+                      "type": "operators_lt",
+                      "inputs": {
+                        "NUM1": {
+                          "value": "0",
+                          "block": {
+                            "id": "d1",
+                            "type": "sensors_distance",
+                            "fields": {
+                              "TRIG_PIN": "4",
+                              "ECHO_PIN": "A2"
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "20"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "alarm",
+                      "type": "sound_start_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "880"
+                        }
+                      }
+                    },
+                    {
+                      "id": "mstop",
+                      "type": "motors_dc_stop",
+                      "fields": {
+                        "EN_PIN": "11",
+                        "IN1_PIN": "12",
+                        "IN2_PIN": "13"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "quiet",
+                      "type": "sound_stop",
+                      "fields": {
+                        "PIN": "8"
+                      }
+                    },
+                    {
+                      "id": "mrun",
+                      "type": "motors_dc_run",
+                      "fields": {
+                        "EN_PIN": "11",
+                        "IN1_PIN": "12",
+                        "IN2_PIN": "13",
+                        "DIRECTION": "FORWARD"
+                      },
+                      "inputs": {
+                        "SPEED": {
+                          "value": "0",
+                          "block": {
+                            "id": "pot2",
+                            "type": "sensors_potentiometer",
+                            "fields": {
+                              "PIN": "A0"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "ifbtn",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "btn",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "A3"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "printd",
+                      "type": "serial_print",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "",
+                          "block": {
+                            "id": "d2",
+                            "type": "sensors_distance",
+                            "fields": {
+                              "TRIG_PIN": "4",
+                              "ECHO_PIN": "A2"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "w4",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.1"
+                  }
+                }
+              }
+            ]
+          }
+        }
       ]
     }
   ]

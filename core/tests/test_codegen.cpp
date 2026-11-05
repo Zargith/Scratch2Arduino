@@ -232,6 +232,57 @@ TEST(Codegen, AddsHelpersOnlyWhenUsed) {
     EXPECT_NE(sketch.source.find("randomSeed(micros());"), std::string::npos);
 }
 
+TEST(Codegen, DrivesComponents) {
+    Block rgb = block("rgb", "lights_rgb_color");
+    rgb.fields = {{"RED_PIN", "9"}, {"GREEN_PIN", "10"}, {"BLUE_PIN", "11"}, {"COLOR", "CYAN"}};
+    Block servo = block("servo", "motors_servo_write");
+    servo.fields["PIN"] = "3";
+    servo.inputs["ANGLE"].value = "45";
+    Block note = block("note", "sound_note");
+    note.fields["NOTE"] = "392";
+    Block play = block("play", "sound_play_tone");
+    play.fields["PIN"] = "8";
+    play.inputs["FREQUENCY"].block = note;
+    play.inputs["SECONDS"].value = "0,25";
+    Block motor = block("motor", "motors_dc_run");
+    motor.fields = {{"EN_PIN", "6"}, {"IN1_PIN", "7"}, {"IN2_PIN", "4"}, {"DIRECTION", "BACKWARD"}};
+    motor.inputs["SPEED"].value = "50";
+    Block stop = block("stop", "motors_dc_stop");
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), rgb, servo, play, motor, stop})).source;
+    for (const char* expected :
+         {"#include <Servo.h>\n\nServo s2a_servo_3;\n", "  s2a_servo_3.attach(3);\n", "analogWrite(9, 0);",
+          "analogWrite(10, 255);", "analogWrite(11, 255);", "s2a_servo_3.write(constrain((int)(45), 0, 180));",
+          "  s2a_tone(8, 392);\n  s2a_wait(0.25);\n  noTone(8);\n", "void s2a_tone(int pin, double frequency) {",
+          "s2a_motor(6, 7, 4, -1, 50);", "s2a_motor(6, 7, 4, 0, 0);", "  pinMode(6, OUTPUT);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "attach() sets the servo pin";
+}
+
+TEST(Codegen, ReadsSensors) {
+    Block distance = block("distance", "sensors_distance");
+    distance.fields = {{"TRIG_PIN", "12"}, {"ECHO_PIN", "11"}};
+    Block print = block("print", "serial_print");
+    print.inputs["VALUE"].block = distance;
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block until = block("until", "control_wait_until");
+    until.inputs["CONDITION"].block = button;
+    Block light = block("light", "sensors_light");
+    light.fields["PIN"] = "A1";
+    Block print2 = block("print2", "serial_print");
+    print2.inputs["VALUE"].block = light;
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), print, until, print2})).source;
+    for (const char* expected :
+         {"s2a_print(s2a_distance(12, 11));", "double s2a_distance(int trig, int echo) {", "pinMode(12, OUTPUT);",
+          "pinMode(11, INPUT);", "pinMode(2, INPUT_PULLUP);", "while (!(digitalRead(2) == LOW)) {",
+          "s2a_print((analogRead(A1) * 100.0 / 1023.0));"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+}
+
 TEST(Codegen, RunsSeveralScriptsSideBySide) {
     // Two "when the program starts" scripts must blink at their own pace, as in Scratch.
     Project project = blink();
