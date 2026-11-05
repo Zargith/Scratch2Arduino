@@ -254,6 +254,11 @@ std::vector<std::string> requiredLibraries(std::string_view source) {
     // Header -> library of the Arduino registry. Add a line here for each component library.
     static const std::pair<std::string_view, std::string_view> kKnown[] = {
         {"Servo.h", "Servo"},
+        {"DHT.h", "DHT sensor library"},
+        {"LiquidCrystal_I2C.h", "LiquidCrystal I2C"},
+        {"U8x8lib.h", "U8g2"},
+        {"U8g2lib.h", "U8g2"},
+        {"Adafruit_NeoPixel.h", "Adafruit NeoPixel"},
     };
     std::set<std::string> found;
     std::size_t position = 0;

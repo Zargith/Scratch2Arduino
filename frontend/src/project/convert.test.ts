@@ -5,7 +5,10 @@ import allBlocks from "../../../examples/projects/all-blocks/project.json";
 import blink from "../../../examples/projects/blink/project.json";
 import trafficLight from "../../../examples/projects/traffic-light/project.json";
 import distanceAlarm from "../../../examples/projects/distance-alarm/project.json";
+import lightGauge from "../../../examples/projects/light-gauge/project.json";
+import reactionGame from "../../../examples/projects/reaction-game/project.json";
 import servoPotentiometer from "../../../examples/projects/servo-potentiometer/project.json";
+import thermometer from "../../../examples/projects/thermometer/project.json";
 import {
 	isProject,
 	projectToWorkspace,
@@ -115,6 +118,9 @@ describe("project conversion", () => {
 		["traffic-light", trafficLight],
 		["distance-alarm", distanceAlarm],
 		["servo-potentiometer", servoPotentiometer],
+		["thermometer", thermometer],
+		["reaction-game", reactionGame],
+		["light-gauge", lightGauge],
 	])("round-trips the %s example through the Blockly state", (_name, example) => {
 		expect(isProject(example)).toBe(true);
 		const project = example as Project;

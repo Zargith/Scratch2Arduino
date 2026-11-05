@@ -316,6 +316,54 @@ TEST(Codegen, WritesFunctionsInsideScriptsThatRunSideBySide) {
         << source;
 }
 
+TEST(Codegen, UsesComponentLibraries) {
+    Block temperature = block("t", "sensors_temperature");
+    temperature.fields = {{"MODEL", "DHT22"}, {"PIN", "3"}};
+    Block lcd = block("lcd", "display_lcd_print");
+    lcd.fields["LINE"] = "2";
+    lcd.inputs["TEXT"].block = temperature;
+    Block humidity = block("h", "sensors_humidity");
+    humidity.fields = {{"MODEL", "DHT11"}, {"PIN", "3"}}; // the first block gives the model
+    Block oled = block("oled", "display_oled_print");
+    oled.inputs["TEXT"].value = "Fête \"ici\"";
+    Block oled2 = block("oled2", "display_oled_print");
+    oled2.fields["LINE"] = "3";
+    oled2.inputs["TEXT"].block = humidity;
+    Block fill = block("fill", "lights_neopixel_fill");
+    fill.fields = {{"PIN", "5"}, {"COLOR", "YELLOW"}};
+    fill.inputs["COUNT"].value = "12";
+    Block one = block("one", "lights_neopixel_set");
+    one.fields["PIN"] = "5"; // default count (8): the strip keeps the longest one
+    Block show = block("show", "lights_matrix_show");
+    show.fields["IMAGE"] = "HEART";
+    Block dot = block("dot", "lights_matrix_dot");
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), lcd, oled, oled2, fill, one,
+                                             show, dot, block("clear", "display_lcd_clear")}))
+                            .source;
+    for (const char* expected :
+         {"#include <Adafruit_NeoPixel.h>\n#include <DHT.h>\n#include <LiquidCrystal_I2C.h>\n#include <U8x8lib.h>\n"
+          "#include <Wire.h>\n",
+          "DHT s2a_dht_3(3, DHT22);", "  s2a_dht_3.begin();", "s2a_lcd_line(2, s2a_text(s2a_dht_read(s2a_dht_3, s2a_dht_3_last, false)));",
+          "s2a_oled_line(1, F(\"Fete \\\"ici\\\"\"));", "s2a_oled_line(3, s2a_text(s2a_dht_read(s2a_dht_3, s2a_dht_3_last, true)));",
+          "  s2a_lcd_begin();", "  s2a_oled.begin();\n  s2a_oled.setFont(u8x8_font_chroma48medium8_r);",
+          "Adafruit_NeoPixel s2a_strip_5(12, 5, NEO_GRB + NEO_KHZ800);", "  s2a_strip_5.begin();",
+          "s2a_strip_5.fill(s2a_strip_5.Color(255, 160, 0));", "s2a_pixel(s2a_strip_5, 1, s2a_strip_5.Color(255, 0, 0));",
+          "byte s2a_matrix_12_11_10[8];", "  s2a_matrix_init(12, 11, 10);",
+          "static const byte image[8] = {0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18};",
+          "s2a_matrix_image(12, 11, 10, s2a_matrix_12_11_10, image);",
+          "s2a_matrix_dot(12, 11, 10, s2a_matrix_12_11_10, 1, 1, true);", "s2a_lcd->clear();"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("DHT11"), std::string::npos);
+    EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "the DHT library sets its pin";
+    EXPECT_EQ(source.find("pinMode(5,"), std::string::npos) << "the NeoPixel library sets its pin";
+}
+
+TEST(Codegen, AsciiText) {
+    EXPECT_EQ(s2a::codegen::asciiText("Élève à l'œil ½ 😀"), "Eleve a l'oeil ? ?");
+    EXPECT_EQ(s2a::codegen::asciiText("a\tb\nc"), "abc");
+}
+
 TEST(Codegen, RunsSeveralScriptsSideBySide) {
     // Two "when the program starts" scripts must blink at their own pace, as in Scratch.
     Project project = blink();

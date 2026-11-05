@@ -1,0 +1,160 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "display",
+    "colour": "#7E57C2",
+    "name": {
+      "fr": "Écrans",
+      "en": "Screens"
+    },
+    "order": 37
+  },
+  "blocks": [
+    {
+      "type": "display_lcd_print",
+      "shape": "statement",
+      "message": {
+        "fr": "écrire %1 sur la ligne %2 de l'écran LCD",
+        "en": "write %1 on line %2 of the LCD screen"
+      },
+      "tooltip": {
+        "fr": "Écrit un texte ou une valeur sur une ligne (16 caractères au plus, les accents sont enlevés). Écran LCD 16×2 avec module I2C : GND sur GND, VCC sur 5V, SDA sur SDA (A4 sur Uno et Nano, 20 sur Mega), SCL sur SCL (A5 sur Uno et Nano, 21 sur Mega).",
+        "en": "Writes a text or a value on a line (16 characters at most). 16×2 LCD with an I2C module: GND to GND, VCC to 5V, SDA to SDA (A4 on Uno and Nano, 20 on Mega), SCL to SCL (A5 on Uno and Nano, 21 on Mega)."
+      },
+      "args": [
+        {
+          "name": "TEXT",
+          "kind": "text",
+          "default": "Bonjour !"
+        },
+        {
+          "name": "LINE",
+          "kind": "dropdown",
+          "default": "1",
+          "options": [
+            {
+              "value": "1",
+              "label": {
+                "fr": "1",
+                "en": "1"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "fr": "2",
+                "en": "2"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "display_lcd_clear",
+      "shape": "statement",
+      "message": {
+        "fr": "effacer l'écran LCD",
+        "en": "clear the LCD screen"
+      },
+      "tooltip": {
+        "fr": "Efface tout l'écran LCD. Écran LCD 16×2 avec module I2C : GND sur GND, VCC sur 5V, SDA sur SDA (A4 sur Uno et Nano, 20 sur Mega), SCL sur SCL (A5 sur Uno et Nano, 21 sur Mega).",
+        "en": "Clears the whole LCD screen. 16×2 LCD with an I2C module: GND to GND, VCC to 5V, SDA to SDA (A4 on Uno and Nano, 20 on Mega), SCL to SCL (A5 on Uno and Nano, 21 on Mega)."
+      }
+    },
+    {
+      "type": "display_oled_print",
+      "shape": "statement",
+      "message": {
+        "fr": "écrire %1 sur la ligne %2 de l'écran OLED",
+        "en": "write %1 on line %2 of the OLED screen"
+      },
+      "tooltip": {
+        "fr": "Écrit un texte ou une valeur sur une des 8 lignes (16 caractères au plus, les accents sont enlevés). Écran OLED SSD1306 128×64 en I2C : branché comme l'écran LCD (GND, VCC, SDA, SCL).",
+        "en": "Writes a text or a value on one of the 8 lines (16 characters at most). SSD1306 128×64 I2C OLED screen: wired like the LCD (GND, VCC, SDA, SCL)."
+      },
+      "args": [
+        {
+          "name": "TEXT",
+          "kind": "text",
+          "default": "Bonjour !"
+        },
+        {
+          "name": "LINE",
+          "kind": "dropdown",
+          "default": "1",
+          "options": [
+            {
+              "value": "1",
+              "label": {
+                "fr": "1",
+                "en": "1"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "fr": "2",
+                "en": "2"
+              }
+            },
+            {
+              "value": "3",
+              "label": {
+                "fr": "3",
+                "en": "3"
+              }
+            },
+            {
+              "value": "4",
+              "label": {
+                "fr": "4",
+                "en": "4"
+              }
+            },
+            {
+              "value": "5",
+              "label": {
+                "fr": "5",
+                "en": "5"
+              }
+            },
+            {
+              "value": "6",
+              "label": {
+                "fr": "6",
+                "en": "6"
+              }
+            },
+            {
+              "value": "7",
+              "label": {
+                "fr": "7",
+                "en": "7"
+              }
+            },
+            {
+              "value": "8",
+              "label": {
+                "fr": "8",
+                "en": "8"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "display_oled_clear",
+      "shape": "statement",
+      "message": {
+        "fr": "effacer l'écran OLED",
+        "en": "clear the OLED screen"
+      },
+      "tooltip": {
+        "fr": "Efface tout l'écran OLED. Écran OLED SSD1306 128×64 en I2C : branché comme l'écran LCD (GND, VCC, SDA, SCL).",
+        "en": "Clears the whole OLED screen. SSD1306 128×64 I2C OLED screen: wired like the LCD (GND, VCC, SDA, SCL)."
+      }
+    }
+  ]
+}

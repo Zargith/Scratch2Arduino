@@ -144,7 +144,7 @@ Result<bool> LiveLink::confirm() {
     return false;
 }
 
-std::optional<std::string> LiveLink::request(const std::string& command) {
+std::optional<std::string> LiveLink::request(const std::string& command, milliseconds timeout) {
     if (error_) {
         return std::nullopt;
     }
@@ -153,7 +153,7 @@ std::optional<std::string> LiveLink::request(const std::string& command) {
         return std::nullopt;
     }
     for (;;) {
-        auto line = transport_.readLine(milliseconds(500));
+        auto line = transport_.readLine(timeout);
         if (!line.ok()) {
             error_ = line.error();
             return std::nullopt;
@@ -215,6 +215,50 @@ double LiveLink::distance(int trigPin, int echoPin) {
     const auto space = reply->find_last_of(' ');
     const auto value = parseNumber(space == std::string::npos ? *reply : reply->substr(space + 1));
     return value ? std::clamp(*value / 10.0, 0.0, 400.0) : 400;
+}
+
+std::optional<std::pair<double, double>> LiveLink::dht(int pin, int model) {
+    // "h <pin> <tenths of °C> <tenths of %>"; the first reading waits for the sensor to wake up.
+    const auto reply = request("H " + std::to_string(pin) + " " + std::to_string(model), milliseconds(3000));
+    if (!reply) {
+        return std::nullopt;
+    }
+    std::istringstream words(*reply);
+    std::string kind;
+    long number = 0;
+    long temperature = -9999;
+    long humidity = -9999;
+    words >> kind >> number >> temperature >> humidity;
+    if (words.fail() || temperature == -9999 || humidity == -9999) {
+        return std::nullopt;
+    }
+    return std::pair{temperature / 10.0, humidity / 10.0};
+}
+
+namespace {
+std::string screenText(const std::string& text) {
+    std::string line = codegen::asciiText(text);
+    return line.size() > 16 ? line.substr(0, 16) : line;
+}
+} // namespace
+
+void LiveLink::lcdLine(int row, const std::string& text) {
+    (void)request("L " + std::to_string(std::clamp(row, 0, 2)) + " " + screenText(text));
+}
+
+void LiveLink::oledLine(int row, const std::string& text) {
+    (void)request("O " + std::to_string(std::clamp(row, 0, 8)) + " " + screenText(text));
+}
+
+void LiveLink::pixels(int pin, int count, int index, int red, int green, int blue) {
+    (void)request("N " + std::to_string(pin) + " " + std::to_string(std::clamp(count, 1, 100)) + " " +
+                  std::to_string(std::max(index, 0)) + " " + std::to_string(std::clamp(red, 0, 255)) + " " +
+                  std::to_string(std::clamp(green, 0, 255)) + " " + std::to_string(std::clamp(blue, 0, 255)));
+}
+
+void LiveLink::matrixRow(int din, int clk, int cs, int row, int bits) {
+    (void)request("G " + std::to_string(din) + " " + std::to_string(clk) + " " + std::to_string(cs) + " " +
+                  std::to_string(std::clamp(row, 1, 8)) + " " + std::to_string(bits & 0xFF));
 }
 
 void LiveLink::reset() {
@@ -312,6 +356,14 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
         modes_[found->number] = mode;
     }
     return found->number;
+}
+
+std::string Interpreter::text(const Block& block, const std::string& name) {
+    const auto input = block.inputs.find(name);
+    if (input != block.inputs.end() && input->second.block) {
+        return formatValue(evaluate(*input->second.block));
+    }
+    return input != block.inputs.end() ? input->second.value : field(block, name);
 }
 
 int Interpreter::pinNumber(const Block& block, const std::string& name) const {
@@ -439,6 +491,22 @@ double Interpreter::evaluate(const Block& block) {
     if (type == "sound_note") {
         return parseNumber(field(block, "NOTE")).value_or(0);
     }
+    if (type == "sensors_temperature" || type == "sensors_humidity") {
+        const int number = pinNumber(block, "PIN");
+        if (number < 0) {
+            return 0;
+        }
+        modes_.erase(number); // the firmware sets the pin of the sensor
+        if (const auto measured = pins_.dht(number, field(block, "MODEL") == "DHT22" ? 22 : 11)) {
+            dht_[number] = *measured; // a sensor that does not answer keeps its last values
+        }
+        const auto& values = dht_[number];
+        const Pin* found = board_.findPin(number);
+        const std::string label = found != nullptr ? found->label : std::to_string(number);
+        readings_[label + " (°C)"] = values.first;
+        readings_[label + " (%)"] = values.second;
+        return type == "sensors_humidity" ? values.second : values.first;
+    }
     if (type == "variables_get") {
         const auto found = variables_.find(field(block, "VARIABLE"));
         return found != variables_.end() ? found->second : 0;
@@ -544,6 +612,48 @@ void Interpreter::run(Thread& thread, Clock now) {
         } else if (type == "sound_stop") {
             if (const int number = pinNumber(block, "PIN"); number >= 0) {
                 pins_.tone(number, 0, 0);
+            }
+        } else if (type == "display_lcd_print") {
+            pins_.lcdLine(field(block, "LINE") == "2" ? 2 : 1, text(block, "TEXT"));
+        } else if (type == "display_lcd_clear") {
+            pins_.lcdLine(0, {});
+        } else if (type == "display_oled_print") {
+            const int line = static_cast<int>(parseNumber(field(block, "LINE")).value_or(1));
+            pins_.oledLine(std::clamp(line, 1, 8), text(block, "TEXT"));
+        } else if (type == "display_oled_clear") {
+            pins_.oledLine(0, {});
+        } else if (type == "lights_neopixel_fill" || type == "lights_neopixel_set") {
+            const auto count = static_cast<int>(std::clamp(number(block, "COUNT"), 1.0, 100.0));
+            const int index = type == "lights_neopixel_set" ? static_cast<int>(number(block, "INDEX")) : 0;
+            if (const int number = pinNumber(block, "PIN"); number >= 0) {
+                modes_.erase(number);
+                int& length = stripLengths_[number];
+                length = std::max(length, count); // as in the sketch: the longest strip of this pin
+                const auto rgb = codegen::colourLevels(field(block, "COLOR"));
+                if (index == 0 || (index >= 1 && index <= length)) {
+                    pins_.pixels(number, length, index, rgb[0], rgb[1], rgb[2]);
+                }
+            }
+        } else if (type == "lights_matrix_show" || type == "lights_matrix_dot") {
+            const int din = pin(block, "DIN_PIN", PinMode::Output);
+            const int clk = pin(block, "CLK_PIN", PinMode::Output);
+            const int cs = pin(block, "CS_PIN", PinMode::Output);
+            if (din >= 0 && clk >= 0 && cs >= 0) {
+                auto& rows = matrices_[std::to_string(din) + " " + std::to_string(clk) + " " + std::to_string(cs)];
+                if (type == "lights_matrix_show") {
+                    rows = codegen::matrixImage(field(block, "IMAGE"));
+                    for (int row = 0; row < 8; ++row) {
+                        pins_.matrixRow(din, clk, cs, row + 1, rows[row]);
+                    }
+                } else {
+                    const auto column = static_cast<int>(number(block, "X"));
+                    const auto row = static_cast<int>(number(block, "Y"));
+                    if (column >= 1 && column <= 8 && row >= 1 && row <= 8) {
+                        const int bit = 0x80 >> (column - 1);
+                        rows[row - 1] = field(block, "STATE") == "OFF" ? (rows[row - 1] & ~bit) : (rows[row - 1] | bit);
+                        pins_.matrixRow(din, clk, cs, row, rows[row - 1]);
+                    }
+                }
             }
         } else if (type == "motors_servo_write") {
             const double angle = number(block, "ANGLE");

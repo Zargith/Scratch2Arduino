@@ -14,16 +14,30 @@
 //   S <pin> <0-180> servo angle (the pin is attached to a servo)         -> "ok"
 //   U <trig> <echo> HC-SR04 ultrasonic distance in millimetres
 //                   (4000 when nothing answers)                          -> "u <trig> <mm>"
-//   X               every output LOW, no sound, servos released          -> "ok"
+//   H <pin> <11|22> DHT11 / DHT22 reading, in tenths of °C and of %
+//                   (-9999 when the sensor does not answer)              -> "h <pin> <temp> <humidity>"
+//   L <row> <text>  text on line <row> (1-2) of an I2C 16x2 LCD (address 0x27 or 0x3F);
+//                   row 0 clears the screen                              -> "ok"
+//   O <row> <text>  text on line <row> (1-8) of an I2C SSD1306 OLED; row 0 clears it -> "ok"
+//   N <pin> <count> <index> <r> <g> <b>  colour of LED <index> (1-<count>, 0: all) of a
+//                   NeoPixel strip                                       -> "ok"
+//   G <din> <clk> <cs> <row> <bits>  row <row> (1-8) of a MAX7219 8x8 LED matrix -> "ok"
+//   X               every output LOW, no sound, servos released, strip, matrix and
+//                   screens cleared                                      -> "ok"
 //
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
 // "! <command>" so that the computer never waits forever.
 
+#include <Adafruit_NeoPixel.h>
+#include <DHT.h>
+#include <LiquidCrystal_I2C.h>
 #include <Servo.h>
+#include <U8x8lib.h>
+#include <Wire.h>
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 2";
-const int kMaxLine = 32;
+const char* const kHello = "S2A 3";
+const int kMaxLine = 48;
 const int kMaxPins = 70;
 const int kMaxServos = 8;
 
@@ -33,6 +47,144 @@ bool output[kMaxPins];
 Servo servos[kMaxServos];
 int servoPins[kMaxServos];
 int tonePin = -1;
+
+DHT* dht = nullptr;
+int dhtPin = -1;
+int dhtType = 0;
+
+LiquidCrystal_I2C* lcd = nullptr;
+U8X8_SSD1306_128X64_NONAME_HW_I2C* oled = nullptr;
+
+Adafruit_NeoPixel strip(0, 6, NEO_GRB + NEO_KHZ800);
+int stripPin = -1;
+
+int matrixPins[3] = {-1, -1, -1}; // DIN, CLK, CS
+
+bool i2cDevice(byte address) {
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;
+}
+
+void readDht(int pin, int type) {
+  if (dht == nullptr || pin != dhtPin || type != dhtType) {
+    delete dht;
+    dht = new DHT(pin, type == 22 ? DHT22 : DHT11);
+    dht->begin();
+    dhtPin = pin;
+    dhtType = type;
+    output[pin] = false;
+    delay(type == 22 ? 2000 : 1000); // the first reading needs the sensor to wake up
+  }
+  const float temperature = dht->readTemperature();
+  const float humidity = dht->readHumidity();
+  Serial.print("h ");
+  Serial.print(pin);
+  Serial.print(' ');
+  Serial.print(isnan(temperature) ? -9999L : (long)lround(temperature * 10));
+  Serial.print(' ');
+  Serial.println(isnan(humidity) ? -9999L : (long)lround(humidity * 10));
+}
+
+void showOnLcd(int row, const char* text) {
+  if (lcd == nullptr) {
+    Wire.begin();
+    lcd = new LiquidCrystal_I2C(i2cDevice(0x3F) && !i2cDevice(0x27) ? 0x3F : 0x27, 16, 2);
+    lcd->init();
+    lcd->backlight();
+  }
+  if (row <= 0) {
+    lcd->clear();
+    return;
+  }
+  lcd->setCursor(0, row > 2 ? 1 : row - 1);
+  int i = 0;
+  for (; i < 16 && text[i] != '\0'; i++) {
+    lcd->print(text[i]);
+  }
+  for (; i < 16; i++) {
+    lcd->print(' ');
+  }
+}
+
+void showOnOled(int row, const char* text) {
+  if (oled == nullptr) {
+    oled = new U8X8_SSD1306_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
+    oled->begin();
+    oled->setFont(u8x8_font_chroma48medium8_r);
+    oled->clear();
+  }
+  if (row <= 0) {
+    oled->clear();
+    return;
+  }
+  char padded[17];
+  int i = 0;
+  for (; i < 16 && text[i] != '\0'; i++) {
+    padded[i] = text[i];
+  }
+  for (; i < 16; i++) {
+    padded[i] = ' ';
+  }
+  padded[16] = '\0';
+  oled->drawString(0, row > 8 ? 7 : row - 1, padded);
+}
+
+void setPixels(int pin, int count, int index, int red, int green, int blue) {
+  if (pin != stripPin || count != (int)strip.numPixels()) {
+    strip.clear();
+    strip.show();
+    strip.updateLength(count);
+    strip.setPin(pin);
+    strip.begin();
+    strip.setBrightness(64); // full brightness dazzles and draws too much current
+    stripPin = pin;
+    output[pin] = false;
+  }
+  const uint32_t colour = strip.Color(red, green, blue);
+  if (index <= 0) {
+    strip.fill(colour);
+  } else if (index <= count) {
+    strip.setPixelColor(index - 1, colour);
+  }
+  strip.show();
+}
+
+void matrixSend(byte reg, byte data) {
+  digitalWrite(matrixPins[2], LOW);
+  shiftOut(matrixPins[0], matrixPins[1], MSBFIRST, reg);
+  shiftOut(matrixPins[0], matrixPins[1], MSBFIRST, data);
+  digitalWrite(matrixPins[2], HIGH);
+}
+
+void matrixRow(int din, int clk, int cs, int row, int bits) {
+  if (din != matrixPins[0] || clk != matrixPins[1] || cs != matrixPins[2]) {
+    matrixPins[0] = din;
+    matrixPins[1] = clk;
+    matrixPins[2] = cs;
+    for (int i = 0; i < 3; i++) {
+      pinMode(matrixPins[i], OUTPUT);
+      output[matrixPins[i]] = false;
+    }
+    digitalWrite(cs, HIGH);
+    matrixSend(0x0F, 0); // no test mode
+    matrixSend(0x09, 0); // no digit decoding
+    matrixSend(0x0A, 4); // intensity
+    matrixSend(0x0B, 7); // all 8 rows
+    matrixSend(0x0C, 1); // on
+    for (int i = 1; i <= 8; i++) {
+      matrixSend(i, 0);
+    }
+  }
+  matrixSend(row, bits);
+}
+
+// Text after the first number of a command ("L 1 Hello" -> "Hello").
+const char* textAfter(const char* command, int position) {
+  if (command[position] == ' ') {
+    position++;
+  }
+  return command + position;
+}
 
 // Gives the pin back to digitalWrite/analogWrite when a servo was using it.
 void releaseServo(int pin) {
@@ -136,6 +288,21 @@ void execute(const char* command) {
     return;
   case 'X':
     stopTone();
+    if (stripPin >= 0) {
+      strip.clear();
+      strip.show();
+    }
+    if (matrixPins[0] >= 0) {
+      for (int i = 1; i <= 8; i++) {
+        matrixSend(i, 0);
+      }
+    }
+    if (lcd != nullptr) {
+      lcd->clear();
+    }
+    if (oled != nullptr) {
+      oled->clear();
+    }
     for (int i = 0; i < kMaxServos; i++) {
       if (servoPins[i] >= 0) {
         releaseServo(servoPins[i]);
@@ -217,6 +384,51 @@ void execute(const char* command) {
     if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &echo) &&
         validPin(echo)) {
       reply('u', pin, distanceMillimetres(pin, echo));
+      return;
+    }
+    break;
+  }
+  case 'H':
+    if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &value)) {
+      readDht(pin, value);
+      return;
+    }
+    break;
+  case 'L':
+  case 'O':
+    if (readNumber(command, &position, &value)) {
+      if (command[0] == 'L') {
+        showOnLcd(value, textAfter(command, position));
+      } else {
+        showOnOled(value, textAfter(command, position));
+      }
+      reply("ok");
+      return;
+    }
+    break;
+  case 'N': {
+    long numbers[5];
+    bool ok = readNumber(command, &position, &pin) && validPin(pin);
+    for (int i = 0; ok && i < 5; i++) {
+      ok = readNumber(command, &position, &numbers[i]);
+    }
+    if (ok && numbers[0] >= 1 && numbers[0] <= 300) {
+      setPixels(pin, numbers[0], numbers[1], constrain(numbers[2], 0, 255), constrain(numbers[3], 0, 255),
+                constrain(numbers[4], 0, 255));
+      reply("ok");
+      return;
+    }
+    break;
+  }
+  case 'G': {
+    long numbers[4];
+    bool ok = readNumber(command, &position, &pin) && validPin(pin);
+    for (int i = 0; ok && i < 4; i++) {
+      ok = readNumber(command, &position, &numbers[i]);
+    }
+    if (ok && validPin(numbers[0]) && validPin(numbers[1]) && numbers[2] >= 1 && numbers[2] <= 8) {
+      matrixRow(pin, numbers[0], numbers[1], numbers[2], numbers[3] & 0xFF);
+      reply("ok");
       return;
     }
     break;
