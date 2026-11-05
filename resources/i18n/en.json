@@ -75,8 +75,6 @@
   "validation": {
     "no_start_block": "Your program does not start anywhere.",
     "no_start_block_hint": "Add the \"{block}\" block (Events category) and attach your blocks below it.",
-    "loose_blocks": "The blocks starting with \"{block}\" are not attached to a start block: they will not run.",
-    "loose_blocks_hint": "Attach them under \"when the program starts\", or drop them on the palette if you do not need them.",
     "empty_script": "The \"{block}\" block has nothing below it.",
     "empty_script_hint": "Attach blocks below it to tell the board what to do.",
     "empty_mouth": "The \"{block}\" block is empty.",

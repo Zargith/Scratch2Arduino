@@ -11,7 +11,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 2 — Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
 | 3a — Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
 | 3b — Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
-| 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted, compiler errors mapped to blocks |
+| 4 — Validation and friendly errors | Done: 10 rules with fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
 | 5 — Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
 | 6 — Sensors and actuators | In progress. Part 1 done: button, potentiometer, light sensor, HC-SR04, RGB LED, buzzer, servo, DC motor (H-bridge), in upload and Live modes, with automatic library installation and two example projects. Next: DHT11/22, LCD 16×2 I2C, OLED, NeoPixel, LED matrix, wiring help images; to be checked on real boards |
 | 7 → 11 | Not started |

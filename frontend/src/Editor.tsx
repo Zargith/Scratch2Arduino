@@ -39,6 +39,27 @@ interface PromptRequest {
 	resolve(value: string | null): void;
 }
 
+const LOOSE = "S2A_LOOSE_BLOCK";
+
+/**
+ * Blocks not attached under a start block do not run: they are shown greyed, like comments,
+ * and come back to life as soon as they are attached again.
+ */
+function markLooseBlocks(workspace: Blockly.WorkspaceSvg) {
+	if (workspace.isDragging()) return;
+	const recordUndo = Blockly.Events.getRecordUndo();
+	Blockly.Events.setRecordUndo(false);
+	try {
+		for (const block of workspace.getAllBlocks(false)) {
+			const root = block.getRootBlock();
+			const loose = !!(root.outputConnection || root.previousConnection);
+			if (block.hasDisabledReason(LOOSE) !== loose) block.setDisabledReason(loose, LOOSE);
+		}
+	} finally {
+		Blockly.Events.setRecordUndo(recordUndo);
+	}
+}
+
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	{ language, board, initialState, onChange, onLoadError },
 	ref
@@ -132,7 +153,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		} finally {
 			Blockly.Events.enable();
 		}
+		Blockly.Events.disable(); // opening a project does not modify it
+		try {
+			markLooseBlocks(created);
+		} finally {
+			Blockly.Events.enable();
+		}
 		const variableEvents: string[] = [Blockly.Events.VAR_CREATE, Blockly.Events.VAR_DELETE, Blockly.Events.VAR_RENAME];
+		const blockEvents: string[] = [Blockly.Events.BLOCK_CREATE, Blockly.Events.BLOCK_MOVE, Blockly.Events.BLOCK_DELETE];
 		created.addChangeListener((event: Blockly.Events.Abstract) => {
 			if (variableEvents.includes(event.type)) {
 				const variables = created.getVariableMap().getVariablesOfType("").map((variable) => ({ id: variable.getId() }));
@@ -140,6 +168,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 				// ScratchContinuousToolbox only redraws its flyout on request.
 				(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
 			}
+			if (blockEvents.includes(event.type)) markLooseBlocks(created);
 			if (!event.isUiEvent) {
 				created.highlightBlock(null);
 				onChangeRef.current();

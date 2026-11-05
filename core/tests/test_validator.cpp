@@ -68,21 +68,17 @@ TEST(Validator, AcceptsTheExampleProjects) {
 TEST(Validator, NoStartBlock) {
     Project project = program({led()});
     const auto issues = check(project);
-    ASSERT_EQ(issues.size(), 2U); // the error first, then the loose blocks
+    ASSERT_EQ(issues.size(), 1U); // the loose blocks themselves are not reported
     EXPECT_EQ(issues[0].rule, Rule::NoStartBlock);
     EXPECT_EQ(issues[0].severity, Severity::Error);
     EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("when the program starts"), std::string::npos);
-    EXPECT_EQ(issues[1].rule, Rule::LooseBlocks);
 }
 
-TEST(Validator, LooseBlocksAreAWarningAndNotChecked) {
+TEST(Validator, LooseBlocksAreLikeComments) {
     Project project = program({hat(), led()});
     Block bad = block("bad", "control_if"); // no condition, but it never runs
     project.scripts.push_back({300, 0, {bad}});
-    const Issue issue = single(check(project));
-    EXPECT_EQ(issue.rule, Rule::LooseBlocks);
-    EXPECT_EQ(issue.severity, Severity::Warning);
-    EXPECT_EQ(issue.blockId, "bad");
+    EXPECT_TRUE(check(project).empty());
 }
 
 TEST(Validator, EmptyScript) {
