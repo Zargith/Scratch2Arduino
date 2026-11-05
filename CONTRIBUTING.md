@@ -6,7 +6,7 @@ so this guide is a draft and will grow with the code.
 ## Ways to help
 
 - **Bug reports and feature ideas**: open an issue describing what you did, what you expected and what happened
-  (OS, board, variant A or B).
+  (OS, board, Scratch2Arduino version).
 - **Translations**: the interface is French first, English second; other languages are welcome.
 - **Example projects and tutorials**: especially for classrooms and workshops.
 - **Code**: pick an item of the current roadmap phase and open a pull request.
@@ -14,7 +14,7 @@ so this guide is a draft and will grow with the code.
 ## Development setup
 
 ```bash
-cmake --preset debug           # both variants (needs Qt 6 and WebKitGTK 4.1 on Linux)
+cmake --preset debug           # the application (needs WebKitGTK 4.1 on Linux)
 cmake --build --preset debug
 ctest --preset debug
 
@@ -30,7 +30,7 @@ cmake --build --preset core-only && ctest --preset core-only
 - Code, comments, commit messages and developer docs in English; user-facing strings in French **and** English.
 - The editor must never raise errors while the user is building a project: validation happens on Build/Run only,
   with friendly messages.
-- Both variants share `core/`: put logic there, keep `apps/` thin.
+- Put logic in `core/` (tested without a GUI), keep `apps/webview` and `frontend/` thin.
 - Add or update unit tests (GoogleTest, `core/tests/`) with every core change.
 - New blocks: see [docs/block-catalog.md](docs/block-catalog.md). New interface texts go in both
   `resources/i18n/fr.json` and `resources/i18n/en.json` (a test fails if a key is missing in one of them).

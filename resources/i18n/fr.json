@@ -5,11 +5,7 @@
   "app": {
     "title": "Scratch2Arduino",
     "welcome": "Bienvenue dans Scratch2Arduino ! Branche ta carte Arduino et commence à assembler des blocs.",
-    "coming_soon": "L'éditeur de blocs arrive bientôt.",
-    "variant": {
-      "webview": "Variante A — webview",
-      "native": "Variante B — native (Qt)"
-    }
+    "coming_soon": "L'éditeur de blocs arrive bientôt."
   },
   "project": {
     "default_name": "Mon projet"

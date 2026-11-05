@@ -1,5 +1,5 @@
 // Conversion between the Blockly workspace state and the project.json format of the C++
-// core (core/include/s2a/project.hpp). Both variants open the same .s2a files, so the
+// core (core/include/s2a/project.hpp). The C++ core reads the same .s2a files, so the
 // project format is the reference; Blockly state is rebuilt from it.
 import { findBlock, shadowInputs, type CatalogBlock } from "@/catalog";
 

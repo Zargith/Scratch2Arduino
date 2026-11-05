@@ -5,7 +5,7 @@
 #   sudo make install            install the build (prefix chosen at `make` time)
 #   sudo make uninstall          remove what `make install` installed
 #   make debug                   Debug build in build/make-debug
-#   make PREFIX=$HOME/.local WEBVIEW=OFF   options: PREFIX, WEBVIEW, NATIVE, TESTS, BUILD_TYPE
+#   make PREFIX=$HOME/.local WEBVIEW=OFF   options: PREFIX, WEBVIEW, TESTS, BUILD_TYPE
 #
 # For a one-command install with dependencies, use ./install.sh instead.
 
@@ -13,11 +13,10 @@ CMAKE      ?= cmake
 CTEST      ?= ctest
 BUILD_TYPE ?= Release
 BUILD_DIR  ?= build/make-$(shell echo $(BUILD_TYPE) | tr A-Z a-z)
-# PREFIX (default /usr/local), WEBVIEW, NATIVE and TESTS (default ON) are only passed to CMake
+# PREFIX (default /usr/local), WEBVIEW and TESTS (default ON) are only passed to CMake
 # when given, so a later plain `make` or `make test` keeps the values chosen earlier.
 PREFIX     ?=
 WEBVIEW    ?=
-NATIVE     ?=
 TESTS      ?=
 JOBS       ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 CMAKE_ARGS ?=
@@ -31,7 +30,6 @@ configure:
 	    -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 	    $(if $(PREFIX),-DCMAKE_INSTALL_PREFIX="$(PREFIX)") \
 	    $(if $(WEBVIEW),-DS2A_BUILD_WEBVIEW="$(WEBVIEW)") \
-	    $(if $(NATIVE),-DS2A_BUILD_NATIVE="$(NATIVE)") \
 	    $(if $(TESTS),-DS2A_BUILD_TESTS="$(TESTS)") \
 	    $(CMAKE_ARGS)
 
