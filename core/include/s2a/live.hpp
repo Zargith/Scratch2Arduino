@@ -8,6 +8,7 @@
 #include "s2a/result.hpp"
 #include "s2a/serial.hpp"
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -26,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 2"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 3"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -51,7 +52,17 @@ public:
     virtual void servoWrite(int pin, int angle) = 0;
     /// Distance in centimetres measured by an HC-SR04 ultrasonic sensor (400 when nothing answers).
     [[nodiscard]] virtual double distance(int trigPin, int echoPin) = 0;
-    /// Every output low, no sound, servos released (Live mode stopped).
+    /// Temperature (°C) and humidity (%) of a DHT11 (model 11) or DHT22 (22); nullopt when it does not answer.
+    [[nodiscard]] virtual std::optional<std::pair<double, double>> dht(int pin, int model) = 0;
+    /// Text on line `row` (1-2) of the I2C LCD; row 0 clears it.
+    virtual void lcdLine(int row, const std::string& text) = 0;
+    /// Text on line `row` (1-8) of the I2C OLED screen; row 0 clears it.
+    virtual void oledLine(int row, const std::string& text) = 0;
+    /// Colour of LED `index` (1-count, 0: all) of a NeoPixel strip.
+    virtual void pixels(int pin, int count, int index, int red, int green, int blue) = 0;
+    /// Row `row` (1-8) of a MAX7219 LED matrix, left column = high bit.
+    virtual void matrixRow(int din, int clk, int cs, int row, int bits) = 0;
+    /// Every output low, no sound, servos released, strip, matrix and screens cleared (Live mode stopped).
     virtual void reset() = 0;
 };
 
@@ -71,6 +82,11 @@ public:
     void tone(int pin, int frequency, int milliseconds) override;
     void servoWrite(int pin, int angle) override;
     [[nodiscard]] double distance(int trigPin, int echoPin) override;
+    [[nodiscard]] std::optional<std::pair<double, double>> dht(int pin, int model) override;
+    void lcdLine(int row, const std::string& text) override;
+    void oledLine(int row, const std::string& text) override;
+    void pixels(int pin, int count, int index, int red, int green, int blue) override;
+    void matrixRow(int din, int clk, int cs, int row, int bits) override;
     void reset() override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
@@ -78,7 +94,8 @@ public:
 
 private:
     /// Sends `command` and returns the reply line ("ok", "r 2 1"...), or nullopt on error.
-    std::optional<std::string> request(const std::string& command);
+    std::optional<std::string> request(const std::string& command,
+                                       std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
 
     serial::LineTransport& transport_;
     std::optional<Error> error_;
@@ -132,6 +149,8 @@ private:
     bool condition(const project::Block& block, const std::string& name);
     double evaluate(const project::Block& block);
     int pin(const project::Block& block, const std::string& name, PinMode mode);
+    /// Text slot: typed text or the value of a reporter, as the serial monitor shows it.
+    [[nodiscard]] std::string text(const project::Block& block, const std::string& name);
     /// Pin number of a pin menu, without changing its mode (-1 when invalid).
     [[nodiscard]] int pinNumber(const project::Block& block, const std::string& name) const;
     void record(int pin, double value);
@@ -146,6 +165,9 @@ private:
     std::map<std::string, double> variables_;
     std::map<int, PinMode> modes_;
     std::map<std::string, double> readings_;
+    std::map<int, std::pair<double, double>> dht_;        ///< Last good DHT values by pin.
+    std::map<int, int> stripLengths_;                     ///< NeoPixel pin -> number of LEDs.
+    std::map<std::string, std::array<int, 8>> matrices_;  ///< "din clk cs" -> rows shown.
     std::vector<std::string> output_;
     std::mt19937 random_{std::random_device{}()};
 };
