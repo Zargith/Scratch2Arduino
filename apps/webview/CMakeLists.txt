@@ -11,7 +11,7 @@ if(UNIX AND NOT APPLE)
     if(NOT S2A_WEBKITGTK_FOUND)
         message(FATAL_ERROR
             "WebKitGTK (et/and pkg-config) introuvable / not found.\n"
-            "  - ./install.sh installe les dépendances / installs the dependencies\n"
+            "  - ./Scratch2Arduino_installer.sh installe les dépendances / installs the dependencies\n"
             "  - Debian/Ubuntu : sudo apt install pkg-config libwebkit2gtk-4.1-dev\n"
             "Sinon / otherwise: -DS2A_BUILD_WEBVIEW=OFF")
     endif()
@@ -69,6 +69,8 @@ target_include_directories(scratch2arduino SYSTEM PRIVATE "${portable_file_dialo
 target_link_libraries(scratch2arduino PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
 if(WIN32)
     target_compile_definitions(scratch2arduino PRIVATE NOMINMAX)
+    # CommandLineToArgvW: the project dropped on the icon.
+    target_link_libraries(scratch2arduino PRIVATE shell32)
 endif()
 s2a_set_warnings(scratch2arduino)
 

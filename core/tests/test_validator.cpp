@@ -68,21 +68,78 @@ TEST(Validator, AcceptsTheExampleProjects) {
 TEST(Validator, NoStartBlock) {
     Project project = program({led()});
     const auto issues = check(project);
-    ASSERT_EQ(issues.size(), 2U); // the error first, then the loose blocks
+    ASSERT_EQ(issues.size(), 1U); // the loose blocks themselves are not reported
     EXPECT_EQ(issues[0].rule, Rule::NoStartBlock);
     EXPECT_EQ(issues[0].severity, Severity::Error);
     EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("when the program starts"), std::string::npos);
-    EXPECT_EQ(issues[1].rule, Rule::LooseBlocks);
 }
 
-TEST(Validator, LooseBlocksAreAWarningAndNotChecked) {
+TEST(Validator, LooseBlocksAreLikeComments) {
     Project project = program({hat(), led()});
     Block bad = block("bad", "control_if"); // no condition, but it never runs
     project.scripts.push_back({300, 0, {bad}});
-    const Issue issue = single(check(project));
-    EXPECT_EQ(issue.rule, Rule::LooseBlocks);
-    EXPECT_EQ(issue.severity, Severity::Warning);
-    EXPECT_EQ(issue.blockId, "bad");
+    EXPECT_TRUE(check(project).empty());
+}
+
+Block define(std::string id, std::string function) {
+    Block result = block(std::move(id), "functions_define");
+    result.fields["FUNCTION"] = std::move(function);
+    return result;
+}
+
+Block call(std::string id, std::string function) {
+    Block result = block(std::move(id), "functions_call");
+    result.fields["FUNCTION"] = std::move(function);
+    return result;
+}
+
+Project withFunctions(Stack main, std::vector<Stack> definitions) {
+    Project project = program(std::move(main));
+    project.functions = {{"f", "blink"}, {"g", "beep"}};
+    for (Stack& stack : definitions) {
+        project.scripts.push_back({300, 0, std::move(stack)});
+    }
+    return project;
+}
+
+TEST(Validator, AcceptsFunctions) {
+    EXPECT_TRUE(check(withFunctions({hat(), call("c", "f")}, {{define("d", "f"), led(), call("c2", "g")},
+                                                             {define("d2", "g"), led("led2")}}))
+                    .empty());
+}
+
+TEST(Validator, FunctionsAloneDoNotStartTheProgram) {
+    Project project = withFunctions({define("d", "f"), led()}, {});
+    EXPECT_EQ(single(check(project)).rule, Rule::NoStartBlock);
+}
+
+TEST(Validator, MissingFunction) {
+    const Issue issue = single(check(withFunctions({hat(), call("c", "deleted")}, {})));
+    EXPECT_EQ(issue.rule, Rule::MissingFunction);
+    EXPECT_EQ(issue.blockId, "c");
+}
+
+TEST(Validator, FunctionNotDefined) {
+    const Issue issue = single(check(withFunctions({hat(), call("c", "f")}, {})));
+    EXPECT_EQ(issue.rule, Rule::FunctionNotDefined);
+    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("« définir blink »"), std::string::npos);
+}
+
+TEST(Validator, FunctionDefinedTwice) {
+    const Issue issue =
+        single(check(withFunctions({hat(), call("c", "f")}, {{define("d1", "f"), led()}, {define("d2", "f"), led("l2")}})));
+    EXPECT_EQ(issue.rule, Rule::FunctionDefinedTwice);
+    EXPECT_EQ(issue.blockId, "d2");
+}
+
+TEST(Validator, RecursiveFunction) {
+    // f calls g, g calls f: neither would ever end.
+    const auto issues = check(withFunctions({hat(), call("c", "f")}, {{define("d1", "f"), call("cg", "g")},
+                                                                     {define("d2", "g"), call("cf", "f")}}));
+    ASSERT_EQ(issues.size(), 2U);
+    EXPECT_EQ(issues[0].rule, Rule::RecursiveFunction);
+    EXPECT_EQ(issues[0].blockId, "cg");
+    EXPECT_EQ(issues[1].blockId, "cf");
 }
 
 TEST(Validator, EmptyScript) {

@@ -20,7 +20,6 @@ enum class Severity {
 
 enum class Rule {
     NoStartBlock,       ///< No "when the program starts" script.
-    LooseBlocks,        ///< Blocks not attached under a hat never run.
     EmptyScript,        ///< A hat with nothing below.
     EmptyMouth,         ///< repeat / if / forever with nothing inside.
     BlocksAfterForever, ///< Blocks below "forever" never run.
@@ -30,6 +29,10 @@ enum class Rule {
     PinCapability,      ///< Pin that cannot do what the block needs (PWM, analog...).
     MissingVariable,    ///< No variable chosen, or a variable that was deleted.
     UnknownBlock,       ///< Block type not in the catalog (project made with a newer version).
+    MissingFunction,    ///< No function chosen, or a function that was deleted.
+    FunctionNotDefined, ///< "call" of a function that has no "define" script.
+    FunctionDefinedTwice, ///< Two "define" scripts for the same function.
+    RecursiveFunction,  ///< A function that calls itself (directly or through others): it would never end.
 };
 
 struct Issue {

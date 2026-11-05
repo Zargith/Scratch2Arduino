@@ -65,6 +65,7 @@ interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
 	s2a_open(language: Language): Promise<OpenedProject | null>;
+	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
 	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
 	s2a_ports(): Promise<Port[]>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
@@ -102,6 +103,9 @@ export const bridge = {
 	hello: () => host("s2a_hello")(),
 	generate: (project: Project) => host("s2a_generate")(project),
 	open: (language: Language) => host("s2a_open")(language),
+	/** Project given to the program (dropped on its icon); null when none or an older host. */
+	startupProject: async (language: Language): Promise<OpenedProject | null> =>
+		typeof window.s2a_startup_project === "function" ? window.s2a_startup_project(language) : null,
 	/** Empty path: ask where to save. Resolves to the saved path, or null when cancelled. */
 	save: (project: Project, path: string, language: Language) => host("s2a_save")(project, path, language),
 	ports: () => host("s2a_ports")(),

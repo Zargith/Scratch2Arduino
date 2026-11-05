@@ -4,8 +4,10 @@ import * as Blockly from "scratch-blocks";
 
 import {
 	blocksTheme,
+	CREATE_FUNCTION_CALLBACK,
 	CREATE_VARIABLE_CALLBACK,
 	defineBlocks,
+	FUNCTION_TYPE,
 	setCurrentBoard,
 	toolbox,
 } from "@/blocks/definitions";
@@ -37,6 +39,44 @@ interface PromptRequest {
 	message: string;
 	value: string;
 	resolve(value: string | null): void;
+}
+
+const LOOSE = "S2A_LOOSE_BLOCK";
+
+/** Text typed in a field, the project name or the serial monitor keeps its own shortcuts. */
+function isTextTarget(target: EventTarget | null): boolean {
+	return (
+		target instanceof HTMLElement &&
+		(target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
+	);
+}
+
+/** Ctrl+Y redoes too (Blockly only knows Ctrl+Shift+Z), as in most Windows programs. */
+function addRedoKey() {
+	const registry = Blockly.ShortcutRegistry.registry;
+	const key = registry.createSerializedKey(Blockly.utils.KeyCodes.Y, [Blockly.utils.KeyCodes.CTRL]);
+	if (!(registry.getShortcutNamesByKeyCode(key) ?? []).includes(Blockly.ShortcutItems.names.REDO)) {
+		registry.addKeyMapping(key, Blockly.ShortcutItems.names.REDO, true);
+	}
+}
+
+/**
+ * Blocks not attached under a start block do not run: they are shown greyed, like comments,
+ * and come back to life as soon as they are attached again.
+ */
+function markLooseBlocks(workspace: Blockly.WorkspaceSvg) {
+	if (workspace.isDragging()) return;
+	const recordUndo = Blockly.Events.getRecordUndo();
+	Blockly.Events.setRecordUndo(false);
+	try {
+		for (const block of workspace.getAllBlocks(false)) {
+			const root = block.getRootBlock();
+			const loose = !!(root.outputConnection || root.previousConnection);
+			if (block.hasDisabledReason(LOOSE) !== loose) block.setDisabledReason(loose, LOOSE);
+		}
+	} finally {
+		Blockly.Events.setRecordUndo(recordUndo);
+	}
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
@@ -81,10 +121,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		if (!element) return;
 		Blockly.ScratchMsgs.setLocale(language);
 		defineBlocks(language);
-		const createLabel = translate(language, "variables.create");
-		const variablesOf = (state: WorkspaceState) => state.variables ?? [];
+		const labels = {
+			createVariable: translate(language, "variables.create"),
+			createFunction: translate(language, "functions.create"),
+		};
+		const ofType = (state: WorkspaceState, type: string) =>
+			(state.variables ?? []).filter((variable) => (variable.type ?? "") === type);
 		const created = Blockly.inject(element, {
-			toolbox: toolbox(language, variablesOf(initialState), createLabel),
+			toolbox: toolbox(language, ofType(initialState, ""), labels, ofType(initialState, FUNCTION_TYPE)),
 			theme: blocksTheme(),
 			media: "./media/",
 			trashcan: true,
@@ -95,9 +139,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		created.registerButtonCallback(CREATE_VARIABLE_CALLBACK, () => {
 			Blockly.ScratchVariables.createVariable(created);
 		});
-		Blockly.ScratchVariables.setPromptHandler((message, defaultValue, callback) => {
+		created.registerButtonCallback(CREATE_FUNCTION_CALLBACK, () => {
+			Blockly.ScratchVariables.createVariable(created, undefined, FUNCTION_TYPE);
+		});
+		Blockly.ScratchVariables.setPromptHandler((message, defaultValue, callback, _title, type) => {
 			setPrompt({
-				message: message || translate(language, "variables.prompt"),
+				message:
+					type !== FUNCTION_TYPE
+						? message || translate(language, "variables.prompt")
+						: defaultValue // renaming gives the current name
+							? translate(language, "functions.rename_prompt", { name: defaultValue })
+							: translate(language, "functions.prompt"),
 				value: defaultValue,
 				resolve: (value) => {
 					if (value !== null) callback(value, []);
@@ -132,14 +184,26 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		} finally {
 			Blockly.Events.enable();
 		}
+		Blockly.Events.disable(); // opening a project does not modify it
+		try {
+			markLooseBlocks(created);
+		} finally {
+			Blockly.Events.enable();
+		}
 		const variableEvents: string[] = [Blockly.Events.VAR_CREATE, Blockly.Events.VAR_DELETE, Blockly.Events.VAR_RENAME];
+		const blockEvents: string[] = [Blockly.Events.BLOCK_CREATE, Blockly.Events.BLOCK_MOVE, Blockly.Events.BLOCK_DELETE];
 		created.addChangeListener((event: Blockly.Events.Abstract) => {
 			if (variableEvents.includes(event.type)) {
-				const variables = created.getVariableMap().getVariablesOfType("").map((variable) => ({ id: variable.getId() }));
-				created.updateToolbox(toolbox(language, variables, createLabel));
+				const idsOf = (type: string) =>
+					created
+						.getVariableMap()
+						.getVariablesOfType(type)
+						.map((variable) => ({ id: variable.getId() }));
+				created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE)));
 				// ScratchContinuousToolbox only redraws its flyout on request.
 				(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
 			}
+			if (blockEvents.includes(event.type)) markLooseBlocks(created);
 			if (!event.isUiEvent) {
 				created.highlightBlock(null);
 				onChangeRef.current();
@@ -147,9 +211,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		});
 		workspace.current = created;
 
+		// Blockly listens to the keyboard on its own area only, for the block that has the
+		// keyboard focus. In the application window that focus is often on the page instead (a
+		// click on a block does not always give it), so Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z, Ctrl+Y...
+		// pressed elsewhere are handed to Blockly, for the selected block.
+		addRedoKey();
+		const forwardShortcut = (event: KeyboardEvent) => {
+			if (!(event.ctrlKey || event.metaKey) || event.defaultPrevented) return;
+			if (event.target instanceof Node && element.contains(event.target)) return; // Blockly's own
+			if (isTextTarget(event.target)) return;
+			if (Blockly.ShortcutRegistry.registry.onKeyDown(created, event)) event.preventDefault();
+		};
+		document.addEventListener("keydown", forwardShortcut);
+
 		const resize = new ResizeObserver(() => Blockly.svgResize(created));
 		resize.observe(element);
 		return () => {
+			document.removeEventListener("keydown", forwardShortcut);
 			resize.disconnect();
 			created.dispose();
 			workspace.current = null;

@@ -1,0 +1,167 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Jauge lumineuse",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "n",
+      "name": "LED allumées",
+      "initialValue": 0
+    },
+    {
+      "id": "i",
+      "name": "i",
+      "initialValue": 1
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "n"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "map",
+                      "type": "operators_map",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "knob",
+                            "type": "sensors_potentiometer",
+                            "fields": {
+                              "PIN": "A0"
+                            }
+                          }
+                        },
+                        "FROM_LOW": {
+                          "value": "0"
+                        },
+                        "FROM_HIGH": {
+                          "value": "100"
+                        },
+                        "TO_LOW": {
+                          "value": "0"
+                        },
+                        "TO_HIGH": {
+                          "value": "8"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "off",
+                "type": "lights_neopixel_fill",
+                "fields": {
+                  "PIN": "5",
+                  "COLOR": "OFF"
+                },
+                "inputs": {
+                  "COUNT": {
+                    "value": "8"
+                  }
+                }
+              },
+              {
+                "id": "i0",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "i"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "1"
+                  }
+                }
+              },
+              {
+                "id": "rep",
+                "type": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "value": "8",
+                    "block": {
+                      "id": "g1",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "n"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "one",
+                      "type": "lights_neopixel_set",
+                      "fields": {
+                        "PIN": "5",
+                        "COLOR": "GREEN"
+                      },
+                      "inputs": {
+                        "COUNT": {
+                          "value": "8"
+                        },
+                        "INDEX": {
+                          "value": "1",
+                          "block": {
+                            "id": "g2",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "i"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "inc",
+                      "type": "variables_change",
+                      "fields": {
+                        "VARIABLE": "i"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "w",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

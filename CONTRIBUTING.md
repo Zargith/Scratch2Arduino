@@ -22,7 +22,7 @@ cmake --preset core-only       # core library and tests only, no GUI dependencie
 cmake --build --preset core-only && ctest --preset core-only
 ```
 
-`./install.sh --help` and `make help` list the other options.
+`./Scratch2Arduino_installer.sh --help` and `make help` list the other options.
 
 ## Conventions
 
@@ -45,7 +45,7 @@ cmake --build --preset core-only && ctest --preset core-only
 ## Releases
 
 Every push to `main` whose CI passes publishes the GitHub release `vX.Y.Z`, where `X.Y.Z` is the
-`VERSION` of `CMakeLists.txt`, with `installer.exe` attached (0.x versions are marked as pre-releases).
+`VERSION` of `CMakeLists.txt`, with `Scratch2Arduino_installer.exe` attached (0.x versions are marked as pre-releases).
 If that tag already exists nothing is published: bump `VERSION` on `dev` before merging into `main`.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`...).
 

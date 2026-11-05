@@ -86,7 +86,7 @@ Scratch2Arduino/
 ├── CMakeLists.txt          # top-level build, option S2A_BUILD_WEBVIEW (OFF: core only)
 ├── CMakePresets.json
 ├── Makefile                # Linux/macOS convenience wrapper around CMake
-├── install.sh              # Linux/macOS one-command installer
+├── Scratch2Arduino_installer.sh              # Linux/macOS one-command installer
 ├── cmake/                  # CMake modules and toolchain helpers
 ├── core/                   # s2a_core: shared C++17 library + unit tests
 ├── blocks/                 # block catalog (JSON, fr/en labels) and its JSON schema
@@ -96,9 +96,9 @@ Scratch2Arduino/
 ├── firmware/               # S2A live firmware for Arduino / ESP boards
 ├── tools/s2a-cli/          # command-line access to the toolchain
 ├── installer/
-│   └── windows/            # installer.exe script (Inno Setup / NSIS)
+│   └── windows/            # Scratch2Arduino_installer.exe script (Inno Setup / NSIS)
 ├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
-├── examples/               # sketches (Blink); example projects (.s2a) in Phase 7
+├── examples/               # sketches (Blink); example projects with their wiring diagrams
 └── docs/                   # roadmap, block catalog guide; later user guide, tutorials
 ```
 
@@ -106,14 +106,14 @@ Scratch2Arduino/
 
 ### Windows
 
-Download **`installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
+Download **`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
 
 ### Linux (and macOS)
 
 ```bash
-./install.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
-./install.sh --user     # same, for the current user only (~/.local)
-./install.sh --uninstall
+./Scratch2Arduino_installer.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
+./Scratch2Arduino_installer.sh --user     # same, for the current user only (~/.local)
+./Scratch2Arduino_installer.sh --uninstall
 
 # or, with the dependencies already installed:
 make && sudo make install
@@ -181,6 +181,25 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
+### Opening a project
+
+**Open** in the top bar, or drop a project (`.s2a`, or a `project.json` of the examples) on the
+Scratch2Arduino icon or shortcut: the program starts with it. On Windows, double-clicking a `.s2a` file
+opens it too. (On macOS, dropping on the Dock icon is not supported yet: use **Open**.)
+
+### Keyboard shortcuts
+
+| Shortcut (⌘ instead of Ctrl on a Mac) | Action |
+|---|---|
+| Ctrl+S | Save the project |
+| Ctrl+C / Ctrl+X | Copy / cut the selected block, with the blocks below it |
+| Ctrl+V | Paste |
+| Ctrl+Z | Undo |
+| Ctrl+Y or Ctrl+Shift+Z | Redo |
+| Delete or Backspace | Delete the selected block |
+
+While typing in a field (a number, a text, the project name), these keys act on the text instead.
+
 ### Live mode
 
 Click **Live**: the blocks run on the computer and drive the board through the
@@ -196,14 +215,26 @@ the wiring:
 
 | Category | Blocks |
 |---|---|
-| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm |
-| Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255) |
+| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity |
+| Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8×8 LED matrix: pictures and single dots |
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
+| Screens | write a text or a value on a line of an I2C 16×2 LCD (address 0x27 or 0x3F, found automatically) or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
 
-They work in upload and Live modes. Libraries they need (for example *Servo*) are downloaded automatically
-the first time. Example projects: [`servo-potentiometer`](examples/projects/servo-potentiometer/project.json)
-and [`distance-alarm`](examples/projects/distance-alarm/project.json).
+They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
+*U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
+**wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
+`servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
+button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
+
+### Functions
+
+To reuse a group of blocks, open the *Functions* category and click **Make a function**: give it a
+name, attach blocks under **define <name>**, then use **call <name>** anywhere (several times if needed).
+The blocks of the function run, then the program goes on after the call. A function does not run on its
+own at start-up, and it cannot call itself (Check explains why). In the Arduino code, each function
+becomes a C++ function. Example: [`traffic-light`](examples/projects/traffic-light/project.json), with the
+functions *feu vert*, *feu orange* and *feu rouge*.
 
 ### Serial monitor
 

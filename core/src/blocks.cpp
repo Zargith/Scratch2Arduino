@@ -118,7 +118,7 @@ std::optional<BlockShape> parseShape(std::string_view text) {
 std::optional<ArgKind> parseKind(std::string_view text) {
     static const std::map<std::string_view, ArgKind> kinds{
         {"number", ArgKind::Number},     {"text", ArgKind::Text},         {"boolean", ArgKind::Boolean},
-        {"pin", ArgKind::Pin},           {"dropdown", ArgKind::Dropdown}, {"variable", ArgKind::Variable},
+        {"pin", ArgKind::Pin},           {"dropdown", ArgKind::Dropdown}, {"variable", ArgKind::Variable}, {"function", ArgKind::Function},
         {"statement", ArgKind::Statement}};
     const auto it = kinds.find(text);
     return it != kinds.end() ? std::optional(it->second) : std::nullopt;
@@ -184,7 +184,10 @@ BlockArg parseArg(const Json& node, const std::string& where, Issues& issues) {
             std::set<std::string> values;
             for (const Json& option : node.at("options")) {
                 DropdownOption parsed{stringField(option, "value").value_or(""),
-                                      localized(option, "label", at, issues)};
+                                      localized(option, "label", at, issues), std::nullopt};
+                if (option.contains("tooltip")) {
+                    parsed.tooltip = localized(option, "tooltip", at, issues);
+                }
                 if (parsed.value.empty() || !values.insert(parsed.value).second) {
                     issues.add(at, "option values must be unique and non-empty");
                 }
@@ -197,7 +200,8 @@ BlockArg parseArg(const Json& node, const std::string& where, Issues& issues) {
     } else if (node.contains("options")) {
         issues.add(at, "'options' is only allowed on dropdown arguments");
     }
-    if ((arg.kind == ArgKind::Statement || arg.kind == ArgKind::Boolean || arg.kind == ArgKind::Variable) &&
+    if ((arg.kind == ArgKind::Statement || arg.kind == ArgKind::Boolean || arg.kind == ArgKind::Variable ||
+         arg.kind == ArgKind::Function) &&
         !arg.defaultValue.empty()) {
         issues.add(at, "this argument kind cannot have a default value");
     }

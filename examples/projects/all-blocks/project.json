@@ -406,6 +406,13 @@
           "statements": {
             "SUBSTACK": [
               {
+                "id": "cflash",
+                "type": "functions_call",
+                "fields": {
+                  "FUNCTION": "flash"
+                }
+              },
+              {
                 "id": "w3",
                 "type": "control_wait",
                 "inputs": {
@@ -655,6 +662,184 @@
           }
         }
       ]
+    },
+    {
+      "x": 2100,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start4",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "lcd1",
+          "type": "display_lcd_print",
+          "fields": {
+            "LINE": "1"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "Température"
+            }
+          }
+        },
+        {
+          "id": "lcd2",
+          "type": "display_lcd_print",
+          "fields": {
+            "LINE": "2"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "",
+              "block": {
+                "id": "temp",
+                "type": "sensors_temperature",
+                "fields": {
+                  "MODEL": "DHT11",
+                  "PIN": "13"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oled1",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "8"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "",
+              "block": {
+                "id": "hum",
+                "type": "sensors_humidity",
+                "fields": {
+                  "MODEL": "DHT11",
+                  "PIN": "13"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "neofill",
+          "type": "lights_neopixel_fill",
+          "fields": {
+            "PIN": "12",
+            "COLOR": "BLUE"
+          },
+          "inputs": {
+            "COUNT": {
+              "value": "8"
+            }
+          }
+        },
+        {
+          "id": "neoset",
+          "type": "lights_neopixel_set",
+          "fields": {
+            "PIN": "12",
+            "COLOR": "WHITE"
+          },
+          "inputs": {
+            "COUNT": {
+              "value": "8"
+            },
+            "INDEX": {
+              "value": "3"
+            }
+          }
+        },
+        {
+          "id": "mxshow",
+          "type": "lights_matrix_show",
+          "fields": {
+            "DIN_PIN": "A4",
+            "CLK_PIN": "A5",
+            "CS_PIN": "A3",
+            "IMAGE": "SMILE"
+          }
+        },
+        {
+          "id": "mxdot",
+          "type": "lights_matrix_dot",
+          "fields": {
+            "DIN_PIN": "A4",
+            "CLK_PIN": "A5",
+            "CS_PIN": "A3",
+            "STATE": "OFF"
+          },
+          "inputs": {
+            "X": {
+              "value": "4"
+            },
+            "Y": {
+              "value": "4"
+            }
+          }
+        },
+        {
+          "id": "w5",
+          "type": "control_wait",
+          "inputs": {
+            "SECONDS": {
+              "value": "2"
+            }
+          }
+        },
+        {
+          "id": "lcdclr",
+          "type": "display_lcd_clear"
+        },
+        {
+          "id": "oledclr",
+          "type": "display_oled_clear"
+        }
+      ]
+    },
+    {
+      "x": 40,
+      "y": 1400,
+      "blocks": [
+        {
+          "id": "dflash",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "flash"
+          }
+        },
+        {
+          "id": "fon",
+          "type": "pins_builtin_led",
+          "fields": {
+            "STATE": "ON"
+          }
+        },
+        {
+          "id": "fw",
+          "type": "control_wait",
+          "inputs": {
+            "SECONDS": {
+              "value": "0.1"
+            }
+          }
+        },
+        {
+          "id": "foff",
+          "type": "pins_builtin_led",
+          "fields": {
+            "STATE": "OFF"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "id": "flash",
+      "name": "flash"
     }
   ]
 }

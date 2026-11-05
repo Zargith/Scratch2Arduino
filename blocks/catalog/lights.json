@@ -3,35 +3,104 @@
   "category": {
     "id": "lights",
     "colour": "#E6A100",
-    "name": { "fr": "Lumières", "en": "Lights" },
+    "name": {
+      "fr": "Lumières",
+      "en": "Lights"
+    },
     "order": 32
   },
   "blocks": [
     {
       "type": "lights_rgb_color",
       "shape": "statement",
-      "message": { "fr": "mettre la LED RGB (R %1, V %2, B %3) en %4", "en": "set the RGB LED (R %1, G %2, B %3) to %4" },
+      "message": {
+        "fr": "mettre la LED RGB (R %1, V %2, B %3) en %4",
+        "en": "set the RGB LED (R %1, G %2, B %3) to %4"
+      },
       "tooltip": {
         "fr": "Allume une LED RGB d'une couleur. Branche ses pattes rouge (R), verte (V) et bleue (B) sur trois broches PWM (~), chacune avec une résistance, et la patte la plus longue sur GND.",
         "en": "Lights an RGB LED in a colour. Wire its red (R), green (G) and blue (B) legs to three PWM pins (~), each through a resistor, and the longest leg to GND."
       },
       "args": [
-        { "name": "RED_PIN", "kind": "pin", "capability": "pwm", "default": "9" },
-        { "name": "GREEN_PIN", "kind": "pin", "capability": "pwm", "default": "10" },
-        { "name": "BLUE_PIN", "kind": "pin", "capability": "pwm", "default": "11" },
+        {
+          "name": "RED_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "9"
+        },
+        {
+          "name": "GREEN_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "10"
+        },
+        {
+          "name": "BLUE_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "11"
+        },
         {
           "name": "COLOR",
           "kind": "dropdown",
           "default": "RED",
           "options": [
-            { "value": "RED", "label": { "fr": "rouge", "en": "red" } },
-            { "value": "GREEN", "label": { "fr": "vert", "en": "green" } },
-            { "value": "BLUE", "label": { "fr": "bleu", "en": "blue" } },
-            { "value": "YELLOW", "label": { "fr": "jaune", "en": "yellow" } },
-            { "value": "CYAN", "label": { "fr": "cyan", "en": "cyan" } },
-            { "value": "MAGENTA", "label": { "fr": "magenta", "en": "magenta" } },
-            { "value": "WHITE", "label": { "fr": "blanc", "en": "white" } },
-            { "value": "OFF", "label": { "fr": "éteint", "en": "off" } }
+            {
+              "value": "RED",
+              "label": {
+                "fr": "rouge",
+                "en": "red"
+              }
+            },
+            {
+              "value": "GREEN",
+              "label": {
+                "fr": "vert",
+                "en": "green"
+              }
+            },
+            {
+              "value": "BLUE",
+              "label": {
+                "fr": "bleu",
+                "en": "blue"
+              }
+            },
+            {
+              "value": "YELLOW",
+              "label": {
+                "fr": "jaune",
+                "en": "yellow"
+              }
+            },
+            {
+              "value": "CYAN",
+              "label": {
+                "fr": "cyan",
+                "en": "cyan"
+              }
+            },
+            {
+              "value": "MAGENTA",
+              "label": {
+                "fr": "magenta",
+                "en": "magenta"
+              }
+            },
+            {
+              "value": "WHITE",
+              "label": {
+                "fr": "blanc",
+                "en": "white"
+              }
+            },
+            {
+              "value": "OFF",
+              "label": {
+                "fr": "éteint",
+                "en": "off"
+              }
+            }
           ]
         }
       ]
@@ -39,18 +108,424 @@
     {
       "type": "lights_rgb_mix",
       "shape": "statement",
-      "message": { "fr": "mettre la LED RGB (R %1, V %2, B %3) à rouge %4 vert %5 bleu %6", "en": "set the RGB LED (R %1, G %2, B %3) to red %4 green %5 blue %6" },
+      "message": {
+        "fr": "mettre la LED RGB (R %1, V %2, B %3) à rouge %4 vert %5 bleu %6",
+        "en": "set the RGB LED (R %1, G %2, B %3) to red %4 green %5 blue %6"
+      },
       "tooltip": {
         "fr": "Mélange les trois couleurs de la LED RGB : chaque valeur va de 0 (éteint) à 255 (à fond). Par exemple rouge 255, vert 128, bleu 0 donne de l'orange.",
         "en": "Mixes the three colours of the RGB LED: each value goes from 0 (off) to 255 (full). For example red 255, green 128, blue 0 makes orange."
       },
       "args": [
-        { "name": "RED_PIN", "kind": "pin", "capability": "pwm", "default": "9" },
-        { "name": "GREEN_PIN", "kind": "pin", "capability": "pwm", "default": "10" },
-        { "name": "BLUE_PIN", "kind": "pin", "capability": "pwm", "default": "11" },
-        { "name": "RED", "kind": "number", "default": 255, "min": 0, "max": 255 },
-        { "name": "GREEN", "kind": "number", "default": 128, "min": 0, "max": 255 },
-        { "name": "BLUE", "kind": "number", "default": 0, "min": 0, "max": 255 }
+        {
+          "name": "RED_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "9"
+        },
+        {
+          "name": "GREEN_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "10"
+        },
+        {
+          "name": "BLUE_PIN",
+          "kind": "pin",
+          "capability": "pwm",
+          "default": "11"
+        },
+        {
+          "name": "RED",
+          "kind": "number",
+          "default": 255,
+          "min": 0,
+          "max": 255
+        },
+        {
+          "name": "GREEN",
+          "kind": "number",
+          "default": 128,
+          "min": 0,
+          "max": 255
+        },
+        {
+          "name": "BLUE",
+          "kind": "number",
+          "default": 0,
+          "min": 0,
+          "max": 255
+        }
+      ]
+    },
+    {
+      "type": "lights_neopixel_fill",
+      "shape": "statement",
+      "message": {
+        "fr": "mettre tout le ruban NeoPixel de la broche %1 (%2 LED) en %3",
+        "en": "set the whole NeoPixel strip of pin %1 (%2 LEDs) to %3"
+      },
+      "tooltip": {
+        "fr": "Allume toutes les LED d'un ruban ou d'un anneau NeoPixel (WS2812) de la même couleur. Fil DIN (ou DI) du ruban sur la broche, 5V sur 5V, GND sur GND. Indique le nombre de LED du ruban (jusqu'à 100) ; il doit être le même dans tous les blocs de ce ruban.",
+        "en": "Lights every LED of a NeoPixel (WS2812) strip or ring in the same colour. Strip DIN (or DI) wire to the pin, 5V to 5V, GND to GND. Give the number of LEDs of the strip (up to 100); it must be the same in every block of this strip."
+      },
+      "args": [
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "5"
+        },
+        {
+          "name": "COUNT",
+          "kind": "number",
+          "default": 8,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "name": "COLOR",
+          "kind": "dropdown",
+          "default": "RED",
+          "options": [
+            {
+              "value": "RED",
+              "label": {
+                "fr": "rouge",
+                "en": "red"
+              }
+            },
+            {
+              "value": "GREEN",
+              "label": {
+                "fr": "vert",
+                "en": "green"
+              }
+            },
+            {
+              "value": "BLUE",
+              "label": {
+                "fr": "bleu",
+                "en": "blue"
+              }
+            },
+            {
+              "value": "YELLOW",
+              "label": {
+                "fr": "jaune",
+                "en": "yellow"
+              }
+            },
+            {
+              "value": "CYAN",
+              "label": {
+                "fr": "cyan",
+                "en": "cyan"
+              }
+            },
+            {
+              "value": "MAGENTA",
+              "label": {
+                "fr": "magenta",
+                "en": "magenta"
+              }
+            },
+            {
+              "value": "WHITE",
+              "label": {
+                "fr": "blanc",
+                "en": "white"
+              }
+            },
+            {
+              "value": "OFF",
+              "label": {
+                "fr": "éteint",
+                "en": "off"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "lights_neopixel_set",
+      "shape": "statement",
+      "message": {
+        "fr": "mettre la LED n° %3 du ruban NeoPixel de la broche %1 (%2 LED) en %4",
+        "en": "set LED number %3 of the NeoPixel strip of pin %1 (%2 LEDs) to %4"
+      },
+      "tooltip": {
+        "fr": "Change la couleur d'une seule LED du ruban : la première est la n° 1. Fil DIN (ou DI) du ruban sur la broche, 5V sur 5V, GND sur GND. Indique le nombre de LED du ruban (jusqu'à 100) ; il doit être le même dans tous les blocs de ce ruban.",
+        "en": "Changes the colour of one LED of the strip: the first one is number 1. Strip DIN (or DI) wire to the pin, 5V to 5V, GND to GND. Give the number of LEDs of the strip (up to 100); it must be the same in every block of this strip."
+      },
+      "args": [
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "5"
+        },
+        {
+          "name": "COUNT",
+          "kind": "number",
+          "default": 8,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "name": "INDEX",
+          "kind": "number",
+          "default": 1,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "name": "COLOR",
+          "kind": "dropdown",
+          "default": "RED",
+          "options": [
+            {
+              "value": "RED",
+              "label": {
+                "fr": "rouge",
+                "en": "red"
+              }
+            },
+            {
+              "value": "GREEN",
+              "label": {
+                "fr": "vert",
+                "en": "green"
+              }
+            },
+            {
+              "value": "BLUE",
+              "label": {
+                "fr": "bleu",
+                "en": "blue"
+              }
+            },
+            {
+              "value": "YELLOW",
+              "label": {
+                "fr": "jaune",
+                "en": "yellow"
+              }
+            },
+            {
+              "value": "CYAN",
+              "label": {
+                "fr": "cyan",
+                "en": "cyan"
+              }
+            },
+            {
+              "value": "MAGENTA",
+              "label": {
+                "fr": "magenta",
+                "en": "magenta"
+              }
+            },
+            {
+              "value": "WHITE",
+              "label": {
+                "fr": "blanc",
+                "en": "white"
+              }
+            },
+            {
+              "value": "OFF",
+              "label": {
+                "fr": "éteint",
+                "en": "off"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "lights_matrix_show",
+      "shape": "statement",
+      "message": {
+        "fr": "afficher %4 sur la matrice de LED (DIN %1, CLK %2, CS %3)",
+        "en": "show %4 on the LED matrix (DIN %1, CLK %2, CS %3)"
+      },
+      "tooltip": {
+        "fr": "Dessine une image sur une matrice de 8×8 LED. Matrice 8×8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
+        "en": "Draws a picture on an 8×8 LED matrix. 8×8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
+      },
+      "args": [
+        {
+          "name": "DIN_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "12"
+        },
+        {
+          "name": "CLK_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "11"
+        },
+        {
+          "name": "CS_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "10"
+        },
+        {
+          "name": "IMAGE",
+          "kind": "dropdown",
+          "default": "HEART",
+          "options": [
+            {
+              "value": "HEART",
+              "label": {
+                "fr": "cœur",
+                "en": "heart"
+              }
+            },
+            {
+              "value": "SMILE",
+              "label": {
+                "fr": "sourire",
+                "en": "smile"
+              }
+            },
+            {
+              "value": "SAD",
+              "label": {
+                "fr": "triste",
+                "en": "sad"
+              }
+            },
+            {
+              "value": "ARROW_UP",
+              "label": {
+                "fr": "flèche haut",
+                "en": "arrow up"
+              }
+            },
+            {
+              "value": "ARROW_DOWN",
+              "label": {
+                "fr": "flèche bas",
+                "en": "arrow down"
+              }
+            },
+            {
+              "value": "ARROW_LEFT",
+              "label": {
+                "fr": "flèche gauche",
+                "en": "arrow left"
+              }
+            },
+            {
+              "value": "ARROW_RIGHT",
+              "label": {
+                "fr": "flèche droite",
+                "en": "arrow right"
+              }
+            },
+            {
+              "value": "CHECK",
+              "label": {
+                "fr": "coche",
+                "en": "check mark"
+              }
+            },
+            {
+              "value": "CROSS",
+              "label": {
+                "fr": "croix",
+                "en": "cross"
+              }
+            },
+            {
+              "value": "FULL",
+              "label": {
+                "fr": "tout allumé",
+                "en": "all on"
+              }
+            },
+            {
+              "value": "OFF",
+              "label": {
+                "fr": "tout éteint",
+                "en": "all off"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "lights_matrix_dot",
+      "shape": "statement",
+      "message": {
+        "fr": "%6 le point x %4 y %5 de la matrice de LED (DIN %1, CLK %2, CS %3)",
+        "en": "turn %6 the dot x %4 y %5 of the LED matrix (DIN %1, CLK %2, CS %3)"
+      },
+      "tooltip": {
+        "fr": "Allume ou éteint un seul point : x va de 1 (à gauche) à 8 (à droite), y de 1 (en haut) à 8 (en bas). Matrice 8×8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
+        "en": "Turns one dot on or off: x goes from 1 (left) to 8 (right), y from 1 (top) to 8 (bottom). 8×8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
+      },
+      "args": [
+        {
+          "name": "DIN_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "12"
+        },
+        {
+          "name": "CLK_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "11"
+        },
+        {
+          "name": "CS_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "10"
+        },
+        {
+          "name": "X",
+          "kind": "number",
+          "default": 1,
+          "min": 1,
+          "max": 8
+        },
+        {
+          "name": "Y",
+          "kind": "number",
+          "default": 1,
+          "min": 1,
+          "max": 8
+        },
+        {
+          "name": "STATE",
+          "kind": "dropdown",
+          "default": "ON",
+          "options": [
+            {
+              "value": "ON",
+              "label": {
+                "fr": "allumer",
+                "en": "on"
+              }
+            },
+            {
+              "value": "OFF",
+              "label": {
+                "fr": "éteindre",
+                "en": "off"
+              }
+            }
+          ]
+        }
       ]
     }
   ]

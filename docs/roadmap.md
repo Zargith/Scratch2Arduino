@@ -11,9 +11,9 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 2 — Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
 | 3a — Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
 | 3b — Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
-| 4 — Validation and friendly errors | Done: 11 rules with fr/en messages and hints, faulty blocks highlighted, compiler errors mapped to blocks |
+| 4 — Validation and friendly errors | Done: 10 rules with fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
 | 5 — Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
-| 6 — Sensors and actuators | In progress. Part 1 done: button, potentiometer, light sensor, HC-SR04, RGB LED, buzzer, servo, DC motor (H-bridge), in upload and Live modes, with automatic library installation and two example projects. Next: DHT11/22, LCD 16×2 I2C, OLED, NeoPixel, LED matrix, wiring help images; to be checked on real boards |
+| 6 — Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
 | 7 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
 
@@ -36,7 +36,7 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
 - **Text languages**: read-only view of generated C++ first, then Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS`) driving the board through the live protocol.
-- **Install**: Windows `installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `install.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
+- **Install**: Windows `Scratch2Arduino_installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
 ## Roadmap
@@ -45,8 +45,8 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 
 ### Phase 0 — Setup and tooling
 - **Goal**: an empty but buildable project on all three OS.
-- **Deliverables**: `git init` and the planned layout; top-level `CMakeLists.txt` with option `S2A_BUILD_WEBVIEW`, `CMakePresets.json`; first `install.sh`, `Makefile` and `installer/windows` script; CI (GitHub Actions) on Windows, Linux, macOS; `.clang-format`, `.clang-tidy`, `.editorconfig`; license; CONTRIBUTING draft.
-- **Done when**: CI builds a "hello window" for each variant on the three OS, and `./install.sh` / `make install` / `installer.exe` each install it.
+- **Deliverables**: `git init` and the planned layout; top-level `CMakeLists.txt` with option `S2A_BUILD_WEBVIEW`, `CMakePresets.json`; first `Scratch2Arduino_installer.sh`, `Makefile` and `installer/windows` script; CI (GitHub Actions) on Windows, Linux, macOS; `.clang-format`, `.clang-tidy`, `.editorconfig`; license; CONTRIBUTING draft.
+- **Done when**: CI builds a "hello window" for each variant on the three OS, and `./Scratch2Arduino_installer.sh` / `make install` / `Scratch2Arduino_installer.exe` each install it.
 
 ### Phase 1 — Core foundations
 - **Goal**: a shared, tested data model.
@@ -106,7 +106,7 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 
 ### Phase 11 — Packaging and release
 - **Goal**: one-click installation everywhere.
-- **Deliverables**: final Windows `installer.exe` (prerequisite check/installation, CMake build & install, shortcuts, uninstaller, signed); final `install.sh` (dependency install via apt / dnf / pacman / brew) and `Makefile` (`make`, `make install`, `make uninstall`); macOS bundle; update check; release process and changelog; CONTRIBUTING, issue templates.
+- **Deliverables**: final Windows `Scratch2Arduino_installer.exe` (prerequisite check/installation, CMake build & install, shortcuts, uninstaller, signed); final `Scratch2Arduino_installer.sh` (dependency install via apt / dnf / pacman / brew) and `Makefile` (`make`, `make install`, `make uninstall`); macOS bundle; update check; release process and changelog; CONTRIBUTING, issue templates.
 - **Done when**: CI produces release artifacts for the three OS, installed and smoke-tested on clean machines.
 
 ### Phase 12 — Variant comparison — dropped

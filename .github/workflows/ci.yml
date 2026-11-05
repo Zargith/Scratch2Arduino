@@ -113,7 +113,7 @@ jobs:
           path: scratch2arduino-frontend.zip
 
   install-scripts:
-    name: install.sh and Makefile (Linux)
+    name: Scratch2Arduino_installer.sh and Makefile (Linux)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -126,12 +126,12 @@ jobs:
         with:
           version: 10.20.0
 
-      - name: install.sh --user
-        run: ./install.sh --user --yes
+      - name: Scratch2Arduino_installer.sh --user
+        run: ./Scratch2Arduino_installer.sh --user --yes
 
-      - name: install.sh --user again (update skips the dependencies and reuses the build)
+      - name: Scratch2Arduino_installer.sh --user again (update skips the dependencies and reuses the build)
         run: |
-          ./install.sh --user --yes | tee second-run.log
+          ./Scratch2Arduino_installer.sh --user --yes | tee second-run.log
           grep -q "Dependencies already installed\|Dépendances déjà installées" second-run.log
 
       - name: Check installed files
@@ -141,9 +141,9 @@ jobs:
           test -f "$HOME/.local/share/icons/hicolor/256x256/apps/scratch2arduino.png"
           test -f "$HOME/.local/share/icons/hicolor/512x512/apps/scratch2arduino.png"
 
-      - name: install.sh --uninstall
+      - name: Scratch2Arduino_installer.sh --uninstall
         run: |
-          ./install.sh --user --uninstall
+          ./Scratch2Arduino_installer.sh --user --uninstall
           test ! -e "$HOME/.local/bin/scratch2arduino"
 
       - name: make, make test, make install, make uninstall
@@ -156,8 +156,12 @@ jobs:
           test ! -e "$RUNNER_TEMP/make-prefix/bin/scratch2arduino"
 
   windows-installer:
-    name: installer.exe (Windows)
+    name: Scratch2Arduino_installer.exe (Windows)
     runs-on: windows-latest
+    env:
+      # Code signing (Windows SmartScreen): set the secrets WINDOWS_CERTIFICATE (base64 of a .pfx)
+      # and WINDOWS_CERTIFICATE_PASSWORD to sign the installer; without them it stays unsigned.
+      HAS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -169,7 +173,7 @@ jobs:
         with:
           version: 10.20.0
 
-      - name: Build the block editor (shipped prebuilt in installer.exe)
+      - name: Build the block editor (shipped prebuilt in Scratch2Arduino_installer.exe)
         run: |
           pnpm --dir frontend install --frozen-lockfile
           pnpm --dir frontend build
@@ -177,28 +181,44 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
-      - name: Build installer.exe
+      - name: Build Scratch2Arduino_installer.exe
         run: |
-          # installer.exe takes its version from CMakeLists.txt.
+          # Scratch2Arduino_installer.exe takes its version from CMakeLists.txt.
           $version = (Select-String -Path CMakeLists.txt -Pattern '^\s*VERSION ([0-9.]+)$' | Select-Object -First 1).Matches[0].Groups[1].Value
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer\windows\scratch2arduino.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Run installer.exe silently
+      - name: Sign Scratch2Arduino_installer.exe
+        if: env.HAS_CERTIFICATE == 'true'
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          $process = Start-Process -FilePath installer\windows\Output\installer.exe -Wait -PassThru `
+          $pfx = Join-Path $env:RUNNER_TEMP 'certificate.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          & $signtool.FullName sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 `
+            /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD installer\windows\Output\Scratch2Arduino_installer.exe
+          $code = $LASTEXITCODE
+          Remove-Item $pfx
+          if ($code -ne 0) { exit $code }
+
+      - name: Run Scratch2Arduino_installer.exe silently
+        run: |
+          $process = Start-Process -FilePath installer\windows\Output\Scratch2Arduino_installer.exe -Wait -PassThru `
             -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup.log"
-          if ($process.ExitCode -ne 0) { throw "installer.exe exited with $($process.ExitCode)" }
+          if ($process.ExitCode -ne 0) { throw "Scratch2Arduino_installer.exe exited with $($process.ExitCode)" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           Get-Content (Join-Path $app 'install-log.txt') -Tail 40
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe was not installed' }
 
-      - name: Run installer.exe again (incremental update)
+      - name: Run Scratch2Arduino_installer.exe again (incremental update)
         run: |
           $watch = [Diagnostics.Stopwatch]::StartNew()
-          $process = Start-Process -FilePath installer\windows\Output\installer.exe -Wait -PassThru `
+          $process = Start-Process -FilePath installer\windows\Output\Scratch2Arduino_installer.exe -Wait -PassThru `
             -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup-update.log"
-          if ($process.ExitCode -ne 0) { throw "installer.exe exited with $($process.ExitCode)" }
+          if ($process.ExitCode -ne 0) { throw "Scratch2Arduino_installer.exe exited with $($process.ExitCode)" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           $log = Get-Content (Join-Path $app 'install-log.txt')
           $log | Select-Object -Last 25
@@ -208,11 +228,26 @@ jobs:
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing after the update' }
           if (Test-Path (Join-Path $app 'staging')) { throw 'the staging folder was not removed' }
 
-      - name: Upload installer.exe
+      - name: The installer refuses to update while Scratch2Arduino is open
+        run: |
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino\bin\scratch2arduino.exe'
+          $running = Start-Process -FilePath $app -PassThru
+          Start-Sleep -Seconds 5
+          if ($running.HasExited) {
+            Write-Host "::warning::scratch2arduino.exe could not stay open on the runner: check skipped"
+            exit 0
+          }
+          $process = Start-Process -FilePath installer\windows\Output\Scratch2Arduino_installer.exe -Wait -PassThru `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup-running.log"
+          Stop-Process -Id $running.Id -Force
+          Get-Content "$env:RUNNER_TEMP\setup-running.log" -Tail 15
+          if ($process.ExitCode -eq 0) { throw 'the installer ran while Scratch2Arduino was open' }
+
+      - name: Upload Scratch2Arduino_installer.exe
         uses: actions/upload-artifact@v7
         with:
           name: installer-windows
-          path: installer/windows/Output/installer.exe
+          path: installer/windows/Output/Scratch2Arduino_installer.exe
 
       - name: Collect logs
         if: always()
@@ -255,7 +290,7 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Download installer.exe
+      - name: Download Scratch2Arduino_installer.exe
         if: steps.version.outputs.exists == 'false'
         uses: actions/download-artifact@v8
         with:
@@ -277,7 +312,7 @@ jobs:
         run: |
           # Builds from source without Node.js download the frontend archive (cmake/S2AFrontend.cmake).
           mv dist/scratch2arduino-frontend.zip "dist/scratch2arduino-frontend-$VERSION.zip"
-          gh release create "v$VERSION" dist/installer.exe "dist/scratch2arduino-frontend-$VERSION.zip" \
+          gh release create "v$VERSION" dist/Scratch2Arduino_installer.exe "dist/scratch2arduino-frontend-$VERSION.zip" \
             --target "$GITHUB_SHA" \
             --title "Scratch2Arduino $VERSION" \
             --generate-notes \

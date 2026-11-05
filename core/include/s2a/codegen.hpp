@@ -39,6 +39,13 @@ inline constexpr int kSerialBaud = 9600;
 /// Red, green and blue levels (0-255) of a colour of the RGB LED menu ("RED"...); off when unknown.
 [[nodiscard]] std::array<int, 3> colourLevels(std::string_view name);
 
+/// Rows (top to bottom, left column = high bit) of a picture of the LED matrix menu; empty when unknown.
+[[nodiscard]] std::array<int, 8> matrixImage(std::string_view name);
+
+/// Text for the screens, which only show ASCII: accents removed ("élève" -> "eleve"), other
+/// characters replaced by '?', control characters dropped.
+[[nodiscard]] std::string asciiText(std::string_view text);
+
 /// Text typed in a slot as a C++ string literal (quotes and backslashes escaped, control
 /// characters except tab and newline dropped).
 [[nodiscard]] std::string stringLiteral(std::string_view text);

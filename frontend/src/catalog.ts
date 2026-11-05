@@ -4,7 +4,7 @@ export type Language = "fr" | "en";
 export type Localized = Record<Language, string>;
 
 export type BlockShape = "hat" | "statement" | "c" | "reporter" | "boolean";
-export type ArgKind = "number" | "text" | "boolean" | "pin" | "dropdown" | "variable" | "statement";
+export type ArgKind = "number" | "text" | "boolean" | "pin" | "dropdown" | "variable" | "function" | "statement";
 export type PinCapability = "digital" | "analog" | "pwm" | "interrupt";
 
 export interface BlockArg {
@@ -12,7 +12,8 @@ export interface BlockArg {
 	kind: ArgKind;
 	default?: string | number;
 	capability?: PinCapability;
-	options?: { value: string; label: Localized }[];
+	/** `tooltip`: shown over the menu when this option is chosen (the block keeps its own tooltip). */
+	options?: { value: string; label: Localized; tooltip?: Localized }[];
 }
 
 export interface BlockDefinition {

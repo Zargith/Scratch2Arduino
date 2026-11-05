@@ -2,10 +2,10 @@
 # Scratch2Arduino installer for Linux and macOS.
 # Installs the build dependencies, builds Scratch2Arduino with CMake and installs it.
 #
-#   ./install.sh                    install system-wide (/usr/local on Linux; ~/Applications on macOS)
-#   ./install.sh --user             install for the current user only (~/.local on Linux)
-#   ./install.sh --uninstall        remove a previous installation
-#   ./install.sh --help             all options
+#   ./Scratch2Arduino_installer.sh                    install system-wide (/usr/local on Linux; ~/Applications on macOS)
+#   ./Scratch2Arduino_installer.sh --user             install for the current user only (~/.local on Linux)
+#   ./Scratch2Arduino_installer.sh --uninstall        remove a previous installation
+#   ./Scratch2Arduino_installer.sh --help             all options
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,7 +27,7 @@ step() { printf '\n\033[1;36m==> %s\033[0m\n' "$(say "$1" "$2")"; }
 fail() { printf '\n\033[1;31m%s\033[0m\n' "$(say "$1" "$2")" >&2; exit 1; }
 
 usage() {
-    say "Utilisation : ./install.sh [options]" "Usage: ./install.sh [options]"
+    say "Utilisation : ./Scratch2Arduino_installer.sh [options]" "Usage: ./Scratch2Arduino_installer.sh [options]"
     cat <<'USAGE'
   --prefix DIR      installation prefix (macOS: folder receiving the .app bundle)
   --user            per-user install (Linux: ~/.local, macOS: ~/Applications)
@@ -103,8 +103,8 @@ install_linux_deps() {
 install_macos_deps() {
     if ! xcode-select -p >/dev/null 2>&1; then
         xcode-select --install || true
-        fail "Installe les outils de ligne de commande Xcode (une fenêtre s'est ouverte), puis relance ./install.sh." \
-             "Install the Xcode command line tools (a window opened), then run ./install.sh again."
+        fail "Installe les outils de ligne de commande Xcode (une fenêtre s'est ouverte), puis relance ./Scratch2Arduino_installer.sh." \
+             "Install the Xcode command line tools (a window opened), then run ./Scratch2Arduino_installer.sh again."
     fi
     command -v brew >/dev/null 2>&1 ||
         fail "Homebrew est requis : https://brew.sh" "Homebrew is required: https://brew.sh"
@@ -130,8 +130,8 @@ elif [ "$INSTALL_DEPS" -eq 1 ]; then
     case "$OS" in
         Linux) install_linux_deps ;;
         Darwin) install_macos_deps ;;
-        *) fail "Système non pris en charge : $OS (sous Windows, utilise installer.exe)." \
-                "Unsupported system: $OS (on Windows, use installer.exe)." ;;
+        *) fail "Système non pris en charge : $OS (sous Windows, utilise Scratch2Arduino_installer.exe)." \
+                "Unsupported system: $OS (on Windows, use Scratch2Arduino_installer.exe)." ;;
     esac
 fi
 
@@ -189,4 +189,4 @@ else
     say "Lance : $PREFIX/bin/scratch2arduino" "Run: $PREFIX/bin/scratch2arduino"
     say "Elle apparaît aussi dans le menu des applications." "It also appears in the applications menu."
 fi
-say "Pour désinstaller : ./install.sh --uninstall" "To uninstall: ./install.sh --uninstall"
+say "Pour désinstaller : ./Scratch2Arduino_installer.sh --uninstall" "To uninstall: ./Scratch2Arduino_installer.sh --uninstall"

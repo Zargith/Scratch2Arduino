@@ -83,10 +83,17 @@ struct Variable {
     double initialValue = 0;
 };
 
+/// A function made by the user: a "define" script, run by "call" blocks.
+struct Function {
+    std::string id;
+    std::string name;
+};
+
 struct Project {
     std::string name;
     std::string boardId{BoardDatabase::kDefaultBoardId};
     std::vector<Variable> variables;
+    std::vector<Function> functions;
     std::vector<Script> scripts;
     /// Extra files stored in the archive under assets/ (path without the prefix -> bytes).
     std::map<std::string, std::string> assets;

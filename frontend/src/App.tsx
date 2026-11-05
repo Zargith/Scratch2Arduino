@@ -32,7 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { bridge, hasHost, HostMissingError, type LiveSnapshot, type Outcome, type Port } from "@/bridge";
+import { bridge, hasHost, HostMissingError, type LiveSnapshot, type OpenedProject, type Outcome, type Port } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
 import logo from "@/logo.png";
@@ -61,6 +61,11 @@ const starterProject = (name: string): Project => ({
 	...emptyProject(name, defaultBoardId),
 	scripts: [{ x: 40, y: 40, blocks: [{ id: "start", type: "events_when_program_starts" }] }],
 });
+
+/** "Ctrl+S", or "⌘S" on a Mac. */
+function shortcut(key: string): string {
+	return /Mac|iPhone|iPad/.test(navigator.platform) ? `⌘${key}` : `Ctrl+${key}`;
+}
 
 export function App() {
 	const [language, setLanguage] = useState<Language>(detectLanguage);
@@ -173,11 +178,8 @@ export function App() {
 		reload(projectToWorkspace(starterProject(untitled)));
 	};
 
-	const openProject = async () => {
-		try {
-			const opened = await bridge.open(language);
-			if (!opened) return;
-			initialValues.current = Object.fromEntries(
+	const showOpened = (opened: OpenedProject) => {
+		initialValues.current = Object.fromEntries(
 				opened.project.variables.map((variable) => [variable.id, variable.initialValue])
 			);
 			setName(opened.project.name);
@@ -191,10 +193,31 @@ export function App() {
 					? { kind: "error", message: t("status.unknown_blocks"), details: unknown.join("\n") }
 					: { kind: "success", message: t("status.opened", { path: opened.name ?? opened.path }) }
 			);
+	};
+
+	const openProject = async () => {
+		try {
+			const opened = await bridge.open(language);
+			if (opened) showOpened(opened);
 		} catch (error) {
 			fail(error);
 		}
 	};
+
+	// A project dropped on the program's icon (or a double-clicked .s2a file) opens at start-up.
+	const showOpenedRef = useRef(showOpened);
+	showOpenedRef.current = showOpened;
+	useEffect(() => {
+		if (!hasHost()) return;
+		bridge
+			.startupProject(language)
+			.then((opened) => {
+				if (opened) showOpenedRef.current(opened);
+			})
+			.catch(fail);
+		// Once, when the editor starts.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const saveProject = async () => {
 		try {
@@ -207,6 +230,20 @@ export function App() {
 			fail(error);
 		}
 	};
+
+	// Ctrl+S (Cmd+S on a Mac) saves, wherever the focus is.
+	const saveRef = useRef(saveProject);
+	saveRef.current = saveProject;
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "s") {
+				event.preventDefault();
+				void saveRef.current();
+			}
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, []);
 
 	const showCode = async () => {
 		try {
@@ -344,7 +381,7 @@ export function App() {
 								<IconFolderOpen size={18} />
 							</ActionIcon>
 						</Tooltip>
-						<Tooltip label={t("toolbar.save")}>
+						<Tooltip label={`${t("toolbar.save")} (${shortcut("S")})`}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.save")} onClick={() => void saveProject()}>
 								<IconDeviceFloppy size={18} />
 							</ActionIcon>

@@ -38,8 +38,23 @@ struct FakePins final : s2a::live::Pins {
         log.push_back("U" + std::to_string(trig) + "/" + std::to_string(echo));
         return distanceCm;
     }
+    std::optional<std::pair<double, double>> dht(int pin, int model) override {
+        log.push_back("H" + std::to_string(pin) + "/" + std::to_string(model));
+        return dhtValues;
+    }
+    void lcdLine(int row, const std::string& text) override { log.push_back("L" + std::to_string(row) + "=" + text); }
+    void oledLine(int row, const std::string& text) override { log.push_back("O" + std::to_string(row) + "=" + text); }
+    void pixels(int pin, int count, int index, int red, int green, int blue) override {
+        log.push_back("N" + std::to_string(pin) + "/" + std::to_string(count) + "/" + std::to_string(index) + "=" +
+                      std::to_string(red) + "," + std::to_string(green) + "," + std::to_string(blue));
+    }
+    void matrixRow(int din, int clk, int cs, int row, int bits) override {
+        log.push_back("G" + std::to_string(din) + "/" + std::to_string(clk) + "/" + std::to_string(cs) + "/" +
+                      std::to_string(row) + "=" + std::to_string(bits));
+    }
     void reset() override { log.emplace_back("X"); }
     double distanceCm = 400;
+    std::optional<std::pair<double, double>> dhtValues;
 
     std::vector<std::string> take() {
         auto result = std::move(log);
@@ -167,6 +182,84 @@ TEST(Interpreter, ReadsSensors) {
     EXPECT_DOUBLE_EQ(interpreter.variables().at("b"), 1);
     EXPECT_DOUBLE_EQ(interpreter.readings().at("11"), 12.5);
     EXPECT_DOUBLE_EQ(interpreter.readings().at("A0"), 100);
+}
+
+TEST(Interpreter, CallsFunctionsAndComesBack) {
+    FakePins pins;
+    Block call = block("call", "functions_call");
+    call.fields["FUNCTION"] = "f";
+    Project project = withScript({block("hat", "events_when_program_starts"), call, led("after", "OFF")});
+    project.functions = {{"f", "blink"}};
+    Block define = block("define", "functions_define");
+    define.fields["FUNCTION"] = "f";
+    project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "1")}});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w"});
+    // The function changes while it waits: the script keeps its place.
+    project.scripts[1].blocks.push_back(led("added", "ON"));
+    interpreter.update(project);
+    interpreter.step(milliseconds(1000));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"D13=1", "D13=0"}));
+    EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, DrivesScreensStripsAndMatrices) {
+    FakePins pins;
+    Block knob = block("knob", "sensors_potentiometer");
+    knob.fields["PIN"] = "A0";
+    Block lcd = block("lcd", "display_lcd_print");
+    lcd.fields["LINE"] = "2";
+    lcd.inputs["TEXT"].block = knob;
+    Block oled = block("oled", "display_oled_print");
+    oled.fields["LINE"] = "8";
+    oled.inputs["TEXT"].value = "Été";
+    Block fill = block("fill", "lights_neopixel_fill");
+    fill.fields = {{"PIN", "5"}, {"COLOR", "BLUE"}};
+    fill.inputs["COUNT"].value = "12";
+    Block one = block("one", "lights_neopixel_set");
+    one.fields = {{"PIN", "5"}, {"COLOR", "GREEN"}};
+    one.inputs["COUNT"].value = "12";
+    one.inputs["INDEX"].value = "13"; // outside the strip: nothing happens
+    Block show = block("show", "lights_matrix_show");
+    show.fields["IMAGE"] = "CROSS";
+    Block dot = block("dot", "lights_matrix_dot");
+    dot.fields["STATE"] = "OFF";
+    dot.inputs["X"].value = "1";
+    dot.inputs["Y"].value = "1";
+    pins.analogInputs[14] = 1023;
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), lcd, oled,
+                                        block("clear", "display_lcd_clear"), fill, one, show, dot}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    const std::vector<std::string> expected{"M14I", "L2=100", "O8=Été", "L0=", "N5/12/0=0,0,255", "M12O", "M11O",
+                                            "M10O", "G12/11/10/1=129", "G12/11/10/2=66", "G12/11/10/3=36",
+                                            "G12/11/10/4=24", "G12/11/10/5=24", "G12/11/10/6=36", "G12/11/10/7=66",
+                                            "G12/11/10/8=129", "G12/11/10/1=1"};
+    EXPECT_EQ(pins.take(), expected);
+}
+
+TEST(Interpreter, KeepsTheLastGoodDhtReading) {
+    FakePins pins;
+    Block temperature = block("t", "sensors_temperature");
+    temperature.fields = {{"MODEL", "DHT22"}, {"PIN", "3"}};
+    Block set = block("set", "variables_set");
+    set.fields["VARIABLE"] = "t";
+    set.inputs["VALUE"].block = temperature;
+    Block forever = block("loop", "control_forever");
+    forever.statements["SUBSTACK"] = {set};
+    Project project = withScript({block("hat", "events_when_program_starts"), forever});
+    project.variables = {{"t", "t", 0}};
+    pins.dhtValues = std::pair{21.5, 40.0};
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("t"), 21.5);
+    pins.dhtValues.reset(); // no answer this time
+    interpreter.step(milliseconds(10));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("t"), 21.5);
+    EXPECT_DOUBLE_EQ(interpreter.readings().at("3 (%)"), 40);
+    EXPECT_EQ(pins.take().front(), "H3/22");
 }
 
 TEST(Interpreter, RepeatsAndFinishes) {
@@ -355,6 +448,8 @@ struct FakeFirmware final : s2a::serial::LineTransport {
             pending.push_back("r " + std::to_string(pin) + " 1");
         } else if (command == "A") {
             pending.push_back("a " + std::to_string(pin) + " 512");
+        } else if (command == "H") {
+            pending.push_back("h " + std::to_string(pin) + " 215 -9999");
         } else if (command == "U") {
             pending.push_back("u " + std::to_string(pin) + " 1234");
         } else {
@@ -436,7 +531,14 @@ TEST(LiveLink, DrivesComponents) {
     link.tone(8, 0, 0);
     link.servoWrite(9, 200);
     EXPECT_DOUBLE_EQ(link.distance(12, 11), 123.4);
-    EXPECT_EQ(firmware.received, (std::vector<std::string>{"?", "T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11"}));
+    EXPECT_FALSE(link.dht(3, 11).has_value()); // no humidity: the sensor did not answer
+    link.lcdLine(1, "Température : 21 °C");
+    link.oledLine(0, "");
+    link.pixels(5, 8, 0, 255, 300, 0);
+    link.matrixRow(12, 11, 10, 3, 0x1FF);
+    EXPECT_EQ(firmware.received,
+              (std::vector<std::string>{"?", "T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11", "H 3 11",
+                                        "L 1 Temperature : 21", "O 0 ", "N 5 8 0 255 255 0", "G 12 11 10 3 255"}));
     EXPECT_FALSE(link.takeError().has_value());
 }
 
