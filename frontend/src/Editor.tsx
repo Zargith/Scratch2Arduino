@@ -41,6 +41,23 @@ interface PromptRequest {
 
 const LOOSE = "S2A_LOOSE_BLOCK";
 
+/** Text typed in a field, the project name or the serial monitor keeps its own shortcuts. */
+function isTextTarget(target: EventTarget | null): boolean {
+	return (
+		target instanceof HTMLElement &&
+		(target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
+	);
+}
+
+/** Ctrl+Y redoes too (Blockly only knows Ctrl+Shift+Z), as in most Windows programs. */
+function addRedoKey() {
+	const registry = Blockly.ShortcutRegistry.registry;
+	const key = registry.createSerializedKey(Blockly.utils.KeyCodes.Y, [Blockly.utils.KeyCodes.CTRL]);
+	if (!(registry.getShortcutNamesByKeyCode(key) ?? []).includes(Blockly.ShortcutItems.names.REDO)) {
+		registry.addKeyMapping(key, Blockly.ShortcutItems.names.REDO, true);
+	}
+}
+
 /**
  * Blocks not attached under a start block do not run: they are shown greyed, like comments,
  * and come back to life as soon as they are attached again.
@@ -176,9 +193,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		});
 		workspace.current = created;
 
+		// Blockly listens to the keyboard on its own area only, for the block that has the
+		// keyboard focus. In the application window that focus is often on the page instead (a
+		// click on a block does not always give it), so Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z, Ctrl+Y...
+		// pressed elsewhere are handed to Blockly, for the selected block.
+		addRedoKey();
+		const forwardShortcut = (event: KeyboardEvent) => {
+			if (!(event.ctrlKey || event.metaKey) || event.defaultPrevented) return;
+			if (event.target instanceof Node && element.contains(event.target)) return; // Blockly's own
+			if (isTextTarget(event.target)) return;
+			if (Blockly.ShortcutRegistry.registry.onKeyDown(created, event)) event.preventDefault();
+		};
+		document.addEventListener("keydown", forwardShortcut);
+
 		const resize = new ResizeObserver(() => Blockly.svgResize(created));
 		resize.observe(element);
 		return () => {
+			document.removeEventListener("keydown", forwardShortcut);
 			resize.disconnect();
 			created.dispose();
 			workspace.current = null;

@@ -181,6 +181,19 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
 5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
 
+### Keyboard shortcuts
+
+| Shortcut (⌘ instead of Ctrl on a Mac) | Action |
+|---|---|
+| Ctrl+S | Save the project |
+| Ctrl+C / Ctrl+X | Copy / cut the selected block, with the blocks below it |
+| Ctrl+V | Paste |
+| Ctrl+Z | Undo |
+| Ctrl+Y or Ctrl+Shift+Z | Redo |
+| Delete or Backspace | Delete the selected block |
+
+While typing in a field (a number, a text, the project name), these keys act on the text instead.
+
 ### Live mode
 
 Click **Live**: the blocks run on the computer and drive the board through the

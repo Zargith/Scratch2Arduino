@@ -62,6 +62,11 @@ const starterProject = (name: string): Project => ({
 	scripts: [{ x: 40, y: 40, blocks: [{ id: "start", type: "events_when_program_starts" }] }],
 });
 
+/** "Ctrl+S", or "⌘S" on a Mac. */
+function shortcut(key: string): string {
+	return /Mac|iPhone|iPad/.test(navigator.platform) ? `⌘${key}` : `Ctrl+${key}`;
+}
+
 export function App() {
 	const [language, setLanguage] = useState<Language>(detectLanguage);
 	const t = useCallback(
@@ -208,6 +213,20 @@ export function App() {
 		}
 	};
 
+	// Ctrl+S (Cmd+S on a Mac) saves, wherever the focus is.
+	const saveRef = useRef(saveProject);
+	saveRef.current = saveProject;
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "s") {
+				event.preventDefault();
+				void saveRef.current();
+			}
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, []);
+
 	const showCode = async () => {
 		try {
 			setCode(await bridge.generate(currentProject()));
@@ -344,7 +363,7 @@ export function App() {
 								<IconFolderOpen size={18} />
 							</ActionIcon>
 						</Tooltip>
-						<Tooltip label={t("toolbar.save")}>
+						<Tooltip label={`${t("toolbar.save")} (${shortcut("S")})`}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.save")} onClick={() => void saveProject()}>
 								<IconDeviceFloppy size={18} />
 							</ActionIcon>
