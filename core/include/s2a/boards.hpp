@@ -45,6 +45,7 @@ struct Board {
     std::string name;     ///< Display name: "Arduino Uno".
     std::string fqbn;     ///< arduino-cli fully qualified board name.
     std::string platform; ///< arduino-cli core to install: "arduino:avr".
+    std::string architecture; ///< Second part of the fqbn: "avr", "esp32".
     std::string mcu;
     double voltage = 5.0;
     std::uint32_t flashBytes = 0;

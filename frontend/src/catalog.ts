@@ -51,8 +51,13 @@ export interface Board {
 export interface BoardFile {
 	id: string;
 	name: string;
-	digitalPins: number;
-	analogPins: { count: number; firstNumber: number; inputOnly?: string[] };
+	/** A count (pins 0..n-1) or the list of usable GPIO numbers (ESP32). */
+	digitalPins: number | number[];
+	/**
+	 * Arduino boards: A0..A(count-1) numbered from firstNumber. GPIO boards: `pins` are digital
+	 * pins that also read analog values, `inputOnly` are analog inputs named by their number.
+	 */
+	analogPins: { count?: number; firstNumber?: number; pins?: string[]; inputOnly?: string[] };
 	pwmPins: string[];
 	interruptPins: string[];
 }
@@ -75,20 +80,31 @@ export function buildCatalog(files: CatalogFile[]): CatalogEntry[] {
 
 /** Mirrors BoardDatabase::fromJson in core/src/boards.cpp. */
 export function buildBoard(file: BoardFile): Board {
-	const pins: Pin[] = [];
-	for (let i = 0; i < file.digitalPins; ++i) {
-		const label = String(i);
+	const numbered: { number: number; pin: Pin }[] = [];
+	const digital = Array.isArray(file.digitalPins)
+		? file.digitalPins
+		: Array.from({ length: file.digitalPins }, (_, i) => i);
+	const analog = file.analogPins.pins ?? [];
+	for (const number of digital) {
+		const label = String(number);
 		const capabilities: PinCapability[] = ["digital"];
+		if (analog.includes(label)) capabilities.push("analog");
 		if (file.pwmPins.includes(label)) capabilities.push("pwm");
 		if (file.interruptPins.includes(label)) capabilities.push("interrupt");
-		pins.push({ label, capabilities });
+		numbered.push({ number, pin: { label, capabilities } });
 	}
-	for (let i = 0; i < file.analogPins.count; ++i) {
-		const label = `A${i}`;
-		const inputOnly = (file.analogPins.inputOnly ?? []).includes(label);
-		pins.push({ label, capabilities: inputOnly ? ["analog"] : ["digital", "analog"] });
+	const inputOnly = file.analogPins.inputOnly ?? [];
+	if (file.analogPins.count !== undefined) {
+		for (let i = 0; i < file.analogPins.count; ++i) {
+			const label = `A${i}`;
+			const capabilities: PinCapability[] = inputOnly.includes(label) ? ["analog"] : ["digital", "analog"];
+			numbered.push({ number: (file.analogPins.firstNumber ?? 0) + i, pin: { label, capabilities } });
+		}
+	} else {
+		for (const label of inputOnly) numbered.push({ number: Number(label), pin: { label, capabilities: ["analog"] } });
 	}
-	return { id: file.id, name: file.name, pins };
+	numbered.sort((a, b) => a.number - b.number);
+	return { id: file.id, name: file.name, pins: numbered.map(({ pin }) => pin) };
 }
 
 const catalogFiles = import.meta.glob<CatalogFile>("../../blocks/catalog/*.json", {

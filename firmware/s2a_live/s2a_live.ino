@@ -34,7 +34,11 @@
 #include <DHT.h>
 #include <LiquidCrystal.h>
 #include <LiquidCrystal_I2C.h>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESP32Servo.h> // same Servo class, for the ESP32
+#else
 #include <Servo.h>
+#endif
 #include <U8x8lib.h>
 #include <Wire.h>
 
@@ -515,6 +519,9 @@ void execute(const char* command) {
 
 void setup() {
   Serial.begin(kBaud);
+#if defined(ARDUINO_ARCH_ESP32)
+  analogReadResolution(10); // 0-1023, as on the Arduino boards
+#endif
   for (int i = 0; i < kMaxPins; i++) {
     output[i] = false;
   }
