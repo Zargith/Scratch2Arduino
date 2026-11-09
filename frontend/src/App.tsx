@@ -563,13 +563,13 @@ export function App() {
 							</ActionIcon>
 						</Tooltip>
 						<Menu position="bottom-start" onOpen={() => void loadRecent()} withinPortal>
-							<Menu.Target>
-								<Tooltip label={t("toolbar.recent")}>
+							<Tooltip label={t("toolbar.recent")}>
+								<Menu.Target>
 									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.recent")}>
 										<IconHistory size={18} />
 									</ActionIcon>
-								</Tooltip>
-							</Menu.Target>
+								</Menu.Target>
+							</Tooltip>
 							<Menu.Dropdown maw={420}>
 								<Menu.Label>{t("toolbar.recent")}</Menu.Label>
 								{recent.length === 0 && <Menu.Item disabled>{t("recent.none")}</Menu.Item>}
