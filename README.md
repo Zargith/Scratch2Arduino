@@ -258,7 +258,7 @@ once installed, or in the folder given by the `S2A_FRONTEND_DIR` environment var
 
 ## Project files
 
-A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** will live in the user's library folder and be exported in the same way.
+A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** live in the user's data folder (`library.json`, next to the recent projects list and the autosaved copy of the project being edited) and can be exported to a `.s2ablocks` file and imported on another computer. That folder is `%APPDATA%\Scratch2Arduino` on Windows, `~/Library/Application Support/Scratch2Arduino` on macOS and `~/.config/scratch2arduino` on Linux (`S2A_USER_DIR` replaces it).
 
 ```json
 {

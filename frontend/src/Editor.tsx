@@ -8,12 +8,15 @@ import {
 	CREATE_VARIABLE_CALLBACK,
 	defineBlocks,
 	FUNCTION_TYPE,
+	INSERT_GROUP_CALLBACK_PREFIX,
+	MANAGE_LIBRARY_CALLBACK,
 	setCurrentBoard,
 	toolbox,
 } from "@/blocks/definitions";
 import type { Board, Language } from "@/catalog";
 import { translate } from "@/i18n";
-import type { WorkspaceState } from "@/project/convert";
+import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
+import type { BlockState, Project, WorkspaceState } from "@/project/convert";
 
 type WorkspaceLoadState = Parameters<typeof Blockly.serialization.workspaces.load>[0];
 
@@ -23,6 +26,8 @@ export interface EditorHandle {
 	highlight(blockIds: string[]): void;
 	/** Live mode: the scripts holding these blocks glow, as in Scratch. */
 	showRunning(blockIds: string[]): void;
+	/** Adds a "My blocks" group to the workspace. */
+	insert(group: Project): void;
 }
 
 interface EditorProps {
@@ -33,6 +38,11 @@ interface EditorProps {
 	onChange(): void;
 	/** Some scripts could not be shown (the others are). */
 	onLoadError?(lostScripts: number): void;
+	/** "My blocks" groups, listed in their palette category. */
+	library: SavedGroup[];
+	/** The user saved a stack to "My blocks" under this name. */
+	onSaveGroup(blocks: Project, name: string): void;
+	onManageLibrary(): void;
 }
 
 interface PromptRequest {
@@ -42,6 +52,57 @@ interface PromptRequest {
 }
 
 const LOOSE = "S2A_LOOSE_BLOCK";
+const SAVE_TO_LIBRARY = "s2a_save_to_library";
+
+/** What the "Save to My blocks" menu entry does in the editor currently shown. */
+let saveToLibrary: ((block: Blockly.BlockSvg) => void) | null = null;
+let menuLanguage: Language = "fr";
+
+/** Right-click on a block: "Save to My blocks" (the block and the ones below it). */
+function registerSaveToLibrary() {
+	const registry = Blockly.ContextMenuRegistry.registry;
+	if (registry.getItem(SAVE_TO_LIBRARY)) return;
+	registry.register({
+		id: SAVE_TO_LIBRARY,
+		scopeType: Blockly.ContextMenuRegistry.ScopeType.BLOCK,
+		displayText: () => translate(menuLanguage, "library.save"),
+		preconditionFn: (scope) => (scope.block && !scope.block.isInFlyout && saveToLibrary ? "enabled" : "hidden"),
+		callback: (scope) => {
+			if (scope.block) saveToLibrary?.(scope.block);
+		},
+		weight: 10,
+	});
+}
+
+function variablesOf(workspace: Blockly.Workspace): VariableInfo[] {
+	return workspace
+		.getVariableMap()
+		.getAllVariables()
+		.map((variable) => ({ id: variable.getId(), name: variable.getName(), type: variable.getType() }));
+}
+
+/** Adds a "My blocks" group at the top left of the visible area, as one undo step. */
+function insertGroup(workspace: Blockly.WorkspaceSvg, group: Project) {
+	const insertion = groupToBlocks(group, variablesOf(workspace), () => Blockly.utils.idGenerator.genUid());
+	const view = workspace.getMetricsManager().getViewMetrics(true);
+	const x = view.left + 40;
+	let y = view.top + 40;
+	Blockly.Events.setGroup(true);
+	try {
+		for (const variable of insertion.create) {
+			workspace.getVariableMap().createVariable(variable.name, variable.type, variable.id);
+		}
+		for (const state of insertion.blocks) {
+			const block = Blockly.serialization.blocks.append(
+				{ ...state, x, y } as unknown as Parameters<typeof Blockly.serialization.blocks.append>[0],
+				workspace
+			) as Blockly.BlockSvg;
+			y += block.getHeightWidth().height + 24;
+		}
+	} finally {
+		Blockly.Events.setGroup(false);
+	}
+}
 
 /** Text typed in a field, the project name or the serial monitor keeps its own shortcuts. */
 function isTextTarget(target: EventTarget | null): boolean {
@@ -80,7 +141,7 @@ function markLooseBlocks(workspace: Blockly.WorkspaceSvg) {
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-	{ language, board, initialState, onChange, onLoadError },
+	{ language, board, initialState, onChange, onLoadError, library, onSaveGroup, onManageLibrary },
 	ref
 ) {
 	const container = useRef<HTMLDivElement>(null);
@@ -89,11 +150,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	onChangeRef.current = onChange;
 	const onLoadErrorRef = useRef(onLoadError);
 	onLoadErrorRef.current = onLoadError;
+	const onSaveGroupRef = useRef(onSaveGroup);
+	onSaveGroupRef.current = onSaveGroup;
+	const onManageLibraryRef = useRef(onManageLibrary);
+	onManageLibraryRef.current = onManageLibrary;
+	const libraryRef = useRef(library);
+	const refreshToolbox = useRef<(() => void) | null>(null);
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
 	const glowing = useRef<Set<string>>(new Set());
 
 	useImperativeHandle(ref, () => ({
 		save: () => (workspace.current ? (Blockly.serialization.workspaces.save(workspace.current) as WorkspaceState) : {}),
+		insert: (group) => {
+			if (workspace.current) insertGroup(workspace.current, group);
+		},
 		showRunning: (blockIds) => {
 			const target = workspace.current;
 			if (!target) return;
@@ -127,8 +197,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		};
 		const ofType = (state: WorkspaceState, type: string) =>
 			(state.variables ?? []).filter((variable) => (variable.type ?? "") === type);
+		const libraryToolbox = () => ({
+			title: translate(language, "library.title"),
+			manage: translate(language, "library.manage"),
+			groups: libraryRef.current.map(({ id, name }) => ({ id, name })),
+		});
 		const created = Blockly.inject(element, {
-			toolbox: toolbox(language, ofType(initialState, ""), labels, ofType(initialState, FUNCTION_TYPE)),
+			toolbox: toolbox(language, ofType(initialState, ""), labels, ofType(initialState, FUNCTION_TYPE), libraryToolbox()),
 			theme: blocksTheme(),
 			media: "./media/",
 			trashcan: true,
@@ -142,6 +217,30 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		created.registerButtonCallback(CREATE_FUNCTION_CALLBACK, () => {
 			Blockly.ScratchVariables.createVariable(created, undefined, FUNCTION_TYPE);
 		});
+		created.registerButtonCallback(MANAGE_LIBRARY_CALLBACK, () => onManageLibraryRef.current());
+		const registerGroupButtons = () => {
+			for (const group of libraryRef.current) {
+				created.registerButtonCallback(`${INSERT_GROUP_CALLBACK_PREFIX}${group.id}`, () => {
+					const current = libraryRef.current.find((candidate) => candidate.id === group.id);
+					if (current) insertGroup(created, current.blocks);
+				});
+			}
+		};
+		registerGroupButtons();
+		menuLanguage = language;
+		registerSaveToLibrary();
+		saveToLibrary = (block) => {
+			const state = Blockly.serialization.blocks.save(block, { addCoordinates: false, addNextBlocks: true });
+			if (!state) return;
+			const group = stackToGroup(state as unknown as BlockState, variablesOf(created));
+			setPrompt({
+				message: translate(language, "library.prompt"),
+				value: "",
+				resolve: (name) => {
+					if (name !== null && name.trim() !== "") onSaveGroupRef.current(group, name.trim());
+				},
+			});
+		};
 		Blockly.ScratchVariables.setPromptHandler((message, defaultValue, callback, _title, type) => {
 			setPrompt({
 				message:
@@ -190,19 +289,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		} finally {
 			Blockly.Events.enable();
 		}
+		const rebuildToolbox = () => {
+			const idsOf = (type: string) =>
+				created
+					.getVariableMap()
+					.getVariablesOfType(type)
+					.map((variable) => ({ id: variable.getId() }));
+			registerGroupButtons();
+			created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE), libraryToolbox()));
+			// ScratchContinuousToolbox only redraws its flyout on request.
+			(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
+		};
+		refreshToolbox.current = rebuildToolbox;
 		const variableEvents: string[] = [Blockly.Events.VAR_CREATE, Blockly.Events.VAR_DELETE, Blockly.Events.VAR_RENAME];
 		const blockEvents: string[] = [Blockly.Events.BLOCK_CREATE, Blockly.Events.BLOCK_MOVE, Blockly.Events.BLOCK_DELETE];
 		created.addChangeListener((event: Blockly.Events.Abstract) => {
-			if (variableEvents.includes(event.type)) {
-				const idsOf = (type: string) =>
-					created
-						.getVariableMap()
-						.getVariablesOfType(type)
-						.map((variable) => ({ id: variable.getId() }));
-				created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE)));
-				// ScratchContinuousToolbox only redraws its flyout on request.
-				(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
-			}
+			if (variableEvents.includes(event.type)) rebuildToolbox();
 			if (blockEvents.includes(event.type)) markLooseBlocks(created);
 			if (!event.isUiEvent) {
 				created.highlightBlock(null);
@@ -229,6 +331,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		return () => {
 			document.removeEventListener("keydown", forwardShortcut);
 			resize.disconnect();
+			saveToLibrary = null;
+			refreshToolbox.current = null;
 			created.dispose();
 			workspace.current = null;
 		};
@@ -240,6 +344,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	useEffect(() => {
 		setCurrentBoard(board);
 	}, [board]);
+
+	useEffect(() => {
+		if (libraryRef.current === library) return;
+		libraryRef.current = library;
+		refreshToolbox.current?.();
+	}, [library]);
 
 	const close = (value: string | null) => {
 		prompt?.resolve(value);

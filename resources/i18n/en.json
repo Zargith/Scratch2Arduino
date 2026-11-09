@@ -70,6 +70,10 @@
     "open_title": "Open a project",
     "save_title": "Save the project",
     "file_filter": "Scratch2Arduino projects",
+    "library_file": "my-blocks",
+    "library_export_title": "Export my blocks",
+    "library_import_title": "Import blocks",
+    "library_filter": "Scratch2Arduino blocks",
     "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino."
   },
   "validation": {

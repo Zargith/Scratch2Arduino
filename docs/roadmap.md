@@ -14,7 +14,8 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 4 — Validation and friendly errors | Done: 10 rules with fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
 | 5 — Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
 | 6 — Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
-| 7 → 11 | Not started |
+| 7 — Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
+| 8 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own

@@ -2,6 +2,7 @@
 // function with webview::bind; every call returns a promise. When the page runs in a
 // plain browser (pnpm dev) the host is missing and calls report it instead of throwing.
 import type { Language } from "@/catalog";
+import type { SavedGroup } from "@/myBlocks";
 import type { Project } from "@/project/convert";
 
 export interface HostInfo {
@@ -86,6 +87,12 @@ interface HostFunctions {
 	s2a_autosave(project: Project, path: string): Promise<null>;
 	s2a_autosaved(): Promise<AutosavedProject | null>;
 	s2a_autosave_clear(): Promise<null>;
+	s2a_library(): Promise<SavedGroup[]>;
+	s2a_library_add(name: string, blocks: Project): Promise<SavedGroup>;
+	s2a_library_rename(id: string, name: string): Promise<null>;
+	s2a_library_remove(id: string): Promise<null>;
+	s2a_library_export(language: Language): Promise<string | null>;
+	s2a_library_import(language: Language): Promise<number | null>;
 	s2a_ports(): Promise<Port[]>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
@@ -133,6 +140,14 @@ export const bridge = {
 	autosave: (project: Project, path: string) => host("s2a_autosave")(project, path),
 	autosaved: () => host("s2a_autosaved")(),
 	autosaveClear: () => host("s2a_autosave_clear")(),
+	library: () => host("s2a_library")(),
+	libraryAdd: (name: string, blocks: Project) => host("s2a_library_add")(name, blocks),
+	libraryRename: (id: string, name: string) => host("s2a_library_rename")(id, name),
+	libraryRemove: (id: string) => host("s2a_library_remove")(id),
+	/** Resolves to the written file, or null when cancelled. */
+	libraryExport: (language: Language) => host("s2a_library_export")(language),
+	/** Resolves to the number of groups added, or null when cancelled. */
+	libraryImport: (language: Language) => host("s2a_library_import")(language),
 	ports: () => host("s2a_ports")(),
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
