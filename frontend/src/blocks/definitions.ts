@@ -141,7 +141,8 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 		case "pin":
 			return { type: "field_s2a_pin", name: arg.name, capability: arg.capability, value: String(arg.default ?? "13") };
 		case "variable":
-			return { type: "field_variable", name: arg.name, variable: null };
+			// Only plain variables: functions are variables of another type and must not be listed.
+			return { type: "field_variable", name: arg.name, variable: null, variableTypes: [""], defaultType: "" };
 		case "function":
 			return {
 				type: "field_s2a_function",
