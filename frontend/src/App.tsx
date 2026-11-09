@@ -48,7 +48,7 @@ import {
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
-import { exampleProject, type Example } from "@/gallery";
+import { exampleProject, type Example } from "@/examples";
 import { Gallery, Wiring } from "@/Gallery";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
