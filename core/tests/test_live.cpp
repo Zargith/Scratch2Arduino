@@ -1,4 +1,5 @@
 #include "s2a/live.hpp"
+#include "s2a/network.hpp"
 
 #include <deque>
 #include <gtest/gtest.h>
@@ -452,6 +453,7 @@ struct FakeFirmware final : s2a::serial::LineTransport {
     std::deque<std::string> pending{std::string(s2a::live::kHello)};
     std::vector<std::string> received;
     bool silent = false;
+    std::string joined; ///< Address on the home network ("" while not joined).
 
     s2a::Status writeLine(std::string_view line) override {
         received.emplace_back(line);
@@ -472,6 +474,8 @@ struct FakeFirmware final : s2a::serial::LineTransport {
             pending.push_back("h " + std::to_string(pin) + " 215 -9999");
         } else if (command == "U") {
             pending.push_back("u " + std::to_string(pin) + " 1234");
+        } else if (command == "I") {
+            pending.push_back(joined.empty() ? "i S2A-1A2B 192.168.4.1 -" : "i S2A-1A2B 192.168.4.1 " + joined);
         } else {
             pending.emplace_back("ok");
         }
@@ -487,6 +491,34 @@ struct FakeFirmware final : s2a::serial::LineTransport {
         return std::optional<std::string>(line);
     }
 };
+
+TEST(LiveLink, SetsUpTheWifiOfAnEsp32) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    auto state = link.networkState();
+    ASSERT_TRUE(state.ok());
+    EXPECT_EQ(state.value().accessPoint, "S2A-1A2B");
+    EXPECT_EQ(state.value().accessPointAddress, "192.168.4.1");
+    EXPECT_EQ(state.value().address, "");
+    // Line breaks and tabs cannot be sent: they would cut the command.
+    ASSERT_TRUE(link.joinNetwork("Box de\tla maison", "mot\nde passe").ok());
+    EXPECT_EQ(firmware.received.back(), "W Box dela maison\tmotde passe");
+    firmware.joined = "192.168.1.42";
+    EXPECT_EQ(link.networkState().value().address, "192.168.1.42");
+}
+
+TEST(Session, OpensWifiPortsAsNetworkConnections) {
+    EXPECT_EQ(s2a::network::wifiAddress("wifi:192.168.4.1"), std::optional<std::string>("192.168.4.1"));
+    EXPECT_EQ(s2a::network::wifiAddress("wifi:s2a-1a2b.local"), std::optional<std::string>("s2a-1a2b.local"));
+    EXPECT_FALSE(s2a::network::wifiAddress("wifi:").has_value());
+    EXPECT_FALSE(s2a::network::wifiAddress("/dev/ttyUSB0").has_value());
+    EXPECT_FALSE(s2a::network::wifiAddress("COM3").has_value());
+    // Nobody listens on this port of this machine: a clear network error, quickly.
+    const auto opened = s2a::live::Session::opener()("wifi:127.0.0.1");
+    ASSERT_FALSE(opened.ok());
+    EXPECT_EQ(opened.error().code, s2a::ErrorCode::NetworkFailed);
+}
 
 TEST(LiveLink, SpeaksTheFirmwareProtocol) {
     FakeFirmware firmware;

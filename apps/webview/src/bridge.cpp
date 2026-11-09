@@ -3,6 +3,7 @@
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/live.hpp"
+#include "s2a/network.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
 #include "s2a/version.hpp"
@@ -505,6 +506,9 @@ void Bridge::bind() {
             toolchain::BuildOptions options;
             if (upload) {
                 options.port = stringArg(args, 1);
+                if (network::wifiAddress(options.port)) {
+                    throw UserError{tr("live.wifi_upload", language)};
+                }
                 closeMonitor(); // the editor opens it again after the upload
             }
             const auto cli = arduinoCli(language);
@@ -530,9 +534,10 @@ void Bridge::bind() {
                 // Stopping can take a moment (outputs switched off): not on the UI thread.
                 std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
             }
-            live_ = std::make_unique<live::Session>(std::move(project), *board, port, language,
-                                                    live::Session::serialOpener(),
-                                                    live::Session::arduinoCliFlasher(*board, port));
+            // Over Wi-Fi the firmware cannot be uploaded: the board must already run it.
+            live_ = std::make_unique<live::Session>(
+                std::move(project), *board, port, language, live::Session::opener(),
+                network::wifiAddress(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port));
             return Json{{"ok", true}}.dump();
         } catch (const UserError& error) {
             message = error.message;
@@ -587,6 +592,9 @@ void Bridge::bind() {
         if (port.empty()) {
             return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
         }
+        if (network::wifiAddress(port)) {
+            return Json{{"ok", false}, {"message", tr("live.wifi_monitor", language)}}.dump();
+        }
         closeMonitor();
         auto opened = serial::Monitor::open(port, baud);
         if (!opened.ok()) {
@@ -624,6 +632,81 @@ void Bridge::bind() {
         }
         return state.dump();
     });
+
+    // Wi-Fi of an ESP32, over its USB cable: saves the home network on the board (the Live
+    // firmware is uploaded first if needed), then waits until it joined it.
+    window_.bind(
+        "s2a_wifi_setup",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 4, language_);
+                const std::string port = stringArg(args, 0);
+                const std::string name = stringArg(args, 1);
+                const std::string password = stringArg(args, 2);
+                const Board* board = BoardDatabase::builtin().find(stringArg(args, 3));
+                if (board == nullptr || port.empty() || network::wifiAddress(port)) {
+                    throw UserError{tr("live.wifi_upload", language)};
+                }
+                closeMonitor();
+                {
+                    const std::lock_guard<std::mutex> lock(liveMutex_);
+                    live_.reset(); // the port is needed
+                }
+                const auto failure = [&](const Error& error) {
+                    return UserError{tr(errorMessageKey(error.code), language)};
+                };
+                auto opened = serial::SerialPort::open(port, live::kBaud);
+                if (!opened.ok()) {
+                    throw failure(opened.error());
+                }
+                std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
+                if (!live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
+                    connection.reset(); // no Live firmware yet: install it (with Wi-Fi), then connect again
+                    std::string details;
+                    if (const auto flashed = live::Session::arduinoCliFlasher(*board, port)(details); !flashed.ok()) {
+                        throw failure(flashed.error());
+                    }
+                    opened = serial::SerialPort::open(port, live::kBaud);
+                    if (!opened.ok()) {
+                        throw failure(opened.error());
+                    }
+                    connection = std::move(opened).value();
+                    if (const auto ready = live::LiveLink(*connection).handshake(); !ready.ok()) {
+                        throw failure(ready.error());
+                    }
+                }
+                live::LiveLink link(*connection);
+                if (const auto joined = link.joinNetwork(name, password); !joined.ok()) {
+                    throw failure(joined.error());
+                }
+                // Joining takes a few seconds; a wrong password never succeeds.
+                live::LiveLink::NetworkState state;
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(name.empty() ? 0 : 20);
+                do {
+                    auto current = link.networkState();
+                    if (!current.ok()) {
+                        throw failure(current.error());
+                    }
+                    state = std::move(current).value();
+                    if (!state.address.empty() || name.empty()) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                } while (std::chrono::steady_clock::now() < deadline);
+                const std::string key = name.empty() ? "live.wifi_forgotten"
+                                        : state.address.empty() ? "live.wifi_not_joined"
+                                                                : "live.wifi_joined";
+                Json result{{"ok", name.empty() || !state.address.empty()},
+                            {"accessPoint", state.accessPoint},
+                            {"accessPointAddress", state.accessPointAddress},
+                            {"address", state.address},
+                            {"message", tr(key, language, {{"network", name}, {"address", state.address},
+                                                           {"access_point", state.accessPoint}})}};
+                return result.dump();
+            });
+        },
+        nullptr);
 
     window_.bind(
         "s2a_build",

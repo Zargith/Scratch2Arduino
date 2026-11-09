@@ -208,6 +208,16 @@ the sensors read by the blocks are shown on the right with a graph of their last
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
 
+#### Live mode over Wi-Fi (ESP32)
+
+With an ESP32, the Live mode also works without the cable. Start it once over USB: the *S2A live*
+firmware is installed with Wi-Fi. The board then creates its own network **S2A-xxxx** (password
+`scratch2arduino`): connect the computer to it and choose **Wi-Fi — the board's network** in the port
+list. To keep the Internet on the computer, open the **Wi-Fi** button (shown for an ESP32), type the
+home or school network and its password and send them to the board over USB: it remembers them, joins
+that network at every start, and its address is added to the port list. Programs are still uploaded
+with the cable. If the computer goes away, the board switches its outputs off.
+
 ### Components
 
 Besides the *Pins* blocks, the toolbox has blocks for the parts of beginner kits; each tooltip explains

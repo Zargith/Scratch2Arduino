@@ -28,6 +28,8 @@ std::string_view errorMessageKey(ErrorCode code) noexcept {
         return "error.port_failed";
     case ErrorCode::BoardNotResponding:
         return "error.board_not_responding";
+    case ErrorCode::NetworkFailed:
+        return "error.network_failed";
     }
     return "error.unknown";
 }
