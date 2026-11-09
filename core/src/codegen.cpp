@@ -381,6 +381,20 @@ private:
         return din + ", " + clk + ", " + cs + ", " + rows;
     }
 
+    /// LCD screen with 16 pins (no I2C module), driven in 4-bit mode: one object per wiring.
+    std::string parallelLcd(const Block& block) {
+        std::string pins;
+        std::string name = "s2a_lcd16";
+        for (const char* arg : {"RS_PIN", "E_PIN", "D4_PIN", "D5_PIN", "D6_PIN", "D7_PIN"}) {
+            const std::string label = pinLabel(block, arg);
+            pins += (pins.empty() ? "" : ", ") + label;
+            name += "_" + label;
+            ownedPins_.insert(label); // the library sets the pins it drives
+        }
+        use("LiquidCrystal.h", "LiquidCrystal " + name + "(" + pins + ");", name + ".begin(16, 2);");
+        return name;
+    }
+
     // --- statements ------------------------------------------------------------------
 
     void wait(Body& body, const std::string& seconds, int depth) {
@@ -485,6 +499,15 @@ private:
                 body.add(depth, "s2a_lcd->clear();");
             } else {
                 body.add(depth, "s2a_lcd_line(" + std::string(field(block, "LINE") == "2" ? "2" : "1") + ", " +
+                                    displayText(block, "TEXT") + ");");
+            }
+        } else if (type == "display_lcd16_print" || type == "display_lcd16_clear") {
+            const std::string screen = parallelLcd(block);
+            if (type == "display_lcd16_clear") {
+                body.add(depth, screen + ".clear();");
+            } else {
+                helpers_.insert("lcd16");
+                body.add(depth, "s2a_lcd16_line(" + screen + ", " + (field(block, "LINE") == "2" ? "2" : "1") + ", " +
                                     displayText(block, "TEXT") + ");");
             }
         } else if (type == "display_oled_print" || type == "display_oled_clear") {
@@ -685,6 +708,10 @@ private:
                 "  s2a_lcd->backlight();", "}", "", "void s2a_lcd_line(int row, const String& text) {",
                 "  s2a_lcd->setCursor(0, row - 1);", "  for (unsigned int i = 0; i < 16; i++) {",
                 "    s2a_lcd->print(i < text.length() ? text[i] : ' ');", "  }", "}"});
+        helper(out, "lcd16",
+               {"void s2a_lcd16_line(LiquidCrystal& lcd, int row, const String& text) {",
+                "  lcd.setCursor(0, row - 1);", "  for (unsigned int i = 0; i < 16; i++) {",
+                "    lcd.print(i < text.length() ? text[i] : ' ');", "  }", "}"});
         helper(out, "oled",
                {"void s2a_oled_line(int row, const String& text) {", "  char line[17];",
                 "  for (unsigned int i = 0; i < 16; i++) {", "    line[i] = i < text.length() ? text[i] : ' ';", "  }",

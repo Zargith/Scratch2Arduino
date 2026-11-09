@@ -82,7 +82,7 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 
 ### Phase 6 — Sensors and actuators
 - **Goal**: cover the usual beginner kits.
-- **Deliverables**: block sets with wiring help images for LEDs, RGB LED, buttons, potentiometer, light sensor, buzzer, servo, DC motor (driver), ultrasonic HC-SR04, DHT11/22, LCD 16×2 (I2C), OLED SSD1306, NeoPixel, LED matrix; automatic Arduino library installation via `arduino-cli`; support in both upload and live modes.
+- **Deliverables**: block sets with wiring help images for LEDs, RGB LED, buttons, potentiometer, light sensor, buzzer, servo, DC motor (driver), ultrasonic HC-SR04, DHT11/22, LCD 16×2 (I2C module or 16 pins), OLED SSD1306, NeoPixel, LED matrix; automatic Arduino library installation via `arduino-cli`; support in both upload and live modes.
 - **Done when**: each component has at least one example project tested on real hardware.
 
 ### Phase 7 — Productivity and sharing
