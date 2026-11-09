@@ -220,9 +220,45 @@ export function unknownBlockTypes(project: Project): string[] {
 	return [...unknown].sort();
 }
 
+/**
+ * Variable and function fields pointing at nothing, or at the wrong kind (a "set" block holding
+ * a function, saved by an older version), are left out: the block gets its default variable
+ * instead of making Blockly invent one, which can fail and hide the whole project.
+ */
+function withValidReferences(project: Project): ProjectScript[] {
+	const kinds = new Map<string, "variable" | "function">([
+		...project.variables.map((variable) => [variable.id, "variable"] as const),
+		...(project.functions ?? []).map((fn) => [fn.id, "function"] as const),
+	]);
+	const clean = (block: ProjectBlock): ProjectBlock => {
+		const args = findBlock(block.type)?.args ?? [];
+		let fields = block.fields;
+		for (const [name, value] of Object.entries(block.fields ?? {})) {
+			const kind = args.find((arg) => arg.name === name)?.kind;
+			if ((kind === "variable" || kind === "function") && kinds.get(value) !== kind) {
+				fields = { ...fields };
+				delete fields[name];
+			}
+		}
+		return {
+			...block,
+			...(fields ? { fields } : {}),
+			...(block.inputs && {
+				inputs: Object.fromEntries(
+					Object.entries(block.inputs).map(([name, input]) => [name, input.block ? { ...input, block: clean(input.block) } : input])
+				),
+			}),
+			...(block.statements && {
+				statements: Object.fromEntries(Object.entries(block.statements).map(([name, stack]) => [name, stack.map(clean)])),
+			}),
+		};
+	};
+	return project.scripts.map((script) => ({ ...script, blocks: script.blocks.map(clean) }));
+}
+
 export function projectToWorkspace(project: Project): WorkspaceState {
 	const blocks: BlockState[] = [];
-	for (const script of project.scripts) {
+	for (const script of withValidReferences(project)) {
 		const overflow: ProjectBlock[][] = [];
 		const first = linked(splitAfterTerminal(script.blocks, overflow));
 		if (first) blocks.push({ ...first, x: script.x, y: script.y });

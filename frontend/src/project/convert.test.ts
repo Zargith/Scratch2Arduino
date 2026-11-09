@@ -1,5 +1,34 @@
 import { describe, expect, it } from "vitest";
 
+describe("references to variables and functions", () => {
+	it("drops a variable field holding a function or an unknown id", async () => {
+		const { emptyProject, projectToWorkspace } = await import("@/project/convert");
+		const project: import("@/project/convert").Project = {
+			...emptyProject("p", "uno"),
+			variables: [{ id: "v1", name: "score", initialValue: 0 }],
+			functions: [{ id: "f1", name: "flash" }],
+			scripts: [
+				{
+					x: 0,
+					y: 0,
+					blocks: [
+						{ id: "a", type: "variables_set", fields: { VARIABLE: "f1" } }, // a function: wrong kind
+						{ id: "b", type: "variables_set", fields: { VARIABLE: "gone" } }, // unknown
+						{ id: "c", type: "variables_set", fields: { VARIABLE: "v1" } },
+						{ id: "d", type: "functions_call", fields: { FUNCTION: "v1" } }, // a variable: wrong kind
+						{ id: "e", type: "functions_call", fields: { FUNCTION: "f1" } },
+					],
+				},
+			],
+		};
+		const states: Record<string, unknown> = {};
+		for (let block = projectToWorkspace(project).blocks?.blocks[0]; block; block = block.next?.block) {
+			states[block.id ?? ""] = block.fields?.VARIABLE ?? block.fields?.FUNCTION;
+		}
+		expect(states).toEqual({ a: undefined, b: undefined, c: { id: "v1" }, d: undefined, e: { id: "f1" } });
+	});
+});
+
 import { findBlock } from "@/catalog";
 import allBlocks from "../../../examples/projects/all-blocks/project.json";
 import blink from "../../../examples/projects/blink/project.json";

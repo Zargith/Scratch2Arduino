@@ -19,6 +19,7 @@ add_library(s2a_core STATIC
     src/resources.cpp
     src/result.cpp
     src/serial.cpp
+    src/userdata.cpp
 )
 add_library(s2a::core ALIAS s2a_core)
 

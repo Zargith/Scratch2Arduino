@@ -1,3 +1,4 @@
+#include "s2a/arduino_cli.hpp"
 #include "s2a/codegen.hpp"
 
 #include <gtest/gtest.h>
@@ -253,11 +254,23 @@ TEST(Codegen, DrivesComponents) {
     for (const char* expected :
          {"#include <Servo.h>\n\nServo s2a_servo_3;\n", "  s2a_servo_3.attach(3);\n", "analogWrite(9, 0);",
           "analogWrite(10, 255);", "analogWrite(11, 255);", "s2a_servo_3.write(constrain((int)(45), 0, 180));",
-          "  s2a_tone(8, 392);\n  s2a_wait(0.25);\n  noTone(8);\n", "void s2a_tone(int pin, double frequency) {",
+          "  s2a_tone(8, 392);\n  s2a_wait(0.25);\n  s2a_quiet(8);\n", "  pinMode(pin, INPUT);\n", "void s2a_tone(int pin, double frequency) {",
           "s2a_motor(6, 7, 4, -1, 50);", "s2a_motor(6, 7, 4, 0, 0);", "  pinMode(6, OUTPUT);"}) {
         EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
     }
     EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "attach() sets the servo pin";
+    EXPECT_EQ(source.find("pinMode(8,"), std::string::npos) << "tone() sets a buzzer pin";
+}
+
+TEST(Codegen, KeepsABuzzerPinThatOtherBlocksDrive) {
+    Block play = block("play", "sound_play_tone");
+    play.fields["PIN"] = "8";
+    Block off = block("off", "pins_digital_write");
+    off.fields = {{"PIN", "8"}, {"STATE", "LOW"}};
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), play, off})).source;
+    EXPECT_EQ(source.find("s2a_quiet"), std::string::npos) << source;
+    EXPECT_NE(source.find("  noTone(8);\n  digitalWrite(8, LOW);"), std::string::npos) << source;
+    EXPECT_NE(source.find("  pinMode(8, OUTPUT);"), std::string::npos) << source;
 }
 
 TEST(Codegen, ReadsSensors) {
@@ -348,7 +361,7 @@ TEST(Codegen, UsesComponentLibraries) {
           "  s2a_lcd_begin();", "  s2a_oled.begin();\n  s2a_oled.setFont(u8x8_font_chroma48medium8_r);",
           "Adafruit_NeoPixel s2a_strip_5(12, 5, NEO_GRB + NEO_KHZ800);", "  s2a_strip_5.begin();",
           "s2a_strip_5.fill(s2a_strip_5.Color(255, 160, 0));", "s2a_pixel(s2a_strip_5, 1, s2a_strip_5.Color(255, 0, 0));",
-          "byte s2a_matrix_12_11_10[8];", "  s2a_matrix_init(12, 11, 10);",
+          "byte s2a_matrix_12_11_10[8];", "  s2a_matrix_settings(din, clk, cs);\n  for (byte row = 0; row < 8; row++) {", "  s2a_matrix_init(12, 11, 10);",
           "static const byte image[8] = {0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18};",
           "s2a_matrix_image(12, 11, 10, s2a_matrix_12_11_10, image);",
           "s2a_matrix_dot(12, 11, 10, s2a_matrix_12_11_10, 1, 1, true);", "s2a_lcd->clear();"}) {
@@ -357,6 +370,33 @@ TEST(Codegen, UsesComponentLibraries) {
     EXPECT_EQ(source.find("DHT11"), std::string::npos);
     EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "the DHT library sets its pin";
     EXPECT_EQ(source.find("pinMode(5,"), std::string::npos) << "the NeoPixel library sets its pin";
+}
+
+TEST(Codegen, Drives16PinLcdScreens) {
+    Block print = block("print", "display_lcd16_print");
+    print.fields["LINE"] = "2";
+    print.inputs["TEXT"].value = "Élève";
+    Block other = block("other", "display_lcd16_print");
+    other.fields = {{"RS_PIN", "2"}, {"E_PIN", "3"}, {"D4_PIN", "4"}, {"D5_PIN", "5"}, {"D6_PIN", "6"}, {"D7_PIN", "A0"}};
+    Block clear = block("clear", "display_lcd16_clear");
+    Block led = block("led", "pins_digital_write");
+    led.fields["PIN"] = "13";
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), print, other, clear, led}));
+    const std::string& source = sketch.source;
+    for (const char* expected :
+         {"#include <LiquidCrystal.h>\n", "LiquidCrystal s2a_lcd16_12_11_10_9_8_7(12, 11, 10, 9, 8, 7);",
+          "LiquidCrystal s2a_lcd16_2_3_4_5_6_A0(2, 3, 4, 5, 6, A0);", "  s2a_lcd16_12_11_10_9_8_7.begin(16, 2);",
+          "  s2a_lcd16_2_3_4_5_6_A0.begin(16, 2);", "void s2a_lcd16_line(LiquidCrystal& lcd, int row, const String& text) {",
+          "s2a_lcd16_line(s2a_lcd16_12_11_10_9_8_7, 2, F(\"Eleve\"));",
+          "s2a_lcd16_line(s2a_lcd16_2_3_4_5_6_A0, 1, F(\"Bonjour !\"));", "s2a_lcd16_12_11_10_9_8_7.clear();",
+          "  pinMode(13, OUTPUT);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("pinMode(12,"), std::string::npos) << "the LiquidCrystal library sets its pins";
+    EXPECT_EQ(source.find("LiquidCrystal s2a_lcd16_12_11_10_9_8_7", source.find("LiquidCrystal s2a_lcd16_12_11_10_9_8_7") + 1),
+              std::string::npos)
+        << "one object per wiring";
+    EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"LiquidCrystal"}));
 }
 
 TEST(Codegen, AsciiText) {

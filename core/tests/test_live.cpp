@@ -43,6 +43,13 @@ struct FakePins final : s2a::live::Pins {
         return dhtValues;
     }
     void lcdLine(int row, const std::string& text) override { log.push_back("L" + std::to_string(row) + "=" + text); }
+    void lcd16Line(const std::array<int, 6>& wiring, int row, const std::string& text) override {
+        std::string entry = "C";
+        for (const int pin : wiring) {
+            entry += std::to_string(pin) + "/";
+        }
+        log.push_back(entry + std::to_string(row) + "=" + text);
+    }
     void oledLine(int row, const std::string& text) override { log.push_back("O" + std::to_string(row) + "=" + text); }
     void pixels(int pin, int count, int index, int red, int green, int blue) override {
         log.push_back("N" + std::to_string(pin) + "/" + std::to_string(count) + "/" + std::to_string(index) + "=" +
@@ -238,6 +245,19 @@ TEST(Interpreter, DrivesScreensStripsAndMatrices) {
                                             "G12/11/10/4=24", "G12/11/10/5=24", "G12/11/10/6=36", "G12/11/10/7=66",
                                             "G12/11/10/8=129", "G12/11/10/1=1"};
     EXPECT_EQ(pins.take(), expected);
+}
+
+TEST(Interpreter, DrivesA16PinLcd) {
+    FakePins pins;
+    Block print = block("print", "display_lcd16_print");
+    print.fields = {{"LINE", "2"}, {"RS_PIN", "2"}, {"E_PIN", "3"}, {"D4_PIN", "4"}, {"D5_PIN", "5"}, {"D6_PIN", "6"},
+                    {"D7_PIN", "A0"}};
+    print.inputs["TEXT"].value = "Été";
+    Block clear = block("clear", "display_lcd16_clear"); // default wiring
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), print, clear}),
+                            BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"C2/3/4/5/6/14/2=Été", "C12/11/10/9/8/7/0="}));
 }
 
 TEST(Interpreter, KeepsTheLastGoodDhtReading) {
@@ -534,11 +554,13 @@ TEST(LiveLink, DrivesComponents) {
     EXPECT_FALSE(link.dht(3, 11).has_value()); // no humidity: the sensor did not answer
     link.lcdLine(1, "Température : 21 °C");
     link.oledLine(0, "");
+    link.lcd16Line({7, 8, 9, 10, 11, 12}, 2, "Bonjour !");
     link.pixels(5, 8, 0, 255, 300, 0);
     link.matrixRow(12, 11, 10, 3, 0x1FF);
     EXPECT_EQ(firmware.received,
               (std::vector<std::string>{"?", "T 8 440 500", "T 8 0 0", "S 9 180", "U 12 11", "H 3 11",
-                                        "L 1 Temperature : 21", "O 0 ", "N 5 8 0 255 255 0", "G 12 11 10 3 255"}));
+                                        "L 1 Temperature : 21", "O 0 ", "C 7 8 9 10 11 12 2 Bonjour !",
+                                        "N 5 8 0 255 255 0", "G 12 11 10 3 255"}));
     EXPECT_FALSE(link.takeError().has_value());
 }
 

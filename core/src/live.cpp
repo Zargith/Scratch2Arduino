@@ -246,6 +246,14 @@ void LiveLink::lcdLine(int row, const std::string& text) {
     (void)request("L " + std::to_string(std::clamp(row, 0, 2)) + " " + screenText(text));
 }
 
+void LiveLink::lcd16Line(const std::array<int, 6>& pins, int row, const std::string& text) {
+    std::string command = "C";
+    for (const int pin : pins) {
+        command += " " + std::to_string(pin);
+    }
+    (void)request(command + " " + std::to_string(std::clamp(row, 0, 2)) + " " + screenText(text));
+}
+
 void LiveLink::oledLine(int row, const std::string& text) {
     (void)request("O " + std::to_string(std::clamp(row, 0, 8)) + " " + screenText(text));
 }
@@ -596,7 +604,7 @@ void Interpreter::run(Thread& thread, Clock now) {
             const double frequency = number(block, "FREQUENCY");
             const double seconds = type == "sound_play_tone" ? std::max(0.0, number(block, "SECONDS")) : 0;
             if (const int number = pinNumber(block, "PIN"); number >= 0) {
-                modes_[number] = PinMode::Output; // tone() sets the pin
+                modes_.erase(number); // tone() sets the pin, the firmware lets it go when the sound ends
                 const int hertz = frequency < 31 ? 0 : static_cast<int>(std::min(frequency, 65535.0));
                 const auto duration = static_cast<int>(std::min(seconds * 1000, 3600000.0));
                 if (type == "sound_play_tone" && duration == 0) {
@@ -617,6 +625,20 @@ void Interpreter::run(Thread& thread, Clock now) {
             pins_.lcdLine(field(block, "LINE") == "2" ? 2 : 1, text(block, "TEXT"));
         } else if (type == "display_lcd_clear") {
             pins_.lcdLine(0, {});
+        } else if (type == "display_lcd16_print" || type == "display_lcd16_clear") {
+            std::array<int, 6> wiring{};
+            bool wired = true;
+            const char* const names[] = {"RS_PIN", "E_PIN", "D4_PIN", "D5_PIN", "D6_PIN", "D7_PIN"};
+            for (std::size_t i = 0; i < wiring.size(); ++i) {
+                wiring[i] = pinNumber(block, names[i]);
+                wired = wired && wiring[i] >= 0;
+                modes_.erase(wiring[i]); // the screen owns its pins
+            }
+            if (wired) {
+                const bool clear = type == "display_lcd16_clear";
+                pins_.lcd16Line(wiring, clear ? 0 : (field(block, "LINE") == "2" ? 2 : 1),
+                                clear ? std::string() : text(block, "TEXT"));
+            }
         } else if (type == "display_oled_print") {
             const int line = static_cast<int>(parseNumber(field(block, "LINE")).value_or(1));
             pins_.oledLine(std::clamp(line, 1, 8), text(block, "TEXT"));

@@ -6,6 +6,10 @@ import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, ty
 
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
 export const CREATE_FUNCTION_CALLBACK = "S2A_CREATE_FUNCTION";
+export const MANAGE_LIBRARY_CALLBACK = "S2A_MANAGE_LIBRARY";
+/** Followed by the group id: the button that adds a "My blocks" group to the workspace. */
+export const INSERT_GROUP_CALLBACK_PREFIX = "S2A_INSERT_GROUP:";
+const LIBRARY_COLOUR = "#8D6E63";
 /** Functions are Blockly variables of this type: named, renamed and deleted like variables. */
 export const FUNCTION_TYPE = "function";
 
@@ -137,7 +141,8 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 		case "pin":
 			return { type: "field_s2a_pin", name: arg.name, capability: arg.capability, value: String(arg.default ?? "13") };
 		case "variable":
-			return { type: "field_variable", name: arg.name, variable: null };
+			// Only plain variables: functions are variables of another type and must not be listed.
+			return { type: "field_variable", name: arg.name, variable: null, variableTypes: [""], defaultType: "" };
 		case "function":
 			return {
 				type: "field_s2a_function",
@@ -246,6 +251,7 @@ export function blocksTheme(): Blockly.Theme {
 		};
 		categoryStyles[category.id] = { colour: category.colour };
 	}
+	categoryStyles.library = { colour: LIBRARY_COLOUR };
 	return Blockly.Theme.defineTheme("scratch2arduino", {
 		name: "scratch2arduino",
 		blockStyles,
@@ -265,7 +271,8 @@ export function toolbox(
 	language: Language,
 	variables: { id: string }[],
 	labels: { createVariable: string; createFunction: string },
-	functions: { id: string }[] = []
+	functions: { id: string }[] = [],
+	library?: { title: string; manage: string; groups: { id: string; name: string }[] }
 ): Blockly.utils.toolbox.ToolboxDefinition {
 	// Variables and functions: a "create" button, then the blocks set to the first one.
 	const named = (blocks: CatalogBlock[], field: string, first: { id: string } | undefined, button: object) => [
@@ -279,9 +286,23 @@ export function toolbox(
 				}))
 			: []),
 	];
+	// "My blocks": one button per saved group (a click adds it to the workspace).
+	const libraryCategory = library && {
+		kind: "category",
+		name: library.title,
+		categorystyle: "library",
+		contents: [
+			{ kind: "button", text: library.manage, callbackkey: MANAGE_LIBRARY_CALLBACK },
+			...library.groups.map((group) => ({
+				kind: "button",
+				text: `＋ ${group.name}`,
+				callbackkey: `${INSERT_GROUP_CALLBACK_PREFIX}${group.id}`,
+			})),
+		],
+	};
 	return {
 		kind: "categoryToolbox",
-		contents: catalog.map(({ category, blocks }) => {
+		contents: [...catalog.map(({ category, blocks }) => {
 			let contents: object[];
 			if (category.id === "variables") {
 				contents = named(blocks, "VARIABLE", variables[0], {
@@ -299,6 +320,6 @@ export function toolbox(
 				contents = blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) }));
 			}
 			return { kind: "category", name: category.name[language], categorystyle: category.id, contents };
-		}),
+		}), ...(libraryCategory ? [libraryCategory] : [])],
 	} as Blockly.utils.toolbox.ToolboxDefinition;
 }

@@ -794,6 +794,36 @@
           "type": "display_lcd_clear"
         },
         {
+          "id": "lcd16a",
+          "type": "display_lcd16_print",
+          "fields": {
+            "LINE": "2",
+            "RS_PIN": "7",
+            "E_PIN": "8",
+            "D4_PIN": "9",
+            "D5_PIN": "10",
+            "D6_PIN": "11",
+            "D7_PIN": "12"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "Bonjour !"
+            }
+          }
+        },
+        {
+          "id": "lcd16clr",
+          "type": "display_lcd16_clear",
+          "fields": {
+            "RS_PIN": "7",
+            "E_PIN": "8",
+            "D4_PIN": "9",
+            "D5_PIN": "10",
+            "D6_PIN": "11",
+            "D7_PIN": "12"
+          }
+        },
+        {
           "id": "oledclr",
           "type": "display_oled_clear"
         }

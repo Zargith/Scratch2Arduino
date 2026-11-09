@@ -34,6 +34,6 @@ export default defineConfig({
 	build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 8000 },
 	test: {
 		environment: "jsdom",
-		include: ["src/**/*.test.ts"],
+		include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
 	},
 });

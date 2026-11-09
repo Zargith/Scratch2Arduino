@@ -18,6 +18,8 @@
 //                   (-9999 when the sensor does not answer)              -> "h <pin> <temp> <humidity>"
 //   L <row> <text>  text on line <row> (1-2) of an I2C 16x2 LCD (address 0x27 or 0x3F);
 //                   row 0 clears the screen                              -> "ok"
+//   C <rs> <e> <d4> <d5> <d6> <d7> <row> <text>  text on line <row> (1-2) of a 16x2 LCD with
+//                   16 pins (no I2C module); row 0 clears it              -> "ok"
 //   O <row> <text>  text on line <row> (1-8) of an I2C SSD1306 OLED; row 0 clears it -> "ok"
 //   N <pin> <count> <index> <r> <g> <b>  colour of LED <index> (1-<count>, 0: all) of a
 //                   NeoPixel strip                                       -> "ok"
@@ -30,13 +32,14 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <DHT.h>
+#include <LiquidCrystal.h>
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 #include <U8x8lib.h>
 #include <Wire.h>
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 3";
+const char* const kHello = "S2A 4";
 const int kMaxLine = 48;
 const int kMaxPins = 70;
 const int kMaxServos = 8;
@@ -47,12 +50,15 @@ bool output[kMaxPins];
 Servo servos[kMaxServos];
 int servoPins[kMaxServos];
 int tonePin = -1;
+unsigned long toneEnd = 0; // when a timed sound ends (0: until stopped)
 
 DHT* dht = nullptr;
 int dhtPin = -1;
 int dhtType = 0;
 
 LiquidCrystal_I2C* lcd = nullptr;
+LiquidCrystal* lcd16 = nullptr;
+long lcd16Pins[6] = {-1, -1, -1, -1, -1, -1}; // RS, E, D4-D7
 U8X8_SSD1306_128X64_NONAME_HW_I2C* oled = nullptr;
 
 Adafruit_NeoPixel strip(0, 6, NEO_GRB + NEO_KHZ800);
@@ -106,6 +112,34 @@ void showOnLcd(int row, const char* text) {
   }
 }
 
+void showOnLcd16(const long* pins, int row, const char* text) {
+  bool same = lcd16 != nullptr;
+  for (int i = 0; i < 6; i++) {
+    same = same && lcd16Pins[i] == pins[i];
+  }
+  if (!same) {
+    delete lcd16;
+    lcd16 = new LiquidCrystal(pins[0], pins[1], pins[2], pins[3], pins[4], pins[5]);
+    for (int i = 0; i < 6; i++) {
+      lcd16Pins[i] = pins[i];
+      output[pins[i]] = false; // the screen owns its pins
+    }
+    lcd16->begin(16, 2);
+  }
+  if (row <= 0) {
+    lcd16->clear();
+    return;
+  }
+  lcd16->setCursor(0, row > 2 ? 1 : row - 1);
+  int i = 0;
+  for (; i < 16 && text[i] != '\0'; i++) {
+    lcd16->print(text[i]);
+  }
+  for (; i < 16; i++) {
+    lcd16->print(' ');
+  }
+}
+
 void showOnOled(int row, const char* text) {
   if (oled == nullptr) {
     oled = new U8X8_SSD1306_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
@@ -156,6 +190,14 @@ void matrixSend(byte reg, byte data) {
   digitalWrite(matrixPins[2], HIGH);
 }
 
+void matrixSettings() {
+  matrixSend(0x0F, 0); // no test mode
+  matrixSend(0x09, 0); // no digit decoding
+  matrixSend(0x0A, 4); // intensity
+  matrixSend(0x0B, 7); // all 8 rows
+  matrixSend(0x0C, 1); // on
+}
+
 void matrixRow(int din, int clk, int cs, int row, int bits) {
   if (din != matrixPins[0] || clk != matrixPins[1] || cs != matrixPins[2]) {
     matrixPins[0] = din;
@@ -166,14 +208,12 @@ void matrixRow(int din, int clk, int cs, int row, int bits) {
       output[matrixPins[i]] = false;
     }
     digitalWrite(cs, HIGH);
-    matrixSend(0x0F, 0); // no test mode
-    matrixSend(0x09, 0); // no digit decoding
-    matrixSend(0x0A, 4); // intensity
-    matrixSend(0x0B, 7); // all 8 rows
-    matrixSend(0x0C, 1); // on
+    matrixSettings();
     for (int i = 1; i <= 8; i++) {
       matrixSend(i, 0);
     }
+  } else if (row == 1) {
+    matrixSettings(); // a voltage dip (buzzer, motor) can reset the chip: set it again with each picture
   }
   matrixSend(row, bits);
 }
@@ -217,9 +257,12 @@ bool writeServo(int pin, int angle) {
   return true;
 }
 
+// A silent buzzer is let go: otherwise the flicker of LEDs on the same GND hums through it.
 void stopTone() {
   if (tonePin >= 0) {
     noTone(tonePin);
+    pinMode(tonePin, INPUT);
+    output[tonePin] = false;
     tonePin = -1;
   }
 }
@@ -300,6 +343,9 @@ void execute(const char* command) {
     if (lcd != nullptr) {
       lcd->clear();
     }
+    if (lcd16 != nullptr) {
+      lcd16->clear();
+    }
     if (oled != nullptr) {
       oled->clear();
     }
@@ -355,12 +401,16 @@ void execute(const char* command) {
         stopTone(); // one sound at a time
       }
       if (value <= 0) {
-        noTone(pin);
-        tonePin = -1;
+        if (tonePin == pin) {
+          stopTone();
+        } else {
+          noTone(pin);
+        }
       } else {
         releaseServo(pin);
         output[pin] = true;
         tonePin = pin;
+        toneEnd = duration > 0 ? max(millis() + (unsigned long)duration, 1UL) : 0;
         if (duration > 0) {
           tone(pin, (unsigned int)constrain(value, 31L, 65535L), (unsigned long)duration);
         } else {
@@ -406,6 +456,19 @@ void execute(const char* command) {
       return;
     }
     break;
+  case 'C': {
+    long wiring[6];
+    bool ok = true;
+    for (int i = 0; ok && i < 6; i++) {
+      ok = readNumber(command, &position, &wiring[i]) && validPin(wiring[i]);
+    }
+    if (ok && readNumber(command, &position, &value)) {
+      showOnLcd16(wiring, value, textAfter(command, position));
+      reply("ok");
+      return;
+    }
+    break;
+  }
   case 'N': {
     long numbers[5];
     bool ok = readNumber(command, &position, &pin) && validPin(pin);
@@ -462,6 +525,9 @@ void setup() {
 }
 
 void loop() {
+  if (tonePin >= 0 && toneEnd != 0 && (long)(millis() - toneEnd) >= 0) {
+    stopTone();
+  }
   while (Serial.available() > 0) {
     const char c = Serial.read();
     if (c == '\r') {

@@ -1,0 +1,82 @@
+{
+  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, same program) is one card with a choice: each variant id is a folder, its parts replace those of the example.",
+  "examples": [
+    {
+      "id": "blink",
+      "title": { "fr": "Clignotant", "en": "Blink" },
+      "description": {
+        "fr": "La LED « L » soudée sur la carte clignote : rien à brancher.",
+        "en": "The on-board \"L\" LED blinks: nothing to wire."
+      },
+      "parts": { "fr": "aucun composant", "en": "no parts" }
+    },
+    {
+      "id": "traffic-light",
+      "title": { "fr": "Feu tricolore", "en": "Traffic light" },
+      "description": {
+        "fr": "Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une fonction.",
+        "en": "Green 3 s, orange 1 s, red 3 s, forever. Each colour is a function."
+      },
+      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" }
+    },
+    {
+      "id": "servo-potentiometer",
+      "title": { "fr": "Potentiomètre et servomoteur", "en": "Potentiometer and servo" },
+      "description": {
+        "fr": "Tourner le potentiomètre fait tourner le bras du servomoteur de 0 à 180°.",
+        "en": "Turning the knob moves the servo arm from 0 to 180°."
+      },
+      "parts": { "fr": "potentiomètre, servomoteur SG90", "en": "potentiometer, SG90 servo" }
+    },
+    {
+      "id": "distance-alarm",
+      "title": { "fr": "Alarme de distance", "en": "Distance alarm" },
+      "description": {
+        "fr": "LED verte quand rien n'est proche ; à moins de 20 cm elle devient rouge et le buzzer bipe de plus en plus vite.",
+        "en": "Green LED when nothing is near; under 20 cm it turns red and the buzzer beeps faster and faster."
+      },
+      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" }
+    },
+    {
+      "id": "thermometer",
+      "title": { "fr": "Thermomètre", "en": "Thermometer" },
+      "description": {
+        "fr": "L'écran affiche la température puis l'humidité, toutes les 2 secondes.",
+        "en": "The screen shows the temperature, then the humidity, every 2 seconds."
+      },
+      "parts": { "fr": "DHT11, écran LCD 16×2 I2C", "en": "DHT11, 16×2 I2C LCD screen" },
+      "variants": [
+        {
+          "id": "thermometer",
+          "label": { "fr": "Écran I2C (4 broches)", "en": "I2C screen (4 pins)" }
+        },
+        {
+          "id": "thermometer-lcd16",
+          "label": { "fr": "Écran 16 broches", "en": "16-pin screen" },
+          "parts": {
+            "fr": "DHT11, écran LCD 16×2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
+            "en": "DHT11, 16×2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reaction-game",
+      "title": { "fr": "Jeu de réaction", "en": "Reaction game" },
+      "description": {
+        "fr": "Attends le cœur sur la matrice, puis appuie le plus vite possible : trop tôt, c'est perdu !",
+        "en": "Wait for the heart on the matrix, then press as fast as you can: too early and you lose!"
+      },
+      "parts": { "fr": "matrice MAX7219, OLED SSD1306, bouton, buzzer", "en": "MAX7219 matrix, SSD1306 OLED, button, buzzer" }
+    },
+    {
+      "id": "light-gauge",
+      "title": { "fr": "Jauge lumineuse", "en": "Light gauge" },
+      "description": {
+        "fr": "Plus on tourne le potentiomètre, plus il y a de LED allumées sur le ruban.",
+        "en": "The more the knob is turned, the more LEDs light up on the strip."
+      },
+      "parts": { "fr": "potentiomètre, ruban NeoPixel ×8", "en": "potentiometer, NeoPixel strip ×8" }
+    }
+  ]
+}

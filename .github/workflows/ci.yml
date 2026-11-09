@@ -206,23 +206,18 @@ jobs:
 
       - name: Run Scratch2Arduino_installer.exe silently
         run: |
-          $process = Start-Process -FilePath installer\windows\Output\Scratch2Arduino_installer.exe -Wait -PassThru `
-            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup.log"
-          if ($process.ExitCode -ne 0) { throw "Scratch2Arduino_installer.exe exited with $($process.ExitCode)" }
+          # The build log is shown while the installer runs.
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup.log"
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
-          Get-Content (Join-Path $app 'install-log.txt') -Tail 40
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe was not installed' }
 
       - name: Run Scratch2Arduino_installer.exe again (incremental update)
         run: |
-          $watch = [Diagnostics.Stopwatch]::StartNew()
-          $process = Start-Process -FilePath installer\windows\Output\Scratch2Arduino_installer.exe -Wait -PassThru `
-            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup-update.log"
-          if ($process.ExitCode -ne 0) { throw "Scratch2Arduino_installer.exe exited with $($process.ExitCode)" }
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-update.log"
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           $log = Get-Content (Join-Path $app 'install-log.txt')
-          $log | Select-Object -Last 25
-          Write-Host "Update took $([int]$watch.Elapsed.TotalSeconds) s"
           if (-not ($log -match 'Previous build found|Compilation précédente trouvée')) { throw 'the update rebuilt everything' }
           if (-not ($log -match '^==> 0 (file|fichier)')) { throw 'unchanged sources were copied again' }
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing after the update' }
