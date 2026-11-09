@@ -2,7 +2,7 @@ import { Button, Card, Image, Modal, SimpleGrid, Stack, Text, ThemeIcon } from "
 import { IconFilePlus } from "@tabler/icons-react";
 
 import type { Language } from "@/catalog";
-import { examples, type Example } from "@/gallery";
+import { examples, type Example } from "@/examples";
 import type { MessageKey } from "@/i18n";
 
 interface GalleryProps {

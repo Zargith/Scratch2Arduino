@@ -61,12 +61,31 @@ export interface OpenedProject {
 	project: Project;
 }
 
+export interface RecentProject {
+	path: string;
+	/** File name without its extension. */
+	name: string;
+}
+
+export interface AutosavedProject {
+	project: Project;
+	/** Where Save writes (the .s2a file it came from), or empty. */
+	path: string;
+	/** Seconds since 1970-01-01 UTC. */
+	savedAt: number;
+}
+
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
 	s2a_open(language: Language): Promise<OpenedProject | null>;
 	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
 	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
+	s2a_recent(): Promise<RecentProject[]>;
+	s2a_open_recent(path: string, language: Language): Promise<OpenedProject>;
+	s2a_autosave(project: Project, path: string): Promise<null>;
+	s2a_autosaved(): Promise<AutosavedProject | null>;
+	s2a_autosave_clear(): Promise<null>;
 	s2a_ports(): Promise<Port[]>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
@@ -108,6 +127,12 @@ export const bridge = {
 		typeof window.s2a_startup_project === "function" ? window.s2a_startup_project(language) : null,
 	/** Empty path: ask where to save. Resolves to the saved path, or null when cancelled. */
 	save: (project: Project, path: string, language: Language) => host("s2a_save")(project, path, language),
+	recent: () => host("s2a_recent")(),
+	openRecent: (path: string, language: Language) => host("s2a_open_recent")(path, language),
+	/** Keeps a copy of the project until it is saved (path: where it was saved, or empty). */
+	autosave: (project: Project, path: string) => host("s2a_autosave")(project, path),
+	autosaved: () => host("s2a_autosaved")(),
+	autosaveClear: () => host("s2a_autosave_clear")(),
 	ports: () => host("s2a_ports")(),
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),

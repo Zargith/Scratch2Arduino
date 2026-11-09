@@ -12,6 +12,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <exception>
+#include <optional>
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
@@ -94,7 +95,8 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
 
 } // namespace
 
-Bridge::Bridge(::webview::webview& window, Language language) : window_(window), language_(language) {}
+Bridge::Bridge(::webview::webview& window, Language language)
+    : window_(window), language_(language), user_(userdata::defaultDirectory()) {}
 
 namespace {
 
@@ -167,10 +169,14 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
     workers_.push_back({std::move(thread), std::move(done)});
 }
 
-std::string Bridge::openedJson(const fs::path& path, Language language) const {
+std::string Bridge::openedJson(const fs::path& path, Language language) {
     auto loaded = project::load(path);
     if (!loaded.ok()) {
         throw UserError{tr(errorMessageKey(loaded.error().code), language)};
+    }
+    {
+        const std::lock_guard<std::mutex> lock(userMutex_);
+        (void)user_.addRecentProject(path); // a convenience: never a reason to fail
     }
     // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
     const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
@@ -255,7 +261,100 @@ void Bridge::bind() {
                 if (const auto saved = project::save(project, path); !saved.ok()) {
                     throw UserError{tr(errorMessageKey(saved.error().code), language)};
                 }
+                {
+                    const std::lock_guard<std::mutex> lock(userMutex_);
+                    (void)user_.addRecentProject(path);
+                    user_.clearAutosave(); // the work is safe in its own file now
+                }
                 return Json(path.u8string()).dump();
+            });
+        },
+        nullptr);
+
+    // Recent projects, newest first: [{path, name}].
+    window_.bind(
+        "s2a_recent",
+        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+            async(id, [this]() {
+                std::vector<fs::path> paths;
+                {
+                    const std::lock_guard<std::mutex> lock(userMutex_);
+                    paths = user_.recentProjects();
+                }
+                Json list = Json::array();
+                for (const fs::path& path : paths) {
+                    list.push_back({{"path", path.u8string()}, {"name", path.stem().u8string()}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    // Reopens a recent project. Only paths of the list are accepted: the page cannot make
+    // the program read any other file.
+    window_.bind(
+        "s2a_open_recent",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 1, language_);
+                const fs::path path = fs::u8path(stringArg(args, 0));
+                bool known = false;
+                {
+                    const std::lock_guard<std::mutex> lock(userMutex_);
+                    known = !path.empty() && user_.isRecentProject(path);
+                }
+                if (!known) {
+                    throw UserError{tr(errorMessageKey(ErrorCode::FileNotFound), language)};
+                }
+                return openedJson(path, language);
+            });
+        },
+        nullptr);
+    // Copy of the project being edited, kept until it is saved: (project, path where it was saved).
+    window_.bind(
+        "s2a_autosave",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const project::Project project = projectArg(args, 0, language_);
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                if (const auto saved = user_.autosave(project, fs::u8path(stringArg(args, 1))); !saved.ok()) {
+                    throw UserError{tr(errorMessageKey(saved.error().code), language_)};
+                }
+                return std::string("null");
+            });
+        },
+        nullptr);
+    // The autosaved project, if any: {project, path, savedAt}.
+    window_.bind(
+        "s2a_autosaved",
+        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+            async(id, [this]() -> std::string {
+                std::optional<userdata::Store::Autosaved> autosaved;
+                {
+                    const std::lock_guard<std::mutex> lock(userMutex_);
+                    autosaved = user_.autosaved();
+                }
+                if (!autosaved) {
+                    return "null";
+                }
+                // Saving goes back to the original file only when it is a .s2a one.
+                const fs::path& original = autosaved->originalPath;
+                const std::string path = original.extension() == ".s2a" ? original.u8string() : std::string{};
+                return Json{{"project", Json::parse(project::toJson(autosaved->project))},
+                            {"path", path},
+                            {"savedAt", autosaved->savedAt}}
+                    .dump();
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_autosave_clear",
+        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+            async(id, [this]() {
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                user_.clearAutosave();
+                return std::string("null");
             });
         },
         nullptr);

@@ -7,6 +7,7 @@ import {
 	Code,
 	Group,
 	Loader,
+	Menu,
 	Modal,
 	ScrollArea,
 	SegmentedControl,
@@ -24,6 +25,7 @@ import {
 	IconDeviceFloppy,
 	IconFilePlus,
 	IconFolderOpen,
+	IconHistory,
 	IconPlayerPlay,
 	IconPlayerStop,
 	IconPlugConnected,
@@ -33,10 +35,20 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { bridge, hasHost, HostMissingError, type LiveSnapshot, type OpenedProject, type Outcome, type Port } from "@/bridge";
+import {
+	bridge,
+	hasHost,
+	HostMissingError,
+	type AutosavedProject,
+	type LiveSnapshot,
+	type OpenedProject,
+	type Outcome,
+	type Port,
+	type RecentProject,
+} from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
-import { exampleProject, type Example } from "@/gallery";
+import { exampleProject, type Example } from "@/examples";
 import { Gallery, Wiring } from "@/Gallery";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
@@ -50,6 +62,9 @@ import {
 	type Project,
 	type WorkspaceState,
 } from "@/project/convert";
+
+/** How often a modified project is copied aside, in case the program is closed without saving. */
+const autosaveInterval = 15_000;
 
 /** Points kept per graph: 30 s at one snapshot every 200 ms. */
 const historyLength = 150;
@@ -102,6 +117,26 @@ export function App() {
 	/** The example being edited: its wiring diagram stays one click away. */
 	const [example, setExample] = useState<Example | null>(null);
 	const [wiringShown, setWiringShown] = useState(false);
+	const [recent, setRecent] = useState<RecentProject[]>([]);
+	/** Unsaved work found at start-up, offered back to the user. */
+	const [restore, setRestore] = useState<AutosavedProject | null>(null);
+	/** Edits made so far, and how many the last autosave holds. */
+	const edits = useRef(0);
+	const autosavedEdits = useRef(0);
+	/** Autosave calls run one after the other (a save never races with an older autosave). */
+	const autosaving = useRef<Promise<unknown>>(Promise.resolve());
+
+	const markDirty = useCallback(() => {
+		edits.current += 1;
+		setDirty(true);
+	}, []);
+
+	/** The project on screen is saved or replaced: its autosaved copy is no longer needed. */
+	const forgetAutosave = useCallback(() => {
+		autosavedEdits.current = edits.current;
+		if (!hasHost()) return;
+		autosaving.current = autosaving.current.then(() => bridge.autosaveClear()).catch(() => undefined);
+	}, []);
 
 	const currentProject = useCallback(
 		(): Project =>
@@ -184,6 +219,7 @@ export function App() {
 		setDirty(false);
 		setStatus(null);
 		setExample(null);
+		forgetAutosave();
 		reload(projectToWorkspace(starterProject(untitled)));
 	};
 
@@ -207,6 +243,7 @@ export function App() {
 			setExample(null);
 			reload(projectToWorkspace(opened.project));
 			const unknown = unknownBlockTypes(opened.project);
+			forgetAutosave();
 			setStatus(
 				unknown.length > 0
 					? { kind: "error", message: t("status.unknown_blocks"), details: unknown.join("\n") }
@@ -228,22 +265,32 @@ export function App() {
 	showOpenedRef.current = showOpened;
 	useEffect(() => {
 		if (!hasHost()) return;
-		bridge
-			.startupProject(language)
+		// The autosave is read first: opening the startup project forgets it.
+		const found = bridge.autosaved().catch(() => null);
+		void found
+			.then(() => bridge.startupProject(language))
 			.then((opened) => {
 				if (opened) showOpenedRef.current(opened);
 			})
-			.catch(fail);
+			.catch(fail)
+			.then(() => found)
+			.then((saved) => {
+				if (saved) setRestore(saved);
+			});
 		// Once, when the editor starts.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const saveProject = async () => {
 		try {
-			const saved = await bridge.save(currentProject(), path, language);
+			const project = currentProject();
+			const savedEdits = edits.current;
+			await autosaving.current; // an older autosave must not land after the save
+			const saved = await bridge.save(project, path, language);
 			if (!saved) return;
 			setPath(saved);
-			setDirty(false);
+			autosavedEdits.current = savedEdits; // the host dropped the autosave
+			if (edits.current === savedEdits) setDirty(false);
 			setStatus({ kind: "success", message: t("status.saved", { path: saved }) });
 		} catch (error) {
 			fail(error);
@@ -263,6 +310,60 @@ export function App() {
 		document.addEventListener("keydown", onKey);
 		return () => document.removeEventListener("keydown", onKey);
 	}, []);
+
+	// Every few seconds, a modified project is copied aside by the host.
+	const autosaveState = useRef({ currentProject, path });
+	autosaveState.current = { currentProject, path };
+	useEffect(() => {
+		if (!hasHost()) return;
+		const timer = setInterval(() => {
+			if (edits.current === autosavedEdits.current) return;
+			autosavedEdits.current = edits.current;
+			const { currentProject: snapshot, path: savedPath } = autosaveState.current;
+			const project = snapshot();
+			autosaving.current = autosaving.current
+				.then(() => bridge.autosave(project, savedPath))
+				.catch(() => undefined); // best effort: the user's own save still works
+		}, autosaveInterval);
+		return () => clearInterval(timer);
+	}, []);
+
+	const loadRecent = async () => {
+		if (!hasHost()) return;
+		try {
+			setRecent(await bridge.recent());
+		} catch {
+			setRecent([]);
+		}
+	};
+
+	const openRecent = async (recentPath: string) => {
+		if (dirty && !window.confirm(t("confirm.new"))) return;
+		try {
+			showOpened(await bridge.openRecent(recentPath, language));
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	const acceptRestore = () => {
+		if (!restore) return;
+		const { project } = restore;
+		setRestore(null);
+		initialValues.current = Object.fromEntries(project.variables.map((variable) => [variable.id, variable.initialValue]));
+		setName(project.name);
+		setBoardId(findBoard(project.board) ? project.board : defaultBoardId);
+		setPath(restore.path);
+		setExample(null);
+		markDirty(); // still to be saved: the copy stays until then
+		reload(projectToWorkspace(project));
+		setStatus({ kind: "success", message: t("status.restored", { name: project.name }) });
+	};
+
+	const discardRestore = () => {
+		setRestore(null);
+		if (!dirty) forgetAutosave();
+	};
 
 	const showCode = async () => {
 		try {
@@ -383,7 +484,7 @@ export function App() {
 						value={name}
 						onChange={(event) => {
 							setName(event.currentTarget.value);
-							setDirty(true);
+							markDirty();
 						}}
 						miw={120}
 						maw={200}
@@ -400,6 +501,29 @@ export function App() {
 								<IconFolderOpen size={18} />
 							</ActionIcon>
 						</Tooltip>
+						<Menu position="bottom-start" onOpen={() => void loadRecent()} withinPortal>
+							<Menu.Target>
+								<Tooltip label={t("toolbar.recent")}>
+									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.recent")}>
+										<IconHistory size={18} />
+									</ActionIcon>
+								</Tooltip>
+							</Menu.Target>
+							<Menu.Dropdown maw={420}>
+								<Menu.Label>{t("toolbar.recent")}</Menu.Label>
+								{recent.length === 0 && <Menu.Item disabled>{t("recent.none")}</Menu.Item>}
+								{recent.map((entry) => (
+									<Menu.Item key={entry.path} onClick={() => void openRecent(entry.path)}>
+										<Text size="sm" fw={600} truncate>
+											{entry.name}
+										</Text>
+										<Text size="xs" c="dimmed" truncate>
+											{entry.path}
+										</Text>
+									</Menu.Item>
+								))}
+							</Menu.Dropdown>
+						</Menu>
 						<Tooltip label={`${t("toolbar.save")} (${shortcut("S")})`}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.save")} onClick={() => void saveProject()}>
 								<IconDeviceFloppy size={18} />
@@ -413,7 +537,7 @@ export function App() {
 						onChange={(value) => {
 							if (value) {
 								setBoardId(value);
-								setDirty(true);
+								markDirty();
 							}
 						}}
 						allowDeselect={false}
@@ -499,7 +623,7 @@ export function App() {
 							setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
 						}
 						onChange={() => {
-							setDirty(true);
+							markDirty();
 							if (!live) return;
 							// Live mode: send the new blocks once the child stops dragging for a moment.
 							if (liveUpdate.current) clearTimeout(liveUpdate.current);
@@ -587,6 +711,23 @@ export function App() {
 				onExample={openExample}
 				onClose={() => setGalleryShown(false)}
 			/>
+			<Modal opened={restore !== null} onClose={discardRestore} title={t("restore.title")} centered>
+				<Text mb="md">
+					{restore &&
+						t("restore.message", {
+							name: restore.project.name,
+							time: new Date(restore.savedAt * 1000).toLocaleString(language),
+						})}
+				</Text>
+				<Group justify="flex-end">
+					<Button variant="default" onClick={discardRestore}>
+						{t("restore.discard")}
+					</Button>
+					<Button onClick={acceptRestore} data-autofocus>
+						{t("restore.accept")}
+					</Button>
+				</Group>
+			</Modal>
 			<Wiring example={example} opened={wiringShown} language={language} t={t} onClose={() => setWiringShown(false)} />
 
 			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">

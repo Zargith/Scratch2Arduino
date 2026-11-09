@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { exampleProject, examples } from "@/gallery";
+import { exampleProject, examples } from "@/examples";
 import { projectToWorkspace, unknownBlockTypes } from "@/project/convert";
 
 const projectsDir = resolve(__dirname, "../../examples/projects");
