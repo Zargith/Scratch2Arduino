@@ -23,7 +23,8 @@
     "process_failed": "Un outil nécessaire à Scratch2Arduino n'a pas pu être lancé. Réinstalle le logiciel.",
     "unknown_board": "Cette carte Arduino n'est pas (encore) prise en charge.",
     "port_failed": "Impossible d'utiliser le port de la carte. Vérifie le câble, et qu'aucun autre programme (moniteur série, Arduino IDE) n'utilise la carte.",
-    "board_not_responding": "La carte ne répond pas. Débranche-la, rebranche-la, puis réessaie."
+    "board_not_responding": "La carte ne répond pas. Débranche-la, rebranche-la, puis réessaie.",
+    "network_failed": "Impossible de joindre la carte par le Wi-Fi. Vérifie que la carte est allumée et que l'ordinateur est sur le même réseau qu'elle (ou sur son propre réseau « S2A-… », mot de passe scratch2arduino)."
   },
   "toolchain": {
     "none": "Tout s'est bien passé.",
@@ -144,6 +145,12 @@
     "flashing": "Installation du programme Live sur la carte {board} (une seule fois, quelques secondes)…",
     "running": "Mode Live : tes blocs s'exécutent sur la carte. Modifie-les, la carte suit !",
     "finished": "Tous les blocs ont été exécutés. Modifie-les pour relancer.",
-    "stopped": "Mode Live arrêté."
+    "stopped": "Mode Live arrêté.",
+    "wifi_no_firmware": "La carte ne répond pas par le Wi-Fi. Branche-la une première fois avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Wi-Fi.",
+    "wifi_joined": "La carte a rejoint le réseau « {network} » : son adresse est {address}.",
+    "wifi_not_joined": "La carte n'arrive pas à rejoindre le réseau « {network} ». Vérifie le nom et le mot de passe (attention aux majuscules). Elle reste joignable sur son propre réseau « {access_point} ».",
+    "wifi_forgotten": "La carte a oublié le réseau de la maison : elle reste joignable sur son propre réseau « {access_point} ».",
+    "wifi_upload": "Un programme s'envoie avec le câble USB : choisis le port USB de la carte (le Wi-Fi sert au mode Live).",
+    "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi, ce que les blocs écrivent s'affiche dans le panneau Live."
   }
 }

@@ -23,7 +23,8 @@
     "process_failed": "A tool needed by Scratch2Arduino could not be started. Reinstall the software.",
     "unknown_board": "This Arduino board is not supported (yet).",
     "port_failed": "The board's port cannot be used. Check the cable, and that no other program (serial monitor, Arduino IDE) is using the board.",
-    "board_not_responding": "The board does not answer. Unplug it, plug it back in, then try again."
+    "board_not_responding": "The board does not answer. Unplug it, plug it back in, then try again.",
+    "network_failed": "The board cannot be reached over Wi-Fi. Check that the board is on and that the computer is on the same network (or on the board's own network \"S2A-…\", password scratch2arduino)."
   },
   "toolchain": {
     "none": "Everything went fine.",
@@ -144,6 +145,12 @@
     "flashing": "Installing the Live program on the {board} board (only once, a few seconds)…",
     "running": "Live mode: your blocks are running on the board. Change them and the board follows!",
     "finished": "Every block has run. Change them to start again.",
-    "stopped": "Live mode stopped."
+    "stopped": "Live mode stopped.",
+    "wifi_no_firmware": "The board does not answer over Wi-Fi. Plug it in once with the USB cable and start the Live mode: the Live program is installed on it, with Wi-Fi.",
+    "wifi_joined": "The board joined the \"{network}\" network: its address is {address}.",
+    "wifi_not_joined": "The board cannot join the \"{network}\" network. Check the name and the password (capital letters matter). It can still be reached on its own network \"{access_point}\".",
+    "wifi_forgotten": "The board forgot the home network: it can still be reached on its own network \"{access_point}\".",
+    "wifi_upload": "A program is sent with the USB cable: choose the board's USB port (Wi-Fi is for the Live mode).",
+    "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi, what the blocks write is shown in the Live panel."
   }
 }

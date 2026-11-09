@@ -2,6 +2,7 @@
 
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
+#include "s2a/network.hpp"
 #include "s2a/resources.hpp"
 #include "s2a/validator.hpp"
 
@@ -271,6 +272,37 @@ void LiveLink::matrixRow(int din, int clk, int cs, int row, int bits) {
 
 void LiveLink::reset() {
     (void)request("X");
+}
+
+Result<LiveLink::NetworkState> LiveLink::networkState() {
+    const auto answer = request("I", milliseconds(1000));
+    if (!answer) {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "no answer to I"});
+    }
+    std::istringstream words(*answer);
+    std::string kind;
+    NetworkState state;
+    words >> kind >> state.accessPoint >> state.accessPointAddress >> state.address;
+    if (kind != "i" || state.accessPoint.empty()) {
+        return Error{ErrorCode::BoardNotResponding, "unexpected answer to I: " + *answer};
+    }
+    if (state.address == "-") {
+        state.address.clear();
+    }
+    return state;
+}
+
+Status LiveLink::joinNetwork(const std::string& name, const std::string& password) {
+    const auto clean = [](std::string text) { // one line, the tab separates the name and the password
+        text.erase(std::remove_if(text.begin(), text.end(), [](char c) { return c == '\n' || c == '\r' || c == '\t'; }),
+                   text.end());
+        return text;
+    };
+    const auto answer = request("W " + clean(name) + "\t" + clean(password), milliseconds(3000));
+    if (!answer || *answer != "ok") {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "no answer to W"});
+    }
+    return success();
 }
 
 std::optional<Error> LiveLink::takeError() {
@@ -885,6 +917,10 @@ void Session::run(project::Project project) {
         }
         // No S2A live firmware on the board yet: upload it, then connect again.
         connection.reset();
+        if (!flasher_) {
+            set(State::Failed, tr("live.wifi_no_firmware", language_));
+            return;
+        }
         set(State::Flashing, tr("live.flashing", language_, {{"board", board_.name}}));
         std::string details;
         if (const auto flashed = flasher_(details); !flashed.ok()) {
@@ -973,6 +1009,19 @@ Session::Opener Session::serialOpener() {
             return opened.error();
         }
         return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+    };
+}
+
+Session::Opener Session::opener() {
+    return [serial = serialOpener()](const std::string& port) -> Result<std::unique_ptr<serial::LineTransport>> {
+        if (const auto address = network::wifiAddress(port)) {
+            auto opened = network::TcpConnection::open(*address, network::kLivePort, milliseconds(5000));
+            if (!opened.ok()) {
+                return opened.error();
+            }
+            return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+        }
+        return serial(port);
     };
 }
 

@@ -32,6 +32,7 @@ import {
 	IconRefresh,
 	IconTerminal2,
 	IconUpload,
+	IconWifi,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -54,6 +55,8 @@ import { Library } from "@/Library";
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
+import { WifiDialog } from "@/WifiDialog";
+import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
@@ -105,6 +108,9 @@ export function App() {
 	const [dirty, setDirty] = useState(false);
 	const [ports, setPorts] = useState<Port[]>([]);
 	const [port, setPort] = useState<string | null>(null);
+	/** Addresses of boards found on the home Wi-Fi (ESP32), offered as ports. */
+	const [wifiAddresses, setWifiAddresses] = useState<string[]>(rememberedAddresses);
+	const [wifiShown, setWifiShown] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [code, setCode] = useState<string | null>(null);
@@ -168,13 +174,21 @@ export function App() {
 		setEditorKey((key) => key + 1);
 	}, []);
 
+	// A board without Wi-Fi cannot use a Wi-Fi port: back to the first USB port.
+	useEffect(() => {
+		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? null);
+	}, [boardId, port, ports]);
+
 	const refreshPorts = useCallback(async () => {
 		if (!hasHost()) return;
 		try {
 			const found = await bridge.ports();
 			setPorts(found);
+			// A Wi-Fi port stays chosen: it is not in the list of plugged-in boards.
 			setPort((current) =>
-				current && found.some((candidate) => candidate.address === current) ? current : (found[0]?.address ?? null)
+				current && (isWifiPort(current) || found.some((candidate) => candidate.address === current))
+					? current
+					: (found[0]?.address ?? null)
 			);
 			const detected = found[0]?.boardId;
 			if (detected && findBoard(detected)) setBoardId(detected);
@@ -609,7 +623,13 @@ export function App() {
 					<Select
 						aria-label={t("port.label")}
 						placeholder={t("port.none")}
-						data={ports.map((candidate) => ({ value: candidate.address, label: candidate.label }))}
+						data={[
+							...ports,
+							...wifiPorts(boardId, wifiAddresses, {
+								accessPoint: t("port.wifi_access_point"),
+								home: t("port.wifi_home", { address: "{address}" }),
+							}),
+						].map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
 						miw={130}
@@ -633,6 +653,13 @@ export function App() {
 								<IconTerminal2 size={18} />
 							</ActionIcon>
 						</Tooltip>
+						{hasWifi(boardId) && (
+							<Tooltip label={t("wifi.title")}>
+								<ActionIcon variant="default" size="lg" aria-label={t("wifi.title")} onClick={() => setWifiShown(true)}>
+									<IconWifi size={18} />
+								</ActionIcon>
+							</Tooltip>
+						)}
 						{example && (
 							<Tooltip label={t("toolbar.wiring")}>
 								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
@@ -792,6 +819,18 @@ export function App() {
 					</Button>
 				</Group>
 			</Modal>
+			<WifiDialog
+				opened={wifiShown}
+				language={language}
+				boardId={boardId}
+				usbPort={port && !isWifiPort(port) ? port : (ports[0]?.address ?? null)}
+				t={t}
+				onJoined={(address) => {
+					setWifiAddresses(rememberAddress(address));
+					setPort(wifiPort(address));
+				}}
+				onClose={() => setWifiShown(false)}
+			/>
 			<Library
 				opened={libraryShown}
 				groups={library}

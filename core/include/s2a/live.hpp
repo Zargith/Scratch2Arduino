@@ -27,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 4"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 5"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -94,6 +94,16 @@ public:
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();
+
+    /// Wi-Fi state of an ESP32: its own network and its address on the joined one ("" if none).
+    struct NetworkState {
+        std::string accessPoint;        ///< "S2A-1A2B"
+        std::string accessPointAddress; ///< "192.168.4.1"
+        std::string address;            ///< On the home network, "" while not joined.
+    };
+    [[nodiscard]] Result<NetworkState> networkState();
+    /// Saves the home network on the board and joins it (an empty name forgets it).
+    [[nodiscard]] Status joinNetwork(const std::string& name, const std::string& password);
 
 private:
     /// True when the firmware answers a "?" now (false while the board restarts).
@@ -183,6 +193,7 @@ private:
 class Session {
 public:
     using Opener = std::function<Result<std::unique_ptr<serial::LineTransport>>(const std::string& port)>;
+    /// Uploads the Live firmware; empty when it cannot be done (Wi-Fi: it needs the USB cable).
     using Flasher = std::function<Status(std::string& details)>;
 
     enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed };
@@ -216,6 +227,8 @@ public:
 
     /// Opens real serial ports.
     [[nodiscard]] static Opener serialOpener();
+    /// Opens serial ports, and Wi-Fi connections for "wifi:<address>" ports.
+    [[nodiscard]] static Opener opener();
     /// Uploads the firmware with the bundled arduino-cli.
     [[nodiscard]] static Flasher arduinoCliFlasher(const Board& board, std::string port);
 
