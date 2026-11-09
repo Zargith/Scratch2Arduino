@@ -17,6 +17,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 7 — Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
 | 8 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
+| 13 — Automatic wiring diagram | Not started (requested on 2026-11-09) |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.
@@ -115,6 +116,12 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 - **Goal**: decide the long-term direction.
 - **Deliverables**: comparison of A and B once both finish Phase 6 — tests with children, performance, binary size, maintainability, contributor friendliness.
 - **Done when**: a written decision (keep both, or focus on one).
+
+### Phase 13 — Automatic wiring diagram
+- **Requested on 2026-11-09** by the user: the diagram of any project, not only of the examples.
+- **Goal**: show the wiring a project needs, computed from its blocks.
+- **Deliverables**: component and pin list extracted from the blocks by the core (the code generator already knows which component uses which pins); a description of each component (pins, parts that blocks do not tell — LED resistor, button to GND with pull-up, potentiometer on V0 of a 16-pin LCD, power) shared with `tools/wiring/wiring.py`; automatic placement on a breadboard and wire routing for Uno, Nano and Mega; a "Wiring" view in the editor that updates with the blocks, with a component / pin table for when the drawing gets crowded; warnings for pins used twice, I2C pins (SDA/SCL) taken by other blocks, too many components for the 5V supply; export as an image.
+- **Done when**: the diagram of every example project is generated from its blocks (no hand-written description left in `tools/wiring/wiring.py`) and a project with a component of each kind gives a readable diagram.
 
 ## Learner progression (example projects)
 
