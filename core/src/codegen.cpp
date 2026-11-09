@@ -85,6 +85,9 @@ public:
             if (!script.blocks.empty() && script.blocks.front().type == kDefine) {
                 definitions_.emplace(field(script.blocks.front(), "FUNCTION"), &script);
             }
+            for (const Block& block : script.blocks) {
+                findSharedPins(block);
+            }
         }
     }
 
@@ -381,6 +384,45 @@ private:
         return din + ", " + clk + ", " + cs + ", " + rows;
     }
 
+    /// Pins used by other blocks than the buzzer ones: a buzzer pin is only released when
+    /// nothing else drives it.
+    void findSharedPins(const Block& block) {
+        if (block.type.rfind("sound_", 0) != 0) {
+            if (const BlockDefinition* definition = catalog_.find(block.type)) {
+                for (const BlockArg& arg : definition->args) {
+                    if (arg.kind == ArgKind::Pin) {
+                        sharedPins_.insert(pinLabel(block, arg.name));
+                    }
+                }
+            }
+        }
+        for (const auto& [name, input] : block.inputs) {
+            if (input.block) {
+                findSharedPins(*input.block);
+            }
+        }
+        for (const auto& [name, stack] : block.statements) {
+            for (const Block& inner : stack) {
+                findSharedPins(inner);
+            }
+        }
+    }
+
+    /// Pin of a buzzer block. A pin only used by buzzers is left alone until a sound starts
+    /// (tone() sets it) and released when it stops (see s2a_quiet).
+    std::string buzzerPin(const Block& block) {
+        const std::string label = pinLabel(block, "PIN");
+        return sharedPins_.count(label) != 0 ? pin(block, "PIN", PinMode::Output) : label;
+    }
+
+    std::string silence(const std::string& target) {
+        if (sharedPins_.count(target) != 0) {
+            return "noTone(" + target + ");";
+        }
+        helpers_.insert("quiet");
+        return "s2a_quiet(" + target + ");";
+    }
+
     /// LCD screen with 16 pins (no I2C module), driven in 4-bit mode: one object per wiring.
     std::string parallelLcd(const Block& block) {
         std::string pins;
@@ -483,14 +525,14 @@ private:
             }
         } else if (type == "sound_play_tone" || type == "sound_start_tone") {
             helpers_.insert("tone");
-            const std::string target = pin(block, "PIN", PinMode::Output);
+            const std::string target = buzzerPin(block);
             body.add(depth, "s2a_tone(" + target + ", " + number(block, "FREQUENCY") + ");");
             if (type == "sound_play_tone") {
                 wait(body, number(block, "SECONDS"), depth);
-                body.add(depth, "noTone(" + target + ");");
+                body.add(depth, silence(target));
             }
         } else if (type == "sound_stop") {
-            body.add(depth, "noTone(" + pin(block, "PIN", PinMode::Output) + ");");
+            body.add(depth, silence(buzzerPin(block)));
         } else if (type == "display_lcd_print" || type == "display_lcd_clear") {
             helpers_.insert("lcd");
             use("LiquidCrystal_I2C.h", "LiquidCrystal_I2C* s2a_lcd = nullptr;", "s2a_lcd_begin();");
@@ -681,6 +723,9 @@ private:
         helper(out, "tone",
                {"void s2a_tone(int pin, double frequency) {", "  if (frequency < 31) {", "    noTone(pin);",
                 "  } else {", "    tone(pin, (unsigned int)min(frequency, 65535.0));", "  }", "}"});
+        helper(out, "quiet",
+               {"// A silent buzzer is let go: otherwise the flicker of LEDs on the same GND hums through it.",
+                "void s2a_quiet(int pin) {", "  noTone(pin);", "  pinMode(pin, INPUT);", "}"});
         helper(out, "distance",
                {"// HC-SR04: the echo lasts 58 microseconds per centimetre; 400 cm when nothing answers.",
                 "double s2a_distance(int trig, int echo) {", "  digitalWrite(trig, LOW);",
@@ -865,6 +910,7 @@ private:
     std::vector<std::string> globals_;  ///< Library objects, in order of first use.
     std::vector<std::string> inits_;    ///< Their set-up, in setup().
     std::set<std::string> ownedPins_;   ///< Pins set up by a library (no pinMode()).
+    std::set<std::string> sharedPins_;  ///< Pins of other blocks than the buzzer ones.
     std::set<std::string> dhtSensors_;  ///< Pins of DHT sensors.
     std::map<std::string, int> stripLengths_; ///< NeoPixel pin -> number of LEDs.
     std::vector<std::string> matrices_;       ///< Row arrays of the LED matrices.

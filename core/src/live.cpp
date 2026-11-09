@@ -604,7 +604,7 @@ void Interpreter::run(Thread& thread, Clock now) {
             const double frequency = number(block, "FREQUENCY");
             const double seconds = type == "sound_play_tone" ? std::max(0.0, number(block, "SECONDS")) : 0;
             if (const int number = pinNumber(block, "PIN"); number >= 0) {
-                modes_[number] = PinMode::Output; // tone() sets the pin
+                modes_.erase(number); // tone() sets the pin, the firmware lets it go when the sound ends
                 const int hertz = frequency < 31 ? 0 : static_cast<int>(std::min(frequency, 65535.0));
                 const auto duration = static_cast<int>(std::min(seconds * 1000, 3600000.0));
                 if (type == "sound_play_tone" && duration == 0) {
