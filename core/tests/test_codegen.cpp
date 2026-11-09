@@ -1,3 +1,4 @@
+#include "s2a/arduino_cli.hpp"
 #include "s2a/codegen.hpp"
 
 #include <gtest/gtest.h>
@@ -357,6 +358,33 @@ TEST(Codegen, UsesComponentLibraries) {
     EXPECT_EQ(source.find("DHT11"), std::string::npos);
     EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "the DHT library sets its pin";
     EXPECT_EQ(source.find("pinMode(5,"), std::string::npos) << "the NeoPixel library sets its pin";
+}
+
+TEST(Codegen, Drives16PinLcdScreens) {
+    Block print = block("print", "display_lcd16_print");
+    print.fields["LINE"] = "2";
+    print.inputs["TEXT"].value = "Élève";
+    Block other = block("other", "display_lcd16_print");
+    other.fields = {{"RS_PIN", "2"}, {"E_PIN", "3"}, {"D4_PIN", "4"}, {"D5_PIN", "5"}, {"D6_PIN", "6"}, {"D7_PIN", "A0"}};
+    Block clear = block("clear", "display_lcd16_clear");
+    Block led = block("led", "pins_digital_write");
+    led.fields["PIN"] = "13";
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), print, other, clear, led}));
+    const std::string& source = sketch.source;
+    for (const char* expected :
+         {"#include <LiquidCrystal.h>\n", "LiquidCrystal s2a_lcd16_7_8_9_10_11_12(7, 8, 9, 10, 11, 12);",
+          "LiquidCrystal s2a_lcd16_2_3_4_5_6_A0(2, 3, 4, 5, 6, A0);", "  s2a_lcd16_7_8_9_10_11_12.begin(16, 2);",
+          "  s2a_lcd16_2_3_4_5_6_A0.begin(16, 2);", "void s2a_lcd16_line(LiquidCrystal& lcd, int row, const String& text) {",
+          "s2a_lcd16_line(s2a_lcd16_7_8_9_10_11_12, 2, F(\"Eleve\"));",
+          "s2a_lcd16_line(s2a_lcd16_2_3_4_5_6_A0, 1, F(\"Bonjour !\"));", "s2a_lcd16_7_8_9_10_11_12.clear();",
+          "  pinMode(13, OUTPUT);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("pinMode(7,"), std::string::npos) << "the LiquidCrystal library sets its pins";
+    EXPECT_EQ(source.find("LiquidCrystal s2a_lcd16_7_8_9_10_11_12", source.find("LiquidCrystal s2a_lcd16_7_8_9_10_11_12") + 1),
+              std::string::npos)
+        << "one object per wiring";
+    EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"LiquidCrystal"}));
 }
 
 TEST(Codegen, AsciiText) {

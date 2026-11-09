@@ -256,6 +256,7 @@ std::vector<std::string> requiredLibraries(std::string_view source) {
         {"Servo.h", "Servo"},
         {"DHT.h", "DHT sensor library"},
         {"LiquidCrystal_I2C.h", "LiquidCrystal I2C"},
+        {"LiquidCrystal.h", "LiquidCrystal"},
         {"U8x8lib.h", "U8g2"},
         {"U8g2lib.h", "U8g2"},
         {"Adafruit_NeoPixel.h", "Adafruit NeoPixel"},

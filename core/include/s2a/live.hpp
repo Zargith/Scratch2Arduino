@@ -27,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 3"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 4"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -56,6 +56,8 @@ public:
     [[nodiscard]] virtual std::optional<std::pair<double, double>> dht(int pin, int model) = 0;
     /// Text on line `row` (1-2) of the I2C LCD; row 0 clears it.
     virtual void lcdLine(int row, const std::string& text) = 0;
+    /// Text on line `row` (1-2) of a 16-pin LCD wired to `pins` (RS, E, D4, D5, D6, D7); row 0 clears it.
+    virtual void lcd16Line(const std::array<int, 6>& pins, int row, const std::string& text) = 0;
     /// Text on line `row` (1-8) of the I2C OLED screen; row 0 clears it.
     virtual void oledLine(int row, const std::string& text) = 0;
     /// Colour of LED `index` (1-count, 0: all) of a NeoPixel strip.
@@ -84,6 +86,7 @@ public:
     [[nodiscard]] double distance(int trigPin, int echoPin) override;
     [[nodiscard]] std::optional<std::pair<double, double>> dht(int pin, int model) override;
     void lcdLine(int row, const std::string& text) override;
+    void lcd16Line(const std::array<int, 6>& pins, int row, const std::string& text) override;
     void oledLine(int row, const std::string& text) override;
     void pixels(int pin, int count, int index, int red, int green, int blue) override;
     void matrixRow(int din, int clk, int cs, int row, int bits) override;

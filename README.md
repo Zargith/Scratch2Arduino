@@ -219,7 +219,7 @@ the wiring:
 | Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8×8 LED matrix: pictures and single dots |
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
-| Screens | write a text or a value on a line of an I2C 16×2 LCD (address 0x27 or 0x3F, found automatically) or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
+| Screens | write a text or a value on a line of a 16×2 LCD — with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4–D7 on the chosen pins, contrast set with a potentiometer on V0) — or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
