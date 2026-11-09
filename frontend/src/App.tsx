@@ -26,6 +26,7 @@ import {
 	IconFolderOpen,
 	IconPlayerPlay,
 	IconPlayerStop,
+	IconPlugConnected,
 	IconRefresh,
 	IconTerminal2,
 	IconUpload,
@@ -35,6 +36,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge, hasHost, HostMissingError, type LiveSnapshot, type OpenedProject, type Outcome, type Port } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
+import { exampleProject, type Example } from "@/gallery";
+import { Gallery, Wiring } from "@/Gallery";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Sparkline } from "@/Sparkline";
@@ -95,6 +98,10 @@ export function App() {
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
+	const [galleryShown, setGalleryShown] = useState(false);
+	/** The example being edited: its wiring diagram stays one click away. */
+	const [example, setExample] = useState<Example | null>(null);
+	const [wiringShown, setWiringShown] = useState(false);
 
 	const currentProject = useCallback(
 		(): Project =>
@@ -169,13 +176,24 @@ export function App() {
 
 	const newProject = () => {
 		if (dirty && !window.confirm(t("confirm.new"))) return;
+		setGalleryShown(false);
 		const untitled = t("project.untitled");
 		initialValues.current = {};
 		setName(untitled);
 		setPath("");
 		setDirty(false);
 		setStatus(null);
+		setExample(null);
 		reload(projectToWorkspace(starterProject(untitled)));
+	};
+
+	const openExample = (chosen: Example) => {
+		if (dirty && !window.confirm(t("confirm.new"))) return;
+		setGalleryShown(false);
+		const project = exampleProject(chosen, language);
+		showOpened({ path: "", project });
+		setExample(chosen);
+		setStatus({ kind: "success", message: t("status.example_opened", { name: project.name }) });
 	};
 
 	const showOpened = (opened: OpenedProject) => {
@@ -186,6 +204,7 @@ export function App() {
 			setBoardId(findBoard(opened.project.board) ? opened.project.board : defaultBoardId);
 			setPath(opened.path);
 			setDirty(false);
+			setExample(null);
 			reload(projectToWorkspace(opened.project));
 			const unknown = unknownBlockTypes(opened.project);
 			setStatus(
@@ -372,7 +391,7 @@ export function App() {
 					/>
 					<ActionIcon.Group>
 						<Tooltip label={t("toolbar.new")}>
-							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.new")} onClick={newProject}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.new")} onClick={() => setGalleryShown(true)}>
 								<IconFilePlus size={18} />
 							</ActionIcon>
 						</Tooltip>
@@ -429,6 +448,13 @@ export function App() {
 								<IconTerminal2 size={18} />
 							</ActionIcon>
 						</Tooltip>
+						{example && (
+							<Tooltip label={t("toolbar.wiring")}>
+								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
+									<IconPlugConnected size={18} />
+								</ActionIcon>
+							</Tooltip>
+						)}
 						<Tooltip label={t("toolbar.code")}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
 								<IconCode size={18} />
@@ -552,6 +578,16 @@ export function App() {
 					</Alert>
 				</div>
 			)}
+
+			<Gallery
+				opened={galleryShown}
+				language={language}
+				t={t}
+				onBlank={newProject}
+				onExample={openExample}
+				onClose={() => setGalleryShown(false)}
+			/>
+			<Wiring example={example} opened={wiringShown} language={language} t={t} onClose={() => setWiringShown(false)} />
 
 			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">
 				<Text size="sm" c="dimmed" mb="sm">

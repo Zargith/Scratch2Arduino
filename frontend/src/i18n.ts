@@ -55,6 +55,15 @@ const fr = {
 	"status.no_port": "Branche ta carte Arduino puis choisis son port avant de téléverser.",
 	"status.no_host": "Cette action n'est possible que dans l'application Scratch2Arduino.",
 	"status.error": "Une erreur inattendue s'est produite : {message}",
+	"gallery.title": "Nouveau projet",
+	"gallery.blank": "Projet vide",
+	"gallery.blank_description": "Juste un bloc « quand le programme démarre » : à toi de jouer !",
+	"gallery.parts": "Matériel : {parts}",
+	"gallery.start": "Commencer",
+	"toolbar.wiring": "Schéma de câblage",
+	"wiring.title": "Schéma de câblage — {name}",
+	"wiring.alt": "Schéma de câblage du projet {name}",
+	"status.example_opened": "Exemple « {name} » ouvert. Clique sur Enregistrer pour garder tes changements.",
 	"confirm.new": "Commencer un nouveau projet ? Les modifications non enregistrées seront perdues.",
 } as const;
 
@@ -115,6 +124,15 @@ const en: Record<MessageKey, string> = {
 	"status.no_port": "Plug in your Arduino board, then pick its port before uploading.",
 	"status.no_host": "This action only works in the Scratch2Arduino application.",
 	"status.error": "Something unexpected went wrong: {message}",
+	"gallery.title": "New project",
+	"gallery.blank": "Blank project",
+	"gallery.blank_description": "Just a \"when the program starts\" block: your turn!",
+	"gallery.parts": "Parts: {parts}",
+	"gallery.start": "Start",
+	"toolbar.wiring": "Wiring diagram",
+	"wiring.title": "Wiring diagram — {name}",
+	"wiring.alt": "Wiring diagram of the {name} project",
+	"status.example_opened": "Example \"{name}\" opened. Click Save to keep your changes.",
 	"confirm.new": "Start a new project? Unsaved changes will be lost.",
 };
 
