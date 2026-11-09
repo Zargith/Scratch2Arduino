@@ -349,7 +349,7 @@ TEST(Codegen, UsesComponentLibraries) {
           "  s2a_lcd_begin();", "  s2a_oled.begin();\n  s2a_oled.setFont(u8x8_font_chroma48medium8_r);",
           "Adafruit_NeoPixel s2a_strip_5(12, 5, NEO_GRB + NEO_KHZ800);", "  s2a_strip_5.begin();",
           "s2a_strip_5.fill(s2a_strip_5.Color(255, 160, 0));", "s2a_pixel(s2a_strip_5, 1, s2a_strip_5.Color(255, 0, 0));",
-          "byte s2a_matrix_12_11_10[8];", "  s2a_matrix_init(12, 11, 10);",
+          "byte s2a_matrix_12_11_10[8];", "  s2a_matrix_settings(din, clk, cs);\n  for (byte row = 0; row < 8; row++) {", "  s2a_matrix_init(12, 11, 10);",
           "static const byte image[8] = {0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18};",
           "s2a_matrix_image(12, 11, 10, s2a_matrix_12_11_10, image);",
           "s2a_matrix_dot(12, 11, 10, s2a_matrix_12_11_10, 1, 1, true);", "s2a_lcd->clear();"}) {

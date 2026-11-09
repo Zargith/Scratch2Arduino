@@ -18,8 +18,8 @@
         "en": "play %2 Hz for %3 seconds on the buzzer of pin %1"
       },
       "tooltip": {
-        "fr": "Fait sonner un buzzer, puis attend la fin du son avant de passer au bloc suivant. Plus le nombre de Hz est grand, plus le son est aigu (440 Hz est le la de la musique).",
-        "en": "Plays a sound on a buzzer and waits until it ends before the next block. The more Hz, the higher the sound (440 Hz is the musical A)."
+        "fr": "Fait sonner un buzzer, puis attend la fin du son avant de passer au bloc suivant. Plus le nombre de Hz est grand, plus le son est aigu (440 Hz est le la de la musique). Il faut un buzzer passif (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille au lieu de jouer la note.",
+        "en": "Plays a sound on a buzzer and waits until it ends before the next block. The more Hz, the higher the sound (440 Hz is the musical A). It needs a passive buzzer (no sticker, the circuit board shows underneath): an active buzzer crackles instead of playing the note."
       },
       "args": [
         {
@@ -51,8 +51,8 @@
         "en": "start the buzzer of pin %1 at %2 Hz"
       },
       "tooltip": {
-        "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise « arrêter le buzzer » pour le faire taire. Un seul buzzer peut sonner à la fois.",
-        "en": "The buzzer keeps sounding and the program goes on at once. Use \"stop the buzzer\" to silence it. Only one buzzer can sound at a time."
+        "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise « arrêter le buzzer » pour le faire taire. Un seul buzzer peut sonner à la fois. Il faut un buzzer passif (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille au lieu de jouer la note.",
+        "en": "The buzzer keeps sounding and the program goes on at once. Use \"stop the buzzer\" to silence it. Only one buzzer can sound at a time. It needs a passive buzzer (no sticker, the circuit board shows underneath): an active buzzer crackles instead of playing the note."
       },
       "args": [
         {
