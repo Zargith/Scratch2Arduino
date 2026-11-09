@@ -17,6 +17,22 @@
 
 namespace {
 
+/// Opens the window as large as the screen: some blocks are long (16-pin LCD...) and the
+/// palette and the scripts need room. The user can still make it smaller.
+void maximize(webview::webview& window) {
+    const auto handle = window.window();
+    if (!handle.ok() || handle.value() == nullptr) {
+        return;
+    }
+#if defined(_WIN32)
+    ShowWindow(static_cast<HWND>(handle.value()), SW_MAXIMIZE);
+#elif defined(__APPLE__)
+    webview::detail::objc::msg_send<void>(static_cast<id>(handle.value()), sel_registerName("zoom:"), nullptr);
+#else
+    gtk_window_maximize(GTK_WINDOW(handle.value()));
+#endif
+}
+
 int run(const std::filesystem::path& startupFile) {
     try {
         const s2a::Language language = s2a::detectSystemLanguage();
@@ -26,6 +42,7 @@ int run(const std::filesystem::path& startupFile) {
         window.set_title(title);
         window.set_size(1280, 800, WEBVIEW_HINT_NONE);
         window.set_size(960, 600, WEBVIEW_HINT_MIN);
+        maximize(window);
 
         s2a::webview::Bridge bridge(window, language);
         bridge.bind();

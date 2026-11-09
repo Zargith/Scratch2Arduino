@@ -407,6 +407,44 @@ def lcd_i2c(c: Canvas, x, y, lines=("Temperature (C)", "21")):
     return pins
 
 
+LCD16_PINS = ["VSS", "VDD", "V0", "RS", "RW", "E", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "A", "K"]
+
+
+def lcd16(c: Canvas, x, y, lines=("Temperature (C)", "21")):
+    """16x2 LCD without I2C module: its 16 pins in a row under the screen."""
+    pins = module(c, x, y, 600, 160, "#2E7D32", LCD16_PINS, side="bottom", pitch=32)
+    c.rect(x + 40, y + 14, 520, 104, "#1B1B1B", radius=4)
+    c.rect(x + 52, y + 26, 496, 80, "#64B5F6", radius=2)
+    for i, line in enumerate(lines):
+        c.text(x + 64, y + 46 + i * 36, line, 22, "#0D47A1", anchor="lm")
+    c.text(x + 300, y - 8, "LCD 16x2 (16 broches / pins)", 10, "#455A64", anchor="mm")
+    return pins
+
+
+def potentiometer_free(c: Canvas, x, y):
+    """10 kΩ potentiometer seen from above, its three legs pointing down; returns leg -> wire end."""
+    c.rect(x + 3, y + 5, 64, 48, "#B0BEC5", radius=4)
+    c.rect(x, y, 64, 48, "#1565C0", outline="#0D47A1", radius=4, width=2)
+    c.circle(x + 32, y + 24, 16, "#ECEFF1", outline="#90A4AE", width=2)
+    c.line([(x + 32, y + 24), (x + 40, y + 12)], "#455A64", 3)
+    c.text(x + 32, y - 9, "10 kΩ", 10, "#455A64", anchor="mm")
+    legs = {}
+    for i, name in enumerate(("-", "W", "+")):
+        lx = x + 12 + i * 20
+        leg(c, (lx, y + 48), (lx, y + 66))
+        legs[name] = (lx, y + 66)
+    return legs
+
+
+def legend(c: Canvas, x, y, rows, title):
+    """Small table: one line per connection, for the wires that are hard to follow."""
+    c.rect(x, y, 330, 26 + 17 * len(rows), "#FFFFFF", outline="#CFD8DC", radius=6, width=2)
+    c.text(x + 12, y + 14, title, 11, "#263238", bold=True, anchor="lm")
+    for i, (left, right) in enumerate(rows):
+        c.text(x + 12, y + 34 + i * 17, left, 10, "#37474F", bold=True, anchor="lm")
+        c.text(x + 100, y + 34 + i * 17, right, 10, "#37474F", anchor="lm")
+
+
 def oled(c: Canvas, x, y, lines=("Jeu de reaction", "", "3")):
     pins = module(c, x, y, 150, 120, "#1A237E", ["GND", "VCC", "SCL", "SDA"], side="top", pitch=26)
     c.rect(x + 12, y + 28, 126, 70, "#000000", radius=3)
@@ -527,6 +565,71 @@ def thermometer(c: Canvas):
                 ("y", screen["SCL"][1]), screen["SCL"]), GREEN)
 
 
+def potentiometer_upper(c: Canvas, board: Breadboard, column: int):
+    """10 kΩ potentiometer in the upper half: legs in row e, wires from row a (above the knob)."""
+    holes = [board.hole(column + i, "e") for i in range(3)]
+    cx, cy = holes[1][0], holes[1][1] - 34
+    for hx, hy in holes:
+        leg(c, (hx, cy + 16), (hx, hy))
+    c.rect(cx - 30, cy - 22, 60, 44, "#1565C0", outline="#0D47A1", radius=4, width=2)
+    c.circle(cx, cy, 16, "#ECEFF1", outline="#90A4AE", width=2)
+    c.line([(cx, cy), (cx + 8, cy - 12)], "#455A64", 3)
+    c.text(cx + 36, cy, "10 kΩ", 10, "#455A64", anchor="lm")
+    return [board.hole(column + i, "a") for i in range(3)]
+
+
+def thermometer_lcd16(c: Canvas):
+    """Same program as the thermometer, with a 16-pin LCD. The Uno sits on the right so that the
+    six signal wires reach the screen without crossing (RS 12, E 11, D4 10, D5 9, D6 8, D7 7)."""
+    uno = Uno(c, 1040, 540)
+    board = Breadboard(c, 60, 540, 30)
+    screen = lcd16(c, 560, 90)
+    sensor = module(c, 150, 190, 120, 140, "#1565C0", ["DATA", "VCC", "GND"], side="left", pitch=26)
+    c.rect(198, 208, 60, 70, "#42A5F5", outline="#1E88E5", radius=4, width=2)
+    for row in range(5):
+        for col in range(4):
+            c.rect(205 + col * 13, 216 + row * 12, 8, 6, "#1565C0", radius=1)
+    c.text(228, 300, "DHT11", 11, "#FFFFFF", bold=True, anchor="mm")
+
+    # Power: 5V and GND of the Uno to the + and - rails, under the breadboard.
+    five, gnd = uno.pin("5V"), uno.pin("GND_power")
+    c.wire(path(five, ("y", 962), ("x", 40), ("y", board.rail("top+", 1)[1]), board.rail("top+", 1)), RED)
+    c.wire(path(gnd, ("y", 976), ("x", 26), ("y", board.rail("top-", 2)[1]), board.rail("top-", 2)), BLACK)
+
+    # Signals, from the digital header up and left to the screen.
+    for index, (pin, name, colour) in enumerate((("12", "RS", ORANGE), ("11", "E", YELLOW), ("10", "D4", GREEN),
+                                                 ("9", "D5", BLUE), ("8", "D6", PURPLE), ("7", "D7", WHITE))):
+        c.wire(path(uno.pin(pin), ("y", 292 + index * 15), ("x", screen[name][0]), screen[name]), colour)
+
+    def lane(rail, column, y, target, colour):
+        c.wire(path(board.rail(rail, column), ("y", y), ("x", target[0]), target), colour)
+
+    # Screen power and contrast (potentiometer: - to GND, + to 5V, middle leg to V0).
+    lane("top-", 13, 392, screen["VSS"], BLACK)
+    lane("top+", 14, 404, screen["VDD"], RED)
+    minus, middle, plus = potentiometer_upper(c, board, 19)
+    c.wire(path(minus, board.rail("top-", 19)), BLACK)
+    c.wire(path(plus, board.rail("top+", 21)), RED)
+    c.wire(path(middle, ("y", 416), ("x", screen["V0"][0]), screen["V0"]), BROWN)
+    lane("top-", 22, 428, screen["RW"], BLACK)
+    # Backlight: A through a 220 Ω resistor to 5V, K to GND.
+    a = screen["A"]
+    lane("top+", 23, 452, (a[0], 436), RED)
+    resistor(c, (a[0], 436), (a[0], 400), "")
+    c.text(a[0] - 12, 418, "220 Ω", 10, "#455A64", anchor="rm")
+    c.wire(path((a[0], 400), a), RED)
+    lane("top-", 25, 466, screen["K"], BLACK)
+
+    # DHT11: data to pin 3 over the top of the screen, power from the rails.
+    c.wire(path(uno.pin("3"), ("y", 60), ("x", 96), ("y", sensor["DATA"][1]), sensor["DATA"]), YELLOW)
+    c.wire(path(board.rail("top+", 3), ("y", 512), ("x", 112), ("y", sensor["VCC"][1]), sensor["VCC"]), RED)
+    c.wire(path(board.rail("top-", 4), ("y", 500), ("x", 126), ("y", sensor["GND"][1]), sensor["GND"]), BLACK)
+
+    legend(c, 670, 640, [("VSS, RW, K", "GND (-)"), ("VDD", "5V (+)"), ("V0", "potentiomètre / potentiometer"),
+                        ("A", "220 Ω → 5V (+)"), ("RS, E", "12, 11"), ("D4…D7", "10, 9, 8, 7"),
+                        ("D0…D3", "rien / not wired")], "LCD 16 broches / 16-pin LCD")
+
+
 def reaction_game(c: Canvas):
     uno = Uno(c, 60, 430)
     board = Breadboard(c, 700, 600, 24)
@@ -588,6 +691,7 @@ EXAMPLES = {
     "servo-potentiometer": servo_potentiometer,
     "distance-alarm": distance_alarm,
     "thermometer": thermometer,
+    "thermometer-lcd16": thermometer_lcd16,
     "reaction-game": reaction_game,
     "light-gauge": light_gauge,
     "traffic-light": traffic_light,
