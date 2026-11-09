@@ -50,6 +50,7 @@ bool output[kMaxPins];
 Servo servos[kMaxServos];
 int servoPins[kMaxServos];
 int tonePin = -1;
+unsigned long toneEnd = 0; // when a timed sound ends (0: until stopped)
 
 DHT* dht = nullptr;
 int dhtPin = -1;
@@ -256,9 +257,12 @@ bool writeServo(int pin, int angle) {
   return true;
 }
 
+// A silent buzzer is let go: otherwise the flicker of LEDs on the same GND hums through it.
 void stopTone() {
   if (tonePin >= 0) {
     noTone(tonePin);
+    pinMode(tonePin, INPUT);
+    output[tonePin] = false;
     tonePin = -1;
   }
 }
@@ -397,12 +401,16 @@ void execute(const char* command) {
         stopTone(); // one sound at a time
       }
       if (value <= 0) {
-        noTone(pin);
-        tonePin = -1;
+        if (tonePin == pin) {
+          stopTone();
+        } else {
+          noTone(pin);
+        }
       } else {
         releaseServo(pin);
         output[pin] = true;
         tonePin = pin;
+        toneEnd = duration > 0 ? max(millis() + (unsigned long)duration, 1UL) : 0;
         if (duration > 0) {
           tone(pin, (unsigned int)constrain(value, 31L, 65535L), (unsigned long)duration);
         } else {
@@ -517,6 +525,9 @@ void setup() {
 }
 
 void loop() {
+  if (tonePin >= 0 && toneEnd != 0 && (long)(millis() - toneEnd) >= 0) {
+    stopTone();
+  }
   while (Serial.available() > 0) {
     const char c = Serial.read();
     if (c == '\r') {

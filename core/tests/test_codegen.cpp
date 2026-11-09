@@ -254,11 +254,23 @@ TEST(Codegen, DrivesComponents) {
     for (const char* expected :
          {"#include <Servo.h>\n\nServo s2a_servo_3;\n", "  s2a_servo_3.attach(3);\n", "analogWrite(9, 0);",
           "analogWrite(10, 255);", "analogWrite(11, 255);", "s2a_servo_3.write(constrain((int)(45), 0, 180));",
-          "  s2a_tone(8, 392);\n  s2a_wait(0.25);\n  noTone(8);\n", "void s2a_tone(int pin, double frequency) {",
+          "  s2a_tone(8, 392);\n  s2a_wait(0.25);\n  s2a_quiet(8);\n", "  pinMode(pin, INPUT);\n", "void s2a_tone(int pin, double frequency) {",
           "s2a_motor(6, 7, 4, -1, 50);", "s2a_motor(6, 7, 4, 0, 0);", "  pinMode(6, OUTPUT);"}) {
         EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
     }
     EXPECT_EQ(source.find("pinMode(3,"), std::string::npos) << "attach() sets the servo pin";
+    EXPECT_EQ(source.find("pinMode(8,"), std::string::npos) << "tone() sets a buzzer pin";
+}
+
+TEST(Codegen, KeepsABuzzerPinThatOtherBlocksDrive) {
+    Block play = block("play", "sound_play_tone");
+    play.fields["PIN"] = "8";
+    Block off = block("off", "pins_digital_write");
+    off.fields = {{"PIN", "8"}, {"STATE", "LOW"}};
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), play, off})).source;
+    EXPECT_EQ(source.find("s2a_quiet"), std::string::npos) << source;
+    EXPECT_NE(source.find("  noTone(8);\n  digitalWrite(8, LOW);"), std::string::npos) << source;
+    EXPECT_NE(source.find("  pinMode(8, OUTPUT);"), std::string::npos) << source;
 }
 
 TEST(Codegen, ReadsSensors) {

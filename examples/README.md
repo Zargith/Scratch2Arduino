@@ -116,8 +116,10 @@ and you lose! The score is shown on the OLED screen.
 
 Prends un buzzer **passif** (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille.
 Si la matrice s'éteint quand le buzzer sonne, ajoute une résistance de 100 Ω en série avec le buzzer.
+Si le buzzer bourdonne pendant que la matrice est allumée, branche son − sur un autre GND de l'Arduino que celui de la matrice.
 / Use a **passive** buzzer (no sticker, the circuit board shows underneath): an active one crackles. If the matrix
-goes off when the buzzer sounds, add a 100 Ω resistor in series with the buzzer.
+goes off when the buzzer sounds, add a 100 Ω resistor in series with the buzzer. If the buzzer hums while the
+matrix is on, wire its − to another GND pin of the Arduino than the matrix one.
 
 ## Jauge lumineuse / Light gauge
 
