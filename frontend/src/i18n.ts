@@ -88,6 +88,10 @@ const fr = {
 	"status.library_saved": "« {name} » est enregistré dans Mes blocs.",
 	"status.library_exported": "Mes blocs exportés : {path}",
 	"status.library_imported": "{count} groupe(s) de blocs importé(s).",
+	"crash.title": "Oups, l'éditeur s'est arrêté",
+	"crash.message":
+		"Une erreur inattendue s'est produite. Tes projets enregistrés ne sont pas touchés. Clique sur « Recommencer » pour rouvrir l'éditeur ; si cela recommence, envoie les détails ci-dessous aux développeurs.",
+	"crash.restart": "Recommencer",
 	"confirm.new": "Commencer un nouveau projet ? Les modifications non enregistrées seront perdues.",
 } as const;
 
@@ -181,6 +185,10 @@ const en: Record<MessageKey, string> = {
 	"status.library_saved": "\"{name}\" is saved in My blocks.",
 	"status.library_exported": "My blocks exported: {path}",
 	"status.library_imported": "{count} group(s) of blocks imported.",
+	"crash.title": "Oops, the editor stopped",
+	"crash.message":
+		"Something unexpected went wrong. Your saved projects are not affected. Click \"Start again\" to reopen the editor; if it happens again, send the details below to the developers.",
+	"crash.restart": "Start again",
 	"confirm.new": "Start a new project? Unsaved changes will be lost.",
 };
 

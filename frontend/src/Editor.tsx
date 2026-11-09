@@ -195,15 +195,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 			createVariable: translate(language, "variables.create"),
 			createFunction: translate(language, "functions.create"),
 		};
-		const ofType = (state: WorkspaceState, type: string) =>
-			(state.variables ?? []).filter((variable) => (variable.type ?? "") === type);
 		const libraryToolbox = () => ({
 			title: translate(language, "library.title"),
 			manage: translate(language, "library.manage"),
 			groups: libraryRef.current.map(({ id, name }) => ({ id, name })),
 		});
+		// The palette's variable and function blocks are added once the project is loaded: built
+		// before, they point at variables the workspace does not have yet, and Blockly invents
+		// names for them that can clash with the project's own ("Variable "i" is already in use").
 		const created = Blockly.inject(element, {
-			toolbox: toolbox(language, ofType(initialState, ""), labels, ofType(initialState, FUNCTION_TYPE), libraryToolbox()),
+			toolbox: toolbox(language, [], labels, [], libraryToolbox()),
 			theme: blocksTheme(),
 			media: "./media/",
 			trashcan: true,
@@ -301,6 +302,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 			(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
 		};
 		refreshToolbox.current = rebuildToolbox;
+		try {
+			rebuildToolbox();
+		} catch (error) {
+			// A palette that cannot be completed must not hide the project.
+			console.error("cannot fill the palette", error);
+		}
 		const variableEvents: string[] = [Blockly.Events.VAR_CREATE, Blockly.Events.VAR_DELETE, Blockly.Events.VAR_RENAME];
 		const blockEvents: string[] = [Blockly.Events.BLOCK_CREATE, Blockly.Events.BLOCK_MOVE, Blockly.Events.BLOCK_DELETE];
 		created.addChangeListener((event: Blockly.Events.Abstract) => {

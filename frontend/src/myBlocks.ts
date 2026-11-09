@@ -114,7 +114,14 @@ export function groupToBlocks(group: Project, existing: VariableInfo[], newId: (
 			}
 		});
 	}
-	const state = projectToWorkspace({ ...emptyProject("", "uno"), scripts });
+	// The references now point at the project's variables and functions (or those to create).
+	const target = (id: string) => ids.get(id) ?? id;
+	const state = projectToWorkspace({
+		...emptyProject("", "uno"),
+		variables: group.variables.map((variable) => ({ ...variable, id: target(variable.id) })),
+		functions: (group.functions ?? []).map((fn) => ({ ...fn, id: target(fn.id) })),
+		scripts,
+	});
 	const blocks = (state.blocks?.blocks ?? []).map(({ x: _x, y: _y, ...block }) => block);
 	return { blocks, create };
 }

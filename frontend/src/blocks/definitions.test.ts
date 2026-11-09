@@ -17,6 +17,21 @@ describe("block definitions", () => {
 		workspace.dispose();
 	});
 
+	it("lists only variables, never functions, in the variable menu", () => {
+		Blockly.ScratchMsgs.setLocale("fr");
+		defineBlocks("fr");
+		const workspace = new Blockly.Workspace();
+		workspace.getVariableMap().createVariable("score", "", "v1");
+		workspace.getVariableMap().createVariable("clignoter", "function", "f1");
+		const set = workspace.newBlock("variables_set");
+		const field = set.getField("VARIABLE") as Blockly.FieldDropdown;
+		field.setValue("v1");
+		const labels = field.getOptions(false).map((option) => String((option as unknown[])[0]));
+		expect(labels).toContain("score");
+		expect(labels).not.toContain("clignoter");
+		workspace.dispose();
+	});
+
 	it("speaks of the function, not of a variable, in the function menu", () => {
 		Blockly.ScratchMsgs.setLocale("fr"); // as the editor does: the "delete" entry needs it
 		defineBlocks("fr");
