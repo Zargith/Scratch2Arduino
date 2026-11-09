@@ -50,6 +50,8 @@ import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
 import { exampleProject, type Example } from "@/examples";
 import { Gallery, Wiring } from "@/Gallery";
+import { Library } from "@/Library";
+import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Sparkline } from "@/Sparkline";
@@ -118,6 +120,8 @@ export function App() {
 	const [example, setExample] = useState<Example | null>(null);
 	const [wiringShown, setWiringShown] = useState(false);
 	const [recent, setRecent] = useState<RecentProject[]>([]);
+	const [library, setLibrary] = useState<SavedGroup[]>([]);
+	const [libraryShown, setLibraryShown] = useState(false);
 	/** Unsaved work found at start-up, offered back to the user. */
 	const [restore, setRestore] = useState<AutosavedProject | null>(null);
 	/** Edits made so far, and how many the last autosave holds. */
@@ -327,6 +331,63 @@ export function App() {
 		}, autosaveInterval);
 		return () => clearInterval(timer);
 	}, []);
+
+	// "My blocks" is shared by all projects: read once, then kept in sync with each change.
+	useEffect(() => {
+		if (!hasHost()) return;
+		bridge
+			.library()
+			.then(setLibrary)
+			.catch(() => setLibrary([]));
+	}, []);
+
+	const saveGroup = async (blocks: Project, groupName: string) => {
+		try {
+			const added = await bridge.libraryAdd(groupName, blocks);
+			setLibrary((groups) => [...groups, added]);
+			setStatus({ kind: "success", message: t("status.library_saved", { name: added.name }) });
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	const renameGroup = async (group: SavedGroup, groupName: string) => {
+		try {
+			await bridge.libraryRename(group.id, groupName);
+			setLibrary((groups) => groups.map((candidate) => (candidate.id === group.id ? { ...candidate, name: groupName } : candidate)));
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	const removeGroup = async (group: SavedGroup) => {
+		try {
+			await bridge.libraryRemove(group.id);
+			setLibrary((groups) => groups.filter((candidate) => candidate.id !== group.id));
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	const exportLibrary = async () => {
+		try {
+			const file = await bridge.libraryExport(language);
+			if (file) setStatus({ kind: "success", message: t("status.library_exported", { path: file }) });
+		} catch (error) {
+			fail(error);
+		}
+	};
+
+	const importLibrary = async () => {
+		try {
+			const count = await bridge.libraryImport(language);
+			if (count === null) return;
+			setLibrary(await bridge.library());
+			setStatus({ kind: "success", message: t("status.library_imported", { count: String(count) }) });
+		} catch (error) {
+			fail(error);
+		}
+	};
 
 	const loadRecent = async () => {
 		if (!hasHost()) return;
@@ -619,6 +680,9 @@ export function App() {
 						language={language}
 						board={findBoard(boardId)}
 						initialState={initialState.current}
+						library={library}
+						onSaveGroup={(blocks, groupName) => void saveGroup(blocks, groupName)}
+						onManageLibrary={() => setLibraryShown(true)}
 						onLoadError={(lost) =>
 							setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
 						}
@@ -728,6 +792,20 @@ export function App() {
 					</Button>
 				</Group>
 			</Modal>
+			<Library
+				opened={libraryShown}
+				groups={library}
+				t={t}
+				onInsert={(group) => {
+					editor.current?.insert(group.blocks);
+					setLibraryShown(false);
+				}}
+				onRename={(group, groupName) => void renameGroup(group, groupName)}
+				onRemove={(group) => void removeGroup(group)}
+				onExport={() => void exportLibrary()}
+				onImport={() => void importLibrary()}
+				onClose={() => setLibraryShown(false)}
+			/>
 			<Wiring example={example} opened={wiringShown} language={language} t={t} onClose={() => setWiringShown(false)} />
 
 			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">

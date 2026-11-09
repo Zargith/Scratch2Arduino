@@ -359,6 +359,117 @@ void Bridge::bind() {
         },
         nullptr);
 
+    // "My blocks": groups of blocks saved by the user, shared by all their projects.
+    const auto groupJson = [](const userdata::SavedBlocks& group) {
+        return Json{{"id", group.id}, {"name", group.name}, {"blocks", Json::parse(project::toJson(group.blocks))}};
+    };
+    window_.bind(
+        "s2a_library",
+        [this, groupJson](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+            async(id, [this, groupJson]() {
+                std::vector<userdata::SavedBlocks> groups;
+                {
+                    const std::lock_guard<std::mutex> lock(userMutex_);
+                    groups = user_.library();
+                }
+                Json list = Json::array();
+                for (const auto& group : groups) {
+                    list.push_back(groupJson(group));
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    // (name, blocks as a project) -> the saved group.
+    window_.bind(
+        "s2a_library_add",
+        [this, groupJson](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this, groupJson]() {
+                const Json args = Json::parse(request);
+                project::Project blocks = projectArg(args, 1, language_);
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                auto added = user_.addToLibrary(stringArg(args, 0), std::move(blocks));
+                if (!added.ok()) {
+                    throw UserError{tr(errorMessageKey(added.error().code), language_)};
+                }
+                return groupJson(added.value()).dump();
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_library_rename",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                if (auto renamed = user_.renameInLibrary(stringArg(args, 0), stringArg(args, 1)); !renamed.ok()) {
+                    throw UserError{tr(errorMessageKey(renamed.error().code), language_)};
+                }
+                return std::string("null");
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_library_remove",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                if (auto removed = user_.removeFromLibrary(stringArg(args, 0)); !removed.ok()) {
+                    throw UserError{tr(errorMessageKey(removed.error().code), language_)};
+                }
+                return std::string("null");
+            });
+        },
+        nullptr);
+    // Asks where to write the library; resolves to the file, or null when cancelled.
+    window_.bind(
+        "s2a_library_export",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() -> std::string {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const fs::path suggestion = projectsDirectory() / (tr("webview.library_file", language) + ".s2ablocks");
+                const std::string chosen = pfd::save_file(tr("webview.library_export_title", language), suggestion.u8string(),
+                                                          {tr("webview.library_filter", language), "*.s2ablocks"},
+                                                          pfd::opt::force_overwrite)
+                                               .result();
+                if (chosen.empty()) {
+                    return "null";
+                }
+                fs::path file = fs::u8path(chosen);
+                if (file.extension() != ".s2ablocks") {
+                    file += ".s2ablocks";
+                }
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                if (auto exported = user_.exportLibrary(file); !exported.ok()) {
+                    throw UserError{tr(errorMessageKey(exported.error().code), language)};
+                }
+                return Json(file.u8string()).dump();
+            });
+        },
+        nullptr);
+    // Asks for a .s2ablocks file and adds its groups; resolves to how many, or null when cancelled.
+    window_.bind(
+        "s2a_library_import",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() -> std::string {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const auto files = pfd::open_file(tr("webview.library_import_title", language), projectsDirectory().u8string(),
+                                                  {tr("webview.library_filter", language), "*.s2ablocks"})
+                                       .result();
+                if (files.empty()) {
+                    return "null";
+                }
+                const std::lock_guard<std::mutex> lock(userMutex_);
+                auto imported = user_.importLibrary(fs::u8path(files.front()));
+                if (!imported.ok()) {
+                    throw UserError{tr(errorMessageKey(imported.error().code), language)};
+                }
+                return Json(imported.value()).dump();
+            });
+        },
+        nullptr);
+
     window_.bind(
         "s2a_ports",
         [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {

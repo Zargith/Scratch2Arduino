@@ -140,6 +140,115 @@ TEST(UserData, WriteFileAtomicallyReplacesContent) {
     EXPECT_FALSE(fs::exists(dir.path() / "sub" / "file.txt.tmp"));
 }
 
+/// A group: "set score to 0" then "call flash" (uses a variable and a function).
+s2a::project::Project group() {
+    s2a::project::Project blocks;
+    blocks.name = "groupe";
+    blocks.variables.push_back({"v1", "score", 0});
+    blocks.functions.push_back({"f1", "flash"});
+    s2a::project::Block set;
+    set.id = "b1";
+    set.type = "variables_set";
+    set.fields["VARIABLE"] = "v1";
+    set.inputs["VALUE"].value = "0";
+    s2a::project::Block call;
+    call.id = "b2";
+    call.type = "functions_call";
+    call.fields["FUNCTION"] = "f1";
+    blocks.scripts.push_back({0, 0, {set, call}});
+    return blocks;
+}
+
+TEST(UserData, LibraryAddRenameRemove) {
+    const TempDir dir;
+    Store store(dir.path() / "data");
+    EXPECT_TRUE(store.library().empty());
+
+    auto first = store.addToLibrary("  Remise à zéro\n", group());
+    ASSERT_TRUE(first.ok());
+    EXPECT_EQ(first.value().name, "Remise à zéro");
+    auto second = store.addToLibrary("", group());
+    ASSERT_TRUE(second.ok());
+    EXPECT_EQ(second.value().name, "?");
+    EXPECT_NE(first.value().id, second.value().id);
+
+    auto groups = Store(dir.path() / "data").library();
+    ASSERT_EQ(groups.size(), 2U);
+    EXPECT_EQ(groups[0].name, "Remise à zéro");
+    EXPECT_EQ(s2a::project::toJson(groups[0].blocks), s2a::project::toJson(group()));
+
+    ASSERT_TRUE(store.renameInLibrary(second.value().id, "Clignoter").ok());
+    EXPECT_EQ(store.library()[1].name, "Clignoter");
+    ASSERT_TRUE(store.removeFromLibrary(first.value().id).ok());
+    groups = store.library();
+    ASSERT_EQ(groups.size(), 1U);
+    EXPECT_EQ(groups[0].name, "Clignoter");
+
+    EXPECT_EQ(store.renameInLibrary("missing", "x").error().code, s2a::ErrorCode::FileNotFound);
+    EXPECT_EQ(store.removeFromLibrary("missing").error().code, s2a::ErrorCode::FileNotFound);
+}
+
+TEST(UserData, LibraryNamesAreShortened) {
+    const TempDir dir;
+    Store store(dir.path());
+    std::string longName;
+    for (int i = 0; i < 100; ++i) {
+        longName += "é"; // 2 bytes each: the cut must not split one
+    }
+    auto added = store.addToLibrary(longName, group());
+    ASSERT_TRUE(added.ok());
+    EXPECT_LE(added.value().name.size(), 80U);
+    EXPECT_EQ(added.value().name.size() % 2, 0U);
+}
+
+TEST(UserData, LibrarySurvivesExportAndImport) {
+    const TempDir dir;
+    Store home(dir.path() / "home");
+    ASSERT_TRUE(home.addToLibrary("Remise à zéro", group()).ok());
+    ASSERT_TRUE(home.addToLibrary("Clignoter", group()).ok());
+    const fs::path file = dir.path() / "mes blocs.s2ablocks";
+    ASSERT_TRUE(home.exportLibrary(file).ok());
+
+    // Another computer, which already has a group with the same name.
+    Store school(dir.path() / "school");
+    ASSERT_TRUE(school.addToLibrary("Clignoter", group()).ok());
+    auto imported = school.importLibrary(file);
+    ASSERT_TRUE(imported.ok());
+    EXPECT_EQ(imported.value(), 2U);
+    const auto groups = school.library();
+    ASSERT_EQ(groups.size(), 3U);
+    EXPECT_EQ(groups[1].name, "Remise à zéro");
+    EXPECT_EQ(groups[2].name, "Clignoter (2)");
+    EXPECT_EQ(s2a::project::toJson(groups[1].blocks), s2a::project::toJson(group()));
+    EXPECT_NE(groups[1].id, home.library()[0].id); // new ids
+
+    // Importing twice keeps adding, with other names.
+    ASSERT_TRUE(school.importLibrary(file).ok());
+    EXPECT_EQ(school.library().back().name, "Clignoter (3)");
+}
+
+TEST(UserData, LibraryImportRejectsOtherFiles) {
+    const TempDir dir;
+    Store store(dir.path());
+    write(dir.path() / "bad.s2ablocks", "{ nope");
+    EXPECT_EQ(store.importLibrary(dir.path() / "bad.s2ablocks").error().code, s2a::ErrorCode::InvalidJson);
+    write(dir.path() / "project.s2ablocks", R"({"format": "scratch2arduino-project", "groups": []})");
+    EXPECT_EQ(store.importLibrary(dir.path() / "project.s2ablocks").error().code, s2a::ErrorCode::InvalidFormat);
+    write(dir.path() / "future.s2ablocks", R"({"format": "scratch2arduino-blocks", "formatVersion": 99, "groups": []})");
+    EXPECT_EQ(store.importLibrary(dir.path() / "future.s2ablocks").error().code, s2a::ErrorCode::UnsupportedVersion);
+    EXPECT_EQ(store.importLibrary(dir.path() / "missing.s2ablocks").error().code, s2a::ErrorCode::FileNotFound);
+
+    // A damaged group is skipped, the others are kept.
+    const std::string valid = s2a::userdata::libraryToJson({{"g1", "ok", group()}});
+    std::string mixed = valid;
+    mixed.replace(mixed.find("\"groups\": ["), 11, R"("groups": [{"name": "broken", "blocks": 3},)");
+    write(dir.path() / "mixed.s2ablocks", mixed);
+    auto imported = store.importLibrary(dir.path() / "mixed.s2ablocks");
+    ASSERT_TRUE(imported.ok());
+    EXPECT_EQ(imported.value(), 1U);
+    EXPECT_TRUE(store.library().size() == 1U && store.library()[0].name == "ok");
+}
+
 TEST(UserData, DefaultDirectoryIsNamedAfterTheProgram) {
     const fs::path dir = s2a::userdata::defaultDirectory();
     EXPECT_FALSE(dir.empty());

@@ -70,6 +70,10 @@
     "open_title": "Ouvrir un projet",
     "save_title": "Enregistrer le projet",
     "file_filter": "Projets Scratch2Arduino",
+    "library_file": "mes-blocs",
+    "library_export_title": "Exporter mes blocs",
+    "library_import_title": "Importer des blocs",
+    "library_filter": "Blocs Scratch2Arduino",
     "frontend_missing": "L'éditeur de blocs est introuvable. Réinstalle Scratch2Arduino."
   },
   "validation": {
