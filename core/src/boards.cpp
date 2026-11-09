@@ -101,28 +101,55 @@ Board parseBoard(const Json& json) {
         throw BoardError("fqbn '" + board.fqbn + "' must look like vendor:arch:board");
     }
     board.platform = json.at("platform").get<std::string>();
+    {
+        const auto first = board.fqbn.find(':');
+        board.architecture = board.fqbn.substr(first + 1, board.fqbn.find(':', first + 1) - first - 1);
+    }
     board.mcu = json.at("mcu").get<std::string>();
     board.voltage = json.at("voltage").get<double>();
     board.flashBytes = json.at("flashBytes").get<std::uint32_t>();
     board.ramBytes = json.at("ramBytes").get<std::uint32_t>();
 
-    const int digitalCount = json.at("digitalPins").get<int>();
-    for (int number = 0; number < digitalCount; ++number) {
+    // Either a count (pins 0..n-1, as on Arduino boards) or the list of usable GPIO numbers
+    // (ESP32: numbers with gaps, the flash and boot pins left out).
+    const Json& digital = json.at("digitalPins");
+    std::vector<int> digitalNumbers;
+    if (digital.is_array()) {
+        digitalNumbers = digital.get<std::vector<int>>();
+    } else {
+        for (int number = 0; number < digital.get<int>(); ++number) {
+            digitalNumbers.push_back(number);
+        }
+    }
+    for (const int number : digitalNumbers) {
         board.pins.push_back(
             {number, std::to_string(number), static_cast<std::uint8_t>(PinCapability::Digital)});
     }
     const Json& analog = json.at("analogPins");
-    const int analogCount = analog.at("count").get<int>();
-    const int firstNumber = analog.at("firstNumber").get<int>();
     const auto inputOnly = analog.value("inputOnly", std::vector<std::string>{});
-    for (int index = 0; index < analogCount; ++index) {
-        const std::string label = "A" + std::to_string(index);
-        const bool digitalToo = std::find(inputOnly.begin(), inputOnly.end(), label) == inputOnly.end();
-        std::uint8_t capabilities = static_cast<std::uint8_t>(PinCapability::Analog);
-        if (digitalToo) {
-            capabilities |= static_cast<std::uint8_t>(PinCapability::Digital);
+    if (analog.contains("count")) {
+        // Arduino boards: A0..An-1 numbered from firstNumber.
+        const int analogCount = analog.at("count").get<int>();
+        const int firstNumber = analog.at("firstNumber").get<int>();
+        for (int index = 0; index < analogCount; ++index) {
+            const std::string label = "A" + std::to_string(index);
+            const bool digitalToo = std::find(inputOnly.begin(), inputOnly.end(), label) == inputOnly.end();
+            std::uint8_t capabilities = static_cast<std::uint8_t>(PinCapability::Analog);
+            if (digitalToo) {
+                capabilities |= static_cast<std::uint8_t>(PinCapability::Digital);
+            }
+            board.pins.push_back({firstNumber + index, label, capabilities});
         }
-        board.pins.push_back({firstNumber + index, label, capabilities});
+    } else {
+        // GPIO boards: "pins" are digital pins that also read analog values, "inputOnly" are
+        // analog inputs that cannot be written (their label is their number).
+        for (const std::string& label : inputOnly) {
+            const auto number = parseNumber(label);
+            if (!number) {
+                throw BoardError("analogPins.inputOnly: '" + label + "' is not a pin number");
+            }
+            board.pins.push_back({*number, label, static_cast<std::uint8_t>(PinCapability::Analog)});
+        }
     }
     std::sort(board.pins.begin(), board.pins.end(),
               [](const Pin& a, const Pin& b) { return a.number < b.number; });
@@ -132,6 +159,12 @@ Board parseBoard(const Json& json) {
         }
     }
 
+    if (analog.contains("pins")) {
+        for (const auto& reference : analog.at("pins")) {
+            pinRef(board, reference.get<std::string>(), "analogPins.pins").capabilities |=
+                static_cast<std::uint8_t>(PinCapability::Analog);
+        }
+    }
     addCapability(board, json.at("pwmPins"), PinCapability::Pwm, "pwmPins");
     addCapability(board, json.at("interruptPins"), PinCapability::Interrupt, "interruptPins");
     board.builtinLed = pinRef(board, json.at("builtinLed").get<std::string>(), "builtinLed").number;

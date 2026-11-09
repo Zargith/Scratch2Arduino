@@ -28,7 +28,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Area | What you get |
 |---|---|
 | Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; Python and JavaScript modes (later) |
-| Boards | Arduino Uno, Nano, Mega first; ESP32 / ESP8266 later |
+| Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit); ESP8266 later |
 | Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers… |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
 | Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
@@ -281,7 +281,7 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 

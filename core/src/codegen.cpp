@@ -423,6 +423,16 @@ private:
         return "s2a_quiet(" + target + ");";
     }
 
+    [[nodiscard]] bool esp32() const { return board_ != nullptr && board_->architecture == "esp32"; }
+
+    /// The on-board LED: LED_BUILTIN on Arduino boards, its GPIO number on the others (not every
+    /// ESP32 board defines LED_BUILTIN).
+    [[nodiscard]] std::string builtinLed() const {
+        return board_ != nullptr && board_->architecture != "avr" && board_->builtinLed >= 0
+                   ? std::to_string(board_->builtinLed)
+                   : std::string("LED_BUILTIN");
+    }
+
     /// LCD screen with 16 pins (no I2C module), driven in 4-bit mode: one object per wiring.
     std::string parallelLcd(const Block& block) {
         std::string pins;
@@ -478,8 +488,9 @@ private:
         body.mark(block.id);
         const std::string& type = block.type;
         if (type == "pins_builtin_led") {
-            pinModes_["LED_BUILTIN"] = PinMode::Output;
-            body.add(depth, std::string("digitalWrite(LED_BUILTIN, ") +
+            const std::string led = builtinLed();
+            pinModes_[led] = PinMode::Output;
+            body.add(depth, "digitalWrite(" + led + ", " +
                                 (field(block, "STATE") == "OFF" ? "LOW" : "HIGH") + ");");
         } else if (type == "pins_digital_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
@@ -596,7 +607,7 @@ private:
         } else if (type == "motors_servo_write") {
             const std::string label = pinLabel(block, "PIN");
             const std::string servo = "s2a_servo_" + label;
-            use("Servo.h", "Servo " + servo + ";", servo + ".attach(" + label + ");", label);
+            use(esp32() ? "ESP32Servo.h" : "Servo.h", "Servo " + servo + ";", servo + ".attach(" + label + ");", label);
             body.add(depth, servo + ".write(constrain((int)(" + number(block, "ANGLE") + "), 0, 180));");
         } else if (type == "motors_dc_run" || type == "motors_dc_stop") {
             helpers_.insert("motor");
@@ -862,6 +873,9 @@ private:
         inits.insert(inits.end(), matrixInits_.begin(), matrixInits_.end());
         for (const std::string& line : inits) {
             out.push_back(std::string(kIndent) + line);
+        }
+        if (esp32()) {
+            out.push_back(std::string(kIndent) + "analogReadResolution(10); // 0-1023, as on the Arduino boards");
         }
         if (helpers_.count("random") != 0) {
             out.push_back(std::string(kIndent) + "randomSeed(micros());");

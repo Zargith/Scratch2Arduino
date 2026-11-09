@@ -399,6 +399,28 @@ TEST(Codegen, Drives16PinLcdScreens) {
     EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"LiquidCrystal"}));
 }
 
+TEST(Codegen, AdaptsToTheEsp32) {
+    Block servo = block("servo", "motors_servo_write");
+    servo.fields["PIN"] = "13";
+    Block knob = block("knob", "sensors_potentiometer");
+    knob.fields["PIN"] = "34";
+    Block print = block("print", "serial_print");
+    print.inputs["VALUE"].block = knob;
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON"), servo, print}, "esp32")).source;
+    for (const char* expected : {"#include <ESP32Servo.h>\n", "  pinMode(2, OUTPUT);", "digitalWrite(2, HIGH);",
+                                 "  analogReadResolution(10);", "s2a_servo_13.attach(13);", "analogRead(34)"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("LED_BUILTIN"), std::string::npos) << source;
+    EXPECT_EQ(source.find("<Servo.h>"), std::string::npos) << source;
+    EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"ESP32Servo"}));
+    // Arduino boards keep LED_BUILTIN and need no resolution change.
+    const auto uno = generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON")})).source;
+    EXPECT_NE(uno.find("digitalWrite(LED_BUILTIN, HIGH);"), std::string::npos);
+    EXPECT_EQ(uno.find("analogReadResolution"), std::string::npos);
+}
+
 TEST(Codegen, AsciiText) {
     EXPECT_EQ(s2a::codegen::asciiText("Élève à l'œil ½ 😀"), "Eleve a l'oeil ? ?");
     EXPECT_EQ(s2a::codegen::asciiText("a\tb\nc"), "abc");
