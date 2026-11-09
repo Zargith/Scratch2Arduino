@@ -189,6 +189,14 @@ void matrixSend(byte reg, byte data) {
   digitalWrite(matrixPins[2], HIGH);
 }
 
+void matrixSettings() {
+  matrixSend(0x0F, 0); // no test mode
+  matrixSend(0x09, 0); // no digit decoding
+  matrixSend(0x0A, 4); // intensity
+  matrixSend(0x0B, 7); // all 8 rows
+  matrixSend(0x0C, 1); // on
+}
+
 void matrixRow(int din, int clk, int cs, int row, int bits) {
   if (din != matrixPins[0] || clk != matrixPins[1] || cs != matrixPins[2]) {
     matrixPins[0] = din;
@@ -199,14 +207,12 @@ void matrixRow(int din, int clk, int cs, int row, int bits) {
       output[matrixPins[i]] = false;
     }
     digitalWrite(cs, HIGH);
-    matrixSend(0x0F, 0); // no test mode
-    matrixSend(0x09, 0); // no digit decoding
-    matrixSend(0x0A, 4); // intensity
-    matrixSend(0x0B, 7); // all 8 rows
-    matrixSend(0x0C, 1); // on
+    matrixSettings();
     for (int i = 1; i <= 8; i++) {
       matrixSend(i, 0);
     }
+  } else if (row == 1) {
+    matrixSettings(); // a voltage dip (buzzer, motor) can reset the chip: set it again with each picture
   }
   matrixSend(row, bits);
 }

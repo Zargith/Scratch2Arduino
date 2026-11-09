@@ -44,6 +44,25 @@
           }
         },
         {
+          "id": "score0",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "3"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "",
+              "block": {
+                "id": "score0v",
+                "type": "variables_get",
+                "fields": {
+                  "VARIABLE": "score"
+                }
+              }
+            }
+          }
+        },
+        {
           "id": "forever",
           "type": "control_forever",
           "statements": {
