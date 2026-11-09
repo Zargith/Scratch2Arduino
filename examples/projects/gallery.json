@@ -1,5 +1,5 @@
 {
-  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png.",
+  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, same program) is one card with a choice: each variant id is a folder, its parts replace those of the example.",
   "examples": [
     {
       "id": "blink",
@@ -44,7 +44,21 @@
         "fr": "L'écran affiche la température puis l'humidité, toutes les 2 secondes.",
         "en": "The screen shows the temperature, then the humidity, every 2 seconds."
       },
-      "parts": { "fr": "DHT11, écran LCD 16×2 I2C", "en": "DHT11, 16×2 I2C LCD screen" }
+      "parts": { "fr": "DHT11, écran LCD 16×2 I2C", "en": "DHT11, 16×2 I2C LCD screen" },
+      "variants": [
+        {
+          "id": "thermometer",
+          "label": { "fr": "Écran I2C (4 broches)", "en": "I2C screen (4 pins)" }
+        },
+        {
+          "id": "thermometer-lcd16",
+          "label": { "fr": "Écran 16 broches", "en": "16-pin screen" },
+          "parts": {
+            "fr": "DHT11, écran LCD 16×2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
+            "en": "DHT11, 16×2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
+          }
+        }
+      ]
     },
     {
       "id": "reaction-game",

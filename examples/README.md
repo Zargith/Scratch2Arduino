@@ -20,6 +20,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Potentiomètre et servomoteur](#potentiomètre-et-servomoteur--potentiometer-and-servo) | potentiomètre, servo SG90 |
 | [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 × 220 Ω, buzzer |
 | [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16×2 I2C |
+| [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16×2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
 | [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
 
@@ -96,6 +97,28 @@ The screen shows the temperature, then the humidity, every 2 seconds.
 
 Si l'écran reste vide, tourne la petite vis bleue derrière le module I2C (contraste).
 If the screen stays blank, turn the small blue screw behind the I2C module (contrast).
+
+## Thermomètre, écran 16 broches / Thermometer, 16-pin screen
+
+![Thermomètre, écran 16 broches](projects/thermometer-lcd16/wiring.png)
+
+Le même programme avec un écran LCD sans module I2C (16 broches).
+The same program with an LCD screen without I2C module (16 pins).
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| DHT11 : VCC / GND | 5V / GND |
+| DHT11 : DATA (out) | 3 |
+| LCD : VSS / RW / K | GND |
+| LCD : VDD | 5V |
+| LCD : V0 | patte du milieu du potentiomètre (les autres sur 5V et GND) / middle leg of the potentiometer (the others to 5V and GND) |
+| LCD : A | 5V à travers 220 Ω / 5V through 220 Ω |
+| LCD : RS / E | 12 / 11 |
+| LCD : D4 / D5 / D6 / D7 | 10 / 9 / 8 / 7 |
+| LCD : D0 à D3 / D0 to D3 | rien / not wired |
+
+Si l'écran reste vide ou n'affiche que des carrés, tourne le potentiomètre (contraste).
+If the screen stays blank or only shows boxes, turn the potentiometer (contrast).
 
 ## Jeu de réaction / Reaction game
 

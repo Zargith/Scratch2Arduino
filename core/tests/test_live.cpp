@@ -257,7 +257,7 @@ TEST(Interpreter, DrivesA16PinLcd) {
     Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), print, clear}),
                             BlockCatalog::builtin(), uno(), pins);
     interpreter.step(milliseconds(0));
-    EXPECT_EQ(pins.take(), (std::vector<std::string>{"C2/3/4/5/6/14/2=Été", "C7/8/9/10/11/12/0="}));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"C2/3/4/5/6/14/2=Été", "C12/11/10/9/8/7/0="}));
 }
 
 TEST(Interpreter, KeepsTheLastGoodDhtReading) {

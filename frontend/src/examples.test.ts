@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { exampleProject, examples } from "@/examples";
+import { exampleGroups, exampleProject, examples } from "@/examples";
 import { projectToWorkspace, unknownBlockTypes } from "@/project/convert";
 
 const projectsDir = resolve(__dirname, "../../examples/projects");
@@ -33,5 +33,16 @@ describe("example gallery", () => {
 		expect(exampleProject(blink, "fr").name).toBe("Clignotant");
 		expect(blink.project.name).toBe(before);
 		expect(blink.wiring).not.toBe("");
+	});
+
+	it("groups the variants of an example in one card", () => {
+		const thermometer = exampleGroups.find((group) => group[0]?.group === "thermometer");
+		expect(thermometer?.map((example) => example.id)).toEqual(["thermometer", "thermometer-lcd16"]);
+		const [i2c, parallel] = thermometer ?? [];
+		expect(i2c?.variant?.fr).toBe("Écran I2C (4 broches)");
+		expect(parallel?.parts.en).toContain("16 pins");
+		expect(parallel?.wiring).not.toBe(i2c?.wiring);
+		expect(exampleGroups.flat()).toEqual(examples);
+		expect(exampleGroups.filter((group) => group.length === 1).every((group) => group[0]?.variant === undefined)).toBe(true);
 	});
 });
