@@ -64,6 +64,13 @@ const fr = {
 	"wiring.title": "Schéma de câblage — {name}",
 	"wiring.alt": "Schéma de câblage du projet {name}",
 	"status.example_opened": "Exemple « {name} » ouvert. Clique sur Enregistrer pour garder tes changements.",
+	"toolbar.recent": "Projets récents",
+	"recent.none": "Aucun projet récent",
+	"restore.title": "Projet récupéré",
+	"restore.message": "Le projet « {name} » n'avait pas été enregistré ({time}). Veux-tu le récupérer ?",
+	"restore.accept": "Récupérer",
+	"restore.discard": "Non merci",
+	"status.restored": "Projet « {name} » récupéré. Pense à l'enregistrer !",
 	"confirm.new": "Commencer un nouveau projet ? Les modifications non enregistrées seront perdues.",
 } as const;
 
@@ -133,6 +140,13 @@ const en: Record<MessageKey, string> = {
 	"wiring.title": "Wiring diagram — {name}",
 	"wiring.alt": "Wiring diagram of the {name} project",
 	"status.example_opened": "Example \"{name}\" opened. Click Save to keep your changes.",
+	"toolbar.recent": "Recent projects",
+	"recent.none": "No recent project",
+	"restore.title": "Project recovered",
+	"restore.message": "The project \"{name}\" had not been saved ({time}). Do you want it back?",
+	"restore.accept": "Recover",
+	"restore.discard": "No thanks",
+	"status.restored": "Project \"{name}\" recovered. Remember to save it!",
 	"confirm.new": "Start a new project? Unsaved changes will be lost.",
 };
 

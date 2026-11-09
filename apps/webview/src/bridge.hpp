@@ -3,6 +3,7 @@
 #include "s2a/i18n.hpp"
 #include "s2a/live.hpp"
 #include "s2a/serial.hpp"
+#include "s2a/userdata.hpp"
 
 #include <atomic>
 #include <filesystem>
@@ -41,8 +42,8 @@ public:
     void setStartupFile(std::filesystem::path path) { startupFile_ = std::move(path); }
 
 private:
-    /// What "open" returns to the editor for the project at `path`.
-    [[nodiscard]] std::string openedJson(const std::filesystem::path& path, Language language) const;
+    /// What "open" returns to the editor for the project at `path`; adds it to the recent projects.
+    [[nodiscard]] std::string openedJson(const std::filesystem::path& path, Language language);
 
     std::filesystem::path startupFile_;
     template <typename Work> void async(const std::string& id, Work work);
@@ -59,6 +60,8 @@ private:
     std::unique_ptr<live::Session> live_; ///< Live mode, when started.
     std::mutex monitorMutex_;
     std::unique_ptr<serial::Monitor> monitor_; ///< Serial monitor, when open.
+    std::mutex userMutex_;
+    userdata::Store user_; ///< Recent projects and autosave (guarded by userMutex_).
 
     /// Frees the board's port for an upload or the Live mode.
     void closeMonitor();
