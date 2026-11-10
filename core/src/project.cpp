@@ -166,6 +166,7 @@ void migrate(Json& json, int fromVersion) {
     if (fromVersion < 2) {
         json["language"] = std::string(programLanguageId(ProgramLanguage::Blocks));
         json.erase("code");
+        json.erase("userCode");
     }
 }
 
@@ -222,6 +223,18 @@ Project projectFromJson(Json json) {
     }
     if (json.contains("code") && project.language != ProgramLanguage::Blocks) {
         project.code = stringAt(json, "code", root);
+    }
+    if (json.contains("userCode")) {
+        const Json& node = json.at("userCode");
+        if (!node.is_object()) {
+            throw FormatError("$.userCode", "must be an object");
+        }
+        const std::string id = stringAt(node, "language", "$.userCode");
+        const auto language = programLanguageFromId(id);
+        if (!language || *language == ProgramLanguage::Blocks) {
+            throw FormatError("$.userCode.language", "unknown language '" + id + "'");
+        }
+        project.userCode = UserCode{*language, stringAt(node, "code", "$.userCode")};
     }
 
     const Json& scripts = arrayAt(json, "scripts", root);
@@ -299,9 +312,10 @@ std::string toJson(const Project& project) {
         scripts.push_back({{"x", script.x}, {"y", script.y}, {"blocks", stackToJson(script.blocks)}});
     }
     const bool text = project.language != ProgramLanguage::Blocks;
+    const bool userCode = project.userCode.has_value();
     Json json{
         {"format", std::string(kFormatName)},
-        {"formatVersion", text ? 2 : 1}, // see kFormatVersion
+        {"formatVersion", text || userCode ? 2 : 1}, // see kFormatVersion
         {"name", project.name},
         {"board", project.boardId},
         {"variables", std::move(variables)},
@@ -317,6 +331,10 @@ std::string toJson(const Project& project) {
     if (text) { // left out for blocks: block projects keep the bytes of version 1
         json["language"] = std::string(programLanguageId(project.language));
         json["code"] = project.code;
+    }
+    if (userCode) { // older versions would drop it silently: hence version 2
+        json["userCode"] = {{"language", std::string(programLanguageId(project.userCode->language))},
+                            {"code", project.userCode->code}};
     }
     return json.dump(2) + "\n";
 }

@@ -199,6 +199,30 @@ TEST(ProjectJson, RejectsUnknownLanguages) {
     EXPECT_FALSE(programLanguageFromId("C++"));
 }
 
+TEST(ProjectJson, KeepsTheUserCodeBesideTheBlocks) {
+    Project project = blink();
+    project.userCode = UserCode{ProgramLanguage::Python, "def clignoter(fois):\n    pass\n"};
+    const std::string json = toJson(project);
+    EXPECT_NE(json.find("\"formatVersion\": 2"), std::string::npos) << "older versions would lose the code";
+    const auto parsed = fromJson(json);
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    EXPECT_EQ(parsed.value().language, ProgramLanguage::Blocks);
+    ASSERT_TRUE(parsed.value().userCode.has_value());
+    EXPECT_EQ(parsed.value().userCode->language, ProgramLanguage::Python);
+    EXPECT_EQ(parsed.value().userCode->code, project.userCode->code);
+    EXPECT_EQ(toJson(parsed.value()), json);
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok());
+    EXPECT_EQ(fromArchive(bytes.value()).value().userCode->code, project.userCode->code);
+}
+
+TEST(ProjectJson, RejectsUserCodeInBlocks) {
+    const auto parsed = fromJson(R"json({"format": "scratch2arduino-project", "formatVersion": 2, "board": "uno",
+        "userCode": {"language": "blocks", "code": ""}})json");
+    ASSERT_FALSE(parsed.ok());
+    EXPECT_EQ(parsed.error().code, ErrorCode::InvalidFormat);
+}
+
 TEST(Archive, KeepsTheTextProgram) {
     Project project = blink();
     project.language = ProgramLanguage::Python;

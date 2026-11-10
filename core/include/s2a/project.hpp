@@ -107,6 +107,14 @@ enum class ProgramLanguage {
 /// The language of an id of programLanguageId(); nullopt when unknown.
 [[nodiscard]] std::optional<ProgramLanguage> programLanguageFromId(std::string_view id) noexcept;
 
+/// Code written by the user beside the blocks (the "My code" file): its functions and global
+/// variables become blocks of the "My code" category. C++ is compiled with the blocks (Upload);
+/// Python and JavaScript run on the computer with the blocks (Live mode).
+struct UserCode {
+    ProgramLanguage language = ProgramLanguage::Cpp; ///< Cpp, Python or JavaScript.
+    std::string code;
+};
+
 struct Project {
     std::string name;
     std::string boardId{BoardDatabase::kDefaultBoardId};
@@ -118,6 +126,8 @@ struct Project {
     ProgramLanguage language = ProgramLanguage::Blocks;
     /// The program of a text project (C++, Python or JavaScript source), empty for blocks.
     std::string code;
+    /// The user's own code file, used with the blocks (block projects only).
+    std::optional<UserCode> userCode;
     /// Extra files stored in the archive under assets/ (path without the prefix -> bytes).
     std::map<std::string, std::string> assets;
 };
