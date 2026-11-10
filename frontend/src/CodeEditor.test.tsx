@@ -39,5 +39,5 @@ describe("code editor", () => {
 
 		await act(async () => root.unmount());
 		container.remove();
-	});
+	}, 30_000); // CodeMirror's first start is slow in jsdom when the whole suite runs
 });

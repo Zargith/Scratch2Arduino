@@ -1,18 +1,37 @@
 // Code editor of the C++, Python and JavaScript modes (CodeMirror 6, bundled offline).
 // Mistakes are shown only when the host reports them (Check, Upload, Live), never while typing:
 // no linter runs on the text, the problems are set from outside and follow the edits.
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { cpp } from "@codemirror/lang-cpp";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import {
+	bracketMatching,
+	defaultHighlightStyle,
+	foldGutter,
+	foldKeymap,
+	indentOnInput,
+	syntaxHighlighting,
+} from "@codemirror/language";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import { basicSetup } from "codemirror";
+import {
+	drawSelection,
+	dropCursor,
+	EditorView,
+	highlightActiveLine,
+	highlightActiveLineGutter,
+	highlightSpecialChars,
+	keymap,
+	lineNumbers,
+} from "@codemirror/view";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import type { Language } from "@/catalog";
+import { completionSource, type TextLanguage } from "@/codeHelp";
 import { problemRange, type CodeProblem } from "@/program";
-import type { ProgramLanguage } from "@/project/convert";
 
 export interface CodeEditorHandle {
 	/** Marks the faulty lines (underline, gutter, message on hover) and scrolls to the first one. */
@@ -22,14 +41,50 @@ export interface CodeEditorHandle {
 }
 
 interface CodeEditorProps {
-	program: Exclude<ProgramLanguage, "blocks">;
+	program: TextLanguage;
 	language: Language;
-	/** Code shown when the editor is created; later changes come from the user. */
+	/** Code shown when the editor is created; later changes come from the user (or `readOnly` updates). */
 	initialCode: string;
-	onChange(code: string): void;
+	onChange?(code: string): void;
+	/** Shown, not edited: the code made from the blocks. Its text follows `initialCode`. */
+	readOnly?: boolean;
+	/** Mistakes to show when the editor opens (the last Check, Upload or Live). */
+	problems?: CodeProblem[];
 }
 
-function syntax(program: Exclude<ProgramLanguage, "blocks">): Extension {
+/** The editor of the code editor: like CodeMirror's basicSetup, with the light completion of codeHelp.ts. */
+function setup(program: TextLanguage, language: () => Language, readOnly: boolean): Extension {
+	return [
+		lineNumbers(),
+		highlightActiveLineGutter(),
+		highlightSpecialChars(),
+		history(),
+		foldGutter(),
+		drawSelection(),
+		dropCursor(),
+		EditorState.allowMultipleSelections.of(true),
+		indentOnInput(),
+		syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+		bracketMatching(),
+		closeBrackets(),
+		autocompletion({ override: [completionSource(program, language)], icons: true }),
+		highlightActiveLine(),
+		highlightSelectionMatches(),
+		keymap.of([
+			...closeBracketsKeymap,
+			...defaultKeymap,
+			...searchKeymap,
+			...historyKeymap,
+			...foldKeymap,
+			...completionKeymap,
+			indentWithTab,
+		]),
+		EditorState.readOnly.of(readOnly),
+		EditorView.editable.of(!readOnly),
+	];
+}
+
+function syntax(program: TextLanguage): Extension {
 	if (program === "python") return python();
 	if (program === "javascript") return javascript();
 	return cpp();
@@ -65,7 +120,7 @@ const look = EditorView.theme({
 });
 
 export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
-	{ program, language, initialCode, onChange },
+	{ program, language, initialCode, onChange, readOnly = false, problems },
 	ref
 ) {
 	const host = useRef<HTMLDivElement>(null);
@@ -74,6 +129,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 	const phrasesSlot = useRef(new Compartment());
 	const onChangeRef = useRef(onChange);
 	onChangeRef.current = onChange;
+	const languageRef = useRef(language);
+	languageRef.current = language;
 
 	// Created once; the language and the texts are switched in place.
 	useEffect(() => {
@@ -83,14 +140,14 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 			state: EditorState.create({
 				doc: initialCode,
 				extensions: [
-					basicSetup,
+					setup(program, () => languageRef.current, readOnly),
 					lintGutter(),
 					look,
 					EditorView.lineWrapping,
 					syntaxSlot.current.of(syntax(program)),
 					phrasesSlot.current.of(EditorState.phrases.of(language === "fr" ? frenchPhrases : {})),
 					EditorView.updateListener.of((update) => {
-						if (update.docChanged) onChangeRef.current(update.state.doc.toString());
+						if (update.docChanged && !readOnly) onChangeRef.current?.(update.state.doc.toString());
 					}),
 				],
 			}),
@@ -108,31 +165,45 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 		view.current?.dispatch({ effects: syntaxSlot.current.reconfigure(syntax(program)) });
 	}, [program]);
 
+	// A read-only view follows its text (the code of the blocks, regenerated).
+	useEffect(() => {
+		const editor = view.current;
+		if (!readOnly || !editor || editor.state.doc.toString() === initialCode) return;
+		editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: initialCode } });
+	}, [readOnly, initialCode]);
+
 	useEffect(() => {
 		view.current?.dispatch({
 			effects: phrasesSlot.current.reconfigure(EditorState.phrases.of(language === "fr" ? frenchPhrases : {})),
 		});
 	}, [language]);
 
+	const show = (problems: CodeProblem[], focus: boolean) => {
+		const editor = view.current;
+		if (!editor) return;
+		const code = editor.state.doc.toString();
+		const diagnostics: Diagnostic[] = problems.map((problem) => ({
+			...problemRange(code, problem),
+			severity: "error",
+			message: problem.message,
+		}));
+		editor.dispatch(setDiagnostics(editor.state, diagnostics));
+		if (diagnostics.length > 0 && focus) {
+			editor.dispatch({
+				selection: { anchor: diagnostics[0].from },
+				effects: EditorView.scrollIntoView(diagnostics[0].from, { y: "center" }),
+			});
+			editor.focus();
+		}
+	};
+
+	useEffect(() => {
+		if (problems && problems.length > 0) show(problems, false);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [problems]);
+
 	useImperativeHandle(ref, () => ({
-		showProblems: (problems) => {
-			const editor = view.current;
-			if (!editor) return;
-			const code = editor.state.doc.toString();
-			const diagnostics: Diagnostic[] = problems.map((problem) => ({
-				...problemRange(code, problem),
-				severity: "error",
-				message: problem.message,
-			}));
-			editor.dispatch(setDiagnostics(editor.state, diagnostics));
-			if (diagnostics.length > 0) {
-				editor.dispatch({
-					selection: { anchor: diagnostics[0].from },
-					effects: EditorView.scrollIntoView(diagnostics[0].from, { y: "center" }),
-				});
-				editor.focus();
-			}
-		},
+		showProblems: (problems) => show(problems, true),
 		clearProblems: () => {
 			const editor = view.current;
 			if (editor) editor.dispatch(setDiagnostics(editor.state, []));

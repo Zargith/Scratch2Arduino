@@ -95,6 +95,8 @@ export interface CodeProblem {
 	/** 1-based; 0 when unknown. */
 	column?: number;
 	message: string;
+	/** "" for the program, "user" for the "My code" file. */
+	file?: string;
 }
 
 /**
@@ -112,4 +114,77 @@ export function problemRange(code: string, problem: CodeProblem): { from: number
 	const from = start + Math.min(column, text.length);
 	const to = start + text.length;
 	return { from, to: Math.max(from, to) };
+}
+
+/** A first "My code" file: a variable and two functions, that become blocks at once. */
+export function starterUserCode(program: Exclude<ProgramLanguage, "blocks">, language: Language): string {
+	const fr = language === "fr";
+	const [speed, blink, times, average] = fr ? ["vitesse", "clignoter", "fois", "moyenne"] : ["speed", "blink", "times", "average"];
+	const intro = fr
+		? "Mon code : les fonctions et les variables écrites ici deviennent des blocs « Mon code »."
+		: "My code: the functions and variables written here become \"My code\" blocks.";
+	switch (program) {
+		case "cpp":
+			return [
+				`// ${intro}`,
+				`int ${speed} = 200;`,
+				"",
+				`void ${blink}(int ${times}) {`,
+				`  for (int i = 0; i < ${times}; i++) {`,
+				"    digitalWrite(LED_BUILTIN, HIGH);",
+				`    delay(${speed});`,
+				"    digitalWrite(LED_BUILTIN, LOW);",
+				`    delay(${speed});`,
+				"  }",
+				"}",
+				"",
+				`float ${average}(float a, float b) {`,
+				"  return (a + b) / 2;",
+				"}",
+				"",
+			].join("\n");
+		case "python":
+			return [
+				`# ${intro}`,
+				`${speed} = 200`,
+				"",
+				`def ${blink}(${times}):`,
+				`    for i in range(int(${times})):`,
+				"        digitalWrite(LED_BUILTIN, HIGH)",
+				`        delay(${speed})`,
+				"        digitalWrite(LED_BUILTIN, LOW)",
+				`        delay(${speed})`,
+				"",
+				`def ${average}(a, b):`,
+				"    return (a + b) / 2",
+				"",
+			].join("\n");
+		case "javascript":
+			return [
+				`// ${intro}`,
+				`let ${speed} = 200;`,
+				"",
+				`function ${blink}(${times}) {`,
+				`  for (let i = 0; i < ${times}; i++) {`,
+				"    digitalWrite(LED_BUILTIN, HIGH);",
+				`    delay(${speed});`,
+				"    digitalWrite(LED_BUILTIN, LOW);",
+				`    delay(${speed});`,
+				"  }",
+				"}",
+				"",
+				`function ${average}(a, b) {`,
+				"  return (a + b) / 2;",
+				"}",
+				"",
+			].join("\n");
+	}
+}
+
+/** True when `code` is a first "My code" file, unchanged (switching its language loses nothing). */
+export function isStarterUserCode(code: string): boolean {
+	const trimmed = code.trim();
+	return (["cpp", "python", "javascript"] as const).some((program) =>
+		(["fr", "en"] as const).some((language) => starterUserCode(program, language).trim() === trimmed)
+	);
 }

@@ -7,6 +7,7 @@ import {
 	Code,
 	Group,
 	Loader,
+	LoadingOverlay,
 	Menu,
 	Modal,
 	ScrollArea,
@@ -50,7 +51,8 @@ import {
 	type RecentProject,
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
-import { CodeEditor, type CodeEditorHandle } from "@/CodeEditor";
+import type { UserDeclaration } from "@/blocks/definitions";
+import { CodeView, type CodeTab } from "@/CodeView";
 import { Editor, type EditorHandle } from "@/Editor";
 import { exampleProject, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
@@ -64,16 +66,26 @@ import { SerialMonitor } from "@/SerialMonitor";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
-import { isScript, isStarterCode, programLanguages, programNames, starterCode, type CodeProblem } from "@/program";
+import {
+	isScript,
+	isStarterCode,
+	isStarterUserCode,
+	programNames,
+	starterCode,
+	starterUserCode,
+	type CodeProblem,
+} from "@/program";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
 	projectToWorkspace,
 	unknownBlockTypes,
 	withProgram,
+	withUserCode,
 	workspaceToProject,
 	type ProgramLanguage,
 	type Project,
+	type UserCode,
 	type WorkspaceState,
 } from "@/project/convert";
 
@@ -115,8 +127,22 @@ export function App() {
 	const initialState = useRef<WorkspaceState>(projectToWorkspace(starterProject("")));
 	const initialValues = useRef<Record<string, number>>({});
 
-	const codeEditor = useRef<CodeEditorHandle>(null);
-	/** Language of the program: blocks, or code typed in the code editor. */
+	/** Blocks view, or code view (the code of the blocks and "My code"). */
+	const [view, setView] = useState<"blocks" | "code">("blocks");
+	const [codeTab, setCodeTab] = useState<CodeTab>("blocks");
+	/** Shown over the window while a view is prepared ("Converting the blocks to code…"). */
+	const [loading, setLoading] = useState<string | null>(null);
+	/** The code of the blocks, for the code view. */
+	const [blocksCode, setBlocksCode] = useState("");
+	/** "My code": a state for its language, a ref for its text (the editor reports every key). */
+	const [userCode, setUserCode] = useState<UserCode | null>(null);
+	const userCodeRef = useRef<UserCode | null>(null);
+	/** Its functions and variables, as blocks of the "My code" category. */
+	const [declarations, setDeclarations] = useState<UserDeclaration[]>([]);
+	/** Mistakes of the last Check, Upload or Live: in "My code", and in an expert program. */
+	const [userProblems, setUserProblems] = useState<CodeProblem[]>([]);
+	const [programProblems, setProgramProblems] = useState<CodeProblem[]>([]);
+	/** Language of the program: blocks, or code typed in the code editor (expert mode). */
 	const [program, setProgram] = useState<ProgramLanguage>("blocks");
 	/** The code of a text program: a ref, not a state, as the code editor reports every key. */
 	const codeRef = useRef("");
@@ -138,7 +164,6 @@ export function App() {
 	const [bluetoothShown, setBluetoothShown] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<Status | null>(null);
-	const [generated, setGenerated] = useState<string | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
@@ -185,7 +210,7 @@ export function App() {
 	);
 
 	const currentProject = useCallback(
-		(): Project => withProgram(currentBlocks(), program, codeRef.current),
+		(): Project => withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current),
 		[currentBlocks, program]
 	);
 
@@ -195,6 +220,20 @@ export function App() {
 		setProgram(language);
 		codeRef.current = language === "blocks" ? "" : (project.code ?? "");
 		codeEdited.current = language !== "blocks";
+		userCodeRef.current = project.userCode ? { ...project.userCode } : null;
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		setProgramProblems([]);
+		setView(language === "blocks" ? "blocks" : "code");
+		setCodeTab("blocks");
+		setDeclarations([]);
+		const found = project.userCode;
+		if (found && hasHost()) {
+			bridge
+				.codeDeclarations(found.language, found.code)
+				.then(setDeclarations)
+				.catch(() => setDeclarations([]));
+		}
 	}, []);
 
 	const fail = useCallback(
@@ -484,12 +523,69 @@ export function App() {
 		if (!dirty) forgetAutosave();
 	};
 
-	const showCode = async () => {
+	/** Lets the overlay be painted before a long synchronous step (Blockly building the blocks). */
+	const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+	/** Code view: the code of the blocks is made again, the blocks are kept aside. */
+	const showCodeView = async (tab?: CodeTab) => {
+		if (tab) setCodeTab(tab);
+		if (view === "code") return;
+		setLoading(t("view.loading_code"));
 		try {
-			setGenerated(await bridge.generate(currentBlocks()));
-		} catch (error) {
-			fail(error);
+			await nextFrame();
+			initialState.current = editor.current?.save() ?? initialState.current;
+			let made = "";
+			if (hasHost()) {
+				try {
+					made = await bridge.generate(currentBlocks());
+				} catch (error) {
+					fail(error);
+				}
+			}
+			setBlocksCode(made);
+			setView("code");
+		} finally {
+			setLoading(null);
 		}
+	};
+
+	/** Blocks view: "My code" is read again for its palette category, then the blocks are built. */
+	const showBlocksView = async () => {
+		if (view === "blocks" || program !== "blocks") return;
+		setLoading(t("view.loading_blocks"));
+		try {
+			const mine = userCodeRef.current;
+			if (mine && hasHost()) {
+				setDeclarations(await bridge.codeDeclarations(mine.language, mine.code).catch(() => []));
+			} else {
+				setDeclarations([]);
+			}
+			await nextFrame();
+			setView("blocks");
+			await nextFrame(); // the blocks are built while the overlay is shown
+		} finally {
+			setLoading(null);
+		}
+	};
+
+	/** Creates, switches or deletes "My code"; typed code is only lost after a confirmation. */
+	const changeUserLanguage = (next: Exclude<ProgramLanguage, "blocks"> | null) => {
+		const current = userCodeRef.current;
+		if (current && next === current.language) return;
+		const typed = current !== null && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		if (next === null) {
+			if (!window.confirm(t("code.confirm_remove"))) return;
+		} else if (
+			current &&
+			typed &&
+			!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))
+		) {
+			return;
+		}
+		userCodeRef.current = next === null ? null : { language: next, code: starterUserCode(next, language) };
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		markDirty();
 	};
 
 	/**
@@ -498,6 +594,7 @@ export function App() {
 	 */
 	const switchProgram = async (next: ProgramLanguage) => {
 		if (next === program || live) return;
+		setProgramProblems([]);
 		const typed = codeEdited.current && !isStarterCode(codeRef.current);
 		const blocksName = t("program.blocks");
 		if (next === "blocks") {
@@ -515,6 +612,7 @@ export function App() {
 		)
 			return;
 		if (program === "blocks") initialState.current = editor.current?.save() ?? initialState.current;
+		setView("code");
 		let start = starterCode(next, language);
 		let fromBlocks = false;
 		// C++: the blocks already are a program; their code is the best starting point.
@@ -539,11 +637,12 @@ export function App() {
 		});
 	};
 
-	/** Marks the faulty lines of a text program (after Check, Upload or Live). */
+	/** Marks the faulty lines (after Check, Upload or Live): in "My code" or in the expert program. */
 	const showProblems = (problems: CodeProblem[] | undefined) => {
-		if (program === "blocks") return;
-		if (problems && problems.length > 0) codeEditor.current?.showProblems(problems);
-		else codeEditor.current?.clearProblems();
+		const all = problems ?? [];
+		setUserProblems(all.filter((problem) => problem.file === "user"));
+		setProgramProblems(all.filter((problem) => problem.file !== "user"));
+		if (all.some((problem) => problem.file === "user") && view === "code") setCodeTab("mine");
 	};
 
 	const run = async (kind: "build" | "upload") => {
@@ -568,7 +667,7 @@ export function App() {
 				details: outcome.details,
 			});
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
-			else showProblems(outcome.problems);
+			showProblems(outcome.problems);
 		} catch (error) {
 			fail(error);
 		} finally {
@@ -591,7 +690,7 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.no_port") });
 			return;
 		}
-		codeEditor.current?.clearProblems();
+		showProblems([]);
 		try {
 			const started = await bridge.liveStart(currentProject(), port, language);
 			if (!started.ok) {
@@ -629,7 +728,7 @@ export function App() {
 					if (snapshot.state === "failed") {
 						setStatus({ kind: "error", message: snapshot.message ?? "", details: snapshot.details });
 						editor.current?.highlight(snapshot.problems ?? []);
-						if (snapshot.line) codeEditor.current?.showProblems([{ line: snapshot.line, message: snapshot.message ?? "" }]);
+						if (snapshot.line) showProblems([{ line: snapshot.line, message: snapshot.message ?? "", file: snapshot.file }]);
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
@@ -641,6 +740,9 @@ export function App() {
 		}, 200);
 		return () => clearInterval(timer);
 	}, [live, fail]);
+
+	/** The language the help window explains: the expert program, or "My code". */
+	const helpLanguage: ProgramLanguage = program !== "blocks" ? program : (userCode?.language ?? "cpp");
 
 	const liveRows = [
 		...Object.entries(liveSnapshot?.variables ?? {}).map(([id, value]) => ({
@@ -714,21 +816,14 @@ export function App() {
 							</ActionIcon>
 						</Tooltip>
 					</ActionIcon.Group>
-					<Select
-						aria-label={t("program.label")}
-						data={programLanguages.map((candidate) => ({
-							value: candidate,
-							label: programName(candidate, t("program.blocks")),
-						}))}
-						value={program}
-						onChange={(value) => {
-							if (value) void switchProgram(value as ProgramLanguage);
-						}}
-						allowDeselect={false}
-						disabled={live}
-						miw={110}
-						maw={140}
-						style={{ flex: 1 }}
+					<SegmentedControl
+						aria-label={t("view.label")}
+						data={[
+							{ value: "blocks", label: t("view.blocks"), disabled: program !== "blocks" || live },
+							{ value: "code", label: t("view.code"), disabled: live },
+						]}
+						value={view}
+						onChange={(value) => void (value === "code" ? showCodeView() : showBlocksView())}
 					/>
 					<Select
 						aria-label={t("board.label")}
@@ -798,7 +893,7 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						{program === "blocks" ? (
+						{view === "blocks" ? (
 							<>
 								<Tooltip label={t("toolbar.wiring")}>
 									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
@@ -806,7 +901,7 @@ export function App() {
 									</ActionIcon>
 								</Tooltip>
 								<Tooltip label={t("toolbar.code")}>
-									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
+									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCodeView("blocks")}>
 										<IconCode size={18} />
 									</ActionIcon>
 								</Tooltip>
@@ -853,19 +948,45 @@ export function App() {
 			</AppShell.Header>
 
 			<AppShell.Main style={{ position: "relative", height: "100dvh" }}>
+				<LoadingOverlay
+					visible={loading !== null}
+					zIndex={300}
+					overlayProps={{ blur: 1 }}
+					loaderProps={{
+						children: (
+							<Stack align="center" gap="sm">
+								<Loader />
+								<Text fw={600}>{loading}</Text>
+							</Stack>
+						),
+					}}
+				/>
 				<div style={{ position: "absolute", inset: "64px 0 0 0" }}>
-					{program !== "blocks" ? (
-						<CodeEditor
-							key={`${editorKey}-${program}`}
-							ref={codeEditor}
-							program={program}
+					{view === "code" ? (
+						<CodeView
+							t={t}
 							language={language}
-							initialCode={codeRef.current}
-							onChange={(typed) => {
+							editorKey={editorKey}
+							tab={codeTab}
+							onTab={setCodeTab}
+							program={program}
+							onProgram={(next) => void switchProgram(next)}
+							programCode={codeRef.current}
+							onProgramCode={(typed) => {
 								codeRef.current = typed;
 								codeEdited.current = true;
 								markDirty();
 							}}
+							programProblems={programProblems}
+							generated={blocksCode}
+							userCode={userCode}
+							onUserCode={(typed) => {
+								if (userCodeRef.current) userCodeRef.current = { ...userCodeRef.current, code: typed };
+								markDirty();
+							}}
+							onUserLanguage={changeUserLanguage}
+							userProblems={userProblems}
+							disabled={live}
 						/>
 					) : (
 						<Editor
@@ -877,6 +998,8 @@ export function App() {
 							library={library}
 							onSaveGroup={(blocks, groupName) => void saveGroup(blocks, groupName)}
 							onManageLibrary={() => setLibraryShown(true)}
+							userDeclarations={declarations}
+							onOpenCode={() => void showCodeView("mine")}
 							onLoadError={(lost) =>
 								setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
 							}
@@ -932,7 +1055,7 @@ export function App() {
 				<div
 					style={{
 						position: "fixed",
-						left: program === "blocks" ? 330 : 64,
+						left: view === "blocks" ? 330 : 64,
 						right: 110,
 						bottom: 16,
 						zIndex: 150,
@@ -1036,21 +1159,13 @@ export function App() {
 				onClose={() => setWiringShown(false)}
 			/>
 
-			<Modal opened={generated !== null} onClose={() => setGenerated(null)} title={t("code.title")} size="xl">
-				<Text size="sm" c="dimmed" mb="sm">
-					{t("code.readonly")}
-				</Text>
-				<ScrollArea.Autosize mah="70vh">
-					<Code block>{generated}</Code>
-				</ScrollArea.Autosize>
-			</Modal>
 			<Modal
 				opened={helpShown}
 				onClose={() => setHelpShown(false)}
-				title={`${t("program.help")} — ${programName(program, t("program.blocks"))}`}
+				title={`${t("program.help")} — ${programName(helpLanguage, t("program.blocks"))}`}
 				size="lg"
 			>
-				{program === "cpp" ? (
+				{helpLanguage === "cpp" ? (
 					<Text size="sm">{t("program.help_cpp")}</Text>
 				) : (
 					<Stack gap="sm">
