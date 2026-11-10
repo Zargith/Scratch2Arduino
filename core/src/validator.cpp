@@ -242,6 +242,9 @@ private:
             issues_.push_back(std::move(issue));
             return;
         }
+        if (board_ != nullptr && !board_->bluetooth && block.type.rfind("phone_", 0) == 0) {
+            add(Rule::NoBluetooth, Severity::Error, block, {{"board", board_->name}});
+        }
         for (const BlockArg& arg : definition->args) {
             switch (arg.kind) {
             case ArgKind::Number: {
@@ -366,6 +369,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.function_defined_twice";
     case Rule::RecursiveFunction:
         return "validation.recursive_function";
+    case Rule::NoBluetooth:
+        return "validation.no_bluetooth";
     }
     return "validation.unknown_block";
 }

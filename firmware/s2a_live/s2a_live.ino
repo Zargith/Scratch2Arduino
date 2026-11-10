@@ -32,11 +32,15 @@
 //                   an empty name forgets it                             -> "ok"
 //   I               network state -> "i <access point> <its address> <address on the joined
 //                   network, or ->"
+//   B               last message of the phone connected over Bluetooth, once -> "b <text>", or
+//                   "b" when it sent nothing new
+//   Y <text>        sends a line to that phone                           -> "ok"
 // The ESP32 also creates its own Wi-Fi network "S2A-xxxx" (password "scratch2arduino") and
 // accepts the same commands on TCP port 3333 (one computer at a time; it answers "S2A <version>"
 // when it connects). It is also a Bluetooth serial device (SPP) named "S2A-xxxx", taking the same
-// commands. When the computer of a Wi-Fi or Bluetooth connection goes away, every output is
-// switched off.
+// commands. A Bluetooth device that starts with "?" is a computer; any other one is a phone (a
+// Bluetooth terminal app): its lines are kept for the "B" command. When the computer of a Wi-Fi
+// or Bluetooth connection goes away, every output is switched off.
 //
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
 // "! <command>" so that the computer never waits forever. Each answer goes back to where the
@@ -61,7 +65,7 @@
 #endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 6";
+const char* const kHello = "S2A 7";
 #if defined(ARDUINO_ARCH_ESP32)
 const int kMaxLine = 120; // room for a Wi-Fi name and password
 #else
@@ -91,6 +95,8 @@ char accessPoint[16] = "S2A"; // also the Bluetooth name
 BluetoothSerial bluetoothPort;
 Input bluetooth = {&bluetoothPort, {0}, 0};
 bool bluetoothConnected = false;
+bool bluetoothComputer = false; // false: a phone (or nothing yet)
+char phoneMessage[kMaxLine + 1] = "";
 #endif
 bool output[kMaxPins];
 Servo servos[kMaxServos];
@@ -449,13 +455,17 @@ void startBluetooth() {
   bluetoothPort.begin(accessPoint);
 }
 
+// No greeting: a phone would show it. A computer asks "?" first.
 void serveBluetooth() {
   const bool connected = bluetoothPort.hasClient();
   if (connected && !bluetoothConnected) {
     bluetooth.length = 0;
-    bluetoothPort.println(kHello);
+    bluetoothComputer = false;
   } else if (!connected && bluetoothConnected) {
-    resetAll(); // the computer went away: nothing keeps running on its own
+    if (bluetoothComputer) {
+      resetAll(); // the computer went away: nothing keeps running on its own
+    }
+    bluetoothComputer = false;
   }
   bluetoothConnected = connected;
 }
@@ -509,6 +519,21 @@ void execute(const char* command) {
     return;
   case 'I':
     networkState();
+    return;
+  case 'B':
+    out->print('b');
+    if (phoneMessage[0] != '\0') {
+      out->print(' ');
+      out->print(phoneMessage);
+      phoneMessage[0] = '\0';
+    }
+    out->println();
+    return;
+  case 'Y':
+    if (bluetoothConnected && !bluetoothComputer) {
+      bluetoothPort.println(textAfter(command, position));
+    }
+    reply("ok");
     return;
 #endif
   case 'X':
@@ -694,6 +719,19 @@ void readFrom(Input& input) {
     }
     if (c == '\n') {
       input.text[input.length] = '\0';
+#if defined(ARDUINO_ARCH_ESP32)
+      if (&input == &bluetooth && !bluetoothComputer) {
+        if (strcmp(input.text, "?") == 0) {
+          bluetoothComputer = true; // the Live mode of a computer
+        } else {
+          if (input.length > 0) {
+            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command
+          }
+          input.length = 0;
+          continue;
+        }
+      }
+#endif
       if (input.length > 0) {
         out = input.stream;
         execute(input.text);

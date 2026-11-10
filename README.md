@@ -240,12 +240,17 @@ the wiring:
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
 | Screens | write a text or a value on a line of a 16×2 LCD — with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4–D7 on the chosen pins, contrast set with a potentiometer on V0) — or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
+| Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone — over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"…) connected to the board "S2A-xxxx" |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
 `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
-button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
+button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer). For the ESP32: `esp32-dimmer`,
+`wireless-station` (Live mode over Wi-Fi or Bluetooth) and `phone-lamp` (the phone drives the lamp over
+Bluetooth while the computer follows in Live mode over Wi-Fi). The Phone blocks also work in Live mode over
+USB or Wi-Fi; over Bluetooth the board's only Bluetooth connection is taken by the computer, so Live refuses
+them.
 
 ### Functions
 
