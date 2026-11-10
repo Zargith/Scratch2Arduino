@@ -105,6 +105,15 @@
           "label": { "fr": "Par Bluetooth", "en": "Over Bluetooth" }
         }
       ]
+    },
+    {
+      "id": "phone-lamp",
+      "title": { "fr": "Lampe pilotée par téléphone", "en": "Phone-controlled lamp" },
+      "description": {
+        "fr": "Wi-Fi et Bluetooth ensemble : le téléphone allume ou éteint la lampe et demande la température par Bluetooth, pendant que l'ordinateur suit tout en mode Live par Wi-Fi. Téléversé, le programme marche aussi avec le téléphone seul.",
+        "en": "Wi-Fi and Bluetooth together: the phone switches the lamp on or off and asks for the temperature over Bluetooth, while the computer follows everything in Live mode over Wi-Fi. Uploaded, the program also works with the phone alone."
+      },
+      "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, téléphone avec une appli de terminal Bluetooth", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, phone with a Bluetooth terminal app" }
     }
   ]
 }

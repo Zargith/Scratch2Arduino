@@ -51,6 +51,7 @@ struct Board {
     std::uint32_t flashBytes = 0;
     std::uint32_t ramBytes = 0;
     int builtinLed = -1;
+    bool bluetooth = false; ///< Classic Bluetooth (ESP32): the phone blocks work.
     std::vector<Pin> pins; ///< Sorted by number.
     std::vector<BusPin> i2c;
     std::vector<BusPin> spi;

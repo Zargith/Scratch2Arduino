@@ -287,6 +287,14 @@ private:
         if (type == "sound_note") {
             return numberLiteral(field(block, "NOTE"));
         }
+        if (type == "phone_received") {
+            phone();
+            return "s2a_phone_received(" + phoneText(block, "MESSAGE") + ")";
+        }
+        if (type == "phone_number") {
+            phone();
+            return "s2a_phone_number()";
+        }
         if (type == "sensors_temperature" || type == "sensors_humidity") {
             const std::string label = pinLabel(block, "PIN");
             const std::string sensor = "s2a_dht_" + label;
@@ -331,6 +339,24 @@ private:
         if (!pin.empty()) {
             ownedPins_.insert(pin);
         }
+    }
+
+    /// The Bluetooth serial link to the phone (ESP32), set up in setup().
+    void phone() {
+        use("BluetoothSerial.h", "BluetoothSerial s2a_phone;", "s2a_phone_begin();");
+        includes_.insert("esp_mac.h"); // esp_read_mac, for the name of the board
+        helpers_.insert("phone");
+        helpers_.insert("text");
+    }
+
+    /// A text slot as a String expression, accents kept (the phone shows them).
+    std::string phoneText(const Block& block, const std::string& name) {
+        const auto input = block.inputs.find(name);
+        if (input != block.inputs.end() && input->second.block) {
+            return "s2a_text(" + expression(*input->second.block) + ")";
+        }
+        const std::string text = input != block.inputs.end() ? input->second.value : defaultValue(block, name);
+        return "String(" + stringLiteral(text) + ")";
     }
 
     /// A text slot as a String expression: typed text (accents removed, for screens) or the
@@ -514,6 +540,9 @@ private:
                 body.add(depth, text.empty() ? std::string("Serial.println();")
                                              : "Serial.println(F(" + stringLiteral(text) + "));");
             }
+        } else if (type == "phone_send") {
+            phone();
+            body.add(depth, "s2a_phone.println(" + phoneText(block, "VALUE") + ");");
         } else if (type == "pins_analog_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
@@ -751,6 +780,79 @@ private:
                {"String s2a_text(double value) {",
                 "  if (value == floor(value) && fabs(value) < 2000000000.0) {", "    return String((long)value);",
                 "  }", "  return String(value, 2);", "}"});
+        helper(out, "phone",
+               {"// Phone over Bluetooth: named \"S2A-xxxx\" like the Live program, pairing without a code.",
+                "String s2a_phone_line;   // last message, until a block recognises it",
+                "String s2a_phone_buffer; // message being received",
+                "double s2a_phone_value = 0;",
+                "",
+                "void s2a_phone_begin() {",
+                "  uint8_t mac[6];",
+                "  esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);",
+                "  char name[16];",
+                "  snprintf(name, sizeof(name), \"S2A-%02X%02X\", mac[4], mac[5]);",
+                "  s2a_phone.enableSSP(false, false);",
+                "  s2a_phone.begin(name);",
+                "}",
+                "",
+                "// Lower case, accents and spaces around removed: \" Éteins\" is \"eteins\".",
+                "String s2a_simple(const String& text) {",
+                "  static const char* const kPlain = \"aaaaaaaceeeeiiiidnooooo/ouuuuypy\"; // U+00E0 to U+00FF",
+                "  String result;",
+                "  for (unsigned int i = 0; i < text.length(); i++) {",
+                "    unsigned char c = text[i];",
+                "    if (c == 0xC3 && i + 1 < text.length()) {",
+                "      unsigned char next = text[++i];",
+                "      if (next >= 0x80 && next <= 0x9F) {",
+                "        next += 0x20; // capital letter",
+                "      }",
+                "      result += next >= 0xA0 && next <= 0xBF ? kPlain[next - 0xA0] : '?';",
+                "    } else {",
+                "      result += (char)tolower(c);",
+                "    }",
+                "  }",
+                "  result.trim();",
+                "  return result;",
+                "}",
+                "",
+                "void s2a_phone_poll() {",
+                "  while (s2a_phone.available() > 0) {",
+                "    const char c = s2a_phone.read();",
+                "    if (c == '\\r') {",
+                "      continue;",
+                "    }",
+                "    if (c != '\\n') {",
+                "      if (s2a_phone_buffer.length() < 60) {",
+                "        s2a_phone_buffer += c;",
+                "      }",
+                "      continue;",
+                "    }",
+                "    s2a_phone_buffer.trim();",
+                "    if (s2a_phone_buffer.length() > 0) {",
+                "      s2a_phone_line = s2a_phone_buffer;",
+                "      char* end = nullptr;",
+                "      const double number = strtod(s2a_phone_line.c_str(), &end);",
+                "      if (end != s2a_phone_line.c_str() && *end == '\\0') {",
+                "        s2a_phone_value = number;",
+                "      }",
+                "    }",
+                "    s2a_phone_buffer = \"\";",
+                "  }",
+                "}",
+                "",
+                "bool s2a_phone_received(const String& message) {",
+                "  s2a_phone_poll();",
+                "  if (s2a_phone_line.length() == 0 || s2a_simple(s2a_phone_line) != s2a_simple(message)) {",
+                "    return false;",
+                "  }",
+                "  s2a_phone_line = \"\"; // true only once for each message",
+                "  return true;",
+                "}",
+                "",
+                "double s2a_phone_number() {",
+                "  s2a_phone_poll();",
+                "  return s2a_phone_value;",
+                "}"});
         helper(out, "dht",
                {"// A DHT sensor does not always answer: keep its last good value.",
                 "double s2a_dht_read(DHT& sensor, double* last, bool humidity) {",

@@ -33,6 +33,7 @@ enum class Rule {
     FunctionNotDefined, ///< "call" of a function that has no "define" script.
     FunctionDefinedTwice, ///< Two "define" scripts for the same function.
     RecursiveFunction,  ///< A function that calls itself (directly or through others): it would never end.
+    NoBluetooth,        ///< A phone block on a board without Bluetooth.
 };
 
 struct Issue {

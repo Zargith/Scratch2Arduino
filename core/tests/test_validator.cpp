@@ -55,7 +55,7 @@ TEST(Validator, AcceptsACorrectProgram) {
 }
 
 TEST(Validator, AcceptsTheExampleProjects) {
-    for (const char* name : {"blink", "all-blocks", "esp32-dimmer", "wireless-station-wifi", "wireless-station-bluetooth"}) {
+    for (const char* name : {"blink", "all-blocks", "esp32-dimmer", "wireless-station-wifi", "wireless-station-bluetooth", "phone-lamp"}) {
         std::ifstream file(std::string(S2A_EXAMPLES_DIR) + "/" + name + "/project.json");
         std::stringstream content;
         content << file.rdbuf();
@@ -243,6 +243,23 @@ TEST(Validator, EveryRuleHasMessagesInBothLanguages) {
             EXPECT_NE(s2a::tr(key + "_hint", language), key + "_hint") << key;
         }
     }
+}
+
+} // namespace
+
+namespace {
+
+TEST(Validator, PhoneBlocksNeedBluetooth) {
+    Block send = block("send", "phone_send");
+    send.inputs["VALUE"].value = "Bonjour";
+    Project project = program({hat(), send});
+    const auto issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::NoBluetooth);
+    EXPECT_EQ(issues[0].blockId, "send");
+    EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("no Bluetooth"), std::string::npos);
+    project.boardId = "esp32";
+    EXPECT_TRUE(check(project).empty());
 }
 
 } // namespace

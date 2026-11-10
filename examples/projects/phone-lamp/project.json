@@ -1,0 +1,213 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Lampe pilotée par téléphone",
+  "board": "esp32",
+  "variables": [
+    {
+      "id": "lampe",
+      "name": "lampe",
+      "initialValue": 0
+    },
+    {
+      "id": "temperature",
+      "name": "temperature",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if-on",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-on",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "allume"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "led-on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "25",
+                        "STATE": "HIGH"
+                      }
+                    },
+                    {
+                      "id": "lamp-on",
+                      "type": "variables_set",
+                      "fields": {
+                        "VARIABLE": "lampe"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-on",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "Lampe allumée"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-off",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-off",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "eteins"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "led-off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "25",
+                        "STATE": "LOW"
+                      }
+                    },
+                    {
+                      "id": "lamp-off",
+                      "type": "variables_set",
+                      "fields": {
+                        "VARIABLE": "lampe"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-off",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "Lampe éteinte"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-temperature",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-temperature",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "temperature"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "measure",
+                      "type": "variables_set",
+                      "fields": {
+                        "VARIABLE": "temperature"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "read-temperature",
+                            "type": "sensors_temperature",
+                            "fields": {
+                              "MODEL": "DHT11",
+                              "PIN": "4"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-label",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "Température (°C) :"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-temperature",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "",
+                          "block": {
+                            "id": "get-temperature",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "temperature"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "pause",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
