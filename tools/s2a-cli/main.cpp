@@ -369,6 +369,15 @@ std::optional<fs::path> Cli::sketchFor(const fs::path& path, const s2a::Board*& 
         fail("cli.sketch_missing", {{"sketch", folder.u8string()}});
         return std::nullopt;
     }
+    // "My code" in C++ is a file of the sketch, included by the code of the blocks.
+    const fs::path userFile = folder / std::string(s2a::codegen::kUserCodeFile);
+    if (project->language == s2a::project::ProgramLanguage::Blocks && project->userCode &&
+        project->userCode->language == s2a::project::ProgramLanguage::Cpp) {
+        std::ofstream user(userFile, std::ios::binary | std::ios::trunc);
+        user << project->userCode->code << '\n';
+    } else {
+        fs::remove(userFile, error);
+    }
     return folder;
 }
 

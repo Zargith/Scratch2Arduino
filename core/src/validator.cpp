@@ -1,5 +1,7 @@
 #include "s2a/validator.hpp"
 
+#include "s2a/usercode.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -310,11 +312,31 @@ private:
             }
             case ArgKind::Dropdown:
                 break;
+            case ArgKind::UserCode:
+                checkUserCode(block, arg);
+                break;
             }
         }
     }
 
+    void checkUserCode(const Block& block, const BlockArg& arg) {
+        const auto field = block.fields.find(arg.name);
+        const std::string name = field != block.fields.end() ? field->second : std::string{};
+        const bool function = block.type == usercode::kCallBlock || block.type == usercode::kValueBlock;
+        const auto* found = usercode::find(declarations_, name,
+                                           function ? usercode::Declaration::Kind::Function
+                                                    : usercode::Declaration::Kind::Variable);
+        if (found == nullptr) {
+            add(Rule::UserCodeMissing, Severity::Error, block, {{"name", name}});
+        } else if (block.type == usercode::kValueBlock && !found->returnsValue) {
+            add(Rule::UserCodeNoValue, Severity::Error, block, {{"name", name}});
+        } else if (block.type == usercode::kSetBlock && found->readOnly) {
+            add(Rule::UserCodeReadOnly, Severity::Error, block, {{"name", name}});
+        }
+    }
+
     const project::Project& project_;
+    const std::vector<usercode::Declaration> declarations_ = usercode::declarations(project_);
     const BlockCatalog& catalog_;
     const Board* board_;
     Language language_;
@@ -371,6 +393,12 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.recursive_function";
     case Rule::NoBluetooth:
         return "validation.no_bluetooth";
+    case Rule::UserCodeMissing:
+        return "validation.usercode_missing";
+    case Rule::UserCodeNoValue:
+        return "validation.usercode_no_value";
+    case Rule::UserCodeReadOnly:
+        return "validation.usercode_read_only";
     }
     return "validation.unknown_block";
 }

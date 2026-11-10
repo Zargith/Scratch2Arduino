@@ -4,6 +4,7 @@
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/script.hpp"
+#include "s2a/usercode.hpp"
 #include "s2a/validator.hpp"
 
 #include <algorithm>
@@ -62,15 +63,15 @@ std::vector<std::string> blocksAt(const std::vector<CompilerMessage>& messages,
 }
 
 /// The errors of the compiler in the user's sketch, by line, explained when possible.
-std::vector<CodeProblem> problemsAt(const std::vector<CompilerMessage>& messages, const std::string& inoName,
-                                    Language language) {
+std::vector<CodeProblem> problemsAt(const std::vector<CompilerMessage>& messages, const std::string& fileName,
+                                    const std::string& file, Language language) {
     std::vector<CodeProblem> problems;
     for (const CompilerMessage& message : messages) {
         // Errors inside a library are reported in the status bar only (no line of the user's code).
-        if (fs::u8path(message.file).filename().u8string() != inoName) {
+        if (fs::u8path(message.file).filename().u8string() != fileName) {
             continue;
         }
-        problems.push_back({message.line, message.column, explainCompilerMessage(message, language)});
+        problems.push_back({message.line, message.column, explainCompilerMessage(message, language), file});
     }
     return problems;
 }
@@ -88,7 +89,7 @@ BuildResult checkScript(const project::Project& project, Language language, bool
     }
     if (const auto error = script::check(project.language, project.code, language)) {
         BuildResult result = failure(script::describe(*error, language), error->details);
-        result.problems.push_back({error->line, 0, error->message});
+        result.problems.push_back({error->line, 0, error->message, ""});
         return result;
     }
     BuildResult result;
@@ -109,6 +110,7 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
     std::vector<std::string> warnings;
     std::vector<std::string> warningBlockIds;
     std::string source;
+    std::string userSource; ///< "My code" in C++, compiled with the blocks.
     std::map<std::string, int> blockLines;
     const bool text = project.language != project::ProgramLanguage::Blocks;
     if (project.language == project::ProgramLanguage::Python ||
@@ -127,6 +129,15 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         }
         source = project.code;
     } else {
+        // Python and JavaScript code runs on the computer: blocks using it need the Live mode.
+        if (project.userCode && script::isScript(project.userCode->language) && usercode::usesUserCode(project)) {
+            return failure(tr("text.usercode_live_only", language,
+                              {{"language", project.userCode->language == project::ProgramLanguage::Python ? "Python"
+                                                                                                          : "JavaScript"}}));
+        }
+        if (project.userCode && project.userCode->language == project::ProgramLanguage::Cpp) {
+            userSource = project.userCode->code;
+        }
         // Mistakes in the blocks are reported here, never while the user edits.
         const auto issues = validation::validate(project, BlockCatalog::builtin(), board, language);
         for (const validation::Issue& issue : issues) {
@@ -173,6 +184,19 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
             return failure(tr(errorMessageKey(ErrorCode::WriteFailed), language), sketch.u8string());
         }
     }
+    const fs::path userFile = sketch / std::string(codegen::kUserCodeFile);
+    if (project.userCode && project.userCode->language == project::ProgramLanguage::Cpp && !text) {
+        std::ofstream file(userFile, std::ios::binary | std::ios::trunc);
+        file << userSource;
+        if (!userSource.empty() && userSource.back() != '\n') {
+            file << '\n';
+        }
+        if (!file) {
+            return failure(tr(errorMessageKey(ErrorCode::WriteFailed), language), userFile.u8string());
+        }
+    } else {
+        fs::remove(userFile, error); // left by an earlier build of the same project
+    }
 
     // Board tools, downloaded once per board family.
     const auto installed = cli.isPlatformInstalled(board->platform);
@@ -191,7 +215,7 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
     }
 
     // Component libraries (Servo...), downloaded the first time a block needs them.
-    const auto missing = missingLibraries(cli, requiredLibraries(source));
+    const auto missing = missingLibraries(cli, requiredLibraries(source + "\n" + userSource));
     if (!missing.ok()) {
         return failure(tr(errorMessageKey(missing.error().code), language), missing.error().detail);
     }
@@ -221,9 +245,20 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         }
         if (!text) {
             result.blockIds = blocksAt(diagnosis.messages, blockLines, name + ".ino");
+            result.problems = problemsAt(diagnosis.messages, std::string(codegen::kUserCodeFile), "user", language);
+            if (diagnosis.problem == Problem::LibraryMissing && !userSource.empty()) {
+                result.message = tr("text.cpp_library_missing", language, diagnosis.params);
+            }
+            if (diagnosis.problem == Problem::CompilerError && !result.problems.empty()) {
+                const CodeProblem& first = result.problems.front();
+                result.message = tr("text.usercode_errors", language,
+                                    {{"count", std::to_string(result.problems.size())},
+                                     {"line", std::to_string(first.line)},
+                                     {"message", first.message}});
+            }
             return result;
         }
-        result.problems = problemsAt(diagnosis.messages, name + ".ino", language);
+        result.problems = problemsAt(diagnosis.messages, name + ".ino", "", language);
         if (diagnosis.problem == Problem::CompilerError && !result.problems.empty()) {
             const CodeProblem& first = result.problems.front();
             result.message = tr("text.cpp_errors", language,

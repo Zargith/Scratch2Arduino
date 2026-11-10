@@ -1,5 +1,7 @@
 #include "s2a/codegen.hpp"
 
+#include "s2a/usercode.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -311,8 +313,38 @@ private:
             const std::string name = variable(block);
             return name.empty() ? "0" : name;
         }
+        if (type == usercode::kValueBlock) {
+            const std::string call = userCall(block, true);
+            return call.empty() ? "0" : call;
+        }
+        if (type == usercode::kGetBlock) {
+            const auto* found = userDeclaration(block, usercode::Declaration::Kind::Variable);
+            return found != nullptr ? found->name : "0";
+        }
         const BlockDefinition* definition = catalog_.find(type);
         return definition != nullptr && definition->shape == BlockShape::Boolean ? "false" : "0";
+    }
+
+    // --- "My code" (C++ only: Python and JavaScript run in Live mode) ---------------
+
+    const usercode::Declaration* userDeclaration(const Block& block, usercode::Declaration::Kind kind) const {
+        if (!project_.userCode || project_.userCode->language != project::ProgramLanguage::Cpp) {
+            return nullptr;
+        }
+        return usercode::find(userDeclarations_, field(block, std::string(usercode::kNameField)), kind);
+    }
+
+    /// "blink(3, 200)", or "" when the function is not in the code (reported by the validator).
+    std::string userCall(const Block& block, bool value) {
+        const auto* found = userDeclaration(block, usercode::Declaration::Kind::Function);
+        if (found == nullptr || (value && !found->returnsValue)) {
+            return {};
+        }
+        std::string call = found->name + "(";
+        for (std::size_t i = 0; i < found->parameters.size(); ++i) {
+            call += (i > 0 ? ", " : "") + number(block, "ARG" + std::to_string(i + 1));
+        }
+        return call + ")";
     }
 
     std::string functionName(const std::string& id) const {
@@ -700,6 +732,15 @@ private:
                 body.add(depth, "}");
                 inlining_.erase(id);
             }
+        } else if (type == usercode::kCallBlock) {
+            if (const std::string call = userCall(block, false); !call.empty()) {
+                body.add(depth, call + ";");
+            }
+        } else if (type == usercode::kSetBlock) {
+            const auto* found = userDeclaration(block, usercode::Declaration::Kind::Variable);
+            if (found != nullptr && !found->readOnly) {
+                body.add(depth, found->name + " = " + number(block, "VALUE") + ";");
+            }
         } else if (type == "variables_set" || type == "variables_change") {
             const std::string name = variable(block);
             if (!name.empty()) {
@@ -731,6 +772,11 @@ private:
             out.push_back("#include <" + header + ">");
         }
         if (!includes_.empty()) {
+            out.emplace_back("");
+        }
+        // The user's C++ file, beside the sketch: its functions and variables are known below.
+        if (project_.userCode && project_.userCode->language == project::ProgramLanguage::Cpp) {
+            out.push_back("#include \"" + std::string(kUserCodeFile) + "\" // My code");
             out.emplace_back("");
         }
         std::vector<std::string> globals = globals_;
@@ -1010,6 +1056,7 @@ private:
     }
 
     const Project& project_;
+    std::vector<usercode::Declaration> userDeclarations_ = usercode::declarations(project_);
     const BlockCatalog& catalog_;
     const Board* board_;
     Body setup_;

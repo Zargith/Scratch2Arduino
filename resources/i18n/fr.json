@@ -119,7 +119,13 @@
     "capability_interrupt": "interruption",
     "blocked": "Problèmes à corriger avant d'envoyer ton programme : {count}.",
     "no_bluetooth": "La carte {board} n'a pas de Bluetooth : le bloc « {block} » ne peut pas parler au téléphone.",
-    "no_bluetooth_hint": "Choisis une carte ESP32, ou enlève les blocs Téléphone."
+    "no_bluetooth_hint": "Choisis une carte ESP32, ou enlève les blocs Téléphone.",
+    "usercode_missing": "« {name} » n'est pas (ou plus) dans « Mon code ».",
+    "usercode_missing_hint": "Vérifie son nom dans ton code (les majuscules comptent), ou retire ce bloc.",
+    "usercode_no_value": "La fonction « {name} » ne donne pas de valeur : elle ne peut pas aller dans une case.",
+    "usercode_no_value_hint": "Ajoute un « return » avec une valeur dans ta fonction, ou utilise le bloc qui l'exécute.",
+    "usercode_read_only": "« {name} » est une constante : un bloc ne peut pas la changer.",
+    "usercode_read_only_hint": "Enlève « const » dans ton code si elle doit changer."
   },
   "editor": {
     "new": "Nouveau",
@@ -196,6 +202,9 @@
     "division_by_zero": "Division par zéro : on ne peut pas diviser par 0.",
     "live_cpp": "Un programme C++ est envoyé à la carte avec Téléverser. Le mode Live est pour les blocs, Python et JavaScript.",
     "running": "Ton programme tourne sur l'ordinateur et pilote la carte. Le bouton Stop l'arrête.",
-    "finished": "Le programme est terminé."
+    "finished": "Le programme est terminé.",
+    "usercode_live_only": "Tes blocs utilisent « Mon code » écrit en {language} : il tourne sur l'ordinateur, lance le programme avec le bouton Live (ou écris « Mon code » en C++ pour le téléverser).",
+    "usercode_upload_only": "Tes blocs utilisent « Mon code » écrit en C++ : il est compilé pour la carte, envoie le programme avec Téléverser (ou écris « Mon code » en Python ou JavaScript pour le mode Live).",
+    "usercode_errors": "« Mon code » a {count} erreur(s). Ligne {line} : {message}"
   }
 }

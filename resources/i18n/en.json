@@ -119,7 +119,13 @@
     "capability_interrupt": "interrupt",
     "blocked": "Problems to fix before your program can be sent: {count}.",
     "no_bluetooth": "The {board} board has no Bluetooth: the \"{block}\" block cannot talk to the phone.",
-    "no_bluetooth_hint": "Choose an ESP32 board, or remove the Phone blocks."
+    "no_bluetooth_hint": "Choose an ESP32 board, or remove the Phone blocks.",
+    "usercode_missing": "\"{name}\" is not (or no longer) in \"My code\".",
+    "usercode_missing_hint": "Check its name in your code (capital letters matter), or remove this block.",
+    "usercode_no_value": "The function \"{name}\" gives no value: it cannot go in a slot.",
+    "usercode_no_value_hint": "Add a \"return\" with a value to your function, or use the block that runs it.",
+    "usercode_read_only": "\"{name}\" is a constant: a block cannot change it.",
+    "usercode_read_only_hint": "Remove \"const\" in your code if it must change."
   },
   "editor": {
     "new": "New",
@@ -196,6 +202,9 @@
     "division_by_zero": "Division by zero: nothing can be divided by 0.",
     "live_cpp": "A C++ program is sent to the board with Upload. Live mode is for blocks, Python and JavaScript.",
     "running": "Your program runs on the computer and drives the board. The Stop button stops it.",
-    "finished": "The program has finished."
+    "finished": "The program has finished.",
+    "usercode_live_only": "Your blocks use \"My code\" written in {language}: it runs on the computer, start the program with the Live button (or write \"My code\" in C++ to upload it).",
+    "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
+    "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}"
   }
 }

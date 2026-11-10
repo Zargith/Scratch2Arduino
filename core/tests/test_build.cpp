@@ -274,4 +274,65 @@ TEST_F(Build, ChecksPythonAndJavaScriptWithoutTheBoard) {
     EXPECT_TRUE(fake.commands.empty());
 }
 
+// --- Blocks with "My code" ---------------------------------------------------------------
+
+Project withMyCode(ProgramLanguage language, std::string code) {
+    Project project = blink();
+    Block call;
+    call.id = "call";
+    call.type = "mycode_call";
+    call.fields["NAME"] = "flash";
+    call.inputs["ARG1"].value = "3";
+    project.scripts[0].blocks[1].statements["SUBSTACK"].push_back(call);
+    project.userCode = UserCode{language, std::move(code)};
+    return project;
+}
+
+TEST_F(Build, CompilesMyCodeWithTheBlocks) {
+    fake.replies = {reply(kInstalled), reply(kCompileSuccess)};
+    const std::string code = "void flash(int times) {\n  for (int i = 0; i < times; i++) {}\n}\n";
+    const auto result = s2a::toolchain::buildProject(cli(), withMyCode(ProgramLanguage::Cpp, code), Language::English, options);
+    ASSERT_TRUE(result.ok) << result.message << "\n" << result.details;
+    const fs::path folder = options.workDirectory / "sketches" / "Clignotant_ete";
+    std::ifstream header(folder / "my_code.h");
+    std::stringstream user;
+    user << header.rdbuf();
+    EXPECT_EQ(user.str(), code);
+    std::ifstream ino(folder / "Clignotant_ete.ino");
+    std::stringstream sketch;
+    sketch << ino.rdbuf();
+    EXPECT_NE(sketch.str().find("#include \"my_code.h\""), std::string::npos);
+    EXPECT_NE(sketch.str().find("flash(3);"), std::string::npos) << sketch.str();
+}
+
+TEST_F(Build, PointsErrorsOfMyCodeAtItsLines) {
+    const std::string failure = R"j({"compiler_out": "", "compiler_err": "/w/Clignotant_ete/my_code.h:2:3: error: 'digitalWrit' was not declared in this scope\n",
+      "builder_result": {}, "upload_result": {}, "success": false, "error": "exit status 1"})j";
+    fake.replies = {reply(kInstalled), reply(failure, 1)};
+    const auto result = s2a::toolchain::buildProject(
+        cli(), withMyCode(ProgramLanguage::Cpp, "void flash(int n) {\n  digitalWrit(13, n);\n}\n"), Language::French, options);
+    EXPECT_FALSE(result.ok);
+    ASSERT_EQ(result.problems.size(), 1U);
+    EXPECT_EQ(result.problems[0].file, "user");
+    EXPECT_EQ(result.problems[0].line, 2);
+    EXPECT_NE(result.message.find("« Mon code » a 1 erreur(s). Ligne 2"), std::string::npos) << result.message;
+}
+
+TEST_F(Build, ReportsMissingFunctionsOfMyCode) {
+    const auto result =
+        s2a::toolchain::buildProject(cli(), withMyCode(ProgramLanguage::Cpp, "int other;\n"), Language::English, options);
+    EXPECT_FALSE(result.ok);
+    EXPECT_NE(result.message.find("\"flash\" is not"), std::string::npos) << result.message;
+    EXPECT_EQ(result.blockIds, std::vector<std::string>{"call"});
+    EXPECT_TRUE(fake.commands.empty());
+}
+
+TEST_F(Build, SendsBlocksUsingPythonCodeToLive) {
+    const auto result = s2a::toolchain::buildProject(cli(), withMyCode(ProgramLanguage::Python, "def flash(n):\n    pass\n"),
+                                                     Language::English, options);
+    EXPECT_FALSE(result.ok);
+    EXPECT_NE(result.message.find("Live"), std::string::npos) << result.message;
+    EXPECT_TRUE(fake.commands.empty());
+}
+
 } // namespace

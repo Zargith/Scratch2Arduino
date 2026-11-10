@@ -32,6 +32,7 @@ struct CodeProblem {
     int line = 0;   ///< 1-based; 0 when the place is unknown.
     int column = 0; ///< 1-based; 0 when unknown.
     std::string message; ///< In the user's language when it could be explained.
+    std::string file;    ///< "" for the program itself, "user" for the "My code" file.
 };
 
 struct BuildResult {
