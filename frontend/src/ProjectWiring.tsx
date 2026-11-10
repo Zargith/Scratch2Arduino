@@ -194,7 +194,7 @@ function WiringTable({ state, t, onShowBlocks }: WiringTableProps) {
 											{connection.boardPin}
 										</Text>
 									</Table.Td>
-									<Table.Td>{connection.via || "—"}</Table.Td>
+									<Table.Td c={connection.via ? undefined : "dimmed"}>{connection.via || t("wiring.direct")}</Table.Td>
 								</Table.Tr>
 							))}
 						</Table.Tbody>

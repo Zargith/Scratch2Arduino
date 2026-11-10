@@ -17,6 +17,7 @@ struct Connection {
     std::string componentPin; ///< "+ leg (long)", "Trig"... (in the chosen language)
     std::string boardPin;     ///< Pin label ("13", "A0", "D5") or power: "5V", "3V3", "VIN", "GND".
     std::string via;          ///< Part in between ("220 Ω resistor"), "" for a plain wire.
+    std::string shortPin;     ///< Name written on the drawn part ("S", "+", "DATA").
 };
 
 struct Component {
