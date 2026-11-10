@@ -3,6 +3,7 @@
 
 #include <pocketpy.h>
 
+#include <cmath>
 #include <ctime>
 #include <limits>
 #include <mutex>
@@ -289,22 +290,13 @@ std::optional<ScriptError> checkPython(const std::string& code, Language languag
     return std::nullopt;
 }
 
-std::optional<ScriptError> runPython(const std::string& code, Api& api, Language language) {
-    const std::lock_guard<std::mutex> lock(pythonMutex());
+namespace {
+
+/// A fresh interpreter with the Arduino API, its output going to `state` (pythonMutex() held).
+py_GlobalRef prepare(Running& state, Api& api) {
     initialize();
     py_resetvm();
-    Running state;
-    state.api = &api;
-    state.language = language;
     running = &state;
-    struct Reset {
-        ~Reset() {
-            running = nullptr;
-            stopFlag = nullptr;
-            py_watchdog_end();
-        }
-    } reset;
-
     py_callbacks()->print = printCallback;
     py_callbacks()->getchr = noInput;
     py_GlobalRef main = py_getmodule("__main__");
@@ -315,18 +307,164 @@ std::optional<ScriptError> runPython(const std::string& code, Api& api, Language
                  nullptr)) {
         py_clearexc(nullptr); // no time module: nothing to replace
     }
-
     stopFlag = api.stopFlag();
     py_watchdog_begin(kWatchdogMs);
+    return main;
+}
+
+void release(Running& state, Api& api) {
+    if (!state.pending.empty()) {
+        api.print(state.pending);
+        state.pending.clear();
+    }
+    running = nullptr;
+    stopFlag = nullptr;
+    py_watchdog_end();
+}
+
+/// A Python value as a number for the blocks (True is 1, None or text is 0).
+double toNumber(py_Ref value) {
+    if (py_istype(value, tp_bool)) {
+        return py_tobool(value) ? 1 : 0;
+    }
+    if (py_istype(value, tp_int)) {
+        return static_cast<double>(py_toint(value));
+    }
+    if (py_istype(value, tp_float)) {
+        return py_tofloat(value);
+    }
+    return 0;
+}
+
+/// Whole numbers stay integers: range(n), list indexes and print() need them ("13", not "13.0").
+void newNumber(py_Ref slot, double value) {
+    if (std::abs(value) < 9e15 && value == std::floor(value)) {
+        py_newint(slot, static_cast<py_i64>(value));
+    } else {
+        py_newfloat(slot, value);
+    }
+}
+
+class PythonModule final : public Module {
+public:
+    PythonModule(std::unique_ptr<Api> api, Language language)
+        : Module(std::move(api)), lock_(pythonMutex()), language_(language) {
+        state_.api = api_.get();
+        state_.language = language;
+        main_ = prepare(state_, *api_);
+    }
+    PythonModule(const PythonModule&) = delete;
+    PythonModule& operator=(const PythonModule&) = delete;
+    PythonModule(PythonModule&&) = delete;
+    PythonModule& operator=(PythonModule&&) = delete;
+    ~PythonModule() override { release(state_, *api_); }
+
+    /// Runs the top-level statements of the code.
+    bool start(const std::string& code, std::optional<ScriptError>& error) {
+        if (py_exec(code.c_str(), kFileName, EXEC_MODE, nullptr)) {
+            return true;
+        }
+        if (state_.stopped || api_->stopRequested()) {
+            py_clearexc(nullptr);
+            return false;
+        }
+        error = detail::takeError(language_);
+        return false;
+    }
+
+    double call(const std::string& name, const std::vector<double>& arguments) override {
+        if (failed()) {
+            return 0;
+        }
+        py_ItemRef found = py_getdict(main_, py_name(name.c_str()));
+        if (found == nullptr || !py_callable(found)) {
+            fail({0, tr("validation.usercode_missing", language_, {{"name", name}}), {}});
+            return 0;
+        }
+        py_watchdog_begin(kWatchdogMs);
+        py_Ref function = py_pushtmp();
+        py_assign(function, found);
+        py_Ref first = nullptr;
+        for (const double argument : arguments) {
+            py_Ref slot = py_pushtmp();
+            newNumber(slot, argument);
+            if (first == nullptr) {
+                first = slot;
+            }
+        }
+        const bool ok = py_call(function, static_cast<int>(arguments.size()), first);
+        py_shrink(static_cast<int>(arguments.size()) + 1);
+        if (!ok) {
+            failWithException();
+            return 0;
+        }
+        return toNumber(py_retval());
+    }
+
+    double get(const std::string& name) override {
+        py_ItemRef found = failed() ? nullptr : py_getdict(main_, py_name(name.c_str()));
+        return found != nullptr ? toNumber(found) : 0;
+    }
+
+    void set(const std::string& name, double value) override {
+        if (failed()) {
+            return;
+        }
+        py_Ref slot = py_pushtmp();
+        newNumber(slot, value);
+        py_setdict(main_, py_name(name.c_str()), slot);
+        py_pop();
+    }
+
+private:
+    void failWithException() {
+        if (state_.stopped || api_->stopRequested()) {
+            py_clearexc(nullptr);
+            return;
+        }
+        fail(detail::takeError(language_));
+    }
+
+    std::unique_lock<std::mutex> lock_;
+    Language language_;
+    Running state_;
+    py_GlobalRef main_ = nullptr;
+};
+
+} // namespace
+
+std::unique_ptr<Module> loadPython(const std::string& code, std::unique_ptr<Api> api, Language language,
+                                   std::optional<ScriptError>& error) {
+    auto module = std::make_unique<PythonModule>(std::move(api), language);
+    if (!module->start(code, error)) {
+        return nullptr;
+    }
+    return module;
+}
+
+std::optional<ScriptError> runPython(const std::string& code, Api& api, Language language) {
+    const std::lock_guard<std::mutex> lock(pythonMutex());
+    Running state;
+    state.api = &api;
+    state.language = language;
+    py_GlobalRef main = prepare(state, api);
+    struct Reset {
+        Running& state;
+        Api& api;
+        ~Reset() { release(state, api); }
+    } reset{state, api};
+
     bool ok = py_exec(code.c_str(), kFileName, EXEC_MODE, nullptr);
     // Arduino style: setup() once, then loop() again and again.
     if (ok) {
         py_ItemRef setup = py_getdict(main, py_name("setup"));
-        py_ItemRef loop = py_getdict(main, py_name("loop"));
         if (setup != nullptr && py_callable(setup)) {
-            ok = py_call(setup, 0, nullptr);
+            py_Ref function = py_pushtmp();
+            py_assign(function, setup);
+            ok = py_call(function, 0, nullptr);
+            py_pop();
         }
-        loop = py_getdict(main, py_name("loop")); // setup() may have changed the dictionary
+        py_ItemRef loop = py_getdict(main, py_name("loop"));
         while (ok && loop != nullptr && py_callable(loop) && !api.stopRequested()) {
             py_watchdog_begin(kWatchdogMs);
             py_Ref function = py_pushtmp();
@@ -338,6 +476,7 @@ std::optional<ScriptError> runPython(const std::string& code, Api& api, Language
     }
     if (!state.pending.empty()) {
         api.print(state.pending);
+        state.pending.clear();
     }
     if (ok) {
         return std::nullopt;

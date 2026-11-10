@@ -210,6 +210,43 @@ TEST(PythonScript, TimeSleepWaitsLikeDelay) {
     EXPECT_EQ(waits, std::vector<long long>{500});
 }
 
+TEST_P(Script, LoadsMyCodeForTheBlocks) {
+    const std::string code = python() ? "print('ready')\nspeed = 3\n\ndef flash(times):\n    for _ in range(int(times)):\n"
+                                        "        digitalWrite(13, HIGH)\n\ndef half(x):\n    return x / 2\n"
+                                        "\ndef broken():\n    return missing + 1\n"
+                                      : "print('ready');\nlet speed = 3;\n\nfunction flash(times) {\n"
+                                        "  for (let i = 0; i < times; i++) digitalWrite(13, HIGH);\n}\n"
+                                        "function half(x) {\n  return x / 2;\n}\n\nfunction broken() {\n  return missing + 1;\n}\n";
+    std::optional<s2a::script::ScriptError> error;
+    auto module = s2a::script::Module::load(GetParam(), code, host, Language::English, error);
+    ASSERT_TRUE(module) << error->message << "\n" << error->details;
+    EXPECT_EQ(printed, std::vector<std::string>{"ready"});
+    EXPECT_EQ(module->get("speed"), 3);
+    module->set("speed", 7);
+    EXPECT_EQ(module->get("speed"), 7);
+    EXPECT_EQ(module->call("half", {5}), 2.5);
+    module->call("flash", {2});
+    EXPECT_EQ(pins.log, (std::vector<std::string>{"M13O", "D13=1", "D13=1"}));
+    EXPECT_FALSE(module->failed());
+    EXPECT_EQ(module->call("broken", {}), 0);
+    ASSERT_TRUE(module->failed());
+    const auto failure = module->takeError();
+    ASSERT_TRUE(failure);
+    EXPECT_EQ(failure->line, 12) << failure->details;
+    EXPECT_NE(failure->message.find("missing"), std::string::npos);
+    EXPECT_TRUE(module->failed()); // still failed: the blocks stop calling it
+    EXPECT_FALSE(module->takeError());
+}
+
+TEST_P(Script, ReportsMyCodeThatFailsAtLoad) {
+    std::optional<s2a::script::ScriptError> error;
+    auto module = s2a::script::Module::load(GetParam(), python() ? "x = 1\ny = nothing\n" : "let x = 1;\nlet y = nothing;\n",
+                                            host, Language::English, error);
+    EXPECT_FALSE(module);
+    ASSERT_TRUE(error);
+    EXPECT_EQ(error->line, 2);
+}
+
 TEST_P(Script, RunsAgainAfterAStop) {
     budget = 1000ms;
     EXPECT_FALSE(run(blink(GetParam())));

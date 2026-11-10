@@ -205,6 +205,7 @@
     "finished": "Le programme est terminé.",
     "usercode_live_only": "Tes blocs utilisent « Mon code » écrit en {language} : il tourne sur l'ordinateur, lance le programme avec le bouton Live (ou écris « Mon code » en C++ pour le téléverser).",
     "usercode_upload_only": "Tes blocs utilisent « Mon code » écrit en C++ : il est compilé pour la carte, envoie le programme avec Téléverser (ou écris « Mon code » en Python ou JavaScript pour le mode Live).",
-    "usercode_errors": "« Mon code » a {count} erreur(s). Ligne {line} : {message}"
+    "usercode_errors": "« Mon code » a {count} erreur(s). Ligne {line} : {message}",
+    "in_user_code": "Dans « Mon code » :"
   }
 }

@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 
+#include <cmath>
 #include <memory>
 #include <regex>
 
@@ -240,6 +241,131 @@ struct Engine {
 };
 
 } // namespace
+
+namespace {
+
+/// Sets up the Arduino API, print and console.log on the global object.
+void prepare(JSContext* ctx, Api& api) {
+    JSValue global = JS_GetGlobalObject(ctx);
+    bindApi(ctx, global, api);
+    JSValue arduino = JS_NewObject(ctx);
+    bindApi(ctx, arduino, api);
+    JS_SetPropertyStr(ctx, global, "arduino", arduino);
+    JSValue console = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, guarded<printFn>, "log", 1));
+    JS_SetPropertyStr(ctx, global, "console", console);
+    JS_FreeValue(ctx, global);
+}
+
+class JavaScriptModule final : public Module {
+public:
+    JavaScriptModule(std::unique_ptr<Api> api, Language language) : Module(std::move(api)), language_(language) {
+        state_.api = api_.get();
+        state_.language = language;
+        if (engine_.context != nullptr) {
+            JS_SetContextOpaque(engine_.context, &state_);
+            JS_SetInterruptHandler(engine_.runtime, interrupt, api_.get());
+            prepare(engine_.context, *api_);
+        }
+    }
+
+    bool start(const std::string& code, std::optional<ScriptError>& error) {
+        if (engine_.context == nullptr) {
+            error = ScriptError{0, tr("error.unknown", language_), "QuickJS could not start"};
+            return false;
+        }
+        JSValue result = JS_Eval(engine_.context, code.c_str(), code.size(), kFileName, JS_EVAL_TYPE_GLOBAL);
+        const bool ok = !JS_IsException(result);
+        JS_FreeValue(engine_.context, result);
+        if (!ok) {
+            if (api_->stopRequested()) {
+                JS_FreeValue(engine_.context, JS_GetException(engine_.context));
+            } else {
+                error = detail::takeError(engine_.context, state_, language_);
+            }
+        }
+        return ok;
+    }
+
+    double call(const std::string& name, const std::vector<double>& arguments) override {
+        if (failed()) {
+            return 0;
+        }
+        JSContext* ctx = engine_.context;
+        // A global name, read as an expression: also finds let/const of the script scope.
+        JSValue function = JS_Eval(ctx, name.c_str(), name.size(), "<s2a>", JS_EVAL_TYPE_GLOBAL);
+        if (JS_IsException(function) || !JS_IsFunction(ctx, function)) {
+            JS_FreeValue(ctx, JS_IsException(function) ? JS_GetException(ctx) : function);
+            fail({0, tr("validation.usercode_missing", language_, {{"name", name}}), {}});
+            return 0;
+        }
+        std::vector<JSValue> values;
+        values.reserve(arguments.size());
+        for (const double argument : arguments) {
+            values.push_back(JS_NewFloat64(ctx, argument));
+        }
+        JSValue result = JS_Call(ctx, function, JS_UNDEFINED, static_cast<int>(values.size()), values.data());
+        for (JSValue value : values) {
+            JS_FreeValue(ctx, value);
+        }
+        JS_FreeValue(ctx, function);
+        return number(result);
+    }
+
+    double get(const std::string& name) override {
+        if (failed()) {
+            return 0;
+        }
+        return number(JS_Eval(engine_.context, name.c_str(), name.size(), "<s2a>", JS_EVAL_TYPE_GLOBAL));
+    }
+
+    void set(const std::string& name, double value) override {
+        if (failed()) {
+            return;
+        }
+        JSContext* ctx = engine_.context;
+        JSValue global = JS_GetGlobalObject(ctx);
+        JS_SetPropertyStr(ctx, global, "__s2a_value", JS_NewFloat64(ctx, value));
+        JS_FreeValue(ctx, global);
+        const std::string assignment = name + " = __s2a_value";
+        (void)number(JS_Eval(ctx, assignment.c_str(), assignment.size(), "<s2a>", JS_EVAL_TYPE_GLOBAL));
+    }
+
+private:
+    /// A result as a number for the blocks (true is 1, undefined is 0); records an exception.
+    double number(JSValue value) {
+        JSContext* ctx = engine_.context;
+        if (JS_IsException(value)) {
+            if (api_->stopRequested()) {
+                JS_FreeValue(ctx, JS_GetException(ctx));
+            } else {
+                fail(detail::takeError(ctx, state_, language_));
+            }
+            return 0;
+        }
+        double result = 0;
+        if (JS_IsNumber(value) || JS_IsBool(value)) {
+            (void)JS_ToFloat64(ctx, &result, value);
+        }
+        JS_FreeValue(ctx, value);
+        return std::isfinite(result) ? result : 0;
+    }
+
+    Engine engine_;
+    Language language_;
+    Running state_;
+};
+
+} // namespace
+
+std::unique_ptr<Module> loadJavaScript(const std::string& code, std::unique_ptr<Api> api, Language language,
+                                       std::optional<ScriptError>& error) {
+    auto module = std::make_unique<JavaScriptModule>(std::move(api), language);
+    if (!module->start(code, error)) {
+        return nullptr;
+    }
+    return module;
+}
 
 std::optional<ScriptError> checkJavaScript(const std::string& code, Language language) {
     Engine engine;

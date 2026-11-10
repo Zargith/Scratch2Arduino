@@ -762,6 +762,54 @@ TEST(Session, SendsCppProjectsToUpload) {
     EXPECT_FALSE(opened);
 }
 
+TEST(Session, BlocksCallMyPythonCode) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    s2a::project::Project project = withScript({block("hat", "events_when_program_starts")});
+    Block call = block("call", "mycode_call");
+    call.fields["NAME"] = "light";
+    call.inputs["ARG1"].value = "13";
+    project.scripts[0].blocks.push_back(call);
+    project.userCode = s2a::project::UserCode{s2a::project::ProgramLanguage::Python,
+                                              "def light(pin):\n    digitalWrite(pin, HIGH)\n    print('on', pin)\n"};
+    {
+        Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                        [](std::string&) { return s2a::success(); });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Finished; }))
+            << session.snapshot().message;
+        EXPECT_EQ(session.snapshot().output, std::vector<std::string>{"on 13"});
+    }
+    const auto& received = firmware->received;
+    EXPECT_NE(std::find(received.begin(), received.end(), "D 13 1"), received.end());
+}
+
+TEST(Session, ReportsTheLineOfAnErrorInMyCode) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    s2a::project::Project project = withScript({block("hat", "events_when_program_starts")});
+    Block call = block("call", "mycode_call");
+    call.fields["NAME"] = "oops";
+    project.scripts[0].blocks.push_back(call);
+    project.userCode = s2a::project::UserCode{s2a::project::ProgramLanguage::JavaScript,
+                                              "function oops() {\n  return nothing;\n}\n"};
+    Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                    [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_EQ(session.snapshot().errorLine, 2);
+    EXPECT_EQ(session.snapshot().errorFile, "user");
+    EXPECT_NE(session.snapshot().message.find("My code"), std::string::npos) << session.snapshot().message;
+}
+
+TEST(Session, SendsBlocksUsingCppCodeToUpload) {
+    s2a::project::Project project = withScript({block("hat", "events_when_program_starts")});
+    Block call = block("call", "mycode_call");
+    call.fields["NAME"] = "f";
+    project.scripts[0].blocks.push_back(call);
+    project.userCode = s2a::project::UserCode{s2a::project::ProgramLanguage::Cpp, "void f() {}\n"};
+    Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(std::make_shared<FakeFirmware>()),
+                    [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_NE(session.snapshot().message.find("Upload"), std::string::npos);
+}
+
 TEST(LiveLink, EmbedsTheFirmware) {
     const auto source = s2a::live::firmwareSource();
     EXPECT_NE(source.find(std::string("\"") + std::string(s2a::live::kHello) + "\""), std::string_view::npos);

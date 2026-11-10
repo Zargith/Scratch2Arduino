@@ -1,6 +1,7 @@
 #include "s2a/live.hpp"
 
 #include "s2a/script.hpp"
+#include "s2a/usercode.hpp"
 
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
@@ -377,12 +378,33 @@ std::optional<Error> LiveLink::takeError() {
 
 // --- Interpreter -------------------------------------------------------------------------
 
-Interpreter::Interpreter(project::Project project, const BlockCatalog& catalog, const Board& board, Pins& pins)
-    : project_(std::move(project)), catalog_(catalog), board_(board), pins_(pins) {
+Interpreter::Interpreter(project::Project project, const BlockCatalog& catalog, const Board& board, Pins& pins,
+                         UserCode* userCode)
+    : project_(std::move(project)), catalog_(catalog), board_(board), pins_(pins), userCode_(userCode) {
     for (const project::Variable& variable : project_.variables) {
         variables_[variable.id] = variable.initialValue;
     }
+    readUserDeclarations();
     start();
+}
+
+void Interpreter::readUserDeclarations() {
+    userParameters_.clear();
+    for (const auto& declaration : usercode::declarations(project_)) {
+        if (declaration.kind == usercode::Declaration::Kind::Function) {
+            userParameters_[declaration.name] = declaration.parameters.size();
+        }
+    }
+}
+
+std::vector<double> Interpreter::userArguments(const Block& block) {
+    std::vector<double> arguments;
+    const auto found = userParameters_.find(field(block, std::string(usercode::kNameField)));
+    const std::size_t count = found != userParameters_.end() ? found->second : 0;
+    for (std::size_t i = 0; i < count; ++i) {
+        arguments.push_back(number(block, "ARG" + std::to_string(i + 1)));
+    }
+    return arguments;
 }
 
 void Interpreter::start() {
@@ -632,6 +654,14 @@ double Interpreter::evaluate(const Block& block) {
         readings_[label + " (%)"] = values.second;
         return type == "sensors_humidity" ? values.second : values.first;
     }
+    if (type == usercode::kValueBlock || type == usercode::kGetBlock) {
+        // The validator checked that the name is in the code before Live mode started.
+        if (userCode_ == nullptr || userCode_->failed()) {
+            return 0;
+        }
+        const std::string name = field(block, std::string(usercode::kNameField));
+        return type == usercode::kGetBlock ? userCode_->get(name) : userCode_->call(name, userArguments(block));
+    }
     if (type == "variables_get") {
         const auto found = variables_.find(field(block, "VARIABLE"));
         return found != variables_.end() ? found->second : 0;
@@ -846,6 +876,15 @@ void Interpreter::run(Thread& thread, Clock now) {
                     break;
                 }
             }
+        } else if (type == usercode::kCallBlock || type == usercode::kSetBlock) {
+            if (userCode_ != nullptr && !userCode_->failed()) {
+                const std::string name = field(block, std::string(usercode::kNameField));
+                if (type == usercode::kSetBlock) {
+                    userCode_->set(name, number(block, "VALUE"));
+                } else {
+                    (void)userCode_->call(name, userArguments(block));
+                }
+            }
         } else if (type == "variables_set" || type == "variables_change") {
             const std::string id = field(block, "VARIABLE");
             if (auto found = variables_.find(id); found != variables_.end()) {
@@ -907,6 +946,7 @@ void Interpreter::update(project::Project project) {
     for (const project::Variable& variable : project_.variables) {
         variables_.emplace(variable.id, variable.initialValue); // existing values are kept
     }
+    readUserDeclarations();
     start(); // one fresh thread per hat
     for (Thread& thread : threads_) {
         const auto before = std::find_if(old.begin(), old.end(), [&](const Thread& t) { return t.hat == thread.hat; });
@@ -973,6 +1013,12 @@ void Session::run(project::Project project) {
         return;
     }
     const bool scripted = script::isScript(project.language);
+    // "My code" in C++ is compiled for the board: the Live mode cannot run it.
+    if (!scripted && project.userCode && project.userCode->language == project::ProgramLanguage::Cpp &&
+        usercode::usesUserCode(project)) {
+        set(State::Failed, tr("text.usercode_upload_only", language_));
+        return;
+    }
     // The blocks are checked first, as for an upload (a typed program is checked as it runs).
     const auto issues = scripted ? std::vector<validation::Issue>{} : validation::validate(project, BlockCatalog::builtin(), &board_, language_);
     if (validation::hasErrors(issues)) {
@@ -1052,7 +1098,28 @@ void Session::run(project::Project project) {
         runScript(project, link);
         return;
     }
-    auto interpreter = std::make_unique<Interpreter>(std::move(project), BlockCatalog::builtin(), board_, link);
+    // "My code" in Python or JavaScript: loaded once (its top-level statements run), then the
+    // blocks call its functions.
+    std::optional<Error> linkError;
+    script::Host host = scriptHost(link, linkError);
+    std::unique_ptr<script::Module> module;
+    if (project.userCode && script::isScript(project.userCode->language)) {
+        std::optional<script::ScriptError> error;
+        module = script::Module::load(project.userCode->language, project.userCode->code, host, language_, error);
+        if (!module) {
+            link.reset();
+            if (linkError) {
+                fail(*linkError);
+            } else if (error) {
+                failScript(*error, "user");
+            } else {
+                set(State::Stopped, tr("live.stopped", language_));
+            }
+            return;
+        }
+    }
+    auto interpreter =
+        std::make_unique<Interpreter>(std::move(project), BlockCatalog::builtin(), board_, link, module.get());
     set(State::Running, tr("live.running", language_));
     const auto start = std::chrono::steady_clock::now();
     while (!stopping_) {
@@ -1067,9 +1134,16 @@ void Session::run(project::Project project) {
             }
         }
         interpreter->step(std::chrono::duration_cast<milliseconds>(std::chrono::steady_clock::now() - start));
-        if (const auto error = link.takeError()) {
+        if (const auto error = linkError ? linkError : link.takeError()) {
             fail(*error);
             return;
+        }
+        if (module) {
+            if (const auto error = module->takeError()) {
+                link.reset();
+                failScript(*error, "user");
+                return;
+            }
         }
         {
             const std::lock_guard<std::mutex> lock(mutex_);
@@ -1100,7 +1174,8 @@ void Session::run(project::Project project) {
             }
             {
                 const std::lock_guard<std::mutex> lock(mutex_);
-                interpreter = std::make_unique<Interpreter>(std::move(*pending_), BlockCatalog::builtin(), board_, link);
+                interpreter = std::make_unique<Interpreter>(std::move(*pending_), BlockCatalog::builtin(), board_, link,
+                                                            module.get());
                 pending_.reset();
             }
             set(State::Running, tr("live.running", language_));
@@ -1114,8 +1189,7 @@ void Session::run(project::Project project) {
     }
 }
 
-void Session::runScript(const project::Project& project, LiveLink& link) {
-    std::optional<Error> linkError;
+script::Host Session::scriptHost(LiveLink& link, std::optional<Error>& linkError) {
     script::Host host;
     host.pins = &link;
     host.board = &board_;
@@ -1147,6 +1221,21 @@ void Session::runScript(const project::Project& project, LiveLink& link) {
         } while (std::chrono::steady_clock::now() < end);
         return true;
     };
+    return host;
+}
+
+void Session::failScript(const script::ScriptError& error, const std::string& file) {
+    set(State::Failed, (file.empty() ? std::string{} : tr("text.in_user_code", language_) + " ") +
+                           script::describe(error, language_),
+        error.details);
+    const std::lock_guard<std::mutex> lock(mutex_);
+    snapshot_.errorLine = error.line;
+    snapshot_.errorFile = file;
+}
+
+void Session::runScript(const project::Project& project, LiveLink& link) {
+    std::optional<Error> linkError;
+    script::Host host = scriptHost(link, linkError);
     set(State::Running, tr("text.running", language_));
     const auto error = script::run(project.language, project.code, host, language_);
     if (!linkError) {
@@ -1158,9 +1247,7 @@ void Session::runScript(const project::Project& project, LiveLink& link) {
         return;
     }
     if (error) {
-        set(State::Failed, script::describe(*error, language_), error->details);
-        const std::lock_guard<std::mutex> lock(mutex_);
-        snapshot_.errorLine = error->line;
+        failScript(*error, "");
         return;
     }
     if (stopping_) {

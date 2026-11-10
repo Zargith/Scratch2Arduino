@@ -205,6 +205,7 @@
     "finished": "The program has finished.",
     "usercode_live_only": "Your blocks use \"My code\" written in {language}: it runs on the computer, start the program with the Live button (or write \"My code\" in C++ to upload it).",
     "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
-    "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}"
+    "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}",
+    "in_user_code": "In \"My code\":"
   }
 }

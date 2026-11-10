@@ -7,6 +7,7 @@
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
+#include "s2a/usercode.hpp"
 #include "s2a/version.hpp"
 #include "s2a/wiring.hpp"
 
@@ -115,7 +116,8 @@ toolchain::ArduinoCli arduinoCli(Language language) {
 std::string outcomeJson(const toolchain::BuildResult& result) {
     Json problems = Json::array();
     for (const toolchain::CodeProblem& problem : result.problems) {
-        problems.push_back({{"line", problem.line}, {"column", problem.column}, {"message", problem.message}});
+        problems.push_back(
+            {{"line", problem.line}, {"column", problem.column}, {"message", problem.message}, {"file", problem.file}});
     }
     return Json{{"ok", result.ok},
                 {"problems", std::move(problems)},
@@ -238,6 +240,26 @@ void Bridge::bind() {
             });
         },
         nullptr);
+
+    // Functions and variables of a "My code" file, for its palette category: (language, code).
+    // Quick and never failing: called each time the user goes back to the blocks.
+    window_.bind("s2a_code_declarations", [](const std::string& request) {
+        const Json args = Json::parse(request);
+        const auto language = project::programLanguageFromId(stringArg(args, 0));
+        Json list = Json::array();
+        if (!language) {
+            return list.dump();
+        }
+        for (const auto& declaration : usercode::declarations(*language, stringArg(args, 1))) {
+            list.push_back({{"kind", declaration.kind == usercode::Declaration::Kind::Function ? "function" : "variable"},
+                            {"name", declaration.name},
+                            {"parameters", declaration.parameters},
+                            {"returnsValue", declaration.returnsValue},
+                            {"readOnly", declaration.readOnly},
+                            {"line", declaration.line}});
+        }
+        return list.dump();
+    });
 
     // Wiring of the project (components, connections, warnings), from its blocks.
     window_.bind(
@@ -686,7 +708,8 @@ void Bridge::bind() {
                     {"readings", snapshot.readings},
                     {"output", snapshot.output},
                     {"outputCount", snapshot.outputCount},
-                    {"line", snapshot.errorLine}}
+                    {"line", snapshot.errorLine},
+                    {"file", snapshot.errorFile}}
             .dump();
     });
 

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -71,6 +72,8 @@ struct Host {
 /// "Line 3: ..." (or the message alone when the line is unknown), in `userLanguage`.
 [[nodiscard]] std::string describe(const ScriptError& error, Language userLanguage);
 
+class Module;
+
 namespace detail {
 
 /// A mistake in a call to the Arduino API ("pin 99 does not exist"), turned into a Python or
@@ -126,11 +129,48 @@ private:
     std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 };
 
+std::unique_ptr<Module> loadPython(const std::string& code, std::unique_ptr<Api> api, Language language,
+                                   std::optional<ScriptError>& error);
+std::unique_ptr<Module> loadJavaScript(const std::string& code, std::unique_ptr<Api> api, Language language,
+                                       std::optional<ScriptError>& error);
 std::optional<ScriptError> checkPython(const std::string& code, Language language);
 std::optional<ScriptError> runPython(const std::string& code, Api& api, Language language);
 std::optional<ScriptError> checkJavaScript(const std::string& code, Language language);
 std::optional<ScriptError> runJavaScript(const std::string& code, Api& api, Language language);
 
 } // namespace detail
+
+/// The "My code" file of a block project, loaded once for the Live mode: its top-level
+/// statements run at load, then the blocks call its functions and use its variables. The
+/// module keeps the interpreter (one Python module at a time in the process).
+class Module : public live::UserCode {
+public:
+    /// Loads `code`; null, with `error` set, when its top-level statements fail.
+    [[nodiscard]] static std::unique_ptr<Module> load(project::ProgramLanguage language, const std::string& code,
+                                                      Host& host, Language userLanguage,
+                                                      std::optional<ScriptError>& error);
+
+    [[nodiscard]] bool failed() const override { return error_.has_value() || failedOnce_; }
+    /// The error that made the code fail (line in "My code"), once.
+    [[nodiscard]] std::optional<ScriptError> takeError() {
+        auto error = error_;
+        error_.reset();
+        failedOnce_ = failedOnce_ || error.has_value();
+        return error;
+    }
+
+protected:
+    explicit Module(std::unique_ptr<detail::Api> api) : api_(std::move(api)) {}
+    /// Records the first error (none once Stop was pressed: stopping is not a mistake).
+    void fail(ScriptError error) {
+        if (!error_ && !failedOnce_ && !api_->stopRequested()) {
+            error_ = std::move(error);
+        }
+    }
+
+    std::unique_ptr<detail::Api> api_;
+    std::optional<ScriptError> error_;
+    bool failedOnce_ = false;
+};
 
 } // namespace s2a::script

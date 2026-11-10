@@ -234,3 +234,21 @@ std::string describe(const ScriptError& error, Language userLanguage) {
 }
 
 } // namespace s2a::script
+
+namespace s2a::script {
+
+std::unique_ptr<Module> Module::load(project::ProgramLanguage language, const std::string& code, Host& host,
+                                     Language userLanguage, std::optional<ScriptError>& error) {
+    error.reset();
+    if (host.pins == nullptr || host.board == nullptr || !isScript(language)) {
+        error = ScriptError{0, tr("text.not_a_script", userLanguage), {}};
+        return nullptr;
+    }
+    auto api = std::make_unique<detail::Api>(host, userLanguage);
+    if (language == project::ProgramLanguage::Python) {
+        return detail::loadPython(code, std::move(api), userLanguage, error);
+    }
+    return detail::loadJavaScript(code, std::move(api), userLanguage, error);
+}
+
+} // namespace s2a::script
