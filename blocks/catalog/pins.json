@@ -27,6 +27,7 @@
     {
       "type": "pins_digital_write",
       "shape": "statement",
+      "component": "output",
       "message": { "fr": "mettre la broche %1 à l'état %2", "en": "set pin %1 to %2" },
       "tooltip": { "fr": "Envoie du courant (HAUT) ou non (BAS) sur une broche, par exemple pour allumer une LED.", "en": "Sends current (HIGH) or not (LOW) to a pin, for example to light an LED." },
       "args": [
@@ -45,6 +46,7 @@
     {
       "type": "pins_set_mode",
       "shape": "statement",
+      "component": "input",
       "message": { "fr": "mettre la broche %1 en %2", "en": "set pin %1 as %2" },
       "tooltip": { "fr": "Choisit comment une broche lit le courant. Pour un bouton branché entre la broche et GND, choisis « entrée avec résistance interne » : la broche est à l'état BAS quand le bouton est appuyé.", "en": "Chooses how a pin reads current. For a button wired between the pin and GND, choose \"input with pull-up\": the pin is LOW while the button is pressed." },
       "args": [
@@ -63,6 +65,7 @@
     {
       "type": "pins_digital_read",
       "shape": "boolean",
+      "component": "input",
       "message": { "fr": "la broche %1 est à l'état %2", "en": "pin %1 is %2" },
       "tooltip": { "fr": "Vrai quand la broche est dans l'état choisi : HAUT quand elle reçoit du courant, BAS sinon. Avec « entrée avec résistance interne », un bouton appuyé met la broche à l'état BAS.", "en": "True when the pin is in the chosen state: HIGH when it receives current, LOW otherwise. With \"input with pull-up\", a pressed button makes the pin LOW." },
       "args": [
@@ -81,6 +84,7 @@
     {
       "type": "pins_analog_read",
       "shape": "reporter",
+      "component": "analog_input",
       "message": { "fr": "valeur analogique de la broche %1", "en": "analog value of pin %1" },
       "tooltip": { "fr": "Mesure une tension entre 0 et 1023, par exemple la position d'un potentiomètre.", "en": "Measures a voltage between 0 and 1023, for example a potentiometer position." },
       "args": [{ "name": "PIN", "kind": "pin", "capability": "analog", "default": "A0" }]
@@ -88,6 +92,7 @@
     {
       "type": "pins_analog_write",
       "shape": "statement",
+      "component": "output",
       "message": { "fr": "mettre la sortie PWM de la broche %1 à %2", "en": "set PWM output of pin %1 to %2" },
       "tooltip": { "fr": "Règle la puissance d'une broche PWM (~) de 0 à 255, par exemple pour faire varier une LED.", "en": "Sets the power of a PWM pin (~) from 0 to 255, for example to dim an LED." },
       "args": [

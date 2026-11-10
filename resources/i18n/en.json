@@ -161,5 +161,10 @@
     "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
     "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again.",
     "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi."
+  },
+  "wiring": {
+    "pin_twice": "Pin {pin} is used by both \"{first}\" and \"{second}\": each component needs its own pin.",
+    "i2c_taken": "Pin {pin} carries the I2C of \"{screen}\": \"{other}\" must use another pin.",
+    "power": "The components need about {current} mA, more than the 500 mA of a USB port: power the board with a mains adapter, and the motors or the LED strip with their own supply (GNDs joined)."
   }
 }

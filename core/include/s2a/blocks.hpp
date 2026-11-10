@@ -62,6 +62,7 @@ struct BlockDefinition {
     std::string category;
     BlockShape shape = BlockShape::Statement;
     bool terminal = false; ///< Nothing attaches below (forever).
+    std::string component; ///< Part wired to the board (resources/components.json), "" for none.
     LocalizedText message; ///< With %1..%n placeholders, one per argument.
     LocalizedText tooltip;
     std::vector<BlockArg> args;

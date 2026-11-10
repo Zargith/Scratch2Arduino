@@ -7,6 +7,7 @@
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
 #include "s2a/version.hpp"
+#include "s2a/wiring.hpp"
 
 #include "bridge.hpp"
 
@@ -202,6 +203,38 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
                 return Json(codegen::generate(project).source).dump();
+            });
+        },
+        nullptr);
+
+    // Wiring of the project (components, connections, warnings), from its blocks.
+    window_.bind(
+        "s2a_wiring",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 1, language_);
+                const project::Project project = projectArg(args, 0, language);
+                const wiring::Plan plan = wiring::plan(project, language);
+                Json components = Json::array();
+                for (const auto& component : plan.components) {
+                    Json connections = Json::array();
+                    for (const auto& connection : component.connections) {
+                        connections.push_back({{"componentPin", connection.componentPin},
+                                               {"boardPin", connection.boardPin},
+                                               {"via", connection.via}});
+                    }
+                    components.push_back({{"kind", component.kind},
+                                          {"name", component.name},
+                                          {"connections", connections},
+                                          {"note", component.note},
+                                          {"blockIds", component.blockIds}});
+                }
+                Json warnings = Json::array();
+                for (const auto& warning : plan.warnings) {
+                    warnings.push_back({{"message", warning.message}, {"blockIds", warning.blockIds}});
+                }
+                return Json{{"components", components}, {"warnings", warnings}}.dump();
             });
         },
         nullptr);

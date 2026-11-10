@@ -161,5 +161,10 @@
     "bluetooth_no_firmware": "La carte ne répond pas par le Bluetooth. Vérifie qu'elle est allumée et près de l'ordinateur. La première fois, branche-la avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Bluetooth.",
     "bluetooth_off": "Impossible de chercher les cartes Bluetooth : le Bluetooth de l'ordinateur est peut-être éteint. Allume-le, puis réessaie.",
     "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi."
+  },
+  "wiring": {
+    "pin_twice": "La broche {pin} est utilisée à la fois par « {first} » et par « {second} » : chaque composant a besoin de sa propre broche.",
+    "i2c_taken": "La broche {pin} sert à l'I2C de « {screen} » : « {other} » doit utiliser une autre broche.",
+    "power": "Les composants demandent environ {current} mA, plus que les 500 mA d'un port USB : alimente la carte avec un bloc secteur, et les moteurs ou le ruban de LED avec leur propre alimentation (GND reliés)."
   }
 }
