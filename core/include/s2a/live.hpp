@@ -27,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 6"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 7"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -66,7 +66,15 @@ public:
     virtual void matrixRow(int din, int clk, int cs, int row, int bits) = 0;
     /// Every output low, no sound, servos released, strip, matrix and screens cleared (Live mode stopped).
     virtual void reset() = 0;
+    /// Last line sent by the phone connected to the board over Bluetooth, once; nullopt when none.
+    [[nodiscard]] virtual std::optional<std::string> phoneMessage() { return std::nullopt; }
+    /// Sends a line to the phone connected to the board over Bluetooth.
+    virtual void phoneSend(const std::string& text) { (void)text; }
 };
+
+/// `text` in lower case, without the accents of Latin letters nor spaces around: " Éteins" is
+/// "eteins" (how the phone blocks compare messages, as the generated code does).
+[[nodiscard]] std::string simpleText(std::string_view text);
 
 /// Pins of a board running the S2A live firmware, over a line transport.
 class LiveLink final : public Pins {
@@ -91,6 +99,8 @@ public:
     void pixels(int pin, int count, int index, int red, int green, int blue) override;
     void matrixRow(int din, int clk, int cs, int row, int bits) override;
     void reset() override;
+    [[nodiscard]] std::optional<std::string> phoneMessage() override;
+    void phoneSend(const std::string& text) override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();
@@ -169,6 +179,8 @@ private:
     /// Pin number of a pin menu, without changing its mode (-1 when invalid).
     [[nodiscard]] int pinNumber(const project::Block& block, const std::string& name) const;
     void record(int pin, double value);
+    /// Takes the phone's new message, if any (phone blocks).
+    void pollPhone();
     [[nodiscard]] std::string field(const project::Block& block, const std::string& name) const;
     bool restore(Thread& thread, const std::vector<Frame>& old);
 
@@ -184,6 +196,8 @@ private:
     std::map<int, int> stripLengths_;                     ///< NeoPixel pin -> number of LEDs.
     std::map<std::string, std::array<int, 8>> matrices_;  ///< "din clk cs" -> rows shown.
     std::vector<std::string> output_;
+    std::string phoneLine_;   ///< Last message of the phone, until a block recognises it.
+    double phoneNumber_ = 0;  ///< Last number sent by the phone.
     std::mt19937 random_{std::random_device{}()};
 };
 

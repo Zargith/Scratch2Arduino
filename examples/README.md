@@ -25,6 +25,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
 | [Variateur ESP32](#variateur-esp32--esp32-dimmer) (ESP32) | potentiomètre, LED, 220 Ω |
 | [Station météo sans fil](#station-météo-sans-fil--wireless-weather-station) (ESP32, Wi-Fi ou Bluetooth) | DHT11, LED, 220 Ω |
+| [Lampe pilotée par téléphone](#lampe-pilotée-par-téléphone--phone-controlled-lamp) (ESP32, Wi-Fi et Bluetooth) | DHT11, LED, 220 Ω, téléphone |
 
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
 `all-blocks` uses every block to test the editor: it is not meant to be wired.
@@ -202,6 +203,26 @@ board changes (the steps are on each diagram).
 | DHT11 : DATA | 4 |
 | LED : patte + par une résistance de 220 Ω / + leg through a 220 Ω resistor | 25 |
 | LED : patte − / − leg | GND |
+
+## Lampe pilotée par téléphone / Phone-controlled lamp
+
+![Lampe pilotée par téléphone](projects/phone-lamp/wiring.png)
+
+Wi-Fi et Bluetooth ensemble. Sur le téléphone, une appli de terminal Bluetooth (par exemple « Serial
+Bluetooth Terminal » sur Android) se connecte à la carte « S2A-… » et envoie `allume`, `eteins` ou
+`temperature` (les majuscules et les accents ne comptent pas) : la carte répond. Pendant ce temps,
+l'ordinateur suit la lampe et la température en mode Live par Wi-Fi, et peut changer les blocs.
+Téléversé, le programme marche aussi avec le téléphone seul. Le mode Live par Bluetooth n'est pas possible
+avec les blocs Téléphone : la carte n'a qu'une connexion Bluetooth, prise par le téléphone.
+Wi-Fi and Bluetooth together. On the phone, a Bluetooth terminal app (for example "Serial Bluetooth
+Terminal" on Android) connects to the "S2A-…" board and sends `allume`, `eteins` or `temperature` (capital
+letters and accents do not matter): the board answers. Meanwhile the computer follows the lamp and the
+temperature in Live mode over Wi-Fi, and can change the blocks. Uploaded, the program also works with the
+phone alone. Live mode over Bluetooth is not possible with the Phone blocks: the board has one Bluetooth
+connection, taken by the phone.
+
+Câblage : le même que la station météo sans fil (DHT11 sur 4, LED sur 25, alimentés en 3V3).
+Wiring: the same as the wireless weather station (DHT11 on 4, LED on 25, powered from 3V3).
 
 ---
 

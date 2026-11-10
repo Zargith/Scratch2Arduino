@@ -28,6 +28,23 @@ constexpr std::string_view kDefine = "functions_define";
 constexpr const char* kFunctionSlot = "#function"; ///< Frame slot of a function body (parent = its "define" hat).
 constexpr std::size_t kMaxFrames = 200;
 
+/// Ids of the phone blocks of `stack` (and of the blocks inside them).
+void phoneBlocks(const Stack& stack, std::vector<std::string>& found) {
+    for (const Block& block : stack) {
+        if (block.type.rfind("phone_", 0) == 0) {
+            found.push_back(block.id);
+        }
+        for (const auto& [name, input] : block.inputs) {
+            if (input.block) {
+                phoneBlocks(Stack{*input.block}, found);
+            }
+        }
+        for (const auto& [name, inner] : block.statements) {
+            phoneBlocks(inner, found);
+        }
+    }
+}
+
 std::optional<double> parseNumber(const std::string& text) {
     std::string trimmed;
     for (char c : text) {
@@ -274,6 +291,51 @@ void LiveLink::reset() {
     (void)request("X");
 }
 
+std::optional<std::string> LiveLink::phoneMessage() {
+    const auto answer = request("B");
+    if (!answer || answer->size() < 3 || answer->rfind("b ", 0) != 0) {
+        return std::nullopt;
+    }
+    return answer->substr(2);
+}
+
+void LiveLink::phoneSend(const std::string& text) {
+    std::string line;
+    for (const char c : text) {
+        line += c == '\n' || c == '\r' || c == '\t' ? ' ' : c;
+    }
+    if (line.size() > 100) { // the firmware reads lines of 120 bytes at most
+        std::size_t end = 100;
+        while (end > 0 && (static_cast<unsigned char>(line[end]) & 0xC0) == 0x80) {
+            --end; // not in the middle of a UTF-8 character
+        }
+        line.resize(end);
+    }
+    (void)request("Y " + line);
+}
+
+std::string simpleText(std::string_view text) {
+    static constexpr std::string_view kPlain = "aaaaaaaceeeeiiiidnooooo/ouuuuypy"; // U+00E0 to U+00FF
+    std::string result;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const auto c = static_cast<unsigned char>(text[i]);
+        if (c == 0xC3 && i + 1 < text.size()) {
+            auto next = static_cast<unsigned char>(text[++i]);
+            if (next >= 0x80 && next <= 0x9F) {
+                next += 0x20; // capital letter
+            }
+            result += next >= 0xA0 && next <= 0xBF ? kPlain[next - 0xA0] : '?';
+        } else {
+            result += static_cast<char>(std::tolower(c));
+        }
+    }
+    const auto first = result.find_first_not_of(" \t");
+    if (first == std::string::npos) {
+        return {};
+    }
+    return result.substr(first, result.find_last_not_of(" \t") - first + 1);
+}
+
 Result<LiveLink::NetworkState> LiveLink::networkState() {
     const auto answer = request("I", milliseconds(1000));
     if (!answer) {
@@ -398,6 +460,15 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
     return found->number;
 }
 
+void Interpreter::pollPhone() {
+    if (auto message = pins_.phoneMessage()) {
+        phoneLine_ = std::move(*message);
+        if (const auto value = parseNumber(phoneLine_)) {
+            phoneNumber_ = *value;
+        }
+    }
+}
+
 std::string Interpreter::text(const Block& block, const std::string& name) {
     const auto input = block.inputs.find(name);
     if (input != block.inputs.end() && input->second.block) {
@@ -497,6 +568,18 @@ double Interpreter::evaluate(const Block& block) {
         const int value = pins_.analogRead(number);
         record(number, value);
         return value;
+    }
+    if (type == "phone_received") {
+        pollPhone();
+        if (phoneLine_.empty() || simpleText(phoneLine_) != simpleText(text(block, "MESSAGE"))) {
+            return 0;
+        }
+        phoneLine_.clear(); // true only once for each message
+        return 1;
+    }
+    if (type == "phone_number") {
+        pollPhone();
+        return phoneNumber_;
     }
     if (type == "sensors_button_pressed") {
         const int number = pin(block, "PIN", PinMode::InputPullup);
@@ -609,6 +692,8 @@ void Interpreter::run(Thread& thread, Clock now) {
             } else {
                 output_.push_back(input != block.inputs.end() ? input->second.value : field(block, "VALUE"));
             }
+        } else if (type == "phone_send") {
+            pins_.phoneSend(text(block, "VALUE"));
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
@@ -897,6 +982,20 @@ void Session::run(project::Project project) {
         const std::lock_guard<std::mutex> lock(mutex_);
         snapshot_.problemBlocks = std::move(blocks);
         return;
+    }
+
+    // Over Bluetooth the computer takes the board's only Bluetooth connection: no room for the phone.
+    if (network::bluetoothAddress(port_) || (network::isWireless(port_) && !network::wifiAddress(port_))) {
+        std::vector<std::string> blocks;
+        for (const auto& script : project.scripts) {
+            phoneBlocks(script.blocks, blocks);
+        }
+        if (!blocks.empty()) {
+            set(State::Failed, tr("live.phone_bluetooth", language_));
+            const std::lock_guard<std::mutex> lock(mutex_);
+            snapshot_.problemBlocks = std::move(blocks);
+            return;
+        }
     }
 
     const auto fail = [this](const Error& error, std::string details = {}) {

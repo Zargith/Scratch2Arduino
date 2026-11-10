@@ -784,6 +784,7 @@ EXAMPLES = {
     "esp32-dimmer": esp32_dimmer,
     "wireless-station-wifi": lambda c: wireless_station(c, "wifi"),
     "wireless-station-bluetooth": lambda c: wireless_station(c, "bluetooth"),
+    "phone-lamp": lambda c: phone_lamp(c),
 }
 
 
@@ -806,7 +807,8 @@ def laptop(c: Canvas, x, y, link: str):
     return cx, y + 168
 
 
-def wireless_station(c: Canvas, link: str):
+def station_circuit(c: Canvas) -> Esp32:
+    """ESP32 with a DHT11 on GPIO 4 and an LED on GPIO 25 (wireless station, phone lamp)."""
     esp = Esp32(c, 60, 400)
     board = Breadboard(c, 720, 470, 24)
     c.wire(path(esp.pin("3V3"), ("y", 372), ("x", 680), ("y", board.rail("top+", 1)[1]), board.rail("top+", 1)), RED)
@@ -825,12 +827,34 @@ def wireless_station(c: Canvas, link: str):
     target = board.hole(5, "h")
     c.wire(path(esp.pin("25"), ("y", 740), ("x", 760), ("y", target[1]), target), GREEN)
     c.circle(esp.x + 306, esp.y + 153, 20, None, outline="#42A5F5", width=4)
-    # The computer, without cable.
-    laptop(c, 1300, 140, link)
+    return esp
+
+
+def waves(c: Canvas, x, y, start, end):
     for i in range(3):
         r = 40 + i * 22
-        box = ((1260 - r) * SCALE, (330 - r) * SCALE, (1260 + r) * SCALE, (330 + r) * SCALE)
-        c.draw.arc(box, 120, 200, fill="#90CAF9", width=4 * SCALE)
+        box = ((x - r) * SCALE, (y - r) * SCALE, (x + r) * SCALE, (y + r) * SCALE)
+        c.draw.arc(box, start, end, fill="#90CAF9", width=4 * SCALE)
+
+
+def phone(c: Canvas, x, y, lines):
+    """Phone showing a Bluetooth terminal app."""
+    c.rect(x + 4, y + 6, 130, 250, "#B0BEC5", radius=18)
+    c.rect(x, y, 130, 250, "#263238", radius=18)
+    c.rect(x + 8, y + 24, 114, 196, "#FAFAFA", radius=4)
+    c.rect(x + 8, y + 24, 114, 24, BLUE, radius=4)
+    c.text(x + 65, y + 36, "S2A-…", 11, "#FFFFFF", bold=True, anchor="mm")
+    for i, (text, mine) in enumerate(lines):
+        c.text(x + (118 if mine else 14), y + 64 + i * 22, text, 10, BLUE if mine else "#37474F",
+               anchor="rm" if mine else "lm")
+    c.circle(x + 65, y + 235, 8, "#455A64")
+
+
+def wireless_station(c: Canvas, link: str):
+    station_circuit(c)
+    # The computer, without cable.
+    laptop(c, 1300, 140, link)
+    waves(c, 1260, 330, 120, 200)
     if link == "wifi":
         steps = [
             ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
@@ -856,6 +880,32 @@ def wireless_station(c: Canvas, link: str):
         c.text(60, 840 + i * 52, english, 13, "#607D8B")
     c.text(60, 90, "Température et humidité en direct, sans câble : alerte rouge au-dessus de 25 °C.", 18, "#37474F")
     c.text(60, 116, "Live temperature and humidity without a cable: red alert above 25 °C.", 15, "#607D8B")
+
+
+def phone_lamp(c: Canvas):
+    station_circuit(c)
+    laptop(c, 1300, 120, "wifi")
+    waves(c, 1260, 310, 120, 200)
+    c.text(1410, 312, "Wi-Fi : mode Live", 13, "#37474F", anchor="mm")
+    phone(c, 1400, 560, [("allume", True), ("Lampe allumée", False), ("temperature", True),
+                         ("Température (°C) :", False), ("21", False), ("eteins", True), ("Lampe éteinte", False)])
+    waves(c, 1375, 690, 140, 220)
+    c.text(1465, 540, "Bluetooth", 13, "#37474F", anchor="mm")
+    steps = [
+        ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+         "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+        ("2. Ordinateur : Wi-Fi « S2A-… » (mot de passe scratch2arduino), port « Wi-Fi — réseau de la carte », mode Live.",
+         "2. Computer: \"S2A-…\" Wi-Fi (password scratch2arduino), \"Wi-Fi — the board's network\" port, Live mode."),
+        ("3. Téléphone : appli « Serial Bluetooth Terminal », connecte « S2A-… », envoie allume, eteins ou temperature.",
+         "3. Phone: \"Serial Bluetooth Terminal\" app, connect \"S2A-…\", send allume, eteins or temperature."),
+    ]
+    for i, (french, english) in enumerate(steps):
+        c.text(60, 820 + i * 52, french, 15, "#37474F")
+        c.text(60, 840 + i * 52, english, 13, "#607D8B")
+    c.text(60, 90, "Le téléphone pilote la lampe par Bluetooth, l'ordinateur suit tout en direct par Wi-Fi.", 18,
+           "#37474F")
+    c.text(60, 116, "The phone drives the lamp over Bluetooth, the computer follows everything live over Wi-Fi.", 15,
+           "#607D8B")
 
 
 BOARD_NAMES = {"uno": "Arduino Uno", "esp32": "ESP32 DevKit"}

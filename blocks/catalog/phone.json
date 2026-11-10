@@ -1,0 +1,40 @@
+{
+  "$schema": "../schema/catalog.schema.json",
+  "category": {
+    "id": "phone",
+    "colour": "#3D8BD9",
+    "name": { "fr": "Téléphone", "en": "Phone" },
+    "order": 38
+  },
+  "blocks": [
+    {
+      "type": "phone_received",
+      "shape": "boolean",
+      "message": { "fr": "le téléphone a envoyé %1", "en": "the phone sent %1" },
+      "tooltip": {
+        "fr": "Vrai une fois quand le téléphone envoie ce message par Bluetooth (sans compter les majuscules ni les accents). Sur le téléphone, une appli de terminal Bluetooth (par exemple « Serial Bluetooth Terminal ») se connecte à la carte « S2A-… ». Cartes avec Bluetooth seulement (ESP32).",
+        "en": "True once when the phone sends this message over Bluetooth (capital letters and accents do not matter). On the phone, a Bluetooth terminal app (for example \"Serial Bluetooth Terminal\") connects to the \"S2A-…\" board. Boards with Bluetooth only (ESP32)."
+      },
+      "args": [{ "name": "MESSAGE", "kind": "text", "default": "allume" }]
+    },
+    {
+      "type": "phone_number",
+      "shape": "reporter",
+      "message": { "fr": "nombre reçu du téléphone", "en": "number received from the phone" },
+      "tooltip": {
+        "fr": "Le dernier nombre envoyé par le téléphone (0 au début). Pratique avec un curseur dans l'appli du téléphone.",
+        "en": "The last number sent by the phone (0 at the start). Handy with a slider in the phone app."
+      }
+    },
+    {
+      "type": "phone_send",
+      "shape": "statement",
+      "message": { "fr": "envoyer %1 au téléphone", "en": "send %1 to the phone" },
+      "tooltip": {
+        "fr": "Écrit un texte ou une valeur dans l'appli du téléphone connecté par Bluetooth.",
+        "en": "Writes a text or a value in the app of the phone connected over Bluetooth."
+      },
+      "args": [{ "name": "VALUE", "kind": "text", "default": "Bonjour !" }]
+    }
+  ]
+}

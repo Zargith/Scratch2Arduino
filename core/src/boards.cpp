@@ -109,6 +109,7 @@ Board parseBoard(const Json& json) {
     board.voltage = json.at("voltage").get<double>();
     board.flashBytes = json.at("flashBytes").get<std::uint32_t>();
     board.ramBytes = json.at("ramBytes").get<std::uint32_t>();
+    board.bluetooth = json.value("bluetooth", false);
 
     // Either a count (pins 0..n-1, as on Arduino boards) or the list of usable GPIO numbers
     // (ESP32: numbers with gaps, the flash and boot pins left out).
