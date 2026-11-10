@@ -1,5 +1,7 @@
 #include "s2a/live.hpp"
 
+#include "s2a/script.hpp"
+
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/network.hpp"
@@ -966,8 +968,13 @@ void Session::set(State state, std::string message, std::string details) {
 }
 
 void Session::run(project::Project project) {
-    // The blocks are checked first, as for an upload.
-    const auto issues = validation::validate(project, BlockCatalog::builtin(), &board_, language_);
+    if (project.language == project::ProgramLanguage::Cpp) {
+        set(State::Failed, tr("text.live_cpp", language_));
+        return;
+    }
+    const bool scripted = script::isScript(project.language);
+    // The blocks are checked first, as for an upload (a typed program is checked as it runs).
+    const auto issues = scripted ? std::vector<validation::Issue>{} : validation::validate(project, BlockCatalog::builtin(), &board_, language_);
     if (validation::hasErrors(issues)) {
         std::vector<std::string> blocks;
         std::string first;
@@ -986,7 +993,7 @@ void Session::run(project::Project project) {
     }
 
     // Over Bluetooth the computer takes the board's only Bluetooth connection: no room for the phone.
-    if (network::bluetoothAddress(port_) || (network::isWireless(port_) && !network::wifiAddress(port_))) {
+    if (!scripted && (network::bluetoothAddress(port_) || (network::isWireless(port_) && !network::wifiAddress(port_)))) {
         std::vector<std::string> blocks;
         for (const auto& script : project.scripts) {
             phoneBlocks(script.blocks, blocks);
@@ -1041,6 +1048,10 @@ void Session::run(project::Project project) {
     }
 
     LiveLink link(*connection);
+    if (scripted) {
+        runScript(project, link);
+        return;
+    }
     auto interpreter = std::make_unique<Interpreter>(std::move(project), BlockCatalog::builtin(), board_, link);
     set(State::Running, tr("live.running", language_));
     const auto start = std::chrono::steady_clock::now();
@@ -1101,6 +1112,63 @@ void Session::run(project::Project project) {
     if (snapshot().state != State::Finished) {
         set(State::Stopped, tr("live.stopped", language_));
     }
+}
+
+void Session::runScript(const project::Project& project, LiveLink& link) {
+    std::optional<Error> linkError;
+    script::Host host;
+    host.pins = &link;
+    host.board = &board_;
+    host.stop = &stopping_;
+    host.print = [this](const std::string& line) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.output.push_back(line);
+        ++snapshot_.outputCount;
+        if (snapshot_.output.size() > kOutputLines) {
+            snapshot_.output.erase(snapshot_.output.begin());
+        }
+    };
+    host.reading = [this](const std::string& label, double value) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.readings[label] = value;
+    };
+    // Waits in short steps: Stop is felt at once, and an unplugged board stops the program.
+    host.sleep = [this, &link, &linkError](milliseconds duration) {
+        const auto end = std::chrono::steady_clock::now() + duration;
+        do {
+            if (auto error = link.takeError()) {
+                linkError = std::move(error);
+                stopping_ = true;
+            }
+            if (stopping_) {
+                return false;
+            }
+            std::this_thread::sleep_for(std::min(milliseconds(10), duration));
+        } while (std::chrono::steady_clock::now() < end);
+        return true;
+    };
+    set(State::Running, tr("text.running", language_));
+    const auto error = script::run(project.language, project.code, host, language_);
+    if (!linkError) {
+        linkError = link.takeError();
+    }
+    link.reset();
+    if (linkError) {
+        set(State::Failed, tr(errorMessageKey(linkError->code), language_), linkError->detail);
+        return;
+    }
+    if (error) {
+        set(State::Failed, script::describe(*error, language_), error->details);
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.errorLine = error->line;
+        return;
+    }
+    if (stopping_) {
+        set(State::Stopped, tr("live.stopped", language_));
+        return;
+    }
+    // Finished: the board stays connected until Stop (as for the blocks).
+    set(State::Finished, tr("text.finished", language_));
 }
 
 Session::Opener Session::serialOpener() {

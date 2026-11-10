@@ -706,6 +706,62 @@ TEST(Session, RefusesBlocksWithMistakes) {
     EXPECT_FALSE(opened);
 }
 
+Session::Opener sharedOpener(std::shared_ptr<FakeFirmware> firmware) {
+    return [firmware](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+        return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(firmware));
+    };
+}
+
+TEST(Session, RunsAPythonProgramUntilStopped) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    s2a::project::Project project = blink();
+    project.language = s2a::project::ProgramLanguage::Python;
+    project.code = "print('hello', analogRead(A0))\nwhile True:\n    digitalWrite(13, HIGH)\n    delay(20)\n";
+    {
+        Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                        [](std::string&) { return s2a::success(); });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().outputCount == 1; }));
+        const auto snapshot = session.snapshot();
+        EXPECT_EQ(snapshot.state, Session::State::Running);
+        EXPECT_EQ(snapshot.output, std::vector<std::string>{"hello 512"});
+        EXPECT_EQ(snapshot.readings.at("A0"), 512);
+        session.stop();
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Stopped; }));
+    }
+    const auto& received = firmware->received;
+    EXPECT_NE(std::find(received.begin(), received.end(), "D 13 1"), received.end());
+    EXPECT_EQ(received.back(), "X");
+}
+
+TEST(Session, ReportsTheLineOfAJavaScriptError) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    s2a::project::Project project = blink();
+    project.language = s2a::project::ProgramLanguage::JavaScript;
+    project.code = "digitalWrite(13, HIGH);\ndigitalWrite(led, LOW);\n";
+    Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                    [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_EQ(session.snapshot().errorLine, 2);
+    EXPECT_NE(session.snapshot().message.find("Line 2"), std::string::npos) << session.snapshot().message;
+}
+
+TEST(Session, SendsCppProjectsToUpload) {
+    s2a::project::Project project = blink();
+    project.language = s2a::project::ProgramLanguage::Cpp;
+    project.code = "void setup() {}\nvoid loop() {}\n";
+    bool opened = false;
+    Session session(
+        project, uno(), "COM1", s2a::Language::English,
+        [&opened](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            opened = true;
+            return s2a::Error{s2a::ErrorCode::PortFailed, "unused"};
+        },
+        [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_NE(session.snapshot().message.find("Upload"), std::string::npos);
+    EXPECT_FALSE(opened);
+}
+
 TEST(LiveLink, EmbedsTheFirmware) {
     const auto source = s2a::live::firmwareSource();
     EXPECT_NE(source.find(std::string("\"") + std::string(s2a::live::kHello) + "\""), std::string_view::npos);

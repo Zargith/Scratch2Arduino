@@ -202,8 +202,9 @@ private:
 };
 
 /// Live mode as the editors use it: connects to the board (uploading the firmware when it does
-/// not answer), then runs the interpreter on a background thread. The editor sends new versions
-/// of the blocks and reads snapshots to show the running blocks and the variables.
+/// not answer), then runs the interpreter (or the Python/JavaScript program of a text project,
+/// see script.hpp) on a background thread. The editor sends new versions of the blocks and
+/// reads snapshots to show the running blocks and the variables.
 class Session {
 public:
     using Opener = std::function<Result<std::unique_ptr<serial::LineTransport>>(const std::string& port)>;
@@ -222,6 +223,7 @@ public:
         std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
         std::vector<std::string> output;        ///< Last lines written to the serial monitor (at most kOutputLines)...
         std::size_t outputCount = 0;            ///< ...out of this many since the start.
+        int errorLine = 0;                      ///< Python/JavaScript: line of the error that stopped the program.
     };
     static constexpr std::size_t kOutputLines = 200;
 
@@ -248,6 +250,8 @@ public:
 
 private:
     void run(project::Project project);
+    /// Python and JavaScript projects: runs the program on this thread until it ends or Stop.
+    void runScript(const project::Project& project, LiveLink& link);
     void set(State state, std::string message, std::string details = {});
 
     const Board& board_;
