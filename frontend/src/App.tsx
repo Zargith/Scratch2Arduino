@@ -51,8 +51,9 @@ import {
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
 import { exampleProject, type Example } from "@/examples";
-import { Gallery, Wiring } from "@/Gallery";
+import { Gallery } from "@/Gallery";
 import { Library } from "@/Library";
+import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
 import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberBoard, rememberedBoards } from "@/bluetooth";
 import type { SavedGroup } from "@/myBlocks";
@@ -681,13 +682,11 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						{example && (
-							<Tooltip label={t("toolbar.wiring")}>
-								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
-									<IconPlugConnected size={18} />
-								</ActionIcon>
-							</Tooltip>
-						)}
+						<Tooltip label={t("toolbar.wiring")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
+								<IconPlugConnected size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("toolbar.code")}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
 								<IconCode size={18} />
@@ -876,7 +875,18 @@ export function App() {
 				onImport={() => void importLibrary()}
 				onClose={() => setLibraryShown(false)}
 			/>
-			<Wiring example={example} opened={wiringShown} language={language} t={t} onClose={() => setWiringShown(false)} />
+			<ProjectWiring
+				opened={wiringShown}
+				example={example}
+				language={language}
+				project={currentProject}
+				t={t}
+				onShowBlocks={(blockIds) => {
+					setWiringShown(false);
+					editor.current?.highlight(blockIds);
+				}}
+				onClose={() => setWiringShown(false)}
+			/>
 
 			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">
 				<Text size="sm" c="dimmed" mb="sm">

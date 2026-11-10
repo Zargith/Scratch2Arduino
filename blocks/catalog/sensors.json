@@ -13,6 +13,7 @@
     {
       "type": "sensors_button_pressed",
       "shape": "boolean",
+      "component": "button",
       "message": {
         "fr": "le bouton de la broche %1 est appuyé",
         "en": "button of pin %1 is pressed"
@@ -33,6 +34,7 @@
     {
       "type": "sensors_potentiometer",
       "shape": "reporter",
+      "component": "potentiometer",
       "message": {
         "fr": "position du potentiomètre de la broche %1 (0 à 100)",
         "en": "position of the potentiometer of pin %1 (0 to 100)"
@@ -53,6 +55,7 @@
     {
       "type": "sensors_light",
       "shape": "reporter",
+      "component": "light_sensor",
       "message": {
         "fr": "lumière mesurée sur la broche %1 (0 à 100)",
         "en": "light measured on pin %1 (0 to 100)"
@@ -73,6 +76,7 @@
     {
       "type": "sensors_distance",
       "shape": "reporter",
+      "component": "ultrasonic",
       "message": {
         "fr": "distance en cm du capteur à ultrasons (Trig %1, Echo %2)",
         "en": "distance in cm from the ultrasonic sensor (Trig %1, Echo %2)"
@@ -99,6 +103,7 @@
     {
       "type": "sensors_temperature",
       "shape": "reporter",
+      "component": "dht",
       "message": {
         "fr": "température en °C du capteur %1 de la broche %2",
         "en": "temperature in °C from the %1 sensor of pin %2"
@@ -140,6 +145,7 @@
     {
       "type": "sensors_humidity",
       "shape": "reporter",
+      "component": "dht",
       "message": {
         "fr": "humidité de l'air (0 à 100) du capteur %1 de la broche %2",
         "en": "air humidity (0 to 100) from the %1 sensor of pin %2"

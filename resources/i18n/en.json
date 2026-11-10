@@ -42,7 +42,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project>                       components to wire, their pins and the warnings\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -63,7 +63,8 @@
     "live_finished": "Every block has run.",
     "bluetooth_searching": "Looking for Bluetooth boards (8 seconds)…",
     "bluetooth_none": "No \"S2A-…\" Bluetooth board found. The board must have received the Live program once over USB.",
-    "compiled_no_size": "Compiled."
+    "compiled_no_size": "Compiled.",
+    "wiring_nothing": "Nothing to wire: the blocks use no component."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
@@ -161,5 +162,10 @@
     "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
     "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again.",
     "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi."
+  },
+  "wiring": {
+    "pin_twice": "Pin {pin} is used by both \"{first}\" and \"{second}\": each component needs its own pin.",
+    "i2c_taken": "Pin {pin} carries the I2C of \"{screen}\": \"{other}\" must use another pin.",
+    "power": "The components need about {current} mA, more than the 500 mA of a USB port: power the board with a mains adapter, and the motors or the LED strip with their own supply (GNDs joined)."
   }
 }

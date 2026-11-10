@@ -20,6 +20,18 @@ export interface WifiSetup {
 	address: string;
 }
 
+/** Wiring of a project (s2a_wiring), already in the user's language. */
+export interface WiringPlan {
+	components: {
+		kind: string;
+		name: string;
+		connections: { componentPin: string; boardPin: string; via: string }[];
+		note: string;
+		blockIds: string[];
+	}[];
+	warnings: { message: string; blockIds: string[] }[];
+}
+
 export interface Port {
 	address: string;
 	label: string;
@@ -101,6 +113,7 @@ export interface AutosavedProject {
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
+	s2a_wiring(project: Project, language: Language): Promise<WiringPlan>;
 	s2a_open(language: Language): Promise<OpenedProject | null>;
 	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
 	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
@@ -152,6 +165,8 @@ export const hasHost = (): boolean => typeof window.s2a_hello === "function";
 export const bridge = {
 	hello: () => host("s2a_hello")(),
 	generate: (project: Project) => host("s2a_generate")(project),
+	/** Components to wire, computed by the core from the blocks (core/include/s2a/wiring.hpp). */
+	wiring: (project: Project, language: Language) => host("s2a_wiring")(project, language),
 	open: (language: Language) => host("s2a_open")(language),
 	/** Project given to the program (dropped on its icon); null when none or an older host. */
 	startupProject: async (language: Language): Promise<OpenedProject | null> =>

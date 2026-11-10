@@ -239,6 +239,13 @@ BlockDefinition parseBlock(const Json& node, const std::string& category, const 
         issues.add(where, "unknown shape (hat, statement, c, reporter, boolean)");
     }
     block.shape = shape.value_or(BlockShape::Statement);
+    if (node.contains("component")) {
+        if (!node.at("component").is_string()) {
+            issues.add(where, "'component' must be a text");
+        } else {
+            block.component = node.at("component").get<std::string>();
+        }
+    }
     if (node.contains("terminal")) {
         if (!node.at("terminal").is_boolean()) {
             issues.add(where, "'terminal' must be true or false");

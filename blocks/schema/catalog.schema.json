@@ -47,6 +47,11 @@
           "description": "hat: starts a script; statement: stacks; c: wraps statements; reporter: returns a number or text; boolean: returns true/false."
         },
         "terminal": { "type": "boolean", "description": "Nothing can be attached below (forever)." },
+        "component": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Part wired to the board, described in resources/components.json (wiring diagram)."
+        },
         "message": {
           "$ref": "#/$defs/localized",
           "description": "Label with %1..%n placeholders, one per argument (any order per language)."
