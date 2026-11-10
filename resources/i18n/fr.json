@@ -42,7 +42,7 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet>                        composants à brancher, leurs broches et les alertes\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
     "unknown_board_short": "carte inconnue",
     "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
@@ -63,7 +63,8 @@
     "live_finished": "Tous les blocs ont été exécutés.",
     "bluetooth_searching": "Recherche des cartes Bluetooth (8 secondes)…",
     "bluetooth_none": "Aucune carte Bluetooth « S2A-… » trouvée. La carte doit avoir reçu le programme Live une fois par USB.",
-    "compiled_no_size": "Compilé."
+    "compiled_no_size": "Compilé.",
+    "wiring_nothing": "Rien à brancher : les blocs n'utilisent aucun composant."
   },
   "build": {
     "unknown_board": "La carte « {board} » n'est pas connue. Choisis une carte dans la liste.",

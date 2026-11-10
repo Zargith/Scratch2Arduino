@@ -5,6 +5,7 @@
 //   s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
 //   s2a-cli generate <project>                     print the Arduino code of a project
+//   s2a-cli wiring <project>                       components to wire, their pins and the warnings
 //   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
 //   s2a-cli upload <sketch|project> --port <port> [--board <id>]
 //   s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)
@@ -20,6 +21,7 @@
 #include "s2a/project.hpp"
 #include "s2a/serial.hpp"
 #include "s2a/validator.hpp"
+#include "s2a/wiring.hpp"
 #include "s2a/version.hpp"
 
 #include <atomic>
@@ -134,6 +136,7 @@ private:
     int bluetooth() const;
     int setup() const;
     int generateCommand() const;
+    int wiringCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
     int liveCommand() const;
@@ -373,6 +376,40 @@ int Cli::generateCommand() const {
     return kSuccess;
 }
 
+int Cli::wiringCommand() const {
+    if (options_.positional.size() != 1) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto project = loadProject(fs::absolute(fs::u8path(options_.positional[0])));
+    if (!project) {
+        return kFailure;
+    }
+    const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    if (selected == nullptr) {
+        return kUsage;
+    }
+    const auto plan = s2a::wiring::plan(*project, s2a::BlockCatalog::builtin(), *selected, options_.language);
+    for (const auto& warning : plan.warnings) {
+        std::cout << "⚠ " << warning.message << '\n';
+    }
+    int number = 0;
+    for (const auto& component : plan.components) {
+        std::cout << ++number << ". " << component.name << '\n';
+        for (const auto& connection : component.connections) {
+            std::cout << "   " << connection.componentPin << " -> " << connection.boardPin
+                      << (connection.via.empty() ? "" : " (" + connection.via + ")") << '\n';
+        }
+        if (!component.note.empty()) {
+            std::cout << "   " << component.note << '\n';
+        }
+    }
+    if (plan.components.empty()) {
+        print("cli.wiring_nothing");
+    }
+    return kSuccess;
+}
+
 int Cli::setup() const {
     const auto cli = arduinoCli();
     if (!cli) {
@@ -576,6 +613,9 @@ int Cli::run() {
     }
     if (options_.command == "generate") {
         return generateCommand();
+    }
+    if (options_.command == "wiring") {
+        return wiringCommand();
     }
     if (options_.command == "compile") {
         return compileCommand();

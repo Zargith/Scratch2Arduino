@@ -252,6 +252,16 @@ Bluetooth while the computer follows in Live mode over Wi-Fi). The Phone blocks 
 USB or Wi-Fi; over Bluetooth the board's only Bluetooth connection is taken by the computer, so Live refuses
 them.
 
+### Wiring
+
+The **Wiring** button (top bar) lists what to wire for the current project, computed from its blocks:
+each component, each of its legs and the board pin it goes to (with the resistor to add, if any), and
+warnings for a pin used by two components, an I2C screen whose SDA/SCL pin drives something else, or
+more current than a USB port gives. **Show the blocks** highlights the blocks concerned. For an example,
+the window also shows its drawn diagram: zoom with the wheel or a double-click, drag to move around. The
+parts are described in [`resources/components.json`](resources/components.json); each block of the
+catalog names its part (`"component"`). From the command line: `s2a-cli wiring <project>`.
+
 ### Functions
 
 To reuse a group of blocks, open the *Functions* category and click **Make a function**: give it a

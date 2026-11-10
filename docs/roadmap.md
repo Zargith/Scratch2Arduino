@@ -18,7 +18,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 8 — Wireless | In progress: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth); Phone blocks (Bluetooth terminal app) and the phone-lamp example mixing Wi-Fi and Bluetooth; ESP8266 (NodeMCU) board with Live mode over Wi-Fi. Next: hardware checks, HC-05/HC-06 on Arduino boards |
 | 9 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
-| 13 — Automatic wiring diagram | Not started (requested on 2026-11-09) |
+| 13 — Automatic wiring diagram | In progress: part 1 — components and pins computed from the blocks (`resources/components.json`, core `wiring::plan`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), "Wiring" window for every project; diagrams can be zoomed. Next: the drawing (breadboard placement and wires) |
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/…` (or `fix/…`, `docs/…`) branch merged into `dev` through a pull request once CI is green.
