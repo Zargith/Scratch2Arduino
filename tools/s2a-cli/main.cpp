@@ -2,6 +2,7 @@
 //
 //   s2a-cli boards                                 supported boards
 //   s2a-cli ports                                  plugged-in boards
+//   s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
 //   s2a-cli generate <project>                     print the Arduino code of a project
 //   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
@@ -15,6 +16,7 @@
 #include "s2a/diagnostics.hpp"
 #include "s2a/i18n.hpp"
 #include "s2a/live.hpp"
+#include "s2a/network.hpp"
 #include "s2a/project.hpp"
 #include "s2a/serial.hpp"
 #include "s2a/validator.hpp"
@@ -129,6 +131,7 @@ private:
 
     int boards() const;
     int ports() const;
+    int bluetooth() const;
     int setup() const;
     int generateCommand() const;
     int compileCommand() const;
@@ -253,6 +256,25 @@ int Cli::compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path&
 int Cli::boards() const {
     for (const auto& known : s2a::BoardDatabase::builtin().boards()) {
         std::cout << known.id << "\t" << known.name << "\t" << known.fqbn << '\n';
+    }
+    return kSuccess;
+}
+
+int Cli::bluetooth() const {
+    print("cli.bluetooth_searching");
+    const auto found = s2a::network::findBluetoothBoards(std::chrono::seconds(8));
+    if (!found.ok()) {
+        print("live.bluetooth_off");
+        if (options_.verbose) {
+            std::cerr << found.error().detail << '\n';
+        }
+        return kFailure;
+    }
+    for (const auto& device : found.value()) {
+        std::cout << s2a::network::kBluetoothPrefix << device.address << "\t" << device.name << '\n';
+    }
+    if (found.value().empty()) {
+        print("cli.bluetooth_none");
     }
     return kSuccess;
 }
@@ -457,8 +479,9 @@ int Cli::liveCommand() const {
     }
 
     print("cli.live_connecting", {{"port", options_.port}});
-    auto port = s2a::serial::SerialPort::open(options_.port, s2a::live::kBaud);
-    if (port.ok()) {
+    const auto open = s2a::live::Session::opener(); // USB, Wi-Fi or Bluetooth
+    auto port = open(options_.port);
+    if (port.ok() && !s2a::network::isWireless(options_.port)) {
         s2a::live::LiveLink probe(*port.value());
         if (!probe.handshake().ok()) {
             port.value().reset(); // free the port for the upload
@@ -477,7 +500,7 @@ int Cli::liveCommand() const {
                 }
                 return kFailure;
             }
-            port = s2a::serial::SerialPort::open(options_.port, s2a::live::kBaud);
+            port = open(options_.port);
         }
     }
     if (!port.ok()) {
@@ -544,6 +567,9 @@ int Cli::run() {
     }
     if (options_.command == "ports") {
         return ports();
+    }
+    if (options_.command == "bluetooth") {
+        return bluetooth();
     }
     if (options_.command == "setup") {
         return setup();

@@ -55,7 +55,7 @@ TEST(Validator, AcceptsACorrectProgram) {
 }
 
 TEST(Validator, AcceptsTheExampleProjects) {
-    for (const char* name : {"blink", "all-blocks", "esp32-dimmer"}) {
+    for (const char* name : {"blink", "all-blocks", "esp32-dimmer", "wireless-station-wifi", "wireless-station-bluetooth"}) {
         std::ifstream file(std::string(S2A_EXAMPLES_DIR) + "/" + name + "/project.json");
         std::stringstream content;
         content << file.rdbuf();

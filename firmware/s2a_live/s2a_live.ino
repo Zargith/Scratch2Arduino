@@ -34,11 +34,13 @@
 //                   network, or ->"
 // The ESP32 also creates its own Wi-Fi network "S2A-xxxx" (password "scratch2arduino") and
 // accepts the same commands on TCP port 3333 (one computer at a time; it answers "S2A <version>"
-// when it connects). When that computer goes away, every output is switched off.
+// when it connects). It is also a Bluetooth serial device (SPP) named "S2A-xxxx", taking the same
+// commands. When the computer of a Wi-Fi or Bluetooth connection goes away, every output is
+// switched off.
 //
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
 // "! <command>" so that the computer never waits forever. Each answer goes back to where the
-// command came from (USB or Wi-Fi).
+// command came from (USB, Wi-Fi or Bluetooth).
 
 #include <Adafruit_NeoPixel.h>
 #include <DHT.h>
@@ -52,13 +54,14 @@
 #include <U8x8lib.h>
 #include <Wire.h>
 #if defined(ARDUINO_ARCH_ESP32)
+#include <BluetoothSerial.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include <WiFi.h>
 #endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 5";
+const char* const kHello = "S2A 6";
 #if defined(ARDUINO_ARCH_ESP32)
 const int kMaxLine = 120; // room for a Wi-Fi name and password
 #else
@@ -67,7 +70,7 @@ const int kMaxLine = 48;
 const int kMaxPins = 70;
 const int kMaxServos = 8;
 
-// A line being received from the computer, over USB or Wi-Fi.
+// A line being received from the computer, over USB, Wi-Fi or Bluetooth.
 struct Input {
   Stream* stream;
   char text[kMaxLine + 1];
@@ -84,7 +87,10 @@ WiFiServer server(kTcpPort);
 WiFiClient client;
 Input network = {&client, {0}, 0};
 bool clientConnected = false;
-char accessPoint[16] = "S2A";
+char accessPoint[16] = "S2A"; // also the Bluetooth name
+BluetoothSerial bluetoothPort;
+Input bluetooth = {&bluetoothPort, {0}, 0};
+bool bluetoothConnected = false;
 #endif
 bool output[kMaxPins];
 Servo servos[kMaxServos];
@@ -435,6 +441,24 @@ void serveNetwork() {
     resetAll(); // the computer went away: nothing keeps running on its own
   }
 }
+
+// Bluetooth serial device with the name of the Wi-Fi network (Wi-Fi must start first).
+// Pairing without a code ("just works"): nothing to type on the computer or the phone.
+void startBluetooth() {
+  bluetoothPort.enableSSP(false, false);
+  bluetoothPort.begin(accessPoint);
+}
+
+void serveBluetooth() {
+  const bool connected = bluetoothPort.hasClient();
+  if (connected && !bluetoothConnected) {
+    bluetooth.length = 0;
+    bluetoothPort.println(kHello);
+  } else if (!connected && bluetoothConnected) {
+    resetAll(); // the computer went away: nothing keeps running on its own
+  }
+  bluetoothConnected = connected;
+}
 #endif
 
 // Every output LOW, no sound, servos released, strip, matrix and screens cleared.
@@ -656,6 +680,7 @@ void setup() {
   }
 #if defined(ARDUINO_ARCH_ESP32)
   startWifi();
+  startBluetooth();
 #endif
   reply(kHello);
 }
@@ -690,6 +715,10 @@ void loop() {
   serveNetwork();
   if (clientConnected) {
     readFrom(network);
+  }
+  serveBluetooth();
+  if (bluetoothConnected) {
+    readFrom(bluetooth);
   }
 #endif
 }

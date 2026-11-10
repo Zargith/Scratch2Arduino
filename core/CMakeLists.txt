@@ -31,7 +31,7 @@ target_include_directories(s2a_core PUBLIC
 target_compile_features(s2a_core PUBLIC cxx_std_17)
 target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++)
 if(WIN32)
-    target_link_libraries(s2a_core PRIVATE ws2_32) # Wi-Fi connection to the boards (network.cpp)
+    target_link_libraries(s2a_core PRIVATE ws2_32 Bthprops) # Wi-Fi and Bluetooth connections to the boards (network.cpp)
 endif()
 s2a_set_warnings(s2a_core)
 

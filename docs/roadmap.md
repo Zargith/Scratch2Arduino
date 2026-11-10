@@ -15,7 +15,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 5 — Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
 | 6 — Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
 | 7 — Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
-| 8 — Wireless | In progress: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor). Next: Bluetooth (ESP32 and HC-05/HC-06), ESP8266 |
+| 8 — Wireless | In progress: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth). Next: phone remote over Bluetooth, ESP8266, HC-05/HC-06 |
 | 9 → 11 | Not started |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
 | 13 — Automatic wiring diagram | Not started (requested on 2026-11-09) |

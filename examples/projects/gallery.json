@@ -86,6 +86,25 @@
         "en": "To try an ESP32 board: the blue on-board LED blinks, the knob sets the brightness of an LED and its value shows on the serial monitor. Also works in Live mode, over USB or Wi-Fi."
       },
       "parts": { "fr": "carte ESP32, potentiomètre, LED, résistance de 220 Ω", "en": "ESP32 board, potentiometer, LED, 220 Ω resistor" }
+    },
+    {
+      "id": "wireless-station",
+      "title": { "fr": "Station météo sans fil", "en": "Wireless weather station" },
+      "description": {
+        "fr": "La carte ESP32 mesure la température et l'humidité, loin de l'ordinateur et sans câble : en mode Live, les valeurs s'affichent en direct et une LED rouge s'allume au-dessus de 25 °C.",
+        "en": "The ESP32 board measures temperature and humidity, away from the computer and without a cable: in Live mode the values show live and a red LED lights up above 25 °C."
+      },
+      "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, chargeur USB ou pile", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, USB charger or battery" },
+      "variants": [
+        {
+          "id": "wireless-station-wifi",
+          "label": { "fr": "Par Wi-Fi", "en": "Over Wi-Fi" }
+        },
+        {
+          "id": "wireless-station-bluetooth",
+          "label": { "fr": "Par Bluetooth", "en": "Over Bluetooth" }
+        }
+      ]
     }
   ]
 }

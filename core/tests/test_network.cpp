@@ -66,10 +66,10 @@ private:
     std::thread thread_;
 };
 
-TEST(TcpConnection, SpeaksTheLineProtocolWithABoard) {
+TEST(SocketConnection, SpeaksTheLineProtocolWithABoard) {
     FakeBoard board;
     {
-        auto opened = s2a::network::TcpConnection::open("127.0.0.1", board.port(), milliseconds(2000));
+        auto opened = s2a::network::SocketConnection::openTcp("127.0.0.1", board.port(), milliseconds(2000));
         ASSERT_TRUE(opened.ok()) << opened.error().detail;
         auto& connection = *opened.value();
         auto hello = connection.readLine(milliseconds(2000));
@@ -88,11 +88,57 @@ TEST(TcpConnection, SpeaksTheLineProtocolWithABoard) {
     }
 }
 
-TEST(TcpConnection, ReportsABoardThatCannotBeReached) {
-    const auto opened = s2a::network::TcpConnection::open("host.invalid", 3333, milliseconds(500));
+TEST(SocketConnection, ReportsABoardThatCannotBeReached) {
+    const auto opened = s2a::network::SocketConnection::openTcp("host.invalid", 3333, milliseconds(500));
     ASSERT_FALSE(opened.ok());
     EXPECT_EQ(opened.error().code, s2a::ErrorCode::NetworkFailed);
 }
 
 } // namespace
 #endif
+
+namespace {
+
+using s2a::network::BluetoothDevice;
+
+TEST(Bluetooth, ReadsTheAddressOfABluetoothPort) {
+    EXPECT_EQ(s2a::network::bluetoothAddress("bt:24:6f:28:aa:bb:cc"), std::optional<std::string>("24:6F:28:AA:BB:CC"));
+    EXPECT_FALSE(s2a::network::bluetoothAddress("bt:24:6F:28:AA:BB").has_value());
+    EXPECT_FALSE(s2a::network::bluetoothAddress("bt:24-6F-28-AA-BB-CC").has_value());
+    EXPECT_FALSE(s2a::network::bluetoothAddress("bt:24:6F:28:AA:BB:CG").has_value());
+    EXPECT_FALSE(s2a::network::bluetoothAddress("COM3").has_value());
+    EXPECT_FALSE(s2a::network::bluetoothAddress("wifi:192.168.4.1").has_value());
+}
+
+TEST(Bluetooth, KnowsTheWirelessPorts) {
+    EXPECT_TRUE(s2a::network::isWireless("wifi:192.168.4.1"));
+    EXPECT_TRUE(s2a::network::isWireless("bt:24:6F:28:AA:BB:CC"));
+    EXPECT_TRUE(s2a::network::isWireless("/dev/cu.S2A-1A2B")); // paired on macOS
+    EXPECT_FALSE(s2a::network::isWireless("/dev/ttyUSB0"));
+    EXPECT_FALSE(s2a::network::isWireless("COM3"));
+}
+
+TEST(Bluetooth, KeepsTheBoardsListedByBluetoothctl) {
+    const std::string output = "Device 24:6F:28:AA:BB:CC S2A-BBCC\n"
+                               "Device 11:22:33:44:55:66 Headphones\n"
+                               "\x1b[0;94m[bluetooth]\x1b[0m# Device a4:cf:12:01:02:03 S2A-0203 \r\n"
+                               "Device 24:6F:28:AA:BB:CC S2A-BBCC\n"
+                               "Device 77:88:99:AA:BB:CC\n"
+                               "garbage\n";
+    const std::vector<BluetoothDevice> expected{{"S2A-BBCC", "24:6F:28:AA:BB:CC"}, {"S2A-0203", "A4:CF:12:01:02:03"}};
+    EXPECT_EQ(s2a::network::parseBluetoothctlDevices(output), expected);
+    EXPECT_TRUE(s2a::network::parseBluetoothctlDevices("").empty());
+}
+
+TEST(Bluetooth, ReportsABoardThatCannotBeReached) {
+    const auto malformed = s2a::network::SocketConnection::openBluetooth("not an address", std::chrono::milliseconds(500));
+    ASSERT_FALSE(malformed.ok());
+    EXPECT_EQ(malformed.error().code, s2a::ErrorCode::NetworkFailed);
+#ifndef _WIN32 // on Windows, connecting to a missing device can take several seconds
+    const auto absent = s2a::network::SocketConnection::openBluetooth("00:00:00:00:00:01", std::chrono::milliseconds(500));
+    ASSERT_FALSE(absent.ok());
+    EXPECT_EQ(absent.error().code, s2a::ErrorCode::NetworkFailed);
+#endif
+}
+
+} // namespace

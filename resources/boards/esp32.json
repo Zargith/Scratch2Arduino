@@ -1,11 +1,11 @@
 {
   "id": "esp32",
   "name": "ESP32 (DevKit)",
-  "fqbn": "esp32:esp32:esp32",
+  "fqbn": "esp32:esp32:esp32:PartitionScheme=huge_app",
   "platform": "esp32:esp32",
   "mcu": "ESP32",
   "voltage": 3.3,
-  "flashBytes": 1310720,
+  "flashBytes": 3145728,
   "ramBytes": 327680,
   "builtinLed": "2",
   "digitalPins": [2, 4, 5, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33],

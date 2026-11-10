@@ -27,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 5"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 6"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 

@@ -218,6 +218,16 @@ home or school network and its password and send them to the board over USB: it 
 that network at every start, and its address is added to the port list. Programs are still uploaded
 with the cable. If the computer goes away, the board switches its outputs off.
 
+#### Live mode over Bluetooth (ESP32)
+
+The same *S2A live* firmware is also a Bluetooth serial device named **S2A-xxxx** (no pairing code).
+Open the **Bluetooth** button (shown for an ESP32), click **Look for boards** and choose yours: it is
+added to the port list as **Bluetooth — S2A-xxxx**. On Linux the search uses `bluetoothctl` (BlueZ); on
+Windows the board is reached directly by its address. On macOS, pair **S2A-xxxx** in System Settings ›
+Bluetooth, then refresh the ports: the board appears as **Bluetooth — S2A-xxxx**. From the command line:
+`s2a-cli bluetooth` lists the boards around, then `s2a-cli live <project> --port bt:<address>`.
+The example **Wireless weather station** exists in a Wi-Fi and a Bluetooth version.
+
 ### Components
 
 Besides the *Pins* blocks, the toolbox has blocks for the parts of beginner kits; each tooltip explains
@@ -291,7 +301,7 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 
