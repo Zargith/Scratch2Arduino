@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { WiringPlan } from "@/bridge";
+import { examples } from "@/examples";
 import { translate, type MessageKey } from "@/i18n";
 import { emptyProject } from "@/project/convert";
 import { ProjectWiring } from "@/ProjectWiring";
@@ -83,6 +84,46 @@ describe("project wiring window", () => {
 		expect(text).toContain("Save the image");
 		await act(async () => buttons[0]?.click());
 		expect(shown).toHaveBeenCalledWith(["press", "led"]);
+		await act(async () => root.unmount());
+		container.remove();
+	}, 60_000);
+
+	it("opens an example on its hand-drawn layout, other projects on the drawn diagram", async () => {
+		const host = window as unknown as Record<string, unknown>;
+		host.s2a_wiring = async () => plan;
+		const t = (key: MessageKey, params?: Record<string, string>) => translate("en", key, params);
+		const example = examples.find((candidate) => candidate.id === "blink");
+		expect(example).toBeDefined();
+		const container = document.createElement("div");
+		document.body.appendChild(container);
+		const root = createRoot(container);
+		const selectedTab = () =>
+			document.body.querySelector('[role="tab"][aria-selected="true"]')?.textContent ?? "";
+		for (const [shown, expected] of [
+			[example ?? null, "Example layout"],
+			[null, "Wiring diagram"],
+		] as const) {
+			await act(async () => {
+				root.render(
+					<MantineProvider>
+						<ProjectWiring
+							opened
+							example={shown}
+							language="en"
+							project={() => emptyProject("Test", "uno")}
+							t={t}
+							onShowBlocks={() => undefined}
+							onClose={() => undefined}
+						/>
+					</MantineProvider>
+				);
+			});
+			await act(async () => {
+				await new Promise((done) => setTimeout(done, 50));
+			});
+			expect(selectedTab()).toBe(expected);
+			await act(async () => root.render(<MantineProvider />));
+		}
 		await act(async () => root.unmount());
 		container.remove();
 	}, 60_000);

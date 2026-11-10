@@ -32,7 +32,8 @@ export function ProjectWiring({ opened, example, language, project, t, onShowBlo
 
 	useEffect(() => {
 		if (!opened) return;
-		setTab("diagram");
+		// An example opens on its hand-drawn breadboard layout; other projects on the drawn diagram.
+		setTab(example ? "example" : "diagram");
 		setSaved(null);
 		if (!hasHost()) {
 			setState({ status: "failed", message: t("wiring.no_host") });
@@ -64,17 +65,17 @@ export function ProjectWiring({ opened, example, language, project, t, onShowBlo
 		<Modal opened={opened} onClose={onClose} title={t("wiring.project_title")} size="90rem">
 			<Tabs value={tab} onChange={setTab}>
 				<Tabs.List mb="sm">
+					{example && (
+						<Tabs.Tab value="example" leftSection={<IconPhoto size={16} />}>
+							{t("wiring.tab_example")}
+						</Tabs.Tab>
+					)}
 					<Tabs.Tab value="diagram" leftSection={<IconSchema size={16} />}>
 						{t("wiring.tab_diagram")}
 					</Tabs.Tab>
 					<Tabs.Tab value="components" leftSection={<IconListDetails size={16} />}>
 						{t("wiring.tab_components")}
 					</Tabs.Tab>
-					{example && (
-						<Tabs.Tab value="example" leftSection={<IconPhoto size={16} />}>
-							{t("wiring.tab_example")}
-						</Tabs.Tab>
-					)}
 				</Tabs.List>
 				<Tabs.Panel value="diagram">
 					{svg ? (
