@@ -193,6 +193,23 @@ TEST_P(Script, StopsALongDelay) {
     EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
 }
 
+TEST(PythonScript, TimeSleepWaitsLikeDelay) {
+    FakePins pins;
+    std::atomic<bool> stop{false};
+    std::vector<long long> waits;
+    s2a::script::Host host;
+    host.pins = &pins;
+    host.board = s2a::BoardDatabase::builtin().find("uno");
+    host.stop = &stop;
+    host.sleep = [&waits](std::chrono::milliseconds duration) {
+        waits.push_back(duration.count());
+        return true;
+    };
+    const auto error = s2a::script::run(ProgramLanguage::Python, "import time\ntime.sleep(0.5)\n", host, Language::English);
+    ASSERT_FALSE(error) << error->message << "\n" << error->details;
+    EXPECT_EQ(waits, std::vector<long long>{500});
+}
+
 TEST_P(Script, RunsAgainAfterAStop) {
     budget = 1000ms;
     EXPECT_FALSE(run(blink(GetParam())));

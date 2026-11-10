@@ -310,6 +310,11 @@ std::optional<ScriptError> runPython(const std::string& code, Api& api, Language
     py_GlobalRef main = py_getmodule("__main__");
     bindApi(main, api);
     bindApi(py_newmodule("arduino"), api);
+    // time.sleep() waits like delay(): Stop must not wait for it to end.
+    if (!py_exec("import time\ntime.sleep = lambda seconds: delay(seconds * 1000)\ndel time\n", "<s2a>", EXEC_MODE,
+                 nullptr)) {
+        py_clearexc(nullptr); // no time module: nothing to replace
+    }
 
     stopFlag = api.stopFlag();
     py_watchdog_begin(kWatchdogMs);
