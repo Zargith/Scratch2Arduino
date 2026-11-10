@@ -49,6 +49,11 @@ struct Diagnosis {
 [[nodiscard]] Diagnosis diagnoseCompile(const CompileOutcome& outcome);
 [[nodiscard]] Diagnosis diagnoseUpload(const CommandOutcome& outcome, std::string_view port);
 
+/// One compiler error of a program typed as text, in words a beginner can act on: common
+/// mistakes ("'x' was not declared", a missing ';' or '}') are explained in `language`, other
+/// messages are given as the compiler wrote them.
+[[nodiscard]] std::string explainCompilerMessage(const CompilerMessage& message, Language language);
+
 /// Translation key of the message for a problem ("toolchain.port_busy").
 [[nodiscard]] std::string_view problemMessageKey(Problem problem) noexcept;
 

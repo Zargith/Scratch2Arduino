@@ -16,6 +16,9 @@ add_library(s2a_core STATIC
     src/i18n.cpp
     src/process.cpp
     src/project.cpp
+    src/script.cpp
+    src/script_javascript.cpp
+    src/script_python.cpp
     src/resources.cpp
     src/result.cpp
     src/network.cpp
@@ -31,7 +34,7 @@ target_include_directories(s2a_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
 )
 target_compile_features(s2a_core PUBLIC cxx_std_17)
-target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++)
+target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++ s2a_pocketpy qjs)
 if(WIN32)
     target_link_libraries(s2a_core PRIVATE ws2_32 Bthprops) # Wi-Fi and Bluetooth connections to the boards (network.cpp)
 endif()

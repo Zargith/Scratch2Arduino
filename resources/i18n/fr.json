@@ -169,5 +169,33 @@
     "pin_twice": "La broche {pin} est utilisée à la fois par « {first} » et par « {second} » : chaque composant a besoin de sa propre broche.",
     "i2c_taken": "La broche {pin} sert à l'I2C de « {screen} » : « {other} » doit utiliser une autre broche.",
     "power": "Les composants demandent environ {current} mA, plus que les 500 mA d'un port USB : alimente la carte avec un bloc secteur, et les moteurs ou le ruban de LED avec leur propre alimentation (GND reliés)."
+  },
+  "text": {
+    "unknown_name": "« {name} » est inconnu : vérifie l'orthographe (les majuscules comptent) et qu'il est bien déclaré avant d'être utilisé.",
+    "missing_semicolon": "Il manque un « ; » à la fin d'une instruction (souvent sur la ligne d'avant).",
+    "missing_closing": "Il manque un « {symbol} » : chaque parenthèse, accolade ou crochet ouvert doit être refermé.",
+    "unknown_member": "« {object} » n'a pas de fonction ou de champ « {name} » : vérifie l'orthographe.",
+    "cpp_empty": "Le programme est vide : écris au moins les fonctions setup() et loop().",
+    "cpp_missing_function": "Il manque la fonction {name}() : un programme Arduino a toujours void setup() { … } et void loop() { … }.",
+    "cpp_errors": "Le programme a {count} erreur(s). Ligne {line} : {message}",
+    "cpp_library_missing": "Le programme utilise la bibliothèque « {library} », qui n'est pas installée. Scratch2Arduino installe tout seul Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 et Adafruit NeoPixel ; pour une autre, installe-la avec arduino-cli lib install.",
+    "script_upload": "Un programme Python ou JavaScript tourne sur l'ordinateur et pilote la carte : utilise le bouton Live au lieu de Téléverser.",
+    "script_ok": "Bravo, Python ou JavaScript comprend ton programme ! Lance-le avec le bouton Live.",
+    "pin_unknown": "La broche {pin} n'existe pas sur la carte {board}.",
+    "pin_mode_unknown": "pinMode attend OUTPUT, INPUT ou INPUT_PULLUP.",
+    "pin_not_analog": "analogRead a besoin d'une broche analogique (A0, A1…) : la broche {pin} n'en est pas une.",
+    "pin_not_pwm": "analogWrite a besoin d'une broche PWM (marquée ~ sur la carte) : la broche {pin} n'en est pas une.",
+    "pin_expected": "Il faut une broche : un nombre (13) ou un nom (\"A0\").",
+    "number_expected": "Il faut un nombre ici.",
+    "argument_count": "Cette fonction n'a pas reçu le bon nombre de valeurs entre ses parenthèses.",
+    "not_a_script": "Ce programme n'est pas écrit en Python ou en JavaScript.",
+    "at_line": "Ligne {line} : {message}",
+    "python_indentation": "Le décalage (l'indentation) n'est pas bon : les lignes d'un même bloc doivent commencer à la même distance du bord, et la ligne après « : » doit être décalée.",
+    "python_syntax": "Python ne comprend pas cette ligne : vérifie les parenthèses, les guillemets et les « : » à la fin des if, while, for et def. ({message})",
+    "javascript_syntax": "JavaScript ne comprend pas cette ligne : vérifie les parenthèses, les accolades et les guillemets. ({message})",
+    "division_by_zero": "Division par zéro : on ne peut pas diviser par 0.",
+    "live_cpp": "Un programme C++ est envoyé à la carte avec Téléverser. Le mode Live est pour les blocs, Python et JavaScript.",
+    "running": "Ton programme tourne sur l'ordinateur et pilote la carte. Le bouton Stop l'arrête.",
+    "finished": "Le programme est terminé."
   }
 }
