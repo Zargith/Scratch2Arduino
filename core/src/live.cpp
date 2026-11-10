@@ -673,7 +673,8 @@ void Interpreter::run(Thread& thread, Clock now) {
                     pins_.setMode(board_.builtinLed, PinMode::Output);
                     modes_[board_.builtinLed] = PinMode::Output;
                 }
-                pins_.digitalWrite(board_.builtinLed, field(block, "STATE") != "OFF");
+                const bool lit = field(block, "STATE") != "OFF";
+                pins_.digitalWrite(board_.builtinLed, board_.builtinLedActiveLow ? !lit : lit);
             }
         } else if (type == "pins_digital_write") {
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {

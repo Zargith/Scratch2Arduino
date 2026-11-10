@@ -52,6 +52,8 @@ struct Board {
     std::uint32_t ramBytes = 0;
     int builtinLed = -1;
     bool bluetooth = false; ///< Classic Bluetooth (ESP32): the phone blocks work.
+    bool wifi = false;      ///< Wi-Fi (ESP32, ESP8266): Live mode over Wi-Fi.
+    bool builtinLedActiveLow = false; ///< The on-board LED lights when its pin is LOW (ESP8266).
     std::vector<Pin> pins; ///< Sorted by number.
     std::vector<BusPin> i2c;
     std::vector<BusPin> spi;

@@ -443,6 +443,21 @@ TEST(Codegen, TalksToThePhoneOverBluetooth) {
     EXPECT_TRUE(s2a::toolchain::requiredLibraries(source).empty()); // part of the ESP32 tools
 }
 
+TEST(Codegen, LightsTheEsp8266LedWithLow) {
+    Block level = block("level", "pins_analog_write");
+    level.fields["PIN"] = "D5";
+    level.inputs["VALUE"].value = "128";
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON"),
+                                             led("off", "OFF"), level},
+                                            "esp8266"))
+                            .source;
+    for (const char* expected : {"  pinMode(2, OUTPUT);", "digitalWrite(2, LOW);\n  digitalWrite(2, HIGH);",
+                                 "analogWrite(D5, "}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("analogReadResolution"), std::string::npos) << source;
+}
+
 TEST(Codegen, AsciiText) {
     EXPECT_EQ(s2a::codegen::asciiText("Élève à l'œil ½ 😀"), "Eleve a l'oeil ? ?");
     EXPECT_EQ(s2a::codegen::asciiText("a\tb\nc"), "abc");

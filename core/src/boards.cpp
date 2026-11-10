@@ -110,21 +110,29 @@ Board parseBoard(const Json& json) {
     board.flashBytes = json.at("flashBytes").get<std::uint32_t>();
     board.ramBytes = json.at("ramBytes").get<std::uint32_t>();
     board.bluetooth = json.value("bluetooth", false);
+    board.wifi = json.value("wifi", false);
+    board.builtinLedActiveLow = json.value("builtinLedActiveLow", false);
 
-    // Either a count (pins 0..n-1, as on Arduino boards) or the list of usable GPIO numbers
-    // (ESP32: numbers with gaps, the flash and boot pins left out).
+    // Either a count (pins 0..n-1, as on Arduino boards), the list of usable GPIO numbers
+    // (ESP32: numbers with gaps, the flash and boot pins left out), or the names printed on the
+    // board with their GPIO number (NodeMCU: "D1" is GPIO 5).
     const Json& digital = json.at("digitalPins");
-    std::vector<int> digitalNumbers;
+    std::vector<std::pair<int, std::string>> digitalPins;
     if (digital.is_array()) {
-        digitalNumbers = digital.get<std::vector<int>>();
+        for (const int number : digital.get<std::vector<int>>()) {
+            digitalPins.emplace_back(number, std::to_string(number));
+        }
+    } else if (digital.is_object()) {
+        for (const auto& [label, number] : digital.items()) {
+            digitalPins.emplace_back(number.get<int>(), label);
+        }
     } else {
         for (int number = 0; number < digital.get<int>(); ++number) {
-            digitalNumbers.push_back(number);
+            digitalPins.emplace_back(number, std::to_string(number));
         }
     }
-    for (const int number : digitalNumbers) {
-        board.pins.push_back(
-            {number, std::to_string(number), static_cast<std::uint8_t>(PinCapability::Digital)});
+    for (const auto& [number, label] : digitalPins) {
+        board.pins.push_back({number, label, static_cast<std::uint8_t>(PinCapability::Digital)});
     }
     const Json& analog = json.at("analogPins");
     const auto inputOnly = analog.value("inputOnly", std::vector<std::string>{});
@@ -196,7 +204,9 @@ const Pin* Board::findPin(std::string_view labelOrNumber) const {
     if (labelOrNumber.size() > 1 && (labelOrNumber[0] == 'D' || labelOrNumber[0] == 'd')) {
         if (const auto number = parseNumber(labelOrNumber.substr(1))) {
             const Pin* pin = findPin(*number);
-            return pin != nullptr && pin->label == labelOrNumber.substr(1) ? pin : nullptr;
+            if (pin != nullptr && pin->label == labelOrNumber.substr(1)) {
+                return pin; // "D13" on an Arduino board
+            }
         }
     }
     const auto it = std::find_if(pins.begin(), pins.end(), [&](const Pin& pin) {

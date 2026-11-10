@@ -516,8 +516,10 @@ private:
         if (type == "pins_builtin_led") {
             const std::string led = builtinLed();
             pinModes_[led] = PinMode::Output;
-            body.add(depth, "digitalWrite(" + led + ", " +
-                                (field(block, "STATE") == "OFF" ? "LOW" : "HIGH") + ");");
+            // On some boards (ESP8266) the LED lights when its pin is LOW.
+            const bool lit = field(block, "STATE") != "OFF";
+            const bool high = board_ != nullptr && board_->builtinLedActiveLow ? !lit : lit;
+            body.add(depth, "digitalWrite(" + led + ", " + (high ? "HIGH" : "LOW") + ");");
         } else if (type == "pins_digital_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "digitalWrite(" + target + ", " +

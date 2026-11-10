@@ -28,7 +28,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Area | What you get |
 |---|---|
 | Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; Python and JavaScript modes (later) |
-| Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit); ESP8266 later |
+| Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers… |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
 | Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
@@ -208,12 +208,12 @@ the sensors read by the blocks are shown on the right with a graph of their last
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
 
-#### Live mode over Wi-Fi (ESP32)
+#### Live mode over Wi-Fi (ESP32, ESP8266)
 
-With an ESP32, the Live mode also works without the cable. Start it once over USB: the *S2A live*
+With an ESP32 or an ESP8266, the Live mode also works without the cable. Start it once over USB: the *S2A live*
 firmware is installed with Wi-Fi. The board then creates its own network **S2A-xxxx** (password
 `scratch2arduino`): connect the computer to it and choose **Wi-Fi — the board's network** in the port
-list. To keep the Internet on the computer, open the **Wi-Fi** button (shown for an ESP32), type the
+list. To keep the Internet on the computer, open the **Wi-Fi** button (shown for an ESP32 or an ESP8266), type the
 home or school network and its password and send them to the board over USB: it remembers them, joins
 that network at every start, and its address is added to the port list. Programs are still uploaded
 with the cable. If the computer goes away, the board switches its outputs off.
@@ -306,7 +306,7 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built. The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0–D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 

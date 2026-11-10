@@ -2,10 +2,9 @@
 // the USB cable. The C++ host recognises the "bt:" prefix (core/include/s2a/network.hpp). On
 // macOS the board is paired in the system settings and appears as a serial port instead.
 import type { Port } from "@/bridge";
+import { findBoard } from "@/catalog";
 
 export const BLUETOOTH_PREFIX = "bt:";
-/** Boards whose Live firmware has Bluetooth (resources/boards/<id>.json). */
-const BLUETOOTH_BOARDS = new Set(["esp32"]);
 const STORAGE_KEY = "s2a.bluetooth.boards";
 const REMEMBERED = 3;
 
@@ -14,7 +13,8 @@ export interface BluetoothBoard {
 	address: string;
 }
 
-export const hasBluetooth = (boardId: string): boolean => BLUETOOTH_BOARDS.has(boardId);
+/** Boards whose Live firmware has Bluetooth ("bluetooth" in resources/boards/<id>.json). */
+export const hasBluetooth = (boardId: string): boolean => findBoard(boardId)?.bluetooth ?? false;
 export const bluetoothPort = (address: string): string => `${BLUETOOTH_PREFIX}${address}`;
 /** A "bt:" port, or the serial port of a board paired on macOS (/dev/cu.S2A-1A2B). */
 export const isBluetoothPort = (port: string | null): boolean =>

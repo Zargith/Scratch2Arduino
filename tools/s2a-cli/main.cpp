@@ -249,7 +249,7 @@ int Cli::compile(const ArduinoCli& cli, const s2a::Board& board, const fs::path&
         params.emplace_back(section.section + "_max", std::to_string(section.max));
         params.emplace_back(section.section + "_percent", percent);
     }
-    print("cli.compiled", params);
+    print(params.empty() ? "cli.compiled_no_size" : "cli.compiled", params);
     return kSuccess;
 }
 
