@@ -488,6 +488,10 @@ void Bridge::bind() {
                     const auto* board = BoardDatabase::builtin().find(port.boardId);
                     Json entry{{"address", port.address},
                                {"label", board != nullptr ? port.label + " — " + board->name : port.label}};
+                    if (network::isWireless(port.address)) { // a board paired over Bluetooth (macOS)
+                        entry["label"] = "Bluetooth — " + port.address.substr(port.address.find(network::kBoardNamePrefix));
+                        entry["bluetooth"] = true;
+                    }
                     if (!port.boardId.empty()) {
                         entry["boardId"] = port.boardId;
                     }
@@ -506,7 +510,7 @@ void Bridge::bind() {
             toolchain::BuildOptions options;
             if (upload) {
                 options.port = stringArg(args, 1);
-                if (network::wifiAddress(options.port)) {
+                if (network::isWireless(options.port)) {
                     throw UserError{tr("live.wifi_upload", language)};
                 }
                 closeMonitor(); // the editor opens it again after the upload
@@ -534,10 +538,10 @@ void Bridge::bind() {
                 // Stopping can take a moment (outputs switched off): not on the UI thread.
                 std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
             }
-            // Over Wi-Fi the firmware cannot be uploaded: the board must already run it.
+            // Over Wi-Fi or Bluetooth the firmware cannot be uploaded: the board must already run it.
             live_ = std::make_unique<live::Session>(
                 std::move(project), *board, port, language, live::Session::opener(),
-                network::wifiAddress(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port));
+                network::isWireless(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port));
             return Json{{"ok", true}}.dump();
         } catch (const UserError& error) {
             message = error.message;
@@ -592,7 +596,7 @@ void Bridge::bind() {
         if (port.empty()) {
             return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
         }
-        if (network::wifiAddress(port)) {
+        if (network::isWireless(port)) {
             return Json{{"ok", false}, {"message", tr("live.wifi_monitor", language)}}.dump();
         }
         closeMonitor();
@@ -645,7 +649,7 @@ void Bridge::bind() {
                 const std::string name = stringArg(args, 1);
                 const std::string password = stringArg(args, 2);
                 const Board* board = BoardDatabase::builtin().find(stringArg(args, 3));
-                if (board == nullptr || port.empty() || network::wifiAddress(port)) {
+                if (board == nullptr || port.empty() || network::isWireless(port)) {
                     throw UserError{tr("live.wifi_upload", language)};
                 }
                 closeMonitor();
@@ -704,6 +708,32 @@ void Bridge::bind() {
                             {"message", tr(key, language, {{"network", name}, {"address", state.address},
                                                            {"access_point", state.accessPoint}})}};
                 return result.dump();
+            });
+        },
+        nullptr);
+
+    // Bluetooth boards around the computer (a search takes about 8 s).
+    window_.bind(
+        "s2a_bluetooth_search",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 0, language_);
+                if (!network::bluetoothByAddress()) {
+                    return Json{{"ok", true}, {"byAddress", false}, {"devices", Json::array()}}.dump();
+                }
+                const auto found = network::findBluetoothBoards(std::chrono::seconds(8));
+                if (!found.ok()) {
+                    return Json{{"ok", false},
+                                {"message", tr("live.bluetooth_off", language)},
+                                {"details", found.error().detail}}
+                        .dump();
+                }
+                Json devices = Json::array();
+                for (const auto& device : found.value()) {
+                    devices.push_back({{"name", device.name}, {"address", device.address}});
+                }
+                return Json{{"ok", true}, {"byAddress", true}, {"devices", devices}}.dump();
             });
         },
         nullptr);

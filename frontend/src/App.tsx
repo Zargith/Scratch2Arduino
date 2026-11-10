@@ -20,6 +20,7 @@ import {
 	Tooltip,
 } from "@mantine/core";
 import {
+	IconBluetooth,
 	IconCheck,
 	IconCode,
 	IconDeviceFloppy,
@@ -52,6 +53,8 @@ import { Editor, type EditorHandle } from "@/Editor";
 import { exampleProject, type Example } from "@/examples";
 import { Gallery, Wiring } from "@/Gallery";
 import { Library } from "@/Library";
+import { BluetoothDialog } from "@/BluetoothDialog";
+import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberBoard, rememberedBoards } from "@/bluetooth";
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
@@ -111,6 +114,9 @@ export function App() {
 	/** Addresses of boards found on the home Wi-Fi (ESP32), offered as ports. */
 	const [wifiAddresses, setWifiAddresses] = useState<string[]>(rememberedAddresses);
 	const [wifiShown, setWifiShown] = useState(false);
+	/** Boards found by a Bluetooth search (ESP32), offered as ports. */
+	const [bluetoothBoards, setBluetoothBoards] = useState(rememberedBoards);
+	const [bluetoothShown, setBluetoothShown] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [code, setCode] = useState<string | null>(null);
@@ -177,6 +183,7 @@ export function App() {
 	// A board without Wi-Fi cannot use a Wi-Fi port: back to the first USB port.
 	useEffect(() => {
 		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? null);
+		if (!hasBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
 	}, [boardId, port, ports]);
 
 	const refreshPorts = useCallback(async () => {
@@ -184,9 +191,10 @@ export function App() {
 		try {
 			const found = await bridge.ports();
 			setPorts(found);
-			// A Wi-Fi port stays chosen: it is not in the list of plugged-in boards.
+			// A Wi-Fi or Bluetooth port stays chosen: it is not in the list of plugged-in boards.
 			setPort((current) =>
-				current && (isWifiPort(current) || found.some((candidate) => candidate.address === current))
+				current &&
+				(isWifiPort(current) || current.startsWith("bt:") || found.some((candidate) => candidate.address === current))
 					? current
 					: (found[0]?.address ?? null)
 			);
@@ -629,6 +637,7 @@ export function App() {
 								accessPoint: t("port.wifi_access_point"),
 								home: t("port.wifi_home", { address: "{address}" }),
 							}),
+							...bluetoothPorts(boardId, bluetoothBoards, t("port.bluetooth", { name: "{name}" })),
 						].map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
@@ -657,6 +666,18 @@ export function App() {
 							<Tooltip label={t("wifi.title")}>
 								<ActionIcon variant="default" size="lg" aria-label={t("wifi.title")} onClick={() => setWifiShown(true)}>
 									<IconWifi size={18} />
+								</ActionIcon>
+							</Tooltip>
+						)}
+						{hasBluetooth(boardId) && (
+							<Tooltip label={t("bluetooth.title")}>
+								<ActionIcon
+									variant="default"
+									size="lg"
+									aria-label={t("bluetooth.title")}
+									onClick={() => setBluetoothShown(true)}
+								>
+									<IconBluetooth size={18} />
 								</ActionIcon>
 							</Tooltip>
 						)}
@@ -823,13 +844,23 @@ export function App() {
 				opened={wifiShown}
 				language={language}
 				boardId={boardId}
-				usbPort={port && !isWifiPort(port) ? port : (ports[0]?.address ?? null)}
+				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
 				t={t}
 				onJoined={(address) => {
 					setWifiAddresses(rememberAddress(address));
 					setPort(wifiPort(address));
 				}}
 				onClose={() => setWifiShown(false)}
+			/>
+			<BluetoothDialog
+				opened={bluetoothShown}
+				language={language}
+				t={t}
+				onChosen={(board) => {
+					setBluetoothBoards(rememberBoard(board));
+					setPort(bluetoothPort(board.address));
+				}}
+				onClose={() => setBluetoothShown(false)}
 			/>
 			<Library
 				opened={libraryShown}

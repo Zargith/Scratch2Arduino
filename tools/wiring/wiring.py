@@ -782,7 +782,80 @@ EXAMPLES = {
     "light-gauge": light_gauge,
     "traffic-light": traffic_light,
     "esp32-dimmer": esp32_dimmer,
+    "wireless-station-wifi": lambda c: wireless_station(c, "wifi"),
+    "wireless-station-bluetooth": lambda c: wireless_station(c, "bluetooth"),
 }
+
+
+def laptop(c: Canvas, x, y, link: str):
+    """Computer with the Wi-Fi or Bluetooth sign on its screen, and waves towards the board."""
+    c.rect(x + 4, y + 6, 220, 140, "#B0BEC5", radius=8)
+    c.rect(x, y, 220, 140, "#37474F", outline="#263238", radius=8, width=2)
+    c.rect(x + 12, y + 12, 196, 116, "#E3F2FD", radius=3)
+    c.polygon([(x - 24, y + 146), (x + 244, y + 146), (x + 262, y + 168), (x - 42, y + 168)], "#90A4AE", "#78909C")
+    cx, cy = x + 110, y + 76
+    if link == "wifi":
+        for r, width in ((44, 7), (30, 7), (16, 7)):
+            box = ((cx - r) * SCALE, (cy - r) * SCALE, (cx + r) * SCALE, (cy + r) * SCALE)
+            c.draw.arc(box, 225, 315, fill=BLUE, width=width * SCALE)
+        c.circle(cx, cy - 2, 6, BLUE)
+    else:  # the Bluetooth rune
+        c.circle(cx, cy - 6, 40, BLUE)
+        top, bottom, left, right = cy - 34, cy + 22, cx - 14, cx + 14
+        c.line([(left, cy - 20), (right, cy + 8), (cx, bottom), (cx, top), (right, cy - 20), (left, cy + 8)], "#FFFFFF", 5)
+    return cx, y + 168
+
+
+def wireless_station(c: Canvas, link: str):
+    esp = Esp32(c, 60, 400)
+    board = Breadboard(c, 720, 470, 24)
+    c.wire(path(esp.pin("3V3"), ("y", 372), ("x", 680), ("y", board.rail("top+", 1)[1]), board.rail("top+", 1)), RED)
+    c.wire(path(esp.pin("GND_bottom"), ("y", 700), ("x", 700), ("y", board.rail("top-", 2)[1]), board.rail("top-", 2)),
+           BLACK)
+    # DHT11 sensor above the breadboard, data on GPIO 4.
+    sensor = dht11(c, 980, 190)
+    c.wire(path(esp.pin("4"), ("y", 386), ("x", sensor["DATA"][0]), sensor["DATA"]), YELLOW)
+    c.wire(path(board.rail("top+", 13), ("x", sensor["VCC"][0]), sensor["VCC"]), RED)
+    c.wire(path(board.rail("top-", 17), ("x", sensor["GND"][0]), sensor["GND"]), BLACK)
+    # Alert LED and its resistor on GPIO 25, its - leg to the - rail at the top.
+    led(c, board, 5, "#E53935")
+    resistor(c, board.hole(5, "e"), board.hole(5, "f"))
+    c.wire(path(board.hole(6, "a"), ("y", board.rail("top-", 6)[1] + 0), ("x", board.rail("top-", 7)[0]),
+                board.rail("top-", 7)), BLACK)
+    target = board.hole(5, "h")
+    c.wire(path(esp.pin("25"), ("y", 740), ("x", 760), ("y", target[1]), target), GREEN)
+    c.circle(esp.x + 306, esp.y + 153, 20, None, outline="#42A5F5", width=4)
+    # The computer, without cable.
+    laptop(c, 1300, 140, link)
+    for i in range(3):
+        r = 40 + i * 22
+        box = ((1260 - r) * SCALE, (330 - r) * SCALE, (1260 + r) * SCALE, (330 + r) * SCALE)
+        c.draw.arc(box, 120, 200, fill="#90CAF9", width=4 * SCALE)
+    if link == "wifi":
+        steps = [
+            ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+             "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+            ("2. Débranche le câble, alimente la carte (chargeur USB ou pile), connecte l'ordinateur au Wi-Fi « S2A-… »"
+             " (mot de passe scratch2arduino).",
+             "2. Unplug the cable, power the board (USB charger or battery), connect the computer to the \"S2A-…\" Wi-Fi"
+             " (password scratch2arduino)."),
+            ("3. Choisis le port « Wi-Fi — réseau de la carte », puis lance le mode Live.",
+             "3. Choose the \"Wi-Fi — the board's network\" port, then start the Live mode."),
+        ]
+    else:
+        steps = [
+            ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+             "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+            ("2. Débranche le câble et alimente la carte (chargeur USB ou pile), près de l'ordinateur.",
+             "2. Unplug the cable and power the board (USB charger or battery), near the computer."),
+            ("3. Bouton Bluetooth › « Chercher les cartes » › choisis « S2A-… », puis lance le mode Live.",
+             "3. Bluetooth button › \"Look for boards\" › choose \"S2A-…\", then start the Live mode."),
+        ]
+    for i, (french, english) in enumerate(steps):
+        c.text(60, 820 + i * 52, french, 15, "#37474F")
+        c.text(60, 840 + i * 52, english, 13, "#607D8B")
+    c.text(60, 90, "Température et humidité en direct, sans câble : alerte rouge au-dessus de 25 °C.", 18, "#37474F")
+    c.text(60, 116, "Live temperature and humidity without a cable: red alert above 25 °C.", 15, "#607D8B")
 
 
 BOARD_NAMES = {"uno": "Arduino Uno", "esp32": "ESP32 DevKit"}

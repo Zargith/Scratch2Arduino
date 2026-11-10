@@ -42,7 +42,7 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "unknown_board": "Carte inconnue « {board} ». Cartes disponibles : {boards}.",
     "unknown_board_short": "carte inconnue",
     "arduino_cli_missing": "L'outil arduino-cli est introuvable. Réinstalle Scratch2Arduino.",
@@ -60,7 +60,9 @@
     "live_flashing": "Installation du programme Live sur la carte {board} (une seule fois)…",
     "live_running": "Mode Live : les blocs s'exécutent sur la carte. Ctrl+C pour arrêter.",
     "live_stopped": "Mode Live arrêté.",
-    "live_finished": "Tous les blocs ont été exécutés."
+    "live_finished": "Tous les blocs ont été exécutés.",
+    "bluetooth_searching": "Recherche des cartes Bluetooth (8 secondes)…",
+    "bluetooth_none": "Aucune carte Bluetooth « S2A-… » trouvée. La carte doit avoir reçu le programme Live une fois par USB."
   },
   "build": {
     "unknown_board": "La carte « {board} » n'est pas connue. Choisis une carte dans la liste.",
@@ -150,7 +152,9 @@
     "wifi_joined": "La carte a rejoint le réseau « {network} » : son adresse est {address}.",
     "wifi_not_joined": "La carte n'arrive pas à rejoindre le réseau « {network} ». Vérifie le nom et le mot de passe (attention aux majuscules). Elle reste joignable sur son propre réseau « {access_point} ».",
     "wifi_forgotten": "La carte a oublié le réseau de la maison : elle reste joignable sur son propre réseau « {access_point} ».",
-    "wifi_upload": "Un programme s'envoie avec le câble USB : choisis le port USB de la carte (le Wi-Fi sert au mode Live).",
-    "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi, ce que les blocs écrivent s'affiche dans le panneau Live."
+    "wifi_upload": "Un programme s'envoie avec le câble USB : choisis le port USB de la carte (le Wi-Fi et le Bluetooth servent au mode Live).",
+    "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi ou Bluetooth, ce que les blocs écrivent s'affiche dans le panneau Live.",
+    "bluetooth_no_firmware": "La carte ne répond pas par le Bluetooth. Vérifie qu'elle est allumée et près de l'ordinateur. La première fois, branche-la avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Bluetooth.",
+    "bluetooth_off": "Impossible de chercher les cartes Bluetooth : le Bluetooth de l'ordinateur est peut-être éteint. Allume-le, puis réessaie."
   }
 }

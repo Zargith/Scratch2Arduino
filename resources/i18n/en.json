@@ -42,7 +42,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -60,7 +60,9 @@
     "live_flashing": "Installing the Live program on the {board} board (only once)…",
     "live_running": "Live mode: the blocks are running on the board. Ctrl+C to stop.",
     "live_stopped": "Live mode stopped.",
-    "live_finished": "Every block has run."
+    "live_finished": "Every block has run.",
+    "bluetooth_searching": "Looking for Bluetooth boards (8 seconds)…",
+    "bluetooth_none": "No \"S2A-…\" Bluetooth board found. The board must have received the Live program once over USB."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
@@ -150,7 +152,9 @@
     "wifi_joined": "The board joined the \"{network}\" network: its address is {address}.",
     "wifi_not_joined": "The board cannot join the \"{network}\" network. Check the name and the password (capital letters matter). It can still be reached on its own network \"{access_point}\".",
     "wifi_forgotten": "The board forgot the home network: it can still be reached on its own network \"{access_point}\".",
-    "wifi_upload": "A program is sent with the USB cable: choose the board's USB port (Wi-Fi is for the Live mode).",
-    "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi, what the blocks write is shown in the Live panel."
+    "wifi_upload": "A program is sent with the USB cable: choose the board's USB port (Wi-Fi and Bluetooth are for the Live mode).",
+    "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi or Bluetooth, what the blocks write is shown in the Live panel.",
+    "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
+    "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again."
   }
 }

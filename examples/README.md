@@ -24,6 +24,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
 | [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
 | [Variateur ESP32](#variateur-esp32--esp32-dimmer) (ESP32) | potentiomètre, LED, 220 Ω |
+| [Station météo sans fil](#station-météo-sans-fil--wireless-weather-station) (ESP32, Wi-Fi ou Bluetooth) | DHT11, LED, 220 Ω |
 
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
 `all-blocks` uses every block to test the editor: it is not meant to be wired.
@@ -181,6 +182,26 @@ Les broches de l'ESP32 supportent 3,3 V au plus : ne jamais y mettre de 5 V. L'o
 les modèles de cartes : suivre les noms écrits sur la carte.
 ESP32 pins take 3.3 V at most: never put 5 V on them. The pin order differs between boards: follow the names
 printed on yours.
+
+## Station météo sans fil / Wireless weather station
+
+| Par Wi-Fi / Over Wi-Fi | Par Bluetooth / Over Bluetooth |
+|---|---|
+| ![Station météo Wi-Fi](projects/wireless-station-wifi/wiring.png) | ![Station météo Bluetooth](projects/wireless-station-bluetooth/wiring.png) |
+
+La carte ESP32 mesure la température et l'humidité, loin de l'ordinateur et sans câble. En mode Live, les
+valeurs s'affichent en direct et une LED rouge s'allume au-dessus de 25 °C. Le programme est le même ;
+seule la façon de joindre la carte change (les étapes sont sur chaque schéma).
+The ESP32 board measures temperature and humidity, away from the computer and without a cable. In Live mode
+the values show live and a red LED lights up above 25 °C. The program is the same; only the way to reach the
+board changes (the steps are on each diagram).
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| DHT11 : VCC / GND | **3V3** / GND |
+| DHT11 : DATA | 4 |
+| LED : patte + par une résistance de 220 Ω / + leg through a 220 Ω resistor | 25 |
+| LED : patte − / − leg | GND |
 
 ---
 

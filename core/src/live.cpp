@@ -918,7 +918,8 @@ void Session::run(project::Project project) {
         // No S2A live firmware on the board yet: upload it, then connect again.
         connection.reset();
         if (!flasher_) {
-            set(State::Failed, tr("live.wifi_no_firmware", language_));
+            set(State::Failed, tr(network::bluetoothAddress(port_) ? "live.bluetooth_no_firmware" : "live.wifi_no_firmware",
+                                  language_));
             return;
         }
         set(State::Flashing, tr("live.flashing", language_, {{"board", board_.name}}));
@@ -1015,7 +1016,14 @@ Session::Opener Session::serialOpener() {
 Session::Opener Session::opener() {
     return [serial = serialOpener()](const std::string& port) -> Result<std::unique_ptr<serial::LineTransport>> {
         if (const auto address = network::wifiAddress(port)) {
-            auto opened = network::TcpConnection::open(*address, network::kLivePort, milliseconds(5000));
+            auto opened = network::SocketConnection::openTcp(*address, network::kLivePort, milliseconds(5000));
+            if (!opened.ok()) {
+                return opened.error();
+            }
+            return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+        }
+        if (const auto address = network::bluetoothAddress(port)) {
+            auto opened = network::SocketConnection::openBluetooth(*address, milliseconds(10000));
             if (!opened.ok()) {
                 return opened.error();
             }

@@ -1,0 +1,174 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Station météo Bluetooth",
+  "board": "esp32",
+  "variables": [
+    {
+      "id": "temperature",
+      "name": "temperature",
+      "initialValue": 0
+    },
+    {
+      "id": "humidite",
+      "name": "humidite",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set-temperature",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "temperature"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "read-temperature",
+                      "type": "sensors_temperature",
+                      "fields": {
+                        "MODEL": "DHT11",
+                        "PIN": "4"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "set-humidity",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "humidite"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "read-humidity",
+                      "type": "sensors_humidity",
+                      "fields": {
+                        "MODEL": "DHT11",
+                        "PIN": "4"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "print",
+                "type": "serial_print",
+                "inputs": {
+                  "VALUE": {
+                    "value": "",
+                    "block": {
+                      "id": "get-temperature-1",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "temperature"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "too-hot",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "hotter",
+                      "type": "operators_gt",
+                      "inputs": {
+                        "NUM1": {
+                          "block": {
+                            "id": "get-temperature-2",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "temperature"
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "25"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "alert-on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "25",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "alert-off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "25",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "blink-on",
+                "type": "pins_builtin_led",
+                "fields": {
+                  "STATE": "ON"
+                }
+              },
+              {
+                "id": "wait-on",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.2"
+                  }
+                }
+              },
+              {
+                "id": "blink-off",
+                "type": "pins_builtin_led",
+                "fields": {
+                  "STATE": "OFF"
+                }
+              },
+              {
+                "id": "wait-off",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "2"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
