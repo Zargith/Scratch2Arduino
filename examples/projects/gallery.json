@@ -77,6 +77,15 @@
         "en": "The more the knob is turned, the more LEDs light up on the strip."
       },
       "parts": { "fr": "potentiomètre, ruban NeoPixel ×8", "en": "potentiometer, NeoPixel strip ×8" }
+    },
+    {
+      "id": "esp32-dimmer",
+      "title": { "fr": "Variateur ESP32", "en": "ESP32 dimmer" },
+      "description": {
+        "fr": "Pour essayer une carte ESP32 : la LED bleue de la carte clignote, le potentiomètre règle la lumière d'une LED et sa valeur s'affiche sur le moniteur série. Marche aussi en mode Live, par USB ou par Wi-Fi.",
+        "en": "To try an ESP32 board: the blue on-board LED blinks, the knob sets the brightness of an LED and its value shows on the serial monitor. Also works in Live mode, over USB or Wi-Fi."
+      },
+      "parts": { "fr": "carte ESP32, potentiomètre, LED, résistance de 220 Ω", "en": "ESP32 board, potentiometer, LED, 220 Ω resistor" }
     }
   ]
 }

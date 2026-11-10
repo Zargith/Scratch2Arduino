@@ -72,15 +72,20 @@ jobs:
             "$cli" compile examples/sketches/blink --board "$board" --lang en --verbose
             "$cli" compile firmware/s2a_live --board "$board" --lang en --verbose
             for project in examples/projects/*/project.json; do
+              # The ESP32 examples use ESP32 pin numbers: compiled in the ESP32 step below.
+              grep -q '"board": "esp32"' "$project" && continue
               "$cli" compile "$project" --board "$board" --lang en --verbose
             done
           done
-          # ESP32: its tools are big, so it is checked on Linux only. The example projects use
-          # Arduino pin names (A0...), so only the sketch and the Live firmware are compiled.
+          # ESP32: its tools are big, so it is checked on Linux only. The Arduino examples use
+          # Arduino pin names (A0...): only the ESP32 examples are compiled for it.
           if [ "$RUNNER_OS" = "Linux" ]; then
             "$cli" setup --board esp32
             "$cli" compile examples/sketches/blink --board esp32 --lang en --verbose
             "$cli" compile firmware/s2a_live --board esp32 --lang en --verbose
+            for project in $(grep -l '"board": "esp32"' examples/projects/*/project.json); do
+              "$cli" compile "$project" --board esp32 --lang en --verbose
+            done
           fi
 
   data:
