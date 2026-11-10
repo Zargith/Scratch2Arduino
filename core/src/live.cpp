@@ -2,6 +2,7 @@
 
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
+#include "s2a/network.hpp"
 #include "s2a/resources.hpp"
 #include "s2a/validator.hpp"
 
@@ -26,6 +27,23 @@ constexpr int kStepBudget = 500; ///< Blocks run per script and step before givi
 constexpr std::string_view kDefine = "functions_define";
 constexpr const char* kFunctionSlot = "#function"; ///< Frame slot of a function body (parent = its "define" hat).
 constexpr std::size_t kMaxFrames = 200;
+
+/// Ids of the phone blocks of `stack` (and of the blocks inside them).
+void phoneBlocks(const Stack& stack, std::vector<std::string>& found) {
+    for (const Block& block : stack) {
+        if (block.type.rfind("phone_", 0) == 0) {
+            found.push_back(block.id);
+        }
+        for (const auto& [name, input] : block.inputs) {
+            if (input.block) {
+                phoneBlocks(Stack{*input.block}, found);
+            }
+        }
+        for (const auto& [name, inner] : block.statements) {
+            phoneBlocks(inner, found);
+        }
+    }
+}
 
 std::optional<double> parseNumber(const std::string& text) {
     std::string trimmed;
@@ -273,6 +291,82 @@ void LiveLink::reset() {
     (void)request("X");
 }
 
+std::optional<std::string> LiveLink::phoneMessage() {
+    const auto answer = request("B");
+    if (!answer || answer->size() < 3 || answer->rfind("b ", 0) != 0) {
+        return std::nullopt;
+    }
+    return answer->substr(2);
+}
+
+void LiveLink::phoneSend(const std::string& text) {
+    std::string line;
+    for (const char c : text) {
+        line += c == '\n' || c == '\r' || c == '\t' ? ' ' : c;
+    }
+    if (line.size() > 100) { // the firmware reads lines of 120 bytes at most
+        std::size_t end = 100;
+        while (end > 0 && (static_cast<unsigned char>(line[end]) & 0xC0) == 0x80) {
+            --end; // not in the middle of a UTF-8 character
+        }
+        line.resize(end);
+    }
+    (void)request("Y " + line);
+}
+
+std::string simpleText(std::string_view text) {
+    static constexpr std::string_view kPlain = "aaaaaaaceeeeiiiidnooooo/ouuuuypy"; // U+00E0 to U+00FF
+    std::string result;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const auto c = static_cast<unsigned char>(text[i]);
+        if (c == 0xC3 && i + 1 < text.size()) {
+            auto next = static_cast<unsigned char>(text[++i]);
+            if (next >= 0x80 && next <= 0x9F) {
+                next += 0x20; // capital letter
+            }
+            result += next >= 0xA0 && next <= 0xBF ? kPlain[next - 0xA0] : '?';
+        } else {
+            result += static_cast<char>(std::tolower(c));
+        }
+    }
+    const auto first = result.find_first_not_of(" \t");
+    if (first == std::string::npos) {
+        return {};
+    }
+    return result.substr(first, result.find_last_not_of(" \t") - first + 1);
+}
+
+Result<LiveLink::NetworkState> LiveLink::networkState() {
+    const auto answer = request("I", milliseconds(1000));
+    if (!answer) {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "no answer to I"});
+    }
+    std::istringstream words(*answer);
+    std::string kind;
+    NetworkState state;
+    words >> kind >> state.accessPoint >> state.accessPointAddress >> state.address;
+    if (kind != "i" || state.accessPoint.empty()) {
+        return Error{ErrorCode::BoardNotResponding, "unexpected answer to I: " + *answer};
+    }
+    if (state.address == "-") {
+        state.address.clear();
+    }
+    return state;
+}
+
+Status LiveLink::joinNetwork(const std::string& name, const std::string& password) {
+    const auto clean = [](std::string text) { // one line, the tab separates the name and the password
+        text.erase(std::remove_if(text.begin(), text.end(), [](char c) { return c == '\n' || c == '\r' || c == '\t'; }),
+                   text.end());
+        return text;
+    };
+    const auto answer = request("W " + clean(name) + "\t" + clean(password), milliseconds(3000));
+    if (!answer || *answer != "ok") {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "no answer to W"});
+    }
+    return success();
+}
+
 std::optional<Error> LiveLink::takeError() {
     auto error = std::move(error_);
     error_.reset();
@@ -364,6 +458,15 @@ int Interpreter::pin(const Block& block, const std::string& name, PinMode mode) 
         modes_[found->number] = mode;
     }
     return found->number;
+}
+
+void Interpreter::pollPhone() {
+    if (auto message = pins_.phoneMessage()) {
+        phoneLine_ = std::move(*message);
+        if (const auto value = parseNumber(phoneLine_)) {
+            phoneNumber_ = *value;
+        }
+    }
 }
 
 std::string Interpreter::text(const Block& block, const std::string& name) {
@@ -466,6 +569,18 @@ double Interpreter::evaluate(const Block& block) {
         record(number, value);
         return value;
     }
+    if (type == "phone_received") {
+        pollPhone();
+        if (phoneLine_.empty() || simpleText(phoneLine_) != simpleText(text(block, "MESSAGE"))) {
+            return 0;
+        }
+        phoneLine_.clear(); // true only once for each message
+        return 1;
+    }
+    if (type == "phone_number") {
+        pollPhone();
+        return phoneNumber_;
+    }
     if (type == "sensors_button_pressed") {
         const int number = pin(block, "PIN", PinMode::InputPullup);
         if (number < 0) {
@@ -558,7 +673,8 @@ void Interpreter::run(Thread& thread, Clock now) {
                     pins_.setMode(board_.builtinLed, PinMode::Output);
                     modes_[board_.builtinLed] = PinMode::Output;
                 }
-                pins_.digitalWrite(board_.builtinLed, field(block, "STATE") != "OFF");
+                const bool lit = field(block, "STATE") != "OFF";
+                pins_.digitalWrite(board_.builtinLed, board_.builtinLedActiveLow ? !lit : lit);
             }
         } else if (type == "pins_digital_write") {
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
@@ -577,6 +693,8 @@ void Interpreter::run(Thread& thread, Clock now) {
             } else {
                 output_.push_back(input != block.inputs.end() ? input->second.value : field(block, "VALUE"));
             }
+        } else if (type == "phone_send") {
+            pins_.phoneSend(text(block, "VALUE"));
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
@@ -867,6 +985,20 @@ void Session::run(project::Project project) {
         return;
     }
 
+    // Over Bluetooth the computer takes the board's only Bluetooth connection: no room for the phone.
+    if (network::bluetoothAddress(port_) || (network::isWireless(port_) && !network::wifiAddress(port_))) {
+        std::vector<std::string> blocks;
+        for (const auto& script : project.scripts) {
+            phoneBlocks(script.blocks, blocks);
+        }
+        if (!blocks.empty()) {
+            set(State::Failed, tr("live.phone_bluetooth", language_));
+            const std::lock_guard<std::mutex> lock(mutex_);
+            snapshot_.problemBlocks = std::move(blocks);
+            return;
+        }
+    }
+
     const auto fail = [this](const Error& error, std::string details = {}) {
         set(State::Failed, tr(errorMessageKey(error.code), language_), error.detail + (details.empty() ? "" : "\n" + details));
     };
@@ -885,6 +1017,11 @@ void Session::run(project::Project project) {
         }
         // No S2A live firmware on the board yet: upload it, then connect again.
         connection.reset();
+        if (!flasher_) {
+            set(State::Failed, tr(network::bluetoothAddress(port_) ? "live.bluetooth_no_firmware" : "live.wifi_no_firmware",
+                                  language_));
+            return;
+        }
         set(State::Flashing, tr("live.flashing", language_, {{"board", board_.name}}));
         std::string details;
         if (const auto flashed = flasher_(details); !flashed.ok()) {
@@ -973,6 +1110,26 @@ Session::Opener Session::serialOpener() {
             return opened.error();
         }
         return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+    };
+}
+
+Session::Opener Session::opener() {
+    return [serial = serialOpener()](const std::string& port) -> Result<std::unique_ptr<serial::LineTransport>> {
+        if (const auto address = network::wifiAddress(port)) {
+            auto opened = network::SocketConnection::openTcp(*address, network::kLivePort, milliseconds(5000));
+            if (!opened.ok()) {
+                return opened.error();
+            }
+            return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+        }
+        if (const auto address = network::bluetoothAddress(port)) {
+            auto opened = network::SocketConnection::openBluetooth(*address, milliseconds(10000));
+            if (!opened.ok()) {
+                return opened.error();
+            }
+            return std::unique_ptr<serial::LineTransport>(std::move(opened).value());
+        }
+        return serial(port);
     };
 }
 

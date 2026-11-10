@@ -27,7 +27,7 @@
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 4"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 7"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -66,7 +66,15 @@ public:
     virtual void matrixRow(int din, int clk, int cs, int row, int bits) = 0;
     /// Every output low, no sound, servos released, strip, matrix and screens cleared (Live mode stopped).
     virtual void reset() = 0;
+    /// Last line sent by the phone connected to the board over Bluetooth, once; nullopt when none.
+    [[nodiscard]] virtual std::optional<std::string> phoneMessage() { return std::nullopt; }
+    /// Sends a line to the phone connected to the board over Bluetooth.
+    virtual void phoneSend(const std::string& text) { (void)text; }
 };
+
+/// `text` in lower case, without the accents of Latin letters nor spaces around: " Éteins" is
+/// "eteins" (how the phone blocks compare messages, as the generated code does).
+[[nodiscard]] std::string simpleText(std::string_view text);
 
 /// Pins of a board running the S2A live firmware, over a line transport.
 class LiveLink final : public Pins {
@@ -91,9 +99,21 @@ public:
     void pixels(int pin, int count, int index, int red, int green, int blue) override;
     void matrixRow(int din, int clk, int cs, int row, int bits) override;
     void reset() override;
+    [[nodiscard]] std::optional<std::string> phoneMessage() override;
+    void phoneSend(const std::string& text) override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();
+
+    /// Wi-Fi state of an ESP32: its own network and its address on the joined one ("" if none).
+    struct NetworkState {
+        std::string accessPoint;        ///< "S2A-1A2B"
+        std::string accessPointAddress; ///< "192.168.4.1"
+        std::string address;            ///< On the home network, "" while not joined.
+    };
+    [[nodiscard]] Result<NetworkState> networkState();
+    /// Saves the home network on the board and joins it (an empty name forgets it).
+    [[nodiscard]] Status joinNetwork(const std::string& name, const std::string& password);
 
 private:
     /// True when the firmware answers a "?" now (false while the board restarts).
@@ -159,6 +179,8 @@ private:
     /// Pin number of a pin menu, without changing its mode (-1 when invalid).
     [[nodiscard]] int pinNumber(const project::Block& block, const std::string& name) const;
     void record(int pin, double value);
+    /// Takes the phone's new message, if any (phone blocks).
+    void pollPhone();
     [[nodiscard]] std::string field(const project::Block& block, const std::string& name) const;
     bool restore(Thread& thread, const std::vector<Frame>& old);
 
@@ -174,6 +196,8 @@ private:
     std::map<int, int> stripLengths_;                     ///< NeoPixel pin -> number of LEDs.
     std::map<std::string, std::array<int, 8>> matrices_;  ///< "din clk cs" -> rows shown.
     std::vector<std::string> output_;
+    std::string phoneLine_;   ///< Last message of the phone, until a block recognises it.
+    double phoneNumber_ = 0;  ///< Last number sent by the phone.
     std::mt19937 random_{std::random_device{}()};
 };
 
@@ -183,6 +207,7 @@ private:
 class Session {
 public:
     using Opener = std::function<Result<std::unique_ptr<serial::LineTransport>>(const std::string& port)>;
+    /// Uploads the Live firmware; empty when it cannot be done (Wi-Fi: it needs the USB cable).
     using Flasher = std::function<Status(std::string& details)>;
 
     enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed };
@@ -216,6 +241,8 @@ public:
 
     /// Opens real serial ports.
     [[nodiscard]] static Opener serialOpener();
+    /// Opens serial ports, and Wi-Fi connections for "wifi:<address>" ports.
+    [[nodiscard]] static Opener opener();
     /// Uploads the firmware with the bundled arduino-cli.
     [[nodiscard]] static Flasher arduinoCliFlasher(const Board& board, std::string port);
 

@@ -28,7 +28,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Area | What you get |
 |---|---|
 | Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; Python and JavaScript modes (later) |
-| Boards | Arduino Uno, Nano, Mega first; ESP32 / ESP8266 later |
+| Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers… |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
 | Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
@@ -208,6 +208,26 @@ the sensors read by the blocks are shown on the right with a graph of their last
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
 
+#### Live mode over Wi-Fi (ESP32, ESP8266)
+
+With an ESP32 or an ESP8266, the Live mode also works without the cable. Start it once over USB: the *S2A live*
+firmware is installed with Wi-Fi. The board then creates its own network **S2A-xxxx** (password
+`scratch2arduino`): connect the computer to it and choose **Wi-Fi — the board's network** in the port
+list. To keep the Internet on the computer, open the **Wi-Fi** button (shown for an ESP32 or an ESP8266), type the
+home or school network and its password and send them to the board over USB: it remembers them, joins
+that network at every start, and its address is added to the port list. Programs are still uploaded
+with the cable. If the computer goes away, the board switches its outputs off.
+
+#### Live mode over Bluetooth (ESP32)
+
+The same *S2A live* firmware is also a Bluetooth serial device named **S2A-xxxx** (no pairing code).
+Open the **Bluetooth** button (shown for an ESP32), click **Look for boards** and choose yours: it is
+added to the port list as **Bluetooth — S2A-xxxx**. On Linux the search uses `bluetoothctl` (BlueZ); on
+Windows the board is reached directly by its address. On macOS, pair **S2A-xxxx** in System Settings ›
+Bluetooth, then refresh the ports: the board appears as **Bluetooth — S2A-xxxx**. From the command line:
+`s2a-cli bluetooth` lists the boards around, then `s2a-cli live <project> --port bt:<address>`.
+The example **Wireless weather station** exists in a Wi-Fi and a Bluetooth version.
+
 ### Components
 
 Besides the *Pins* blocks, the toolbox has blocks for the parts of beginner kits; each tooltip explains
@@ -220,12 +240,17 @@ the wiring:
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
 | Screens | write a text or a value on a line of a 16×2 LCD — with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4–D7 on the chosen pins, contrast set with a potentiometer on V0) — or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
+| Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone — over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"…) connected to the board "S2A-xxxx" |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
 `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
-button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer).
+button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer). For the ESP32: `esp32-dimmer`,
+`wireless-station` (Live mode over Wi-Fi or Bluetooth) and `phone-lamp` (the phone drives the lamp over
+Bluetooth while the computer follows in Live mode over Wi-Fi). The Phone blocks also work in Live mode over
+USB or Wi-Fi; over Bluetooth the board's only Bluetooth connection is taken by the computer, so Live refuses
+them.
 
 ### Functions
 
@@ -281,7 +306,7 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built. The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0–D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 

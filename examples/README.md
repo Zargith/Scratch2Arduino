@@ -23,6 +23,9 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16×2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
 | [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
+| [Variateur ESP32](#variateur-esp32--esp32-dimmer) (ESP32) | potentiomètre, LED, 220 Ω |
+| [Station météo sans fil](#station-météo-sans-fil--wireless-weather-station) (ESP32, Wi-Fi ou Bluetooth) | DHT11, LED, 220 Ω |
+| [Lampe pilotée par téléphone](#lampe-pilotée-par-téléphone--phone-controlled-lamp) (ESP32, Wi-Fi et Bluetooth) | DHT11, LED, 220 Ω, téléphone |
 
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
 `all-blocks` uses every block to test the editor: it is not meant to be wired.
@@ -157,6 +160,69 @@ The more the knob is turned, the more LEDs light up on the strip.
 | Potentiomètre : patte du milieu / middle leg | A0 |
 | Ruban NeoPixel : 5V / GND | 5V / GND |
 | Ruban NeoPixel : DIN | 5 |
+
+## Variateur ESP32 / ESP32 dimmer
+
+![Variateur ESP32](projects/esp32-dimmer/wiring.png)
+
+Pour essayer une carte ESP32 (choisir « ESP32 (DevKit) ») : la LED bleue de la carte (broche 2) clignote, le
+potentiomètre règle la lumière de la LED et sa valeur (0 à 255) s'affiche sur le moniteur série. Les deux
+scripts tournent en même temps. Marche aussi en mode Live, par USB ou par Wi-Fi.
+To try an ESP32 board (choose "ESP32 (DevKit)"): the blue on-board LED (pin 2) blinks, the knob sets the
+brightness of the LED and its value (0 to 255) shows on the serial monitor. Both scripts run at the same time.
+Also works in Live mode, over USB or Wi-Fi.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Potentiomètre 10 kΩ : pattes extérieures / outer legs | GND et **3V3** (pas 5V / not 5V) |
+| Potentiomètre : patte du milieu / middle leg | 34 |
+| LED : patte + (longue) par une résistance de 220 Ω / + leg (long) through a 220 Ω resistor | 25 |
+| LED : patte − / − leg | GND |
+
+Les broches de l'ESP32 supportent 3,3 V au plus : ne jamais y mettre de 5 V. L'ordre des broches change selon
+les modèles de cartes : suivre les noms écrits sur la carte.
+ESP32 pins take 3.3 V at most: never put 5 V on them. The pin order differs between boards: follow the names
+printed on yours.
+
+## Station météo sans fil / Wireless weather station
+
+| Par Wi-Fi / Over Wi-Fi | Par Bluetooth / Over Bluetooth |
+|---|---|
+| ![Station météo Wi-Fi](projects/wireless-station-wifi/wiring.png) | ![Station météo Bluetooth](projects/wireless-station-bluetooth/wiring.png) |
+
+La carte ESP32 mesure la température et l'humidité, loin de l'ordinateur et sans câble. En mode Live, les
+valeurs s'affichent en direct et une LED rouge s'allume au-dessus de 25 °C. Le programme est le même ;
+seule la façon de joindre la carte change (les étapes sont sur chaque schéma).
+The ESP32 board measures temperature and humidity, away from the computer and without a cable. In Live mode
+the values show live and a red LED lights up above 25 °C. The program is the same; only the way to reach the
+board changes (the steps are on each diagram).
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| DHT11 : VCC / GND | **3V3** / GND |
+| DHT11 : DATA | 4 |
+| LED : patte + par une résistance de 220 Ω / + leg through a 220 Ω resistor | 25 |
+| LED : patte − / − leg | GND |
+
+## Lampe pilotée par téléphone / Phone-controlled lamp
+
+![Lampe pilotée par téléphone](projects/phone-lamp/wiring.png)
+
+Wi-Fi et Bluetooth ensemble. Sur le téléphone, une appli de terminal Bluetooth (par exemple « Serial
+Bluetooth Terminal » sur Android) se connecte à la carte « S2A-… » et envoie `allume`, `eteins` ou
+`temperature` (les majuscules et les accents ne comptent pas) : la carte répond. Pendant ce temps,
+l'ordinateur suit la lampe et la température en mode Live par Wi-Fi, et peut changer les blocs.
+Téléversé, le programme marche aussi avec le téléphone seul. Le mode Live par Bluetooth n'est pas possible
+avec les blocs Téléphone : la carte n'a qu'une connexion Bluetooth, prise par le téléphone.
+Wi-Fi and Bluetooth together. On the phone, a Bluetooth terminal app (for example "Serial Bluetooth
+Terminal" on Android) connects to the "S2A-…" board and sends `allume`, `eteins` or `temperature` (capital
+letters and accents do not matter): the board answers. Meanwhile the computer follows the lamp and the
+temperature in Live mode over Wi-Fi, and can change the blocks. Uploaded, the program also works with the
+phone alone. Live mode over Bluetooth is not possible with the Phone blocks: the board has one Bluetooth
+connection, taken by the phone.
+
+Câblage : le même que la station météo sans fil (DHT11 sur 4, LED sur 25, alimentés en 3V3).
+Wiring: the same as the wireless weather station (DHT11 on 4, LED on 25, powered from 3V3).
 
 ---
 

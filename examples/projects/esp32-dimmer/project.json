@@ -1,0 +1,101 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Variateur ESP32",
+  "board": "esp32",
+  "variables": [
+    {
+      "id": "lumiere",
+      "name": "lumiere",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start-blink",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever-blink",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              { "id": "on", "type": "pins_builtin_led", "fields": { "STATE": "ON" } },
+              { "id": "wait-on", "type": "control_wait", "inputs": { "SECONDS": { "value": "0.5" } } },
+              { "id": "off", "type": "pins_builtin_led", "fields": { "STATE": "OFF" } },
+              { "id": "wait-off", "type": "control_wait", "inputs": { "SECONDS": { "value": "0.5" } } }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "x": 420,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start-dimmer",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever-dimmer",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": { "VARIABLE": "lumiere" },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0",
+                    "block": {
+                      "id": "map",
+                      "type": "operators_map",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": { "id": "knob", "type": "sensors_potentiometer", "fields": { "PIN": "34" } }
+                        },
+                        "FROM_LOW": { "value": "0" },
+                        "FROM_HIGH": { "value": "100" },
+                        "TO_LOW": { "value": "0" },
+                        "TO_HIGH": { "value": "255" }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pwm",
+                "type": "pins_analog_write",
+                "fields": { "PIN": "25" },
+                "inputs": {
+                  "VALUE": {
+                    "value": "128",
+                    "block": { "id": "get-pwm", "type": "variables_get", "fields": { "VARIABLE": "lumiere" } }
+                  }
+                }
+              },
+              {
+                "id": "print",
+                "type": "serial_print",
+                "inputs": {
+                  "VALUE": {
+                    "value": "",
+                    "block": { "id": "get-print", "type": "variables_get", "fields": { "VARIABLE": "lumiere" } }
+                  }
+                }
+              },
+              { "id": "wait", "type": "control_wait", "inputs": { "SECONDS": { "value": "0.1" } } }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

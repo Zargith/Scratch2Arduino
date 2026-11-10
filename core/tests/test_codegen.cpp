@@ -399,6 +399,65 @@ TEST(Codegen, Drives16PinLcdScreens) {
     EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"LiquidCrystal"}));
 }
 
+TEST(Codegen, AdaptsToTheEsp32) {
+    Block servo = block("servo", "motors_servo_write");
+    servo.fields["PIN"] = "13";
+    Block knob = block("knob", "sensors_potentiometer");
+    knob.fields["PIN"] = "34";
+    Block print = block("print", "serial_print");
+    print.inputs["VALUE"].block = knob;
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON"), servo, print}, "esp32")).source;
+    for (const char* expected : {"#include <ESP32Servo.h>\n", "  pinMode(2, OUTPUT);", "digitalWrite(2, HIGH);",
+                                 "  analogReadResolution(10);", "s2a_servo_13.attach(13);", "analogRead(34)"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("LED_BUILTIN"), std::string::npos) << source;
+    EXPECT_EQ(source.find("<Servo.h>"), std::string::npos) << source;
+    EXPECT_EQ(s2a::toolchain::requiredLibraries(source), (std::vector<std::string>{"ESP32Servo"}));
+    // Arduino boards keep LED_BUILTIN and need no resolution change.
+    const auto uno = generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON")})).source;
+    EXPECT_NE(uno.find("digitalWrite(LED_BUILTIN, HIGH);"), std::string::npos);
+    EXPECT_EQ(uno.find("analogReadResolution"), std::string::npos);
+}
+
+TEST(Codegen, TalksToThePhoneOverBluetooth) {
+    Block sent = block("sent", "phone_received");
+    sent.inputs["MESSAGE"].value = "Éteins";
+    Block when = block("if", "control_if");
+    when.inputs["CONDITION"].block = sent;
+    Block answer = block("answer", "phone_send");
+    answer.inputs["VALUE"].value = "Lampe éteinte";
+    Block number = block("number", "phone_number");
+    Block print = block("print", "phone_send");
+    print.inputs["VALUE"].block = number;
+    when.statements["SUBSTACK"] = {led("off", "OFF"), answer, print};
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), when}, "esp32")).source;
+    for (const char* expected : {"#include <BluetoothSerial.h>\n", "BluetoothSerial s2a_phone;", "  s2a_phone_begin();",
+                                 "if (s2a_phone_received(String(\"Éteins\"))) {",
+                                 "s2a_phone.println(String(\"Lampe éteinte\"));",
+                                 "s2a_phone.println(s2a_text(s2a_phone_number()));", "String s2a_text(double value)",
+                                 "bool s2a_phone_received(const String& message)"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_TRUE(s2a::toolchain::requiredLibraries(source).empty()); // part of the ESP32 tools
+}
+
+TEST(Codegen, LightsTheEsp8266LedWithLow) {
+    Block level = block("level", "pins_analog_write");
+    level.fields["PIN"] = "D5";
+    level.inputs["VALUE"].value = "128";
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), led("on", "ON"),
+                                             led("off", "OFF"), level},
+                                            "esp8266"))
+                            .source;
+    for (const char* expected : {"  pinMode(2, OUTPUT);", "digitalWrite(2, LOW);\n  digitalWrite(2, HIGH);",
+                                 "analogWrite(D5, "}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("analogReadResolution"), std::string::npos) << source;
+}
+
 TEST(Codegen, AsciiText) {
     EXPECT_EQ(s2a::codegen::asciiText("Élève à l'œil ½ 😀"), "Eleve a l'oeil ? ?");
     EXPECT_EQ(s2a::codegen::asciiText("a\tb\nc"), "abc");

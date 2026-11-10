@@ -10,10 +10,32 @@ export interface HostInfo {
 	version: string;
 }
 
+/** Wi-Fi of an ESP32 after s2a_wifi_setup (see core LiveLink::NetworkState). */
+export interface WifiSetup {
+	ok: boolean;
+	message: string;
+	accessPoint: string;
+	accessPointAddress: string;
+	/** On the home network, "" when not joined. */
+	address: string;
+}
+
 export interface Port {
 	address: string;
 	label: string;
 	boardId?: string;
+	/** The serial port of a board paired over Bluetooth (macOS): for the Live mode only. */
+	bluetooth?: boolean;
+}
+
+/** Result of s2a_bluetooth_search. */
+export interface BluetoothSearch {
+	ok: boolean;
+	/** False on macOS: the board is paired in the system settings, then it is a serial port. */
+	byAddress?: boolean;
+	devices?: { name: string; address: string }[];
+	message?: string;
+	details?: string;
 }
 
 /** Result of a build or an upload, already explained in the user's language by the core. */
@@ -94,6 +116,8 @@ interface HostFunctions {
 	s2a_library_export(language: Language): Promise<string | null>;
 	s2a_library_import(language: Language): Promise<number | null>;
 	s2a_ports(): Promise<Port[]>;
+	s2a_wifi_setup(port: string, name: string, password: string, boardId: string, language: Language): Promise<WifiSetup>;
+	s2a_bluetooth_search(language: Language): Promise<BluetoothSearch>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
@@ -149,6 +173,11 @@ export const bridge = {
 	/** Resolves to the number of groups added, or null when cancelled. */
 	libraryImport: (language: Language) => host("s2a_library_import")(language),
 	ports: () => host("s2a_ports")(),
+	/** Saves the home Wi-Fi on the board over its USB port (empty name: forget it). */
+	wifiSetup: (port: string, name: string, password: string, boardId: string, language: Language) =>
+		host("s2a_wifi_setup")(port, name, password, boardId, language),
+	/** Bluetooth boards around the computer (about 8 seconds). */
+	bluetoothSearch: (language: Language) => host("s2a_bluetooth_search")(language),
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
 	setTitle: (title: string) => host("s2a_set_title")(title),

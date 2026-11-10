@@ -16,9 +16,11 @@ std::vector<int> numbers(const std::vector<const s2a::Pin*>& pins) {
     return result;
 }
 
-TEST(BuiltinBoards, LoadsUnoNanoAndMega) {
+TEST(BuiltinBoards, LoadsUnoNanoMegaAndEsp32) {
     const auto& database = BoardDatabase::builtin();
-    ASSERT_EQ(database.boards().size(), 3U);
+    ASSERT_EQ(database.boards().size(), 5U);
+    EXPECT_NE(database.find("esp32"), nullptr);
+    EXPECT_NE(database.find("esp8266"), nullptr);
     EXPECT_NE(database.find("uno"), nullptr);
     EXPECT_NE(database.find("nano"), nullptr);
     EXPECT_NE(database.find("mega"), nullptr);
@@ -41,6 +43,23 @@ TEST(Uno, PinsMatchTheHardware) {
     EXPECT_EQ(numbers(uno->pinsWith(PinCapability::Interrupt)), (std::vector<int>{2, 3}));
     EXPECT_EQ(numbers(uno->pinsWith(PinCapability::Analog)), (std::vector<int>{14, 15, 16, 17, 18, 19}));
     EXPECT_EQ(uno->pinsWith(PinCapability::Digital).size(), 20U);
+}
+
+TEST(Esp32, ListsItsGpioPins) {
+    const auto* esp32 = BoardDatabase::builtin().find("esp32");
+    ASSERT_NE(esp32, nullptr);
+    EXPECT_EQ(esp32->architecture, "esp32");
+    EXPECT_EQ(esp32->builtinLed, 2);
+    // Flash pins (6-11), serial (1, 3) and boot pins (0, 12) are left out.
+    for (const int hidden : {0, 1, 3, 6, 7, 8, 9, 10, 11, 12}) {
+        EXPECT_EQ(esp32->findPin(hidden), nullptr) << hidden;
+    }
+    // Analog inputs usable while Wi-Fi is on (ADC1); 34-39 are inputs only.
+    EXPECT_EQ(numbers(esp32->pinsWith(PinCapability::Analog)), (std::vector<int>{32, 33, 34, 35, 36, 39}));
+    ASSERT_NE(esp32->findPin("34"), nullptr);
+    EXPECT_FALSE(esp32->findPin("34")->has(PinCapability::Digital));
+    EXPECT_TRUE(esp32->findPin("D25")->has(PinCapability::Pwm));
+    EXPECT_EQ(esp32->pinsWith(PinCapability::Digital).size(), 18U);
 }
 
 TEST(Uno, FindsPinsByLabelOrNumber) {
@@ -118,6 +137,37 @@ TEST(BoardDatabase, RejectsInvalidDescriptions) {
     expectInvalid(base, R"("interruptPins": [])", R"("interruptPins": [], "usb": ["12"])");
     EXPECT_FALSE(BoardDatabase::fromJson({"{"}).ok());
     EXPECT_FALSE(BoardDatabase::fromJson({kMinimalBoard, kMinimalBoard}).ok()); // duplicate id
+}
+
+} // namespace
+
+namespace {
+
+TEST(BuiltinBoards, NamesTheNodeMcuPinsAsPrintedOnIt) {
+    const auto* board = s2a::BoardDatabase::builtin().find("esp8266");
+    ASSERT_NE(board, nullptr);
+    const auto* d1 = board->findPin("D1");
+    ASSERT_NE(d1, nullptr);
+    EXPECT_EQ(d1->number, 5); // GPIO 5
+    EXPECT_EQ(d1->label, "D1");
+    EXPECT_EQ(board->findPin("d1"), d1);
+    EXPECT_EQ(board->findPin("5"), d1);
+    EXPECT_EQ(board->findPin("1"), nullptr); // GPIO 1 is the serial port
+    const auto* a0 = board->findPin("A0");
+    ASSERT_NE(a0, nullptr);
+    EXPECT_EQ(a0->number, 17);
+    EXPECT_TRUE(a0->has(s2a::PinCapability::Analog));
+    EXPECT_FALSE(a0->has(s2a::PinCapability::Digital));
+    EXPECT_FALSE(board->findPin("D0")->has(s2a::PinCapability::Pwm));
+    EXPECT_EQ(board->builtinLed, 2);
+    EXPECT_TRUE(board->builtinLedActiveLow);
+    EXPECT_TRUE(board->wifi);
+    EXPECT_FALSE(board->bluetooth);
+    const auto* esp32 = s2a::BoardDatabase::builtin().find("esp32");
+    EXPECT_TRUE(esp32->wifi && esp32->bluetooth && !esp32->builtinLedActiveLow);
+    EXPECT_FALSE(s2a::BoardDatabase::builtin().find("uno")->wifi);
+    // "D13" on an Arduino board is still pin 13.
+    EXPECT_EQ(s2a::BoardDatabase::builtin().find("uno")->findPin("D13")->number, 13);
 }
 
 } // namespace

@@ -42,6 +42,9 @@ describe("example gallery", () => {
 		expect(i2c?.variant?.fr).toBe("Écran I2C (4 broches)");
 		expect(parallel?.parts.en).toContain("16 pins");
 		expect(parallel?.wiring).not.toBe(i2c?.wiring);
+		const wireless = exampleGroups.find((group) => group[0]?.group === "wireless-station");
+		expect(wireless?.map((example) => example.variant?.en)).toEqual(["Over Wi-Fi", "Over Bluetooth"]);
+		expect(wireless?.every((example) => example.project.board === "esp32")).toBe(true);
 		expect(exampleGroups.flat()).toEqual(examples);
 		expect(exampleGroups.filter((group) => group.length === 1).every((group) => group[0]?.variant === undefined)).toBe(true);
 	});

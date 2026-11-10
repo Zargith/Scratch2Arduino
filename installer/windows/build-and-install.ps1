@@ -39,29 +39,47 @@ if (-not $BuildDir) { $BuildDir = Join-Path $InstallDir 'build' }
 if (-not $LogFile) { $LogFile = Join-Path $InstallDir 'install-log.txt' }
 New-Item -ItemType Directory -Force -Path (Split-Path $LogFile) | Out-Null
 
+# Appends a line to the log (or starts it again). Another program may be reading the log at
+# that moment (the CI shows it while the installer runs): retry for a short while.
+function Write-Log([string]$Line, [switch]$Reset) {
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            if ($Reset) {
+                Set-Content -Path $LogFile -Value $Line -Encoding UTF8 -ErrorAction Stop
+            } else {
+                Add-Content -Path $LogFile -Value $Line -Encoding UTF8 -ErrorAction Stop
+            }
+            return
+        } catch {
+            if ($attempt -ge 40) { throw }
+            Start-Sleep -Milliseconds 50
+        }
+    }
+}
+
 function Say([string]$Fr, [string]$En) {
     $text = if ($French) { $Fr } else { $En }
     Write-Host "==> $text" -ForegroundColor Cyan
-    Add-Content -Path $LogFile -Value "==> $text" -Encoding UTF8
+    Write-Log "==> $text"
 }
 
 function Fail([string]$Fr, [string]$En) {
     $text = if ($French) { $Fr } else { $En }
     Write-Host $text -ForegroundColor Red
-    Add-Content -Path $LogFile -Value "ERROR: $text" -Encoding UTF8
+    Write-Log "ERROR: $text"
     exit 1
 }
 
 # Runs a native command, mirrors its output to the log and stops on a non-zero exit code.
 function Invoke-Native([string]$Exe, [string[]]$Arguments) {
-    Add-Content -Path $LogFile -Value "> $Exe $($Arguments -join ' ')" -Encoding UTF8
+    Write-Log "> $Exe $($Arguments -join ' ')"
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     # Not Tee-Object: in Windows PowerShell 5.1 it writes UTF-16, which would mix encodings in the log.
     & $Exe @Arguments 2>&1 | ForEach-Object {
         $line = "$_"
         Write-Host $line
-        Add-Content -Path $LogFile -Value $line -Encoding UTF8
+        Write-Log $line
     }
     $code = $LASTEXITCODE
     $ErrorActionPreference = $previous
@@ -171,7 +189,7 @@ function Read-Manifest([string]$Path) {
 }
 
 try {
-    Set-Content -Path $LogFile -Value "Scratch2Arduino build - $(Get-Date -Format s)" -Encoding UTF8
+    Write-Log "Scratch2Arduino build - $(Get-Date -Format s)" -Reset
 
     if (Get-Process -Name 'scratch2arduino' -ErrorAction SilentlyContinue) {
         Fail 'Scratch2Arduino est ouvert : ferme-le puis relance l''installation.' `
@@ -275,7 +293,7 @@ try {
     exit 0
 }
 catch {
-    Add-Content -Path $LogFile -Value "ERROR: $_" -Encoding UTF8
+    Write-Log "ERROR: $_"
     Write-Host $_ -ForegroundColor Red
     Fail "La compilation a échoué. Journal : $LogFile" "The build failed. Log: $LogFile"
 }

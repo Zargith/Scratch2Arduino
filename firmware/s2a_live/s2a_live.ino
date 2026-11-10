@@ -27,25 +27,87 @@
 //   X               every output LOW, no sound, servos released, strip, matrix and
 //                   screens cleared                                      -> "ok"
 //
+// ESP32 and ESP8266 only (Wi-Fi):
+//   W <name>\t<password>  joins this Wi-Fi network, now and at every start (saved on the board);
+//                   an empty name forgets it                             -> "ok"
+//   I               network state -> "i <access point> <its address> <address on the joined
+//                   network, or ->"
+//   B               last message of the phone connected over Bluetooth, once -> "b <text>", or
+//                   "b" when it sent nothing new
+//   Y <text>        sends a line to that phone                           -> "ok"
+// The ESP32 and the ESP8266 also create their own Wi-Fi network "S2A-xxxx" (password
+// "scratch2arduino") and accept the same commands on TCP port 3333 (one computer at a time; it
+// answers "S2A <version>" when it connects). ESP32 only: B and Y, and a Bluetooth serial device
+// (SPP) named "S2A-xxxx", taking the same commands. A Bluetooth device that starts with "?" is a computer; any other one is a phone (a
+// Bluetooth terminal app): its lines are kept for the "B" command. When the computer of a Wi-Fi
+// or Bluetooth connection goes away, every output is switched off.
+//
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
-// "! <command>" so that the computer never waits forever.
+// "! <command>" so that the computer never waits forever. Each answer goes back to where the
+// command came from (USB, Wi-Fi or Bluetooth).
 
 #include <Adafruit_NeoPixel.h>
 #include <DHT.h>
 #include <LiquidCrystal.h>
 #include <LiquidCrystal_I2C.h>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESP32Servo.h> // same Servo class, for the ESP32
+#else
 #include <Servo.h>
+#endif
 #include <U8x8lib.h>
 #include <Wire.h>
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#define S2A_WIFI 1
+#endif
+#if defined(ARDUINO_ARCH_ESP32)
+#define S2A_BLUETOOTH 1
+#include <BluetoothSerial.h>
+#include <ESPmDNS.h>
+#include <Preferences.h>
+#include <WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
+#include <EEPROM.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 4";
+const char* const kHello = "S2A 7";
+#if defined(S2A_WIFI)
+const int kMaxLine = 120; // room for a Wi-Fi name and password
+#else
 const int kMaxLine = 48;
+#endif
 const int kMaxPins = 70;
 const int kMaxServos = 8;
 
-char line[kMaxLine + 1];
-int length = 0;
+// A line being received from the computer, over USB, Wi-Fi or Bluetooth.
+struct Input {
+  Stream* stream;
+  char text[kMaxLine + 1];
+  int length;
+};
+
+Input usb = {&Serial, {0}, 0};
+Print* out = &Serial; // where the answer to the command being executed goes
+
+#if defined(S2A_WIFI)
+const char* const kAccessPointPassword = "scratch2arduino";
+const uint16_t kTcpPort = 3333;
+WiFiServer server(kTcpPort);
+WiFiClient client;
+Input network = {&client, {0}, 0};
+bool clientConnected = false;
+char accessPoint[16] = "S2A"; // also the Bluetooth name
+#endif
+#if defined(S2A_BLUETOOTH)
+BluetoothSerial bluetoothPort;
+Input bluetooth = {&bluetoothPort, {0}, 0};
+bool bluetoothConnected = false;
+bool bluetoothComputer = false; // false: a phone (or nothing yet)
+char phoneMessage[kMaxLine + 1] = "";
+#endif
 bool output[kMaxPins];
 Servo servos[kMaxServos];
 int servoPins[kMaxServos];
@@ -83,12 +145,12 @@ void readDht(int pin, int type) {
   }
   const float temperature = dht->readTemperature();
   const float humidity = dht->readHumidity();
-  Serial.print("h ");
-  Serial.print(pin);
-  Serial.print(' ');
-  Serial.print(isnan(temperature) ? -9999L : (long)lround(temperature * 10));
-  Serial.print(' ');
-  Serial.println(isnan(humidity) ? -9999L : (long)lround(humidity * 10));
+  out->print("h ");
+  out->print(pin);
+  out->print(' ');
+  out->print(isnan(temperature) ? -9999L : (long)lround(temperature * 10));
+  out->print(' ');
+  out->println(isnan(humidity) ? -9999L : (long)lround(humidity * 10));
 }
 
 void showOnLcd(int row, const char* text) {
@@ -284,15 +346,15 @@ long distanceMillimetres(int trig, int echo) {
 }
 
 void reply(const char* text) {
-  Serial.println(text);
+  out->println(text);
 }
 
 void reply(char kind, int pin, long value) {
-  Serial.print(kind);
-  Serial.print(' ');
-  Serial.print(pin);
-  Serial.print(' ');
-  Serial.println(value);
+  out->print(kind);
+  out->print(' ');
+  out->print(pin);
+  out->print(' ');
+  out->println(value);
 }
 
 // Reads the next integer of `text` starting at `*position`; false when there is none.
@@ -318,7 +380,187 @@ bool readNumber(const char* text, int* position, long* value) {
 }
 
 bool validPin(long pin) {
+#if defined(ARDUINO_ARCH_ESP8266)
+  if (pin == A0) {
+    return true; // the only analog input, after the digital pins
+  }
+#endif
   return pin >= 0 && pin < kMaxPins && pin < NUM_DIGITAL_PINS;
+}
+
+#if defined(S2A_WIFI)
+// The home network, kept on the board: Preferences (ESP32) or EEPROM (ESP8266).
+void saveNetwork(const String& name, const String& password) {
+#if defined(ARDUINO_ARCH_ESP32)
+  Preferences settings;
+  settings.begin("s2a", false);
+  settings.putString("ssid", name);
+  settings.putString("password", password);
+  settings.end();
+#else
+  EEPROM.begin(128);
+  EEPROM.write(0, 'S'); // written by this firmware
+  for (int i = 0; i < 32; i++) {
+    EEPROM.write(1 + i, i < (int)name.length() ? name[i] : 0);
+  }
+  for (int i = 0; i < 64; i++) {
+    EEPROM.write(33 + i, i < (int)password.length() ? password[i] : 0);
+  }
+  EEPROM.end();
+#endif
+}
+
+void loadNetwork(String& name, String& password) {
+#if defined(ARDUINO_ARCH_ESP32)
+  Preferences settings;
+  settings.begin("s2a", true);
+  name = settings.getString("ssid", "");
+  password = settings.getString("password", "");
+  settings.end();
+#else
+  name = "";
+  password = "";
+  EEPROM.begin(128);
+  if (EEPROM.read(0) == 'S') {
+    for (int i = 0; i < 32 && EEPROM.read(1 + i) != 0; i++) {
+      name += (char)EEPROM.read(1 + i);
+    }
+    for (int i = 0; i < 64 && EEPROM.read(33 + i) != 0; i++) {
+      password += (char)EEPROM.read(33 + i);
+    }
+  }
+  EEPROM.end();
+#endif
+}
+
+// "name<TAB>password": saved on the board, joined now and at every start.
+void joinNetwork(const char* text) {
+  String name = text;
+  String password;
+  const int tab = name.indexOf('\t');
+  if (tab >= 0) {
+    password = name.substring(tab + 1);
+    name = name.substring(0, tab);
+  }
+  saveNetwork(name, password);
+  WiFi.disconnect();
+  if (name.length() > 0) {
+    WiFi.begin(name.c_str(), password.c_str());
+  }
+}
+
+void networkState() {
+  out->print("i ");
+  out->print(accessPoint);
+  out->print(' ');
+  out->print(WiFi.softAPIP());
+  out->print(' ');
+  if (WiFi.status() == WL_CONNECTED) {
+    out->println(WiFi.localIP());
+  } else {
+    out->println('-');
+  }
+}
+
+void startWifi() {
+  WiFi.mode(WIFI_AP_STA);
+  uint8_t mac[6];
+  WiFi.softAPmacAddress(mac);
+  snprintf(accessPoint, sizeof(accessPoint), "S2A-%02X%02X", mac[4], mac[5]);
+  WiFi.softAP(accessPoint, kAccessPointPassword);
+  String name;
+  String password;
+  loadNetwork(name, password);
+  if (name.length() > 0) {
+    WiFi.begin(name.c_str(), password.c_str());
+  }
+  String host = accessPoint;
+  host.toLowerCase(); // s2a-xxxx.local
+  if (MDNS.begin(host.c_str())) {
+    MDNS.addService("s2a", "tcp", kTcpPort);
+  }
+  server.begin();
+  server.setNoDelay(true);
+}
+
+// One computer at a time: a new one replaces the previous one.
+void serveNetwork() {
+  if (server.hasClient()) {
+    if (client) {
+      client.stop();
+    }
+#if defined(ARDUINO_ARCH_ESP8266)
+    client = server.available(); // the new connection
+#else
+    client = server.accept();
+#endif
+    client.setNoDelay(true);
+    network.length = 0;
+    clientConnected = true;
+    client.println(kHello);
+  }
+  if (clientConnected && !client.connected()) {
+    clientConnected = false;
+    resetAll(); // the computer went away: nothing keeps running on its own
+  }
+}
+#endif
+
+#if defined(S2A_BLUETOOTH)
+// Bluetooth serial device with the name of the Wi-Fi network (Wi-Fi must start first).
+// Pairing without a code ("just works"): nothing to type on the computer or the phone.
+void startBluetooth() {
+  bluetoothPort.enableSSP(false, false);
+  bluetoothPort.begin(accessPoint);
+}
+
+// No greeting: a phone would show it. A computer asks "?" first.
+void serveBluetooth() {
+  const bool connected = bluetoothPort.hasClient();
+  if (connected && !bluetoothConnected) {
+    bluetooth.length = 0;
+    bluetoothComputer = false;
+  } else if (!connected && bluetoothConnected) {
+    if (bluetoothComputer) {
+      resetAll(); // the computer went away: nothing keeps running on its own
+    }
+    bluetoothComputer = false;
+  }
+  bluetoothConnected = connected;
+}
+#endif
+
+// Every output LOW, no sound, servos released, strip, matrix and screens cleared.
+void resetAll() {
+  stopTone();
+  if (stripPin >= 0) {
+    strip.clear();
+    strip.show();
+  }
+  if (matrixPins[0] >= 0) {
+    for (int i = 1; i <= 8; i++) {
+      matrixSend(i, 0);
+    }
+  }
+  if (lcd != nullptr) {
+    lcd->clear();
+  }
+  if (lcd16 != nullptr) {
+    lcd16->clear();
+  }
+  if (oled != nullptr) {
+    oled->clear();
+  }
+  for (int i = 0; i < kMaxServos; i++) {
+    if (servoPins[i] >= 0) {
+      releaseServo(servoPins[i]);
+    }
+  }
+  for (int i = 0; i < kMaxPins && i < NUM_DIGITAL_PINS; i++) {
+    if (output[i]) {
+      digitalWrite(i, LOW);
+    }
+  }
 }
 
 void execute(const char* command) {
@@ -329,36 +571,34 @@ void execute(const char* command) {
   case '?':
     reply(kHello);
     return;
+#if defined(S2A_WIFI)
+  case 'W':
+    joinNetwork(textAfter(command, position));
+    reply("ok");
+    return;
+  case 'I':
+    networkState();
+    return;
+#endif
+#if defined(S2A_BLUETOOTH)
+  case 'B':
+    out->print('b');
+    if (phoneMessage[0] != '\0') {
+      out->print(' ');
+      out->print(phoneMessage);
+      phoneMessage[0] = '\0';
+    }
+    out->println();
+    return;
+  case 'Y':
+    if (bluetoothConnected && !bluetoothComputer) {
+      bluetoothPort.println(textAfter(command, position));
+    }
+    reply("ok");
+    return;
+#endif
   case 'X':
-    stopTone();
-    if (stripPin >= 0) {
-      strip.clear();
-      strip.show();
-    }
-    if (matrixPins[0] >= 0) {
-      for (int i = 1; i <= 8; i++) {
-        matrixSend(i, 0);
-      }
-    }
-    if (lcd != nullptr) {
-      lcd->clear();
-    }
-    if (lcd16 != nullptr) {
-      lcd16->clear();
-    }
-    if (oled != nullptr) {
-      oled->clear();
-    }
-    for (int i = 0; i < kMaxServos; i++) {
-      if (servoPins[i] >= 0) {
-        releaseServo(servoPins[i]);
-      }
-    }
-    for (int i = 0; i < kMaxPins && i < NUM_DIGITAL_PINS; i++) {
-      if (output[i]) {
-        digitalWrite(i, LOW);
-      }
-    }
+    resetAll();
     reply("ok");
     return;
   case 'M':
@@ -509,38 +749,82 @@ void execute(const char* command) {
     }
     break;
   }
-  Serial.print("! ");
-  Serial.println(command);
+  out->print("! ");
+  out->println(command);
 }
 
 void setup() {
   Serial.begin(kBaud);
+#if defined(ARDUINO_ARCH_ESP32)
+  analogReadResolution(10); // 0-1023, as on the Arduino boards
+#endif
   for (int i = 0; i < kMaxPins; i++) {
     output[i] = false;
   }
   for (int i = 0; i < kMaxServos; i++) {
     servoPins[i] = -1;
   }
+#if defined(S2A_WIFI)
+  startWifi();
+#endif
+#if defined(S2A_BLUETOOTH)
+  startBluetooth();
+#endif
   reply(kHello);
+}
+
+// Executes the complete lines received on `input`; the answers go back to it.
+void readFrom(Input& input) {
+  while (input.stream->available() > 0) {
+    const char c = input.stream->read();
+    if (c == '\r') {
+      continue;
+    }
+    if (c == '\n') {
+      input.text[input.length] = '\0';
+#if defined(S2A_BLUETOOTH)
+      if (&input == &bluetooth && !bluetoothComputer) {
+        if (strcmp(input.text, "?") == 0) {
+          bluetoothComputer = true; // the Live mode of a computer
+        } else {
+          if (input.length > 0) {
+            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command
+          }
+          input.length = 0;
+          continue;
+        }
+      }
+#endif
+      if (input.length > 0) {
+        out = input.stream;
+        execute(input.text);
+        out = &Serial;
+      }
+      input.length = 0;
+    } else if (input.length < kMaxLine) {
+      input.text[input.length++] = c;
+    }
+  }
 }
 
 void loop() {
   if (tonePin >= 0 && toneEnd != 0 && (long)(millis() - toneEnd) >= 0) {
     stopTone();
   }
-  while (Serial.available() > 0) {
-    const char c = Serial.read();
-    if (c == '\r') {
-      continue;
-    }
-    if (c == '\n') {
-      line[length] = '\0';
-      if (length > 0) {
-        execute(line);
-      }
-      length = 0;
-    } else if (length < kMaxLine) {
-      line[length++] = c;
-    }
+  readFrom(usb);
+#if defined(S2A_WIFI)
+  serveNetwork();
+  if (clientConnected) {
+    readFrom(network);
   }
+#endif
+#if defined(ARDUINO_ARCH_ESP8266)
+  MDNS.update();
+#endif
+#if defined(S2A_BLUETOOTH)
+  serveBluetooth();
+  if (bluetoothConnected) {
+    readFrom(bluetooth);
+  }
+#endif
 }

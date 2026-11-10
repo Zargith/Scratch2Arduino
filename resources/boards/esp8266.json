@@ -1,0 +1,19 @@
+{
+  "id": "esp8266",
+  "name": "ESP8266 (NodeMCU)",
+  "fqbn": "esp8266:esp8266:nodemcuv2",
+  "platform": "esp8266:esp8266",
+  "mcu": "ESP8266",
+  "voltage": 3.3,
+  "flashBytes": 1044464,
+  "ramBytes": 81920,
+  "builtinLed": "D4",
+  "builtinLedActiveLow": true,
+  "wifi": true,
+  "digitalPins": { "D0": 16, "D1": 5, "D2": 4, "D3": 0, "D4": 2, "D5": 14, "D6": 12, "D7": 13, "D8": 15 },
+  "analogPins": { "count": 1, "firstNumber": 17, "inputOnly": ["A0"] },
+  "pwmPins": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"],
+  "interruptPins": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"],
+  "i2c": { "sda": "D2", "scl": "D1" },
+  "spi": { "mosi": "D7", "miso": "D6", "sck": "D5", "ss": "D8" }
+}

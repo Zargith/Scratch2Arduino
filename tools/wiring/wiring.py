@@ -193,6 +193,64 @@ class Uno:
         return self.pins[name]
 
 
+# --- ESP32 DevKit ------------------------------------------------------------------------
+
+class Esp32:
+    """ESP32 DevKit (30 pins) seen from above, antenna on the left, USB plug on the right."""
+
+    # Pins named by their GPIO number, as in the blocks (VP = 36, VN = 39).
+    TOP = ["3V3", "GND", "15", "2", "4", "RX2", "TX2", "5", "18", "19", "21", "RX0", "TX0", "22", "23"]
+    BOTTOM = ["VIN", "GND", "13", "12", "14", "27", "26", "25", "33", "32", "35", "34", "VN 39", "VP 36", "EN"]
+    PITCH = 26
+
+    def __init__(self, c: Canvas, x: float, y: float) -> None:
+        self.c, self.x, self.y = c, x, y
+        self.w, self.h = 540, 250
+        self.pins: dict[str, tuple[float, float]] = {}
+        self._draw()
+
+    def _header(self, labels, y, label_y):
+        c = self.c
+        x = self.x + 40
+        for label in labels:
+            c.rect(x - 8, y - 8, 16, 16, "#1E1E1E")
+            c.rect(x - 3.5, y - 3.5, 7, 7, "#D4AF37")
+            name = label.split(" ")[-1]
+            if name == "GND" and y > self.y + self.h / 2:
+                self.pins["GND_bottom"] = (x, y)  # next to VIN, used for the power wires
+            self.pins.setdefault(name, (x, y))
+            c.text(x, label_y, label, 9, "#FFFFFF", angle=90)
+            x += self.PITCH
+
+    def _draw(self):
+        c, x, y, w, h = self.c, self.x, self.y, self.w, self.h
+        c.rect(x + 4, y + 6, w, h, "#B0BEC5", radius=10)  # shadow
+        c.rect(x, y, w, h, "#1A1A1A", outline="#000000", radius=10, width=2)
+        # USB plug on the right edge, buttons EN and BOOT beside it.
+        c.rect(x + w - 30, y + 100, 56, 50, "#B0BEC5", outline="#78909C", radius=4, width=2)
+        c.rect(x + w - 24, y + 110, 42, 30, "#CFD8DC", radius=3)
+        for by, name in ((y + 85, "EN"), (y + 165, "BOOT")):
+            c.rect(x + w - 70, by - 10, 22, 20, "#9E9E9E", radius=3)
+            c.circle(x + w - 59, by, 6, "#424242")
+            c.text(x + w - 80, by, name, 8, "#B0BEC5", anchor="rm")
+        # Metal shield of the ESP32 chip, its antenna on the left.
+        c.rect(x + 10, y + 75, 52, 100, "#263238", radius=2)
+        for i in range(5):
+            c.line([(x + 18 + i * 9, y + 85), (x + 18 + i * 9, y + 165)], "#D4AF37", 2)
+        c.rect(x + 66, y + 75, 160, 100, "#B0BEC5", outline="#90A4AE", radius=3, width=2)
+        c.text(x + 146, y + 112, "ESP32", 24, "#455A64", bold=True, anchor="mm")
+        c.text(x + 146, y + 142, "WROOM-32", 11, "#546E7A", anchor="mm")
+        c.text(x + 320, y + 112, "DevKit", 18, "#FFFFFF", bold=True, anchor="mm")
+        # Blue built-in LED, wired to GPIO 2.
+        c.rect(x + 300, y + 150, 12, 7, "#42A5F5")
+        c.text(x + 318, y + 153, "LED (2)", 9, "#90CAF9", anchor="lm")
+        self._header(self.TOP, y + 16, y + 44)
+        self._header(self.BOTTOM, y + h - 16, y + h - 46)
+
+    def pin(self, name: str) -> tuple[float, float]:
+        return self.pins[name]
+
+
 # --- Breadboard --------------------------------------------------------------------------
 
 class Breadboard:
@@ -686,6 +744,34 @@ def traffic_light(c: Canvas):
         c.wire(path(uno.pin(pin), ("y", lane), ("x", lane_x), ("y", target[1]), target), wire)
 
 
+def esp32_dimmer(c: Canvas):
+    esp = Esp32(c, 60, 400)
+    board = Breadboard(c, 720, 470, 24)
+    # 3.3 V (not 5 V: an ESP32 pin must not get more than 3.3 V) and GND to the rails.
+    c.wire(path(esp.pin("3V3"), ("y", 370), ("x", 680), ("y", board.rail("bot+", 1)[1]), board.rail("bot+", 1)), RED)
+    c.wire(path(esp.pin("GND_bottom"), ("y", 700), ("x", 700), ("y", board.rail("bot-", 2)[1]), board.rail("bot-", 2)), BLACK)
+    # Potentiometer: middle leg to GPIO 34.
+    potentiometer(c, board, 5)
+    c.wire(path(board.hole(5, "j"), ("y", board.rail("bot-", 5)[1])), BLACK)
+    c.wire(path(board.hole(7, "j"), ("y", board.rail("bot+", 7)[1])), RED)
+    middle = board.hole(6, "j")
+    c.wire(path(esp.pin("34"), ("y", 740), ("x", middle[0]), middle), YELLOW)
+    # LED and its resistor on GPIO 25.
+    led(c, board, 15, "#43A047")
+    resistor(c, board.hole(15, "e"), board.hole(15, "f"))
+    c.wire(path(board.hole(16, "e"), ("x", board.hole(17, "e")[0]), ("y", board.rail("bot-", 17)[1])), BLACK)
+    target = board.hole(15, "h")
+    c.wire(path(esp.pin("25"), ("y", 760), ("x", 1030), ("y", target[1]), target), GREEN)
+    c.circle(esp.x + 306, esp.y + 153, 20, None, outline="#42A5F5", width=4)
+    c.text(800, 250, "Potentiomètre et LED sur le 3,3 V : jamais de 5 V sur une broche de l'ESP32.", 18,
+           "#37474F", anchor="mm")
+    c.text(800, 278, "Knob and LED on 3.3 V: never put 5 V on an ESP32 pin.", 15, "#607D8B", anchor="mm")
+    c.text(800, 900, "L'ordre des broches change selon les modèles d'ESP32 : suis les noms écrits sur ta carte.", 16,
+           "#37474F", anchor="mm")
+    c.text(800, 926, "The pin order differs between ESP32 boards: follow the names printed on yours.", 14, "#607D8B",
+           anchor="mm")
+
+
 EXAMPLES = {
     "blink": blink,
     "servo-potentiometer": servo_potentiometer,
@@ -695,14 +781,141 @@ EXAMPLES = {
     "reaction-game": reaction_game,
     "light-gauge": light_gauge,
     "traffic-light": traffic_light,
+    "esp32-dimmer": esp32_dimmer,
+    "wireless-station-wifi": lambda c: wireless_station(c, "wifi"),
+    "wireless-station-bluetooth": lambda c: wireless_station(c, "bluetooth"),
+    "phone-lamp": lambda c: phone_lamp(c),
 }
+
+
+def laptop(c: Canvas, x, y, link: str):
+    """Computer with the Wi-Fi or Bluetooth sign on its screen, and waves towards the board."""
+    c.rect(x + 4, y + 6, 220, 140, "#B0BEC5", radius=8)
+    c.rect(x, y, 220, 140, "#37474F", outline="#263238", radius=8, width=2)
+    c.rect(x + 12, y + 12, 196, 116, "#E3F2FD", radius=3)
+    c.polygon([(x - 24, y + 146), (x + 244, y + 146), (x + 262, y + 168), (x - 42, y + 168)], "#90A4AE", "#78909C")
+    cx, cy = x + 110, y + 76
+    if link == "wifi":
+        for r, width in ((44, 7), (30, 7), (16, 7)):
+            box = ((cx - r) * SCALE, (cy - r) * SCALE, (cx + r) * SCALE, (cy + r) * SCALE)
+            c.draw.arc(box, 225, 315, fill=BLUE, width=width * SCALE)
+        c.circle(cx, cy - 2, 6, BLUE)
+    else:  # the Bluetooth rune
+        c.circle(cx, cy - 6, 40, BLUE)
+        top, bottom, left, right = cy - 34, cy + 22, cx - 14, cx + 14
+        c.line([(left, cy - 20), (right, cy + 8), (cx, bottom), (cx, top), (right, cy - 20), (left, cy + 8)], "#FFFFFF", 5)
+    return cx, y + 168
+
+
+def station_circuit(c: Canvas) -> Esp32:
+    """ESP32 with a DHT11 on GPIO 4 and an LED on GPIO 25 (wireless station, phone lamp)."""
+    esp = Esp32(c, 60, 400)
+    board = Breadboard(c, 720, 470, 24)
+    c.wire(path(esp.pin("3V3"), ("y", 372), ("x", 680), ("y", board.rail("top+", 1)[1]), board.rail("top+", 1)), RED)
+    c.wire(path(esp.pin("GND_bottom"), ("y", 700), ("x", 700), ("y", board.rail("top-", 2)[1]), board.rail("top-", 2)),
+           BLACK)
+    # DHT11 sensor above the breadboard, data on GPIO 4.
+    sensor = dht11(c, 980, 190)
+    c.wire(path(esp.pin("4"), ("y", 386), ("x", sensor["DATA"][0]), sensor["DATA"]), YELLOW)
+    c.wire(path(board.rail("top+", 13), ("x", sensor["VCC"][0]), sensor["VCC"]), RED)
+    c.wire(path(board.rail("top-", 17), ("x", sensor["GND"][0]), sensor["GND"]), BLACK)
+    # Alert LED and its resistor on GPIO 25, its - leg to the - rail at the top.
+    led(c, board, 5, "#E53935")
+    resistor(c, board.hole(5, "e"), board.hole(5, "f"))
+    c.wire(path(board.hole(6, "a"), ("y", board.rail("top-", 6)[1] + 0), ("x", board.rail("top-", 7)[0]),
+                board.rail("top-", 7)), BLACK)
+    target = board.hole(5, "h")
+    c.wire(path(esp.pin("25"), ("y", 740), ("x", 760), ("y", target[1]), target), GREEN)
+    c.circle(esp.x + 306, esp.y + 153, 20, None, outline="#42A5F5", width=4)
+    return esp
+
+
+def waves(c: Canvas, x, y, start, end):
+    for i in range(3):
+        r = 40 + i * 22
+        box = ((x - r) * SCALE, (y - r) * SCALE, (x + r) * SCALE, (y + r) * SCALE)
+        c.draw.arc(box, start, end, fill="#90CAF9", width=4 * SCALE)
+
+
+def phone(c: Canvas, x, y, lines):
+    """Phone showing a Bluetooth terminal app."""
+    c.rect(x + 4, y + 6, 130, 250, "#B0BEC5", radius=18)
+    c.rect(x, y, 130, 250, "#263238", radius=18)
+    c.rect(x + 8, y + 24, 114, 196, "#FAFAFA", radius=4)
+    c.rect(x + 8, y + 24, 114, 24, BLUE, radius=4)
+    c.text(x + 65, y + 36, "S2A-…", 11, "#FFFFFF", bold=True, anchor="mm")
+    for i, (text, mine) in enumerate(lines):
+        c.text(x + (118 if mine else 14), y + 64 + i * 22, text, 10, BLUE if mine else "#37474F",
+               anchor="rm" if mine else "lm")
+    c.circle(x + 65, y + 235, 8, "#455A64")
+
+
+def wireless_station(c: Canvas, link: str):
+    station_circuit(c)
+    # The computer, without cable.
+    laptop(c, 1300, 140, link)
+    waves(c, 1260, 330, 120, 200)
+    if link == "wifi":
+        steps = [
+            ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+             "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+            ("2. Débranche le câble, alimente la carte (chargeur USB ou pile), connecte l'ordinateur au Wi-Fi « S2A-… »"
+             " (mot de passe scratch2arduino).",
+             "2. Unplug the cable, power the board (USB charger or battery), connect the computer to the \"S2A-…\" Wi-Fi"
+             " (password scratch2arduino)."),
+            ("3. Choisis le port « Wi-Fi — réseau de la carte », puis lance le mode Live.",
+             "3. Choose the \"Wi-Fi — the board's network\" port, then start the Live mode."),
+        ]
+    else:
+        steps = [
+            ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+             "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+            ("2. Débranche le câble et alimente la carte (chargeur USB ou pile), près de l'ordinateur.",
+             "2. Unplug the cable and power the board (USB charger or battery), near the computer."),
+            ("3. Bouton Bluetooth › « Chercher les cartes » › choisis « S2A-… », puis lance le mode Live.",
+             "3. Bluetooth button › \"Look for boards\" › choose \"S2A-…\", then start the Live mode."),
+        ]
+    for i, (french, english) in enumerate(steps):
+        c.text(60, 820 + i * 52, french, 15, "#37474F")
+        c.text(60, 840 + i * 52, english, 13, "#607D8B")
+    c.text(60, 90, "Température et humidité en direct, sans câble : alerte rouge au-dessus de 25 °C.", 18, "#37474F")
+    c.text(60, 116, "Live temperature and humidity without a cable: red alert above 25 °C.", 15, "#607D8B")
+
+
+def phone_lamp(c: Canvas):
+    station_circuit(c)
+    laptop(c, 1300, 120, "wifi")
+    waves(c, 1260, 310, 120, 200)
+    c.text(1410, 312, "Wi-Fi : mode Live", 13, "#37474F", anchor="mm")
+    phone(c, 1400, 560, [("allume", True), ("Lampe allumée", False), ("temperature", True),
+                         ("Température (°C) :", False), ("21", False), ("eteins", True), ("Lampe éteinte", False)])
+    waves(c, 1375, 690, 140, 220)
+    c.text(1465, 540, "Bluetooth", 13, "#37474F", anchor="mm")
+    steps = [
+        ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
+         "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
+        ("2. Ordinateur : Wi-Fi « S2A-… » (mot de passe scratch2arduino), port « Wi-Fi — réseau de la carte », mode Live.",
+         "2. Computer: \"S2A-…\" Wi-Fi (password scratch2arduino), \"Wi-Fi — the board's network\" port, Live mode."),
+        ("3. Téléphone : appli « Serial Bluetooth Terminal », connecte « S2A-… », envoie allume, eteins ou temperature.",
+         "3. Phone: \"Serial Bluetooth Terminal\" app, connect \"S2A-…\", send allume, eteins or temperature."),
+    ]
+    for i, (french, english) in enumerate(steps):
+        c.text(60, 820 + i * 52, french, 15, "#37474F")
+        c.text(60, 840 + i * 52, english, 13, "#607D8B")
+    c.text(60, 90, "Le téléphone pilote la lampe par Bluetooth, l'ordinateur suit tout en direct par Wi-Fi.", 18,
+           "#37474F")
+    c.text(60, 116, "The phone drives the lamp over Bluetooth, the computer follows everything live over Wi-Fi.", 15,
+           "#607D8B")
+
+
+BOARD_NAMES = {"uno": "Arduino Uno", "esp32": "ESP32 DevKit"}
 
 
 def main(names: list[str]) -> int:
     for name in names or list(EXAMPLES):
         folder = ROOT / "examples" / "projects" / name
         project = json.loads((folder / "project.json").read_text(encoding="utf-8"))
-        canvas = Canvas(project["name"] + " — Arduino Uno")
+        canvas = Canvas(project["name"] + " — " + BOARD_NAMES.get(project.get("board", "uno"), "Arduino Uno"))
         EXAMPLES[name](canvas)
         canvas.save(folder / "wiring.png")
         print((folder / "wiring.png").relative_to(ROOT))

@@ -1,4 +1,5 @@
 #include "s2a/live.hpp"
+#include "s2a/network.hpp"
 
 #include <deque>
 #include <gtest/gtest.h>
@@ -60,6 +61,16 @@ struct FakePins final : s2a::live::Pins {
                       std::to_string(row) + "=" + std::to_string(bits));
     }
     void reset() override { log.emplace_back("X"); }
+    std::optional<std::string> phoneMessage() override {
+        if (phone.empty()) {
+            return std::nullopt;
+        }
+        std::string message = phone.front();
+        phone.pop_front();
+        return message;
+    }
+    void phoneSend(const std::string& text) override { log.push_back("Y=" + text); }
+    std::deque<std::string> phone; ///< Messages the phone will send, oldest first.
     double distanceCm = 400;
     std::optional<std::pair<double, double>> dhtValues;
 
@@ -452,6 +463,8 @@ struct FakeFirmware final : s2a::serial::LineTransport {
     std::deque<std::string> pending{std::string(s2a::live::kHello)};
     std::vector<std::string> received;
     bool silent = false;
+    std::string joined; ///< Address on the home network ("" while not joined).
+    std::string phoneSays; ///< Next message of the phone ("" for none).
 
     s2a::Status writeLine(std::string_view line) override {
         received.emplace_back(line);
@@ -472,6 +485,11 @@ struct FakeFirmware final : s2a::serial::LineTransport {
             pending.push_back("h " + std::to_string(pin) + " 215 -9999");
         } else if (command == "U") {
             pending.push_back("u " + std::to_string(pin) + " 1234");
+        } else if (command == "B") {
+            pending.emplace_back(phoneSays.empty() ? "b" : "b " + phoneSays);
+            phoneSays.clear();
+        } else if (command == "I") {
+            pending.push_back(joined.empty() ? "i S2A-1A2B 192.168.4.1 -" : "i S2A-1A2B 192.168.4.1 " + joined);
         } else {
             pending.emplace_back("ok");
         }
@@ -487,6 +505,34 @@ struct FakeFirmware final : s2a::serial::LineTransport {
         return std::optional<std::string>(line);
     }
 };
+
+TEST(LiveLink, SetsUpTheWifiOfAnEsp32) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    auto state = link.networkState();
+    ASSERT_TRUE(state.ok());
+    EXPECT_EQ(state.value().accessPoint, "S2A-1A2B");
+    EXPECT_EQ(state.value().accessPointAddress, "192.168.4.1");
+    EXPECT_EQ(state.value().address, "");
+    // Line breaks and tabs cannot be sent: they would cut the command.
+    ASSERT_TRUE(link.joinNetwork("Box de\tla maison", "mot\nde passe").ok());
+    EXPECT_EQ(firmware.received.back(), "W Box dela maison\tmotde passe");
+    firmware.joined = "192.168.1.42";
+    EXPECT_EQ(link.networkState().value().address, "192.168.1.42");
+}
+
+TEST(Session, OpensWifiPortsAsNetworkConnections) {
+    EXPECT_EQ(s2a::network::wifiAddress("wifi:192.168.4.1"), std::optional<std::string>("192.168.4.1"));
+    EXPECT_EQ(s2a::network::wifiAddress("wifi:s2a-1a2b.local"), std::optional<std::string>("s2a-1a2b.local"));
+    EXPECT_FALSE(s2a::network::wifiAddress("wifi:").has_value());
+    EXPECT_FALSE(s2a::network::wifiAddress("/dev/ttyUSB0").has_value());
+    EXPECT_FALSE(s2a::network::wifiAddress("COM3").has_value());
+    // Nobody listens on this port of this machine: a clear network error, quickly.
+    const auto opened = s2a::live::Session::opener()("wifi:127.0.0.1");
+    ASSERT_FALSE(opened.ok());
+    EXPECT_EQ(opened.error().code, s2a::ErrorCode::NetworkFailed);
+}
 
 TEST(LiveLink, SpeaksTheFirmwareProtocol) {
     FakeFirmware firmware;
@@ -664,6 +710,66 @@ TEST(LiveLink, EmbedsTheFirmware) {
     const auto source = s2a::live::firmwareSource();
     EXPECT_NE(source.find(std::string("\"") + std::string(s2a::live::kHello) + "\""), std::string_view::npos);
     EXPECT_NE(source.find("void loop()"), std::string_view::npos);
+}
+
+} // namespace
+
+namespace {
+
+TEST(Phone, ComparesMessagesWithoutCapitalsNorAccents) {
+    EXPECT_EQ(s2a::live::simpleText("  Éteins "), "eteins");
+    EXPECT_EQ(s2a::live::simpleText("ALLUMÉ"), "allume");
+    EXPECT_EQ(s2a::live::simpleText("Ça va à l'école ?"), "ca va a l'ecole ?");
+    EXPECT_EQ(s2a::live::simpleText(""), "");
+    EXPECT_EQ(s2a::live::simpleText("   "), "");
+}
+
+TEST(Phone, BlocksReactOnceToEachMessage) {
+    // forever: if the phone sent "allume" -> LED on 25, answer the phone; the number goes to PWM 26.
+    Block sent = block("sent", "phone_received");
+    sent.inputs["MESSAGE"].value = "allume";
+    Block when = block("if", "control_if");
+    when.inputs["CONDITION"].block = sent;
+    Block on = block("on", "pins_digital_write");
+    on.fields = {{"PIN", "25"}, {"STATE", "HIGH"}};
+    Block answer = block("answer", "phone_send");
+    answer.inputs["VALUE"].value = "Lampe allumée";
+    when.statements["SUBSTACK"] = {on, answer};
+    Block level = block("level", "pins_analog_write");
+    level.fields["PIN"] = "26";
+    level.inputs["VALUE"].block = block("number", "phone_number");
+    Block forever = block("loop", "control_forever");
+    forever.statements["SUBSTACK"] = {when, level, wait("pause", "1")};
+    Project project = withScript({block("hat", "events_when_program_starts"), forever});
+    project.boardId = "esp32";
+
+    FakePins pins;
+    Interpreter interpreter(project, BlockCatalog::builtin(), *s2a::BoardDatabase::builtin().find("esp32"), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M26O", "P26=0"})); // nothing sent yet
+    pins.phone = {" ALLUMÉ "};
+    interpreter.step(milliseconds(1000));
+    interpreter.step(milliseconds(1001));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M25O", "D25=1", "Y=Lampe allumée", "P26=0"}));
+    pins.phone = {"120"};
+    interpreter.step(milliseconds(2001));
+    interpreter.step(milliseconds(2002));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"P26=120"}); // a number is not "allume", and only once
+}
+
+TEST(LiveLink, PassesThePhoneMessages) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    EXPECT_FALSE(link.phoneMessage().has_value());
+    firmware.phoneSays = "Bonjour à toi";
+    EXPECT_EQ(link.phoneMessage(), std::optional<std::string>("Bonjour à toi"));
+    EXPECT_FALSE(link.phoneMessage().has_value());
+    link.phoneSend("Ligne\nsuivante");
+    EXPECT_EQ(firmware.received.back(), "Y Ligne suivante");
+    link.phoneSend(std::string(99, 'a') + "é"); // cut at 100 bytes, not inside the "é"
+    EXPECT_EQ(firmware.received.back(), "Y " + std::string(99, 'a'));
+    EXPECT_FALSE(link.takeError().has_value());
 }
 
 } // namespace

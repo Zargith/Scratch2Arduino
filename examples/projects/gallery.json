@@ -77,6 +77,43 @@
         "en": "The more the knob is turned, the more LEDs light up on the strip."
       },
       "parts": { "fr": "potentiomètre, ruban NeoPixel ×8", "en": "potentiometer, NeoPixel strip ×8" }
+    },
+    {
+      "id": "esp32-dimmer",
+      "title": { "fr": "Variateur ESP32", "en": "ESP32 dimmer" },
+      "description": {
+        "fr": "Pour essayer une carte ESP32 : la LED bleue de la carte clignote, le potentiomètre règle la lumière d'une LED et sa valeur s'affiche sur le moniteur série. Marche aussi en mode Live, par USB ou par Wi-Fi.",
+        "en": "To try an ESP32 board: the blue on-board LED blinks, the knob sets the brightness of an LED and its value shows on the serial monitor. Also works in Live mode, over USB or Wi-Fi."
+      },
+      "parts": { "fr": "carte ESP32, potentiomètre, LED, résistance de 220 Ω", "en": "ESP32 board, potentiometer, LED, 220 Ω resistor" }
+    },
+    {
+      "id": "wireless-station",
+      "title": { "fr": "Station météo sans fil", "en": "Wireless weather station" },
+      "description": {
+        "fr": "La carte ESP32 mesure la température et l'humidité, loin de l'ordinateur et sans câble : en mode Live, les valeurs s'affichent en direct et une LED rouge s'allume au-dessus de 25 °C.",
+        "en": "The ESP32 board measures temperature and humidity, away from the computer and without a cable: in Live mode the values show live and a red LED lights up above 25 °C."
+      },
+      "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, chargeur USB ou pile", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, USB charger or battery" },
+      "variants": [
+        {
+          "id": "wireless-station-wifi",
+          "label": { "fr": "Par Wi-Fi", "en": "Over Wi-Fi" }
+        },
+        {
+          "id": "wireless-station-bluetooth",
+          "label": { "fr": "Par Bluetooth", "en": "Over Bluetooth" }
+        }
+      ]
+    },
+    {
+      "id": "phone-lamp",
+      "title": { "fr": "Lampe pilotée par téléphone", "en": "Phone-controlled lamp" },
+      "description": {
+        "fr": "Wi-Fi et Bluetooth ensemble : le téléphone allume ou éteint la lampe et demande la température par Bluetooth, pendant que l'ordinateur suit tout en mode Live par Wi-Fi. Téléversé, le programme marche aussi avec le téléphone seul.",
+        "en": "Wi-Fi and Bluetooth together: the phone switches the lamp on or off and asks for the temperature over Bluetooth, while the computer follows everything in Live mode over Wi-Fi. Uploaded, the program also works with the phone alone."
+      },
+      "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, téléphone avec une appli de terminal Bluetooth", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, phone with a Bluetooth terminal app" }
     }
   ]
 }

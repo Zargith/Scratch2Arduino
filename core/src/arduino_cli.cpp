@@ -148,6 +148,13 @@ fs::path locateArduinoCli() {
 ArduinoCli::ArduinoCli(fs::path executable, Directories directories, process::Runner runner)
     : executable_(std::move(executable)), directories_(std::move(directories)), runner_(std::move(runner)) {}
 
+namespace {
+// Space-separated, as arduino-cli reads lists from the environment.
+constexpr std::string_view kAdditionalBoardIndexes =
+    "https://espressif.github.io/arduino-esp32/package_esp32_index.json "
+    "https://arduino.esp8266.com/stable/package_esp8266com_index.json";
+} // namespace
+
 Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chrono::milliseconds timeout) const {
     process::Command command;
     command.program = executable_;
@@ -159,6 +166,8 @@ Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chro
         {"ARDUINO_DIRECTORIES_DOWNLOADS", directories_.downloads.u8string()},
         {"ARDUINO_DIRECTORIES_USER", directories_.user.u8string()},
         {"ARDUINO_UPDATER_ENABLE_NOTIFICATION", "false"},
+        // Where arduino-cli finds the boards that Arduino does not publish (ESP32, ESP8266).
+        {"ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS", std::string(kAdditionalBoardIndexes)},
     };
     command.timeout = timeout;
     return runner_(command);
@@ -254,6 +263,7 @@ std::vector<std::string> requiredLibraries(std::string_view source) {
     // Header -> library of the Arduino registry. Add a line here for each component library.
     static const std::pair<std::string_view, std::string_view> kKnown[] = {
         {"Servo.h", "Servo"},
+        {"ESP32Servo.h", "ESP32Servo"},
         {"DHT.h", "DHT sensor library"},
         {"LiquidCrystal_I2C.h", "LiquidCrystal I2C"},
         {"LiquidCrystal.h", "LiquidCrystal"},
