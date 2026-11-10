@@ -23,6 +23,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16×2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
 | [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
+| [Variateur ESP32](#variateur-esp32--esp32-dimmer) (ESP32) | potentiomètre, LED, 220 Ω |
 
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
 `all-blocks` uses every block to test the editor: it is not meant to be wired.
@@ -157,6 +158,29 @@ The more the knob is turned, the more LEDs light up on the strip.
 | Potentiomètre : patte du milieu / middle leg | A0 |
 | Ruban NeoPixel : 5V / GND | 5V / GND |
 | Ruban NeoPixel : DIN | 5 |
+
+## Variateur ESP32 / ESP32 dimmer
+
+![Variateur ESP32](projects/esp32-dimmer/wiring.png)
+
+Pour essayer une carte ESP32 (choisir « ESP32 (DevKit) ») : la LED bleue de la carte (broche 2) clignote, le
+potentiomètre règle la lumière de la LED et sa valeur (0 à 255) s'affiche sur le moniteur série. Les deux
+scripts tournent en même temps. Marche aussi en mode Live, par USB ou par Wi-Fi.
+To try an ESP32 board (choose "ESP32 (DevKit)"): the blue on-board LED (pin 2) blinks, the knob sets the
+brightness of the LED and its value (0 to 255) shows on the serial monitor. Both scripts run at the same time.
+Also works in Live mode, over USB or Wi-Fi.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Potentiomètre 10 kΩ : pattes extérieures / outer legs | GND et **3V3** (pas 5V / not 5V) |
+| Potentiomètre : patte du milieu / middle leg | 34 |
+| LED : patte + (longue) par une résistance de 220 Ω / + leg (long) through a 220 Ω resistor | 25 |
+| LED : patte − / − leg | GND |
+
+Les broches de l'ESP32 supportent 3,3 V au plus : ne jamais y mettre de 5 V. L'ordre des broches change selon
+les modèles de cartes : suivre les noms écrits sur la carte.
+ESP32 pins take 3.3 V at most: never put 5 V on them. The pin order differs between boards: follow the names
+printed on yours.
 
 ---
 

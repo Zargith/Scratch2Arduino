@@ -193,6 +193,64 @@ class Uno:
         return self.pins[name]
 
 
+# --- ESP32 DevKit ------------------------------------------------------------------------
+
+class Esp32:
+    """ESP32 DevKit (30 pins) seen from above, antenna on the left, USB plug on the right."""
+
+    # Pins named by their GPIO number, as in the blocks (VP = 36, VN = 39).
+    TOP = ["3V3", "GND", "15", "2", "4", "RX2", "TX2", "5", "18", "19", "21", "RX0", "TX0", "22", "23"]
+    BOTTOM = ["VIN", "GND", "13", "12", "14", "27", "26", "25", "33", "32", "35", "34", "VN 39", "VP 36", "EN"]
+    PITCH = 26
+
+    def __init__(self, c: Canvas, x: float, y: float) -> None:
+        self.c, self.x, self.y = c, x, y
+        self.w, self.h = 540, 250
+        self.pins: dict[str, tuple[float, float]] = {}
+        self._draw()
+
+    def _header(self, labels, y, label_y):
+        c = self.c
+        x = self.x + 40
+        for label in labels:
+            c.rect(x - 8, y - 8, 16, 16, "#1E1E1E")
+            c.rect(x - 3.5, y - 3.5, 7, 7, "#D4AF37")
+            name = label.split(" ")[-1]
+            if name == "GND" and y > self.y + self.h / 2:
+                self.pins["GND_bottom"] = (x, y)  # next to VIN, used for the power wires
+            self.pins.setdefault(name, (x, y))
+            c.text(x, label_y, label, 9, "#FFFFFF", angle=90)
+            x += self.PITCH
+
+    def _draw(self):
+        c, x, y, w, h = self.c, self.x, self.y, self.w, self.h
+        c.rect(x + 4, y + 6, w, h, "#B0BEC5", radius=10)  # shadow
+        c.rect(x, y, w, h, "#1A1A1A", outline="#000000", radius=10, width=2)
+        # USB plug on the right edge, buttons EN and BOOT beside it.
+        c.rect(x + w - 30, y + 100, 56, 50, "#B0BEC5", outline="#78909C", radius=4, width=2)
+        c.rect(x + w - 24, y + 110, 42, 30, "#CFD8DC", radius=3)
+        for by, name in ((y + 85, "EN"), (y + 165, "BOOT")):
+            c.rect(x + w - 70, by - 10, 22, 20, "#9E9E9E", radius=3)
+            c.circle(x + w - 59, by, 6, "#424242")
+            c.text(x + w - 80, by, name, 8, "#B0BEC5", anchor="rm")
+        # Metal shield of the ESP32 chip, its antenna on the left.
+        c.rect(x + 10, y + 75, 52, 100, "#263238", radius=2)
+        for i in range(5):
+            c.line([(x + 18 + i * 9, y + 85), (x + 18 + i * 9, y + 165)], "#D4AF37", 2)
+        c.rect(x + 66, y + 75, 160, 100, "#B0BEC5", outline="#90A4AE", radius=3, width=2)
+        c.text(x + 146, y + 112, "ESP32", 24, "#455A64", bold=True, anchor="mm")
+        c.text(x + 146, y + 142, "WROOM-32", 11, "#546E7A", anchor="mm")
+        c.text(x + 320, y + 112, "DevKit", 18, "#FFFFFF", bold=True, anchor="mm")
+        # Blue built-in LED, wired to GPIO 2.
+        c.rect(x + 300, y + 150, 12, 7, "#42A5F5")
+        c.text(x + 318, y + 153, "LED (2)", 9, "#90CAF9", anchor="lm")
+        self._header(self.TOP, y + 16, y + 44)
+        self._header(self.BOTTOM, y + h - 16, y + h - 46)
+
+    def pin(self, name: str) -> tuple[float, float]:
+        return self.pins[name]
+
+
 # --- Breadboard --------------------------------------------------------------------------
 
 class Breadboard:
@@ -686,6 +744,34 @@ def traffic_light(c: Canvas):
         c.wire(path(uno.pin(pin), ("y", lane), ("x", lane_x), ("y", target[1]), target), wire)
 
 
+def esp32_dimmer(c: Canvas):
+    esp = Esp32(c, 60, 400)
+    board = Breadboard(c, 720, 470, 24)
+    # 3.3 V (not 5 V: an ESP32 pin must not get more than 3.3 V) and GND to the rails.
+    c.wire(path(esp.pin("3V3"), ("y", 370), ("x", 680), ("y", board.rail("bot+", 1)[1]), board.rail("bot+", 1)), RED)
+    c.wire(path(esp.pin("GND_bottom"), ("y", 700), ("x", 700), ("y", board.rail("bot-", 2)[1]), board.rail("bot-", 2)), BLACK)
+    # Potentiometer: middle leg to GPIO 34.
+    potentiometer(c, board, 5)
+    c.wire(path(board.hole(5, "j"), ("y", board.rail("bot-", 5)[1])), BLACK)
+    c.wire(path(board.hole(7, "j"), ("y", board.rail("bot+", 7)[1])), RED)
+    middle = board.hole(6, "j")
+    c.wire(path(esp.pin("34"), ("y", 740), ("x", middle[0]), middle), YELLOW)
+    # LED and its resistor on GPIO 25.
+    led(c, board, 15, "#43A047")
+    resistor(c, board.hole(15, "e"), board.hole(15, "f"))
+    c.wire(path(board.hole(16, "e"), ("x", board.hole(17, "e")[0]), ("y", board.rail("bot-", 17)[1])), BLACK)
+    target = board.hole(15, "h")
+    c.wire(path(esp.pin("25"), ("y", 760), ("x", 1030), ("y", target[1]), target), GREEN)
+    c.circle(esp.x + 306, esp.y + 153, 20, None, outline="#42A5F5", width=4)
+    c.text(800, 250, "Potentiomètre et LED sur le 3,3 V : jamais de 5 V sur une broche de l'ESP32.", 18,
+           "#37474F", anchor="mm")
+    c.text(800, 278, "Knob and LED on 3.3 V: never put 5 V on an ESP32 pin.", 15, "#607D8B", anchor="mm")
+    c.text(800, 900, "L'ordre des broches change selon les modèles d'ESP32 : suis les noms écrits sur ta carte.", 16,
+           "#37474F", anchor="mm")
+    c.text(800, 926, "The pin order differs between ESP32 boards: follow the names printed on yours.", 14, "#607D8B",
+           anchor="mm")
+
+
 EXAMPLES = {
     "blink": blink,
     "servo-potentiometer": servo_potentiometer,
@@ -695,14 +781,18 @@ EXAMPLES = {
     "reaction-game": reaction_game,
     "light-gauge": light_gauge,
     "traffic-light": traffic_light,
+    "esp32-dimmer": esp32_dimmer,
 }
+
+
+BOARD_NAMES = {"uno": "Arduino Uno", "esp32": "ESP32 DevKit"}
 
 
 def main(names: list[str]) -> int:
     for name in names or list(EXAMPLES):
         folder = ROOT / "examples" / "projects" / name
         project = json.loads((folder / "project.json").read_text(encoding="utf-8"))
-        canvas = Canvas(project["name"] + " — Arduino Uno")
+        canvas = Canvas(project["name"] + " — " + BOARD_NAMES.get(project.get("board", "uno"), "Arduino Uno"))
         EXAMPLES[name](canvas)
         canvas.save(folder / "wiring.png")
         print((folder / "wiring.png").relative_to(ROOT))
