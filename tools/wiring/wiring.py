@@ -110,7 +110,9 @@ class Canvas:
             for x, y in (points[0], points[-1]):
                 self.rect(x - 4, y - 4, 8, 8, "#424242", radius=1)
                 self.circle(x, y, 2.2, "#BDBDBD")
-        self.image.resize((WIDTH, HEIGHT), Image.LANCZOS).save(target, optimize=True)
+        # Drawn at twice the size and kept so: the editor lets the diagram be zoomed in. 256 colours
+        # keep the files small (the editor bundles them).
+        self.image.quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(target, optimize=True)
 
 
 def path(start, *moves):
