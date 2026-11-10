@@ -160,10 +160,13 @@ Block blockFromJson(const Json& json, const std::string& path, int depth) {
 }
 
 /// Upgrades an older project.json in place, one version at a time.
-void migrate(Json& /*json*/, int fromVersion) {
-    // Version 1 is the first format: nothing to upgrade yet. When the format changes, add a
-    // step per version here (if (fromVersion < 2) { ... }) and bump kFormatVersion.
-    (void)fromVersion;
+void migrate(Json& json, int fromVersion) {
+    // Version 2 added "language" and "code" (programs written as text): version 1 projects are
+    // block projects. When the format changes again, add a step here and bump kFormatVersion.
+    if (fromVersion < 2) {
+        json["language"] = std::string(programLanguageId(ProgramLanguage::Blocks));
+        json.erase("code");
+    }
 }
 
 Project projectFromJson(Json json) {
@@ -209,6 +212,18 @@ Project projectFromJson(Json json) {
         }
     }
 
+    if (json.contains("language")) {
+        const std::string id = stringAt(json, "language", root);
+        const auto language = programLanguageFromId(id);
+        if (!language) {
+            throw FormatError("$.language", "unknown language '" + id + "'");
+        }
+        project.language = *language;
+    }
+    if (json.contains("code") && project.language != ProgramLanguage::Blocks) {
+        project.code = stringAt(json, "code", root);
+    }
+
     const Json& scripts = arrayAt(json, "scripts", root);
     for (std::size_t index = 0; index < scripts.size(); ++index) {
         const std::string path = "$.scripts[" + std::to_string(index) + "]";
@@ -226,6 +241,30 @@ Project projectFromJson(Json json) {
 }
 
 } // namespace
+
+std::string_view programLanguageId(ProgramLanguage language) noexcept {
+    switch (language) {
+    case ProgramLanguage::Blocks:
+        return "blocks";
+    case ProgramLanguage::Cpp:
+        return "cpp";
+    case ProgramLanguage::Python:
+        return "python";
+    case ProgramLanguage::JavaScript:
+        return "javascript";
+    }
+    return "blocks";
+}
+
+std::optional<ProgramLanguage> programLanguageFromId(std::string_view id) noexcept {
+    for (const ProgramLanguage language :
+         {ProgramLanguage::Blocks, ProgramLanguage::Cpp, ProgramLanguage::Python, ProgramLanguage::JavaScript}) {
+        if (programLanguageId(language) == id) {
+            return language;
+        }
+    }
+    return std::nullopt;
+}
 
 std::string newId() {
     static constexpr std::string_view kAlphabet =
@@ -259,9 +298,10 @@ std::string toJson(const Project& project) {
     for (const Script& script : project.scripts) {
         scripts.push_back({{"x", script.x}, {"y", script.y}, {"blocks", stackToJson(script.blocks)}});
     }
+    const bool text = project.language != ProgramLanguage::Blocks;
     Json json{
         {"format", std::string(kFormatName)},
-        {"formatVersion", kFormatVersion},
+        {"formatVersion", text ? 2 : 1}, // see kFormatVersion
         {"name", project.name},
         {"board", project.boardId},
         {"variables", std::move(variables)},
@@ -273,6 +313,10 @@ std::string toJson(const Project& project) {
             functions.push_back({{"id", function.id}, {"name", function.name}});
         }
         json["functions"] = std::move(functions);
+    }
+    if (text) { // left out for blocks: block projects keep the bytes of version 1
+        json["language"] = std::string(programLanguageId(project.language));
+        json["code"] = project.code;
     }
     return json.dump(2) + "\n";
 }
