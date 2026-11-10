@@ -168,7 +168,7 @@ TEST(WiringDiagram, DrawsEveryPinOfEveryBoard) {
     }
 }
 
-TEST(WiringDiagram, DrawsTheBoardTheComponentsAndTheirWires) {
+TEST(WiringDiagram, DrawsTheBoardTheBreadboardThePartsAndTheirWires) {
     std::ifstream file(std::string(S2A_EXAMPLES_DIR) + "/distance-alarm/project.json");
     std::stringstream content;
     content << file.rdbuf();
@@ -180,20 +180,28 @@ TEST(WiringDiagram, DrawsTheBoardTheComponentsAndTheirWires) {
     EXPECT_EQ(svg.rfind("<svg ", 0), 0U);
     EXPECT_NE(svg.find("</svg>"), std::string::npos);
     EXPECT_NE(svg.find("Alarm &amp; &lt;test&gt;"), std::string::npos);
-    for (const char* expected : {"HC-SR04 distance sensor", "RGB LED (common cathode)", "Passive buzzer", ">220 Ω<",
-                                 ">Trig<", ">UNO<", "+ 5V"}) {
+    // The board, the module of the sensor with its pin names, the resistors, the numbered parts.
+    for (const char* expected : {">UNO<", ">HC-SR04<", ">Trig<", ">Echo<", ">220 Ω<", ">1<", ">2<", ">3<", ">30<"}) {
         EXPECT_NE(svg.find(expected), std::string::npos) << expected;
     }
-    // One wire per connection (each drawn twice: outline and colour), plus the feeds of the 2 rails.
-    std::size_t lines = 0;
-    for (auto at = svg.find("<polyline"); at != std::string::npos; at = svg.find("<polyline", at + 1)) {
-        ++lines;
+    // The pins used are circled: Trig, Echo, the 3 colours, the buzzer, and the 5V and GND feeding the rails.
+    std::size_t circled = 0;
+    for (auto at = svg.find(R"(fill="none" stroke="#FFEB3B")"); at != std::string::npos;
+         at = svg.find(R"(fill="none" stroke="#FFEB3B")", at + 1)) {
+        ++circled;
     }
-    std::size_t connections = 0;
-    for (const auto& component : plan.components) {
-        connections += component.connections.size();
-    }
-    EXPECT_EQ(lines, 2 + 2 * (connections + 2)); // the 2 rails, then the wires
+    EXPECT_EQ(circled, 8U);
+}
+
+TEST(WiringDiagram, PlugsSmallPartsIntoTheBreadboardAndPutsModulesAbove) {
+    const auto* uno = s2a::BoardDatabase::builtin().find("uno");
+    const Plan plan = s2a::wiring::plan(program({block("led", "pins_digital_write", {{"PIN", "7"}}),
+                                                 block("servo", "motors_servo_write", {{"PIN", "9"}})}),
+                                        BlockCatalog::builtin(), *uno, Language::English);
+    const std::string svg = s2a::wiring::svg(plan, *uno, "Test");
+    EXPECT_NE(svg.find(">SG90<"), std::string::npos); // the servo is a module
+    EXPECT_NE(svg.find(">S<"), std::string::npos);    // with the short name of its signal pin
+    EXPECT_NE(svg.find(">220 Ω<"), std::string::npos); // the LED's resistor on the breadboard
 }
 
 TEST(WiringDiagram, AddsThePinsMissingFromTheDrawing) {

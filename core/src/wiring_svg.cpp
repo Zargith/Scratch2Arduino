@@ -241,32 +241,33 @@ std::vector<Point> module(Svg& svg, Point at, double w, double h, const std::str
 
 /// Width and height of the drawn module of `kind` with `pins` pins.
 std::pair<double, double> moduleSize(const std::string& kind, std::size_t pins) {
+    // The bottom 36 px of a module hold the names of its pins.
     const double minimum = 20 * static_cast<double>(pins + 1);
     if (kind == "lcd_i2c" || kind == "lcd16") {
-        return {std::max(minimum, 300.0), 120};
+        return {std::max(minimum, 300.0), 140};
     }
     if (kind == "ultrasonic") {
-        return {std::max(minimum, 150.0), 80};
+        return {std::max(minimum, 150.0), 110};
     }
     if (kind == "matrix") {
-        return {std::max(minimum, 130.0), 140};
+        return {std::max(minimum, 130.0), 170};
     }
     if (kind == "neopixel") {
-        return {std::max(minimum, 220.0), 60};
+        return {std::max(minimum, 220.0), 90};
     }
     if (kind == "dc_motor") {
-        return {std::max(minimum, 140.0), 120};
+        return {std::max(minimum, 140.0), 130};
     }
     if (kind == "servo") {
-        return {std::max(minimum, 110.0), 100};
-    }
-    if (kind == "oled") {
         return {std::max(minimum, 110.0), 110};
     }
-    if (kind == "dht") {
-        return {std::max(minimum, 90.0), 120};
+    if (kind == "oled") {
+        return {std::max(minimum, 110.0), 130};
     }
-    return {std::max(minimum, 100.0), 80};
+    if (kind == "dht") {
+        return {std::max(minimum, 90.0), 130};
+    }
+    return {std::max(minimum, 100.0), 110};
 }
 
 void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*h*/, const std::string& name) {
@@ -284,7 +285,7 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
                 svg.rect(at.x + w / 2 - 23 + col * 13, at.y + 22 + row * 12, 8, 6, "#1565C0", {}, 1);
             }
         }
-        svg.text({at.x + w / 2, at.y + 98}, "DHT", 11, "#FFFFFF", "middle", true);
+        svg.text({at.x + w / 2, at.y + 10}, "DHT", 9, "#FFFFFF", "middle", true);
     } else if (kind == "servo") {
         svg.rect(at.x + 10, at.y + 20, w - 20, 50, "#1E88E5", "#0D47A1", 6, 2);
         svg.circle(at.x + 40, at.y + 45, 12, "#FFFFFF");
@@ -313,7 +314,7 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
                 svg.circle(at.x + w / 2 - 43 + col * 12.3, at.y + 17 + row * 12.3, 4.5, lit ? "#F44336" : "#4E1C1A");
             }
         }
-        svg.text({at.x + w / 2, at.y + 128}, "MAX7219", 10, "#FFFFFF", "middle", true);
+        svg.text({at.x + w / 2, at.y + 126}, "MAX7219", 10, "#FFFFFF", "middle", true);
     } else if (kind == "lcd_i2c" || kind == "lcd16") {
         svg.rect(at.x + 14, at.y + 14, w - 28, 66, "#1B5E20", {}, 4);
         svg.rect(at.x + 22, at.y + 22, w - 44, 50, "#9CCC65", {}, 2);
@@ -365,27 +366,48 @@ int breadboardColumns(const std::string& kind) {
     return 0;
 }
 
-/// For a part on the breadboard: the hole of each connection (column offset, row).
+/// For a part on the breadboard (plugged into the lower half, seen from above): the hole of each
+/// connection (column offset, row). A signal arrives from above in a free hole of the column of
+/// its leg (through the resistor across the middle channel for an LED); power legs go down to
+/// the bottom rails with a short jumper from row j.
 std::vector<std::pair<int, char>> breadboardHoles(const std::string& kind) {
     if (kind == "output") {
-        return {{0, 'h'}, {1, 'a'}};
+        return {{0, 'b'}, {1, 'j'}};
     }
     if (kind == "button") {
-        return {{0, 'h'}, {2, 'j'}};
+        return {{0, 'b'}, {2, 'j'}};
     }
     if (kind == "potentiometer") {
-        return {{0, 'j'}, {1, 'j'}, {2, 'j'}};
+        return {{0, 'j'}, {1, 'f'}, {2, 'j'}};
     }
     if (kind == "buzzer") {
-        return {{0, 'j'}, {2, 'j'}};
+        return {{0, 'f'}, {2, 'j'}};
     }
     if (kind == "rgb_led") {
-        return {{0, 'h'}, {2, 'h'}, {3, 'h'}, {1, 'a'}};
+        return {{0, 'b'}, {2, 'b'}, {3, 'b'}, {1, 'j'}};
     }
     if (kind == "light_sensor") {
-        return {{0, 'a'}, {1, 'd'}, {1, 'j'}};
+        return {{0, 'j'}, {1, 'f'}, {1, 'j'}};
     }
     return {};
+}
+
+/// For a wire arriving from below (bottom header of the board): a free hole of the lower half
+/// joined to the leg, when there is one; otherwise the wire goes round and arrives from above.
+std::optional<std::pair<int, char>> holeFromBelow(const std::string& kind, std::size_t connection) {
+    if (kind == "button" && connection == 0) {
+        return std::pair{0, 'i'};
+    }
+    if (kind == "potentiometer" && connection == 1) {
+        return std::pair{1, 'j'};
+    }
+    if (kind == "buzzer" && connection == 0) {
+        return std::pair{0, 'j'};
+    }
+    if (kind == "light_sensor" && connection == 1) {
+        return std::pair{1, 'i'};
+    }
+    return std::nullopt;
 }
 
 class Diagram {
@@ -446,6 +468,7 @@ private:
         double lane = 0;
         double track = 0; ///< x of a vertical track, for detours (0: none).
         double lane2 = 0; ///< Second lane (wire from the bottom header to a module above).
+        bool toModule = false;
     };
 
     [[nodiscard]] std::string plusLabel() const { return board_.voltage >= 4.5 ? "5V" : "3V3"; }
@@ -524,10 +547,14 @@ private:
             const BoardPin& pin = pins_.at(wires_[i].pin);
             (pin.side == BoardHeader::Side::Bottom ? bottomWires : topWires).push_back(i);
         }
-        // Wires from the bottom header to a module go round the breadboard: they need a top lane too.
+        // Wires from the bottom header to a module, or to a part reached from above, go round the
+        // breadboard: they need a top lane too.
         std::size_t detours = 0;
         for (const std::size_t i : bottomWires) {
-            if (targetsModule_[i]) {
+            const auto [c, k] = wireOf_[i];
+            fromBelow_[i] = c != SIZE_MAX && placed_[c].onBreadboard &&
+                            holeFromBelow(plan_.components[c].kind, k).has_value();
+            if (c != SIZE_MAX && !fromBelow_[i]) {
                 ++detours;
             }
         }
@@ -575,7 +602,7 @@ private:
         for (const std::size_t i : bottomWires) {
             wires_[i].lane = bottomLane;
             bottomLane += 14;
-            if (targetsModule_[i]) {
+            if (wireOf_[i].first != SIZE_MAX && !fromBelow_[i]) {
                 wires_[i].track = detourTrack;
                 detourTrack += 13;
                 wires_[i].lane2 = lane;
@@ -613,7 +640,9 @@ private:
                 }
                 wireOf_.push_back({c, k});
                 wires_.push_back({end.boardPin, {}, kSignals[wires_.size() % std::size(kSignals)], end.via});
+                wires_.back().toModule = !placed_[c].onBreadboard;
                 targetsModule_.push_back(!placed_[c].onBreadboard);
+                fromBelow_.push_back(false);
                 if (end.boardPin == "5V" || end.boardPin == "VIN") {
                     wires_.back().colour = "#FF7043";
                 }
@@ -626,6 +655,7 @@ private:
                 wireOf_.push_back({SIZE_MAX, 0});
                 wires_.push_back({pin, {}, colour, {}});
                 targetsModule_.push_back(false);
+                fromBelow_.push_back(false);
             }
         }
     }
@@ -639,9 +669,8 @@ private:
                 for (std::size_t k = 0; k < placed.ends.size() && k < holes.size(); ++k) {
                     End& end = placed.ends[k];
                     end.at = breadboard_.hole(placed.column + holes[k].first, holes[k].second);
-                    const bool upper = holes[k].second <= 'e';
                     const bool ground = component.connections[k].boardPin == "GND";
-                    end.rail = upper ? (ground ? Rail::TopMinus : Rail::TopPlus) : (ground ? Rail::BottomMinus : Rail::BottomPlus);
+                    end.rail = ground ? Rail::BottomMinus : Rail::BottomPlus;
                 }
             } else {
                 for (std::size_t k = 0; k < placed.ends.size(); ++k) {
@@ -659,6 +688,9 @@ private:
                 const Rail rail = bottom ? (ground ? Rail::BottomMinus : Rail::BottomPlus)
                                          : (ground ? Rail::TopMinus : Rail::TopPlus);
                 wires_[i].target = breadboard_.rail(rail, ground ? 2 : 1);
+            } else if (fromBelow_[i]) {
+                const auto hole = holeFromBelow(plan_.components[c].kind, k);
+                wires_[i].target = breadboard_.hole(placed_[c].column + hole->first, hole->second);
             } else {
                 wires_[i].target = placed_[c].ends[k].at;
             }
@@ -730,6 +762,7 @@ private:
     }
 
     void drawParts(Svg& svg) {
+        std::size_t leds = 0;
         for (std::size_t c = 0; c < placed_.size(); ++c) {
             const Placed& placed = placed_[c];
             const Component& component = plan_.components[c];
@@ -754,75 +787,65 @@ private:
             };
             Point badgeAt;
             if (kind == "output" || kind == "rgb_led") {
+                // Legs in row h; the resistor joins the + leg's column to the upper half.
                 const bool rgb = kind == "rgb_led";
                 const int legs = rgb ? 4 : 2;
-                const Point first = b.hole(col, 'c');
-                const Point last = b.hole(col + legs - 1, 'c');
-                const double cx = (first.x + last.x) / 2;
-                const double top = first.y - 62;
-                for (int i = 0; i < legs; ++i) {
-                    leg(svg, {cx - (legs - 1) * 3 + i * 6, top + 32}, b.hole(col + i, 'c'));
-                }
+                const Point first = b.hole(col, 'h');
+                const Point last = b.hole(col + legs - 1, 'h');
+                const Point centre{(first.x + last.x) / 2, first.y};
                 if (rgb) {
-                    svg.rect(cx - 16, top + 22, 32, 10, "#E0E0E0", {}, 2);
-                    svg.rect(cx - 15, top - 6, 30, 32, "#F5F5F5", "#BDBDBD", 14);
-                    svg.circle(cx - 5, top + 6, 4, "#EF5350");
-                    svg.circle(cx + 5, top + 6, 4, "#66BB6A");
-                    svg.circle(cx, top + 14, 4, "#42A5F5");
+                    svg.circle(centre.x, centre.y, 26, "#F5F5F5", "#9E9E9E", 2);
+                    svg.circle(centre.x - 8, centre.y - 6, 6, "#EF5350");
+                    svg.circle(centre.x + 8, centre.y - 6, 6, "#66BB6A");
+                    svg.circle(centre.x, centre.y + 8, 6, "#42A5F5");
                     const char* names[] = {"R", "−", "G", "B"};
                     for (int i = 0; i < 4; ++i) {
-                        svg.text({b.colX(col + i) + 7, b.rowY('d') + 4}, names[i], 9, "#455A64", "start", true);
+                        svg.text({b.colX(col + i), b.rowY('j') + 16}, names[i], 10, "#455A64", "middle", true);
                     }
-                    resistor(svg, b.hole(col, 'e'), b.hole(col, 'f'), resistorValue(0));
-                    resistor(svg, b.hole(col + 2, 'e'), b.hole(col + 2, 'f'), {});
-                    resistor(svg, b.hole(col + 3, 'e'), b.hole(col + 3, 'f'), {});
+                    for (const int leg : {0, 2, 3}) {
+                        resistor(svg, b.hole(col + leg, 'e'), b.hole(col + leg, 'f'), leg == 0 ? resistorValue(0) : std::string{});
+                    }
                 } else {
-                    svg.rect(cx - 14, top + 22, 28, 8, "#E53935", "#B71C1C", 2);
-                    svg.rect(cx - 12, top - 4, 24, 30, "#E53935", "#B71C1C", 12);
-                    svg.circle(cx - 4, top + 6, 3, "#FFFFFF");
-                    svg.text({first.x - 9, first.y + 4}, "+", 11, "#455A64", "middle", true);
+                    // Successive LEDs in different colours, as in a kit: red, yellow, green, blue.
+                    static const char* const kLeds[] = {"#E53935", "#FDD835", "#43A047", "#1E88E5"};
+                    const std::string colour = kLeds[leds++ % std::size(kLeds)];
+                    svg.circle(centre.x, centre.y, 15, colour, darker(colour), 2);
+                    svg.circle(centre.x - 5, centre.y - 5, 4, "#FFFFFF");
+                    svg.line({{centre.x + 11, centre.y - 10}, {centre.x + 11, centre.y + 10}}, darker(colour), 2); // flat side: −
+                    svg.text({first.x - 4, first.y + 30}, "+", 12, "#455A64", "middle", true);
                     resistor(svg, b.hole(col, 'e'), b.hole(col, 'f'), resistorValue(0));
                 }
-                badgeAt = {cx - 30, top - 14};
+                badgeAt = {centre.x - (rgb ? 34 : 24), centre.y - (rgb ? 26 : 20)};
             } else if (kind == "button") {
                 const Point e = b.hole(col, 'e');
                 const Point f = b.hole(col, 'f');
                 svg.rect(e.x - 9, e.y - 8, 58, f.y - e.y + 16, "#90A4AE", "#607D8B", 4, 2);
                 svg.circle(e.x + 20, (e.y + f.y) / 2, 13, "#263238");
-                badgeAt = {e.x - 24, e.y - 22};
+                badgeAt = {e.x - 22, e.y - 18};
             } else if (kind == "potentiometer") {
-                const Point mid = b.hole(col + 1, 'f');
-                const double cy = mid.y + 34;
-                for (int i = 0; i < 3; ++i) {
-                    leg(svg, {b.colX(col + i), cy - 16}, b.hole(col + i, 'f'));
-                }
-                svg.rect(mid.x - 30, cy - 22, 60, 44, "#1565C0", "#0D47A1", 4, 2);
-                svg.circle(mid.x, cy, 16, "#ECEFF1", "#90A4AE", 2);
-                svg.line({{mid.x, cy}, {mid.x + 8, cy - 12}}, "#455A64", 3);
-                svg.text({mid.x + 36, cy + 4}, "10 kΩ", 10, "#455A64", "start", true);
-                badgeAt = {mid.x - 44, cy - 28};
+                const Point mid = b.hole(col + 1, 'h');
+                svg.rect(mid.x - 30, mid.y - 26, 60, 52, "#1565C0", "#0D47A1", 4, 2);
+                svg.circle(mid.x, mid.y, 17, "#ECEFF1", "#90A4AE", 2);
+                svg.line({{mid.x, mid.y}, {mid.x + 9, mid.y - 13}}, "#455A64", 3);
+                svg.text({mid.x + 34, mid.y + 4}, "10 kΩ", 10, "#455A64", "start", true);
+                badgeAt = {mid.x - 40, mid.y - 30};
             } else if (kind == "buzzer") {
-                const Point plus = b.hole(col, 'g');
-                const Point minus = b.hole(col + 2, 'g');
-                const double cx = (plus.x + minus.x) / 2;
-                const double cy = plus.y - 30;
-                leg(svg, {cx - 8, cy}, plus);
-                leg(svg, {cx + 8, cy}, minus);
-                svg.circle(cx, cy, 25, "#212121", "#000000", 2);
-                svg.circle(cx, cy, 5, "#424242");
-                svg.text({cx - 13, cy - 8}, "+", 13, "#FFFFFF", "middle", true);
-                badgeAt = {cx - 40, cy - 26};
+                const Point mid = b.hole(col + 1, 'h');
+                svg.circle(mid.x, mid.y, 26, "#212121", "#000000", 2);
+                svg.circle(mid.x, mid.y, 6, "#424242");
+                svg.text({mid.x - 15, mid.y - 7}, "+", 13, "#FFFFFF", "middle", true);
+                badgeAt = {mid.x - 36, mid.y - 26};
             } else if (kind == "light_sensor") {
-                const Point a = b.hole(col, 'c');
-                const Point d = b.hole(col + 1, 'c');
-                const double cx = (a.x + d.x) / 2;
-                const double cy = a.y - 34;
-                leg(svg, {cx - 5, cy + 10}, a);
-                leg(svg, {cx + 5, cy + 10}, d);
-                svg.circle(cx, cy, 13, "#FFCC80", "#EF6C00", 2);
-                svg.line({{cx - 8, cy - 4}, {cx - 4, cy + 4}, {cx, cy - 4}, {cx + 4, cy + 4}, {cx + 8, cy - 4}}, "#BF360C", 2);
-                resistor(svg, b.hole(col + 1, 'e'), b.hole(col + 1, 'f'), resistorValue(2));
-                badgeAt = {cx - 34, cy - 18};
+                const Point a = b.hole(col, 'h');
+                const Point d = b.hole(col + 1, 'h');
+                const Point mid{(a.x + d.x) / 2, a.y};
+                svg.circle(mid.x, mid.y, 14, "#FFCC80", "#EF6C00", 2);
+                svg.line({{mid.x - 8, mid.y - 4}, {mid.x - 4, mid.y + 4}, {mid.x, mid.y - 4}, {mid.x + 4, mid.y + 4},
+                          {mid.x + 8, mid.y - 4}},
+                         "#BF360C", 2);
+                // Its 10 kΩ resistor goes from the column of leg 2 straight into the − rail.
+                resistor(svg, b.hole(col + 1, 'j'), b.rail(Rail::BottomMinus, col + 1), resistorValue(2));
+                badgeAt = {mid.x - 26, mid.y - 22};
             }
             badge(svg, badgeAt, number);
         }
@@ -841,6 +864,9 @@ private:
                 const End& end = placed_[c].ends[k];
                 if (!end.toRail) {
                     continue;
+                }
+                if (placed_[c].onBreadboard && plan_.components[c].kind == "light_sensor" && k == 2) {
+                    continue; // its resistor is drawn into the rail
                 }
                 const bool ground = end.rail == Rail::TopMinus || end.rail == Rail::BottomMinus;
                 top = top || end.rail == Rail::TopMinus || end.rail == Rail::TopPlus;
@@ -894,7 +920,7 @@ private:
             }
             points.push_back(wire.target);
             jumper(svg, points, wire.colour);
-            if (!wire.via.empty()) {
+            if (!wire.via.empty() && wire.toModule) { // parts on the breadboard draw their own resistors
                 resistor(svg, {wire.target.x, wire.target.y + 8}, {wire.target.x, wire.target.y + 48}, wire.via);
             }
         }
@@ -912,6 +938,7 @@ private:
     std::vector<Wire> wires_;
     std::vector<std::pair<std::size_t, std::size_t>> wireOf_; ///< (component, connection), SIZE_MAX for a feed.
     std::vector<bool> targetsModule_;
+    std::vector<bool> fromBelow_; ///< Wire arriving in the lower half from below.
     std::vector<std::size_t> feeds_;
     double width_ = 0;
     double height_ = 0;
