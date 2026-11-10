@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, Group, Loader, Modal, Paper, Stack, Table, Tabs, Text } from "@mantine/core";
-import { IconAlertTriangle, IconListDetails, IconPhoto } from "@tabler/icons-react";
+import { IconAlertTriangle, IconDownload, IconListDetails, IconPhoto, IconSchema } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { bridge, hasHost, type WiringPlan } from "@/bridge";
@@ -27,11 +27,13 @@ type State = { status: "loading" } | { status: "ready"; plan: WiringPlan } | { s
 /** What to wire for the project, computed from its blocks: components, pins and warnings. */
 export function ProjectWiring({ opened, example, language, project, t, onShowBlocks, onClose }: ProjectWiringProps) {
 	const [state, setState] = useState<State>({ status: "loading" });
-	const [tab, setTab] = useState<string | null>("components");
+	const [tab, setTab] = useState<string | null>("diagram");
+	const [saved, setSaved] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!opened) return;
-		setTab(example ? "diagram" : "components");
+		setTab("diagram");
+		setSaved(null);
 		if (!hasHost()) {
 			setState({ status: "failed", message: t("wiring.no_host") });
 			return;
@@ -48,20 +50,59 @@ export function ProjectWiring({ opened, example, language, project, t, onShowBlo
 		// The project is read once, when the window opens: the editor is behind it.
 	}, [opened, language, example]);
 
-	const components = <WiringTable state={state} t={t} onShowBlocks={onShowBlocks} />;
+	const svg = state.status === "ready" ? state.plan.svg : undefined;
+	const save = async () => {
+		if (!svg) return;
+		try {
+			const file = await bridge.saveImage(project().name, await svgToPng(svg), language);
+			if (file) setSaved(t("wiring.saved", { file }));
+		} catch (error) {
+			setSaved(String(error));
+		}
+	};
 	return (
 		<Modal opened={opened} onClose={onClose} title={t("wiring.project_title")} size="90rem">
-			{example ? (
-				<Tabs value={tab} onChange={setTab}>
-					<Tabs.List mb="sm">
-						<Tabs.Tab value="diagram" leftSection={<IconPhoto size={16} />}>
-							{t("wiring.tab_diagram")}
+			<Tabs value={tab} onChange={setTab}>
+				<Tabs.List mb="sm">
+					<Tabs.Tab value="diagram" leftSection={<IconSchema size={16} />}>
+						{t("wiring.tab_diagram")}
+					</Tabs.Tab>
+					<Tabs.Tab value="components" leftSection={<IconListDetails size={16} />}>
+						{t("wiring.tab_components")}
+					</Tabs.Tab>
+					{example && (
+						<Tabs.Tab value="example" leftSection={<IconPhoto size={16} />}>
+							{t("wiring.tab_example")}
 						</Tabs.Tab>
-						<Tabs.Tab value="components" leftSection={<IconListDetails size={16} />}>
-							{t("wiring.tab_components")}
-						</Tabs.Tab>
-					</Tabs.List>
-					<Tabs.Panel value="diagram">
+					)}
+				</Tabs.List>
+				<Tabs.Panel value="diagram">
+					{svg ? (
+						<Stack gap="xs">
+							<ZoomableImage src={svgUrl(svg)} height="65vh" alt={t("wiring.project_title")} t={t} />
+							<Group justify="space-between">
+								<Text size="sm" c="dimmed">
+									{t("wiring.diagram_help")}
+								</Text>
+								<Button size="xs" variant="light" leftSection={<IconDownload size={14} />} onClick={() => void save()}>
+									{t("wiring.save_image")}
+								</Button>
+							</Group>
+							{saved && (
+								<Text size="sm" c="dimmed">
+									{saved}
+								</Text>
+							)}
+						</Stack>
+					) : (
+						<WiringTable state={state} t={t} onShowBlocks={onShowBlocks} />
+					)}
+				</Tabs.Panel>
+				<Tabs.Panel value="components">
+					<WiringTable state={state} t={t} onShowBlocks={onShowBlocks} />
+				</Tabs.Panel>
+				{example && (
+					<Tabs.Panel value="example">
 						<Stack gap="xs">
 							<ZoomableImage
 								src={example.wiring}
@@ -74,11 +115,8 @@ export function ProjectWiring({ opened, example, language, project, t, onShowBlo
 							</Text>
 						</Stack>
 					</Tabs.Panel>
-					<Tabs.Panel value="components">{components}</Tabs.Panel>
-				</Tabs>
-			) : (
-				components
-			)}
+				)}
+			</Tabs>
 		</Modal>
 	);
 }
@@ -169,4 +207,27 @@ function WiringTable({ state, t, onShowBlocks }: WiringTableProps) {
 			))}
 		</Stack>
 	);
+}
+
+/** The SVG as an image URL. */
+export function svgUrl(svg: string): string {
+	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+/** The SVG drawn twice as big on a canvas, as a PNG data URL. */
+async function svgToPng(svg: string): Promise<string> {
+	const image = new Image();
+	await new Promise<void>((done, fail) => {
+		image.onload = () => done();
+		image.onerror = () => fail(new Error("SVG"));
+		image.src = svgUrl(svg);
+	});
+	const canvas = document.createElement("canvas");
+	canvas.width = image.naturalWidth * 2;
+	canvas.height = image.naturalHeight * 2;
+	const context = canvas.getContext("2d");
+	if (!context) throw new Error("canvas");
+	context.scale(2, 2);
+	context.drawImage(image, 0, 0);
+	return canvas.toDataURL("image/png");
 }

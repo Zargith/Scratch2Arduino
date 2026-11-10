@@ -55,6 +55,11 @@ inline constexpr int kUsbBudget = 500;
 /// Same, with the built-in catalog and the project's board (an empty plan for an unknown board).
 [[nodiscard]] Plan plan(const project::Project& project, Language language);
 
+/// The wiring diagram of `plan` as an SVG picture: the board with its pins, the components as
+/// numbered cards (in the order of the plan), power rails (+ and GND) and one wire per
+/// connection, with its resistor. `title` is written at the top.
+[[nodiscard]] std::string svg(const Plan& plan, const Board& board, const std::string& title);
+
 /// Kinds described in resources/components.json.
 [[nodiscard]] std::vector<std::string> componentKinds();
 

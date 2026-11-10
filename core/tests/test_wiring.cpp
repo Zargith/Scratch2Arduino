@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -137,6 +138,72 @@ TEST(Wiring, KnowsTheNamesOfTheNodeMcuPins) {
                                         Language::English);
     ASSERT_EQ(plan.components.size(), 1U);
     EXPECT_EQ(plan.components[0].connections[0].boardPin, "D1");
+}
+
+} // namespace
+
+namespace {
+
+TEST(WiringDiagram, DrawsEveryPinOfEveryBoard) {
+    const std::set<std::string> power = {"5V", "3V3", "3.3V", "GND", "VIN", "AREF", "IOREF", "RESET", "RST", "EN",
+                                         "REF", "RSV", "SD3", "SD2", "SD1", "CMD", "SD0", "CLK", "SCL", "SDA"};
+    for (const auto& board : s2a::BoardDatabase::builtin().boards()) {
+        ASSERT_GT(board.drawing.width, 0) << board.id;
+        std::set<std::string> drawn;
+        for (const auto& header : board.drawing.headers) {
+            for (const auto& entry : header.pins) {
+                if (!entry) {
+                    continue;
+                }
+                drawn.insert(entry->pin);
+                EXPECT_TRUE(entry->pin == "-" || power.count(entry->pin) != 0 || board.findPin(entry->pin) != nullptr)
+                    << board.id << ": " << entry->pin << " is not a pin of the board";
+            }
+        }
+        for (const auto& pin : board.pins) {
+            EXPECT_EQ(drawn.count(pin.label), 1U) << board.id << ": pin " << pin.label << " is not drawn";
+        }
+        EXPECT_EQ(drawn.count(board.voltage >= 4.5 ? "5V" : "3V3"), 1U) << board.id;
+        EXPECT_EQ(drawn.count("GND"), 1U) << board.id;
+    }
+}
+
+TEST(WiringDiagram, DrawsTheBoardTheComponentsAndTheirWires) {
+    std::ifstream file(std::string(S2A_EXAMPLES_DIR) + "/distance-alarm/project.json");
+    std::stringstream content;
+    content << file.rdbuf();
+    const auto project = fromJson(content.str());
+    ASSERT_TRUE(project.ok());
+    const auto* uno = s2a::BoardDatabase::builtin().find("uno");
+    const Plan plan = s2a::wiring::plan(project.value(), BlockCatalog::builtin(), *uno, Language::English);
+    const std::string svg = s2a::wiring::svg(plan, *uno, "Alarm & <test>");
+    EXPECT_EQ(svg.rfind("<svg ", 0), 0U);
+    EXPECT_NE(svg.find("</svg>"), std::string::npos);
+    EXPECT_NE(svg.find("Alarm &amp; &lt;test&gt;"), std::string::npos);
+    for (const char* expected : {"HC-SR04 distance sensor", "RGB LED (common cathode)", "Passive buzzer", ">220 Ω<",
+                                 ">Trig<", ">UNO<", "+ 5V"}) {
+        EXPECT_NE(svg.find(expected), std::string::npos) << expected;
+    }
+    // One wire per connection (each drawn twice: outline and colour), plus the feeds of the 2 rails.
+    std::size_t lines = 0;
+    for (auto at = svg.find("<polyline"); at != std::string::npos; at = svg.find("<polyline", at + 1)) {
+        ++lines;
+    }
+    std::size_t connections = 0;
+    for (const auto& component : plan.components) {
+        connections += component.connections.size();
+    }
+    EXPECT_EQ(lines, 2 + 2 * (connections + 2)); // the 2 rails, then the wires
+}
+
+TEST(WiringDiagram, AddsThePinsMissingFromTheDrawing) {
+    s2a::Board board = *s2a::BoardDatabase::builtin().find("uno");
+    board.drawing.headers.clear();
+    const Plan plan = s2a::wiring::plan(program({block("led", "pins_digital_write", {{"PIN", "7"}})}),
+                                        BlockCatalog::builtin(), board, Language::English);
+    const std::string svg = s2a::wiring::svg(plan, board, "Test");
+    EXPECT_NE(svg.find(">7<"), std::string::npos);
+    EXPECT_NE(svg.find(">GND<"), std::string::npos);
 }
 
 } // namespace

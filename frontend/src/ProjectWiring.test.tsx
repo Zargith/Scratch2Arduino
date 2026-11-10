@@ -22,6 +22,7 @@ const plan: WiringPlan = {
 		},
 	],
 	warnings: [{ message: "Pin 7 is used by both", blockIds: ["press", "led"] }],
+	svg: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
 };
 
 describe("project wiring window", () => {
@@ -76,6 +77,10 @@ describe("project wiring window", () => {
 			button.textContent?.includes("Show the blocks")
 		);
 		expect(buttons.length).toBe(2);
+		// The diagram drawn by the core is the first tab.
+		const picture = document.body.querySelector('img[src^="data:image/svg+xml"]');
+		expect(picture).not.toBeNull();
+		expect(text).toContain("Save the image");
 		await act(async () => buttons[0]?.click());
 		expect(shown).toHaveBeenCalledWith(["press", "led"]);
 		await act(async () => root.unmount());
