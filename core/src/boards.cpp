@@ -183,6 +183,37 @@ Board parseBoard(const Json& json) {
     if (json.contains("spi")) {
         board.spi = parseBus(board, json.at("spi"), "spi");
     }
+    if (json.contains("drawing")) {
+        const Json& drawing = json.at("drawing");
+        board.drawing.width = drawing.at("width").get<double>();
+        board.drawing.height = drawing.at("height").get<double>();
+        board.drawing.colour = drawing.value("colour", std::string("#00878F"));
+        board.drawing.title = drawing.value("title", board.name);
+        for (const Json& node : drawing.at("headers")) {
+            BoardHeader header;
+            const std::string side = node.at("side").get<std::string>();
+            if (side != "top" && side != "bottom" && side != "right") {
+                throw BoardError("drawing.headers.side: '" + side + "' must be top, bottom or right");
+            }
+            header.side = side == "top" ? BoardHeader::Side::Top
+                                        : (side == "bottom" ? BoardHeader::Side::Bottom : BoardHeader::Side::Right);
+            header.x = node.at("x").get<double>();
+            header.y = node.at("y").get<double>();
+            header.pitch = node.at("pitch").get<double>();
+            for (const Json& entry : node.at("pins")) {
+                if (entry.is_null()) {
+                    header.pins.emplace_back(std::nullopt);
+                    continue;
+                }
+                // "TX 1|1": printed label, then the pin; "5V": both the same.
+                const std::string text = entry.get<std::string>();
+                const auto bar = text.find('|');
+                BoardHeader::Entry pin{text.substr(0, bar), bar == std::string::npos ? text : text.substr(bar + 1)};
+                header.pins.emplace_back(std::move(pin));
+            }
+            board.drawing.headers.push_back(std::move(header));
+        }
+    }
     for (const auto& usb : json.value("usb", std::vector<std::string>{})) {
         board.usbIds.push_back(parseUsbId(usb));
     }

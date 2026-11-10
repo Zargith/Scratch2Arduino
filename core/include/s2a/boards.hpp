@@ -39,6 +39,30 @@ struct BusPin {
     int number = 0;
 };
 
+/// A row of header pins on the drawing of a board (wiring diagram).
+struct BoardHeader {
+    enum class Side { Top, Bottom, Right }; ///< Where the wires leave the board.
+    struct Entry {
+        std::string label; ///< As printed on the board ("TX 1", "D5").
+        std::string pin;   ///< Label of the pin in the database ("1", "D5"), a power pin ("5V", "GND"),
+                           ///< or "-" for a pin the blocks cannot use (serial, flash).
+    };
+    Side side = Side::Top;
+    double x = 0;     ///< First pin, from the top-left corner of the board.
+    double y = 0;
+    double pitch = 0; ///< Distance between two pins (along x, or along y on the right side).
+    std::vector<std::optional<Entry>> pins; ///< nullopt: a gap between two header blocks.
+};
+
+/// How a board is drawn on wiring diagrams: a coloured rectangle and its headers.
+struct BoardDrawing {
+    double width = 0; ///< 0: no drawing.
+    double height = 0;
+    std::string colour;
+    std::string title;
+    std::vector<BoardHeader> headers;
+};
+
 /// Description of a supported board (resources/boards/<id>.json).
 struct Board {
     std::string id;       ///< Stable identifier stored in projects: "uno".
@@ -54,6 +78,7 @@ struct Board {
     bool bluetooth = false; ///< Classic Bluetooth (ESP32): the phone blocks work.
     bool wifi = false;      ///< Wi-Fi (ESP32, ESP8266): Live mode over Wi-Fi.
     bool builtinLedActiveLow = false; ///< The on-board LED lights when its pin is LOW (ESP8266).
+    BoardDrawing drawing;
     std::vector<Pin> pins; ///< Sorted by number.
     std::vector<BusPin> i2c;
     std::vector<BusPin> spi;

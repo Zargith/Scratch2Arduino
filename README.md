@@ -254,13 +254,17 @@ them.
 
 ### Wiring
 
-The **Wiring** button (top bar) lists what to wire for the current project, computed from its blocks:
+The **Wiring** button (top bar) draws the **wiring diagram** of the current project, computed from its
+blocks: the board with the pins used circled, each component as a numbered card, the + and GND rails and
+one wire per leg, with its resistor (zoom with the wheel, **Save the image** writes a PNG). The next tab
+lists the same thing as a table:
 each component, each of its legs and the board pin it goes to (with the resistor to add, if any), and
 warnings for a pin used by two components, an I2C screen whose SDA/SCL pin drives something else, or
 more current than a USB port gives. **Show the blocks** highlights the blocks concerned. For an example,
-the window also shows its drawn diagram: zoom with the wheel or a double-click, drag to move around. The
+the window also shows its hand-drawn breadboard layout. The
 parts are described in [`resources/components.json`](resources/components.json); each block of the
-catalog names its part (`"component"`). From the command line: `s2a-cli wiring <project>`.
+catalog names its part (`"component"`). From the command line: `s2a-cli wiring <project> [--svg diagram.svg]`. Each board file has a
+`drawing` (size, colour, headers in the order printed on the board) used for the diagram.
 
 ### Functions
 

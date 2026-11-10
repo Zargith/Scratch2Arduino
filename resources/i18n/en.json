@@ -42,7 +42,7 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project>                       components to wire, their pins and the warnings\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
     "unknown_board_short": "unknown board",
     "arduino_cli_missing": "The arduino-cli tool cannot be found. Reinstall Scratch2Arduino.",
@@ -80,7 +80,9 @@
     "library_export_title": "Export my blocks",
     "library_import_title": "Import blocks",
     "library_filter": "Scratch2Arduino blocks",
-    "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino."
+    "frontend_missing": "The block editor cannot be found. Reinstall Scratch2Arduino.",
+    "image_title": "Save the wiring diagram",
+    "image_filter": "PNG image"
   },
   "validation": {
     "no_start_block": "Your program does not start anywhere.",

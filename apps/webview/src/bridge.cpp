@@ -1,5 +1,6 @@
 // Core headers first: webview.h (via bridge.hpp) brings X11 macros on Linux.
 #include "s2a/arduino_cli.hpp"
+#include "s2a/boards.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/live.hpp"
@@ -14,7 +15,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <optional>
+#include <string_view>
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
@@ -49,6 +52,30 @@ project::Project projectArg(const Json& args, std::size_t index, Language langua
         throw UserError{tr(errorMessageKey(parsed.error().code), language) + " (" + parsed.error().detail + ")"};
     }
     return std::move(parsed).value();
+}
+
+/// Bytes of a base64 text (a "data:...;base64," prefix is skipped); invalid characters are ignored.
+std::string base64Decode(std::string_view text) {
+    if (const auto comma = text.find(','); text.substr(0, 5) == "data:" && comma != std::string_view::npos) {
+        text.remove_prefix(comma + 1);
+    }
+    static constexpr std::string_view kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string bytes;
+    unsigned int buffer = 0;
+    int bits = 0;
+    for (const char c : text) {
+        const auto value = kAlphabet.find(c);
+        if (value == std::string_view::npos) {
+            continue; // padding, line breaks
+        }
+        buffer = (buffer << 6) | static_cast<unsigned int>(value);
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            bytes.push_back(static_cast<char>((buffer >> bits) & 0xFF));
+        }
+    }
+    return bytes;
 }
 
 std::string stringArg(const Json& args, std::size_t index) {
@@ -216,6 +243,7 @@ void Bridge::bind() {
                 const Language language = languageArg(args, 1, language_);
                 const project::Project project = projectArg(args, 0, language);
                 const wiring::Plan plan = wiring::plan(project, language);
+                const Board* board = BoardDatabase::builtin().find(project.boardId);
                 Json components = Json::array();
                 for (const auto& component : plan.components) {
                     Json connections = Json::array();
@@ -234,7 +262,43 @@ void Bridge::bind() {
                 for (const auto& warning : plan.warnings) {
                     warnings.push_back({{"message", warning.message}, {"blockIds", warning.blockIds}});
                 }
-                return Json{{"components", components}, {"warnings", warnings}}.dump();
+                Json result{{"components", components}, {"warnings", warnings}};
+                if (board != nullptr) {
+                    result["svg"] = wiring::svg(plan, *board, project.name + " — " + board->name);
+                }
+                return result.dump();
+            });
+        },
+        nullptr);
+
+    // A picture made by the editor (the wiring diagram as PNG), saved where the user chooses.
+    window_.bind(
+        "s2a_save_image",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() -> std::string {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 2, language_);
+                const std::string name = stringArg(args, 0);
+                const std::string data = base64Decode(stringArg(args, 1));
+                const fs::path suggestion =
+                    projectsDirectory() / (codegen::identifier(name.empty() ? "schema" : name) + ".png");
+                const std::string chosen = pfd::save_file(tr("webview.image_title", language), suggestion.u8string(),
+                                                          {tr("webview.image_filter", language), "*.png"},
+                                                          pfd::opt::force_overwrite)
+                                               .result();
+                if (chosen.empty()) {
+                    return "null";
+                }
+                fs::path file = fs::u8path(chosen);
+                if (file.extension() != ".png") {
+                    file += ".png";
+                }
+                std::ofstream out(file, std::ios::binary);
+                out << data;
+                if (!out) {
+                    throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
+                }
+                return Json(file.u8string()).dump();
             });
         },
         nullptr);

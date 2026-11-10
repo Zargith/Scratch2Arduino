@@ -15,5 +15,27 @@
   "pwmPins": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"],
   "interruptPins": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"],
   "i2c": { "sda": "D2", "scl": "D1" },
-  "spi": { "mosi": "D7", "miso": "D6", "sck": "D5", "ss": "D8" }
+  "spi": { "mosi": "D7", "miso": "D6", "sck": "D5", "ss": "D8" },
+  "drawing": {
+    "width": 480,
+    "height": 220,
+    "colour": "#1A1A1A",
+    "title": "NodeMCU ESP8266",
+    "headers": [
+      {
+        "side": "top",
+        "x": 40,
+        "y": 16,
+        "pitch": 26,
+        "pins": ["A0", "RSV", "RSV", "SD3", "SD2", "SD1", "CMD", "SD0", "CLK", "GND", "3V3", "EN", "RST", "GND", "VIN"]
+      },
+      {
+        "side": "bottom",
+        "x": 40,
+        "y": 204,
+        "pitch": 26,
+        "pins": ["D0", "D1", "D2", "D3", "D4", "3V3", "GND", "D5", "D6", "D7", "D8", "RX|-", "TX|-", "GND", "3V3"]
+      }
+    ]
+  }
 }

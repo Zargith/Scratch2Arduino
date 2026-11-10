@@ -5,7 +5,7 @@
 //   s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
 //   s2a-cli generate <project>                     print the Arduino code of a project
-//   s2a-cli wiring <project>                       components to wire, their pins and the warnings
+//   s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)
 //   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
 //   s2a-cli upload <sketch|project> --port <port> [--board <id>]
 //   s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)
@@ -68,6 +68,7 @@ struct Options {
     bool verbose = false;
     bool boardGiven = false;
     double seconds = 0; ///< live: stop after this many seconds (0 = until Ctrl+C).
+    std::string svg;    ///< wiring: also write the diagram to this SVG file.
 };
 
 std::atomic<bool> stopRequested{false};
@@ -407,6 +408,14 @@ int Cli::wiringCommand() const {
     if (plan.components.empty()) {
         print("cli.wiring_nothing");
     }
+    if (!options_.svg.empty()) {
+        std::ofstream file(fs::u8path(options_.svg), std::ios::binary);
+        file << s2a::wiring::svg(plan, *selected, project->name + " — " + selected->name);
+        if (!file) {
+            std::cerr << tr(s2a::errorMessageKey(s2a::ErrorCode::WriteFailed)) << '\n';
+            return kFailure;
+        }
+    }
     return kSuccess;
 }
 
@@ -659,6 +668,12 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
                 return std::nullopt;
             }
             options.language = s2a::languageFromLocale(*language);
+        } else if (arg == "--svg") {
+            const auto file = value();
+            if (!file) {
+                return std::nullopt;
+            }
+            options.svg = *file;
         } else if (arg == "--seconds") {
             const auto seconds = value();
             if (!seconds) {
