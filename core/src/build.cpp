@@ -168,13 +168,15 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         result.details = "- " + warning + "\n" + result.details;
     }
     TranslationParams params{{"board", board->name}};
+    bool sized = false; // the ESP8266 tools do not report the size of the program
     for (const MemoryUsage& section : compiled.value().memory) {
         params.emplace_back(section.section + "_percent",
                             section.max > 0 ? std::to_string(section.size * 100 / section.max) : "?");
+        sized = sized || section.section == "text";
     }
     if (options.port.empty()) {
         result.ok = true;
-        result.message = tr("build.compiled", language, params);
+        result.message = tr(sized ? "build.compiled" : "build.compiled_no_size", language, params);
         return result;
     }
 

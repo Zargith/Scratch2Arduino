@@ -149,8 +149,10 @@ ArduinoCli::ArduinoCli(fs::path executable, Directories directories, process::Ru
     : executable_(std::move(executable)), directories_(std::move(directories)), runner_(std::move(runner)) {}
 
 namespace {
+// Space-separated, as arduino-cli reads lists from the environment.
 constexpr std::string_view kAdditionalBoardIndexes =
-    "https://espressif.github.io/arduino-esp32/package_esp32_index.json";
+    "https://espressif.github.io/arduino-esp32/package_esp32_index.json "
+    "https://arduino.esp8266.com/stable/package_esp8266com_index.json";
 } // namespace
 
 Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chrono::milliseconds timeout) const {
@@ -164,7 +166,7 @@ Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chro
         {"ARDUINO_DIRECTORIES_DOWNLOADS", directories_.downloads.u8string()},
         {"ARDUINO_DIRECTORIES_USER", directories_.user.u8string()},
         {"ARDUINO_UPDATER_ENABLE_NOTIFICATION", "false"},
-        // Where arduino-cli finds the boards that Arduino does not publish (ESP32).
+        // Where arduino-cli finds the boards that Arduino does not publish (ESP32, ESP8266).
         {"ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS", std::string(kAdditionalBoardIndexes)},
     };
     command.timeout = timeout;

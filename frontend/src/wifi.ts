@@ -1,18 +1,18 @@
-// Wi-Fi "ports" of the boards that have Wi-Fi (ESP32): the Live mode reaches them over the
+// Wi-Fi "ports" of the boards that have Wi-Fi (ESP32, ESP8266): the Live mode reaches them over the
 // network instead of the USB cable. The C++ host recognises the "wifi:" prefix
 // (core/include/s2a/network.hpp).
 import type { Port } from "@/bridge";
+import { findBoard } from "@/catalog";
 
 export const WIFI_PREFIX = "wifi:";
 /** The board on its own network "S2A-xxxx" (password below) always has this address. */
 export const ACCESS_POINT_ADDRESS = "192.168.4.1";
 export const ACCESS_POINT_PASSWORD = "scratch2arduino";
-/** Boards whose Live firmware has Wi-Fi (resources/boards/<id>.json). */
-const WIFI_BOARDS = new Set(["esp32"]);
 const STORAGE_KEY = "s2a.wifi.addresses";
 const REMEMBERED = 3;
 
-export const hasWifi = (boardId: string): boolean => WIFI_BOARDS.has(boardId);
+/** Boards whose Live firmware has Wi-Fi ("wifi" in resources/boards/<id>.json). */
+export const hasWifi = (boardId: string): boolean => findBoard(boardId)?.wifi ?? false;
 export const isWifiPort = (port: string | null): boolean => port?.startsWith(WIFI_PREFIX) ?? false;
 export const wifiPort = (address: string): string => `${WIFI_PREFIX}${address}`;
 

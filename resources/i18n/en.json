@@ -62,12 +62,14 @@
     "live_stopped": "Live mode stopped.",
     "live_finished": "Every block has run.",
     "bluetooth_searching": "Looking for Bluetooth boards (8 seconds)…",
-    "bluetooth_none": "No \"S2A-…\" Bluetooth board found. The board must have received the Live program once over USB."
+    "bluetooth_none": "No \"S2A-…\" Bluetooth board found. The board must have received the Live program once over USB.",
+    "compiled_no_size": "Compiled."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",
     "compiled": "Well done, your program is correct! It uses {text_percent}% of the memory of the {board} board.",
-    "uploaded": "Here we go: your program is now running on the {board} board!"
+    "uploaded": "Here we go: your program is now running on the {board} board!",
+    "compiled_no_size": "Well done, your program is correct! It is ready for the {board} board."
   },
   "webview": {
     "open_title": "Open a project",

@@ -62,12 +62,14 @@
     "live_stopped": "Mode Live arrêté.",
     "live_finished": "Tous les blocs ont été exécutés.",
     "bluetooth_searching": "Recherche des cartes Bluetooth (8 secondes)…",
-    "bluetooth_none": "Aucune carte Bluetooth « S2A-… » trouvée. La carte doit avoir reçu le programme Live une fois par USB."
+    "bluetooth_none": "Aucune carte Bluetooth « S2A-… » trouvée. La carte doit avoir reçu le programme Live une fois par USB.",
+    "compiled_no_size": "Compilé."
   },
   "build": {
     "unknown_board": "La carte « {board} » n'est pas connue. Choisis une carte dans la liste.",
     "compiled": "Bravo, ton programme est correct ! Il utilise {text_percent} % de la mémoire de la carte {board}.",
-    "uploaded": "C'est parti : ton programme tourne maintenant sur la carte {board} !"
+    "uploaded": "C'est parti : ton programme tourne maintenant sur la carte {board} !",
+    "compiled_no_size": "Bravo, ton programme est correct ! Il est prêt pour la carte {board}."
   },
   "webview": {
     "open_title": "Ouvrir un projet",

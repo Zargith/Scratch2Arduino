@@ -18,8 +18,9 @@ std::vector<int> numbers(const std::vector<const s2a::Pin*>& pins) {
 
 TEST(BuiltinBoards, LoadsUnoNanoMegaAndEsp32) {
     const auto& database = BoardDatabase::builtin();
-    ASSERT_EQ(database.boards().size(), 4U);
+    ASSERT_EQ(database.boards().size(), 5U);
     EXPECT_NE(database.find("esp32"), nullptr);
+    EXPECT_NE(database.find("esp8266"), nullptr);
     EXPECT_NE(database.find("uno"), nullptr);
     EXPECT_NE(database.find("nano"), nullptr);
     EXPECT_NE(database.find("mega"), nullptr);
@@ -136,6 +137,37 @@ TEST(BoardDatabase, RejectsInvalidDescriptions) {
     expectInvalid(base, R"("interruptPins": [])", R"("interruptPins": [], "usb": ["12"])");
     EXPECT_FALSE(BoardDatabase::fromJson({"{"}).ok());
     EXPECT_FALSE(BoardDatabase::fromJson({kMinimalBoard, kMinimalBoard}).ok()); // duplicate id
+}
+
+} // namespace
+
+namespace {
+
+TEST(BuiltinBoards, NamesTheNodeMcuPinsAsPrintedOnIt) {
+    const auto* board = s2a::BoardDatabase::builtin().find("esp8266");
+    ASSERT_NE(board, nullptr);
+    const auto* d1 = board->findPin("D1");
+    ASSERT_NE(d1, nullptr);
+    EXPECT_EQ(d1->number, 5); // GPIO 5
+    EXPECT_EQ(d1->label, "D1");
+    EXPECT_EQ(board->findPin("d1"), d1);
+    EXPECT_EQ(board->findPin("5"), d1);
+    EXPECT_EQ(board->findPin("1"), nullptr); // GPIO 1 is the serial port
+    const auto* a0 = board->findPin("A0");
+    ASSERT_NE(a0, nullptr);
+    EXPECT_EQ(a0->number, 17);
+    EXPECT_TRUE(a0->has(s2a::PinCapability::Analog));
+    EXPECT_FALSE(a0->has(s2a::PinCapability::Digital));
+    EXPECT_FALSE(board->findPin("D0")->has(s2a::PinCapability::Pwm));
+    EXPECT_EQ(board->builtinLed, 2);
+    EXPECT_TRUE(board->builtinLedActiveLow);
+    EXPECT_TRUE(board->wifi);
+    EXPECT_FALSE(board->bluetooth);
+    const auto* esp32 = s2a::BoardDatabase::builtin().find("esp32");
+    EXPECT_TRUE(esp32->wifi && esp32->bluetooth && !esp32->builtinLedActiveLow);
+    EXPECT_FALSE(s2a::BoardDatabase::builtin().find("uno")->wifi);
+    // "D13" on an Arduino board is still pin 13.
+    EXPECT_EQ(s2a::BoardDatabase::builtin().find("uno")->findPin("D13")->number, 13);
 }
 
 } // namespace

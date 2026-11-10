@@ -46,13 +46,20 @@ export interface Board {
 	id: string;
 	name: string;
 	pins: Pin[];
+	/** Live mode over Wi-Fi (ESP32, ESP8266). */
+	wifi: boolean;
+	/** Live mode over Bluetooth and the Phone blocks (ESP32). */
+	bluetooth: boolean;
 }
 
 export interface BoardFile {
 	id: string;
 	name: string;
-	/** A count (pins 0..n-1) or the list of usable GPIO numbers (ESP32). */
-	digitalPins: number | number[];
+	/**
+	 * A count (pins 0..n-1), the list of usable GPIO numbers (ESP32), or the names printed on the
+	 * board with their GPIO number (NodeMCU: { "D1": 5 }).
+	 */
+	digitalPins: number | number[] | Record<string, number>;
 	/**
 	 * Arduino boards: A0..A(count-1) numbered from firstNumber. GPIO boards: `pins` are digital
 	 * pins that also read analog values, `inputOnly` are analog inputs named by their number.
@@ -60,6 +67,8 @@ export interface BoardFile {
 	analogPins: { count?: number; firstNumber?: number; pins?: string[]; inputOnly?: string[] };
 	pwmPins: string[];
 	interruptPins: string[];
+	wifi?: boolean;
+	bluetooth?: boolean;
 }
 
 export type CatalogBlock = BlockDefinition & { category: string };
@@ -81,12 +90,13 @@ export function buildCatalog(files: CatalogFile[]): CatalogEntry[] {
 /** Mirrors BoardDatabase::fromJson in core/src/boards.cpp. */
 export function buildBoard(file: BoardFile): Board {
 	const numbered: { number: number; pin: Pin }[] = [];
-	const digital = Array.isArray(file.digitalPins)
-		? file.digitalPins
-		: Array.from({ length: file.digitalPins }, (_, i) => i);
+	const digital: [string, number][] = Array.isArray(file.digitalPins)
+		? file.digitalPins.map((number): [string, number] => [String(number), number])
+		: typeof file.digitalPins === "number"
+			? Array.from({ length: file.digitalPins }, (_, i): [string, number] => [String(i), i])
+			: Object.entries(file.digitalPins);
 	const analog = file.analogPins.pins ?? [];
-	for (const number of digital) {
-		const label = String(number);
+	for (const [label, number] of digital) {
 		const capabilities: PinCapability[] = ["digital"];
 		if (analog.includes(label)) capabilities.push("analog");
 		if (file.pwmPins.includes(label)) capabilities.push("pwm");
@@ -104,7 +114,13 @@ export function buildBoard(file: BoardFile): Board {
 		for (const label of inputOnly) numbered.push({ number: Number(label), pin: { label, capabilities: ["analog"] } });
 	}
 	numbered.sort((a, b) => a.number - b.number);
-	return { id: file.id, name: file.name, pins: numbered.map(({ pin }) => pin) };
+	return {
+		id: file.id,
+		name: file.name,
+		pins: numbered.map(({ pin }) => pin),
+		wifi: file.wifi ?? false,
+		bluetooth: file.bluetooth ?? false,
+	};
 }
 
 const catalogFiles = import.meta.glob<CatalogFile>("../../blocks/catalog/*.json", {
