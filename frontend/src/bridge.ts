@@ -3,6 +3,7 @@
 // plain browser (pnpm dev) the host is missing and calls report it instead of throwing.
 import type { Language } from "@/catalog";
 import type { SavedGroup } from "@/myBlocks";
+import type { CodeProblem } from "@/program";
 import type { Project } from "@/project/convert";
 
 export interface HostInfo {
@@ -62,6 +63,8 @@ export interface Outcome {
 	/** Validation warnings: the program was built anyway. */
 	warnings?: string[];
 	warningBlockIds?: string[];
+	/** Text programs: the faulty lines (C++ compiler errors, Python/JavaScript syntax). */
+	problems?: CodeProblem[];
 }
 
 export type LiveState = "connecting" | "flashing" | "running" | "finished" | "stopped" | "failed";
@@ -79,6 +82,8 @@ export interface LiveSnapshot {
 	output?: string[];
 	/** ...out of this many since Live mode started. */
 	outputCount?: number;
+	/** Python/JavaScript: line of the error that stopped the program (0: none). */
+	line?: number;
 }
 
 export interface MonitorState {

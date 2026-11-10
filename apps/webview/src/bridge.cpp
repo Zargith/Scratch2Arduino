@@ -113,7 +113,12 @@ toolchain::ArduinoCli arduinoCli(Language language) {
 }
 
 std::string outcomeJson(const toolchain::BuildResult& result) {
+    Json problems = Json::array();
+    for (const toolchain::CodeProblem& problem : result.problems) {
+        problems.push_back({{"line", problem.line}, {"column", problem.column}, {"message", problem.message}});
+    }
     return Json{{"ok", result.ok},
+                {"problems", std::move(problems)},
                 {"message", result.message},
                 {"details", result.details},
                 {"blockIds", result.blockIds},
@@ -680,7 +685,8 @@ void Bridge::bind() {
                     {"variables", snapshot.variables},
                     {"readings", snapshot.readings},
                     {"output", snapshot.output},
-                    {"outputCount", snapshot.outputCount}}
+                    {"outputCount", snapshot.outputCount},
+                    {"line", snapshot.errorLine}}
             .dump();
     });
 

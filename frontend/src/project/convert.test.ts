@@ -184,3 +184,17 @@ describe("project conversion", () => {
 		expect(isProject({ format: "other" })).toBe(false);
 	});
 });
+
+describe("program language", () => {
+	it("writes text projects in format 2 and block projects in format 1", async () => {
+		const { emptyProject, withProgram } = await import("@/project/convert");
+		const blocks = emptyProject("p", "uno");
+		const python = withProgram(blocks, "python", "print(1)\n");
+		expect(python).toMatchObject({ formatVersion: 2, language: "python", code: "print(1)\n" });
+		const back = withProgram(python, "blocks", "ignored");
+		expect(back.formatVersion).toBe(1);
+		expect(back).not.toHaveProperty("language");
+		expect(back).not.toHaveProperty("code");
+		expect(withProgram(python, "cpp", "void setup() {}")).toMatchObject({ language: "cpp", code: "void setup() {}" });
+	});
+});

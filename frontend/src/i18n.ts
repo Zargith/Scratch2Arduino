@@ -136,6 +136,28 @@ const fr = {
 		"Une erreur inattendue s'est produite. Tes projets enregistrés ne sont pas touchés. Clique sur « Recommencer » pour rouvrir l'éditeur ; si cela recommence, envoie les détails ci-dessous aux développeurs.",
 	"crash.restart": "Recommencer",
 	"confirm.new": "Commencer un nouveau projet ? Les modifications non enregistrées seront perdues.",
+	"program.label": "Langage du programme",
+	"program.blocks": "Blocs",
+	"program.confirm_blocks":
+		"Revenir aux blocs efface ton code {language}. Tes blocs reviennent comme tu les avais laissés. Continuer ?",
+	"program.confirm_replace": "Passer en {to} remplace ton code {from} par un exemple en {to}. Continuer ?",
+	"program.help": "Aide du langage",
+	"program.help_cpp":
+		"Tu écris un vrai programme Arduino en C++ : setup() s'exécute une fois au démarrage, puis loop() recommence sans arrêt. « Vérifier » le compile, « Téléverser » l'envoie à la carte. Les bibliothèques Servo, DHT, LiquidCrystal (I2C), U8g2 et Adafruit NeoPixel s'installent toutes seules quand tu les inclus (#include <Servo.h>).",
+	"program.help_script":
+		"Ton programme tourne sur l'ordinateur et pilote la carte en direct : branche-la, choisis son port et clique sur « Live » (« Arrêter » le stoppe, même dans une boucle sans fin). « Vérifier » relit le programme sans le lancer. Fonctions disponibles :",
+	"program.help_functions":
+		"pinMode(broche, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(broche, HIGH | LOW)\ndigitalRead(broche) → HIGH ou LOW\nanalogRead(A0) → 0 à 1023\nanalogWrite(broche ~, 0 à 255)\ndelay(millisecondes)    millis()\ntone(broche, fréquence[, durée])    noTone(broche)\nservoWrite(broche, angle de 0 à 180)\nprint(…) → moniteur série et panneau Live",
+	"program.help_loop": "Tu peux aussi écrire des fonctions setup() et loop(), comme sur Arduino.",
+	"status.program_cpp_from_blocks":
+		"Mode C++ : ton code commence avec le programme de tes blocs. Modifie-le, puis « Vérifier » ou « Téléverser ».",
+	"status.program_cpp": "Mode C++ : écris ton programme Arduino, puis « Vérifier » ou « Téléverser ».",
+	"status.program_script":
+		"Mode {language} : ton programme tourne sur l'ordinateur et pilote la carte avec le bouton « Live ».",
+	"status.program_blocks": "Retour aux blocs : ils sont comme tu les avais laissés.",
+	"status.upload_script":
+		"Un programme {language} se lance avec le bouton « Live » : il tourne sur l'ordinateur et pilote la carte.",
+	"status.live_cpp": "Un programme C++ s'envoie à la carte avec « Téléverser ».",
 } as const;
 
 export type MessageKey = keyof typeof fr;
@@ -276,6 +298,27 @@ const en: Record<MessageKey, string> = {
 		"Something unexpected went wrong. Your saved projects are not affected. Click \"Start again\" to reopen the editor; if it happens again, send the details below to the developers.",
 	"crash.restart": "Start again",
 	"confirm.new": "Start a new project? Unsaved changes will be lost.",
+	"program.label": "Program language",
+	"program.blocks": "Blocks",
+	"program.confirm_blocks":
+		"Going back to the blocks deletes your {language} code. Your blocks come back as you left them. Continue?",
+	"program.confirm_replace": "Switching to {to} replaces your {from} code with a {to} example. Continue?",
+	"program.help": "Language help",
+	"program.help_cpp":
+		"You write a real Arduino program in C++: setup() runs once at start, then loop() runs again and again. \"Check\" compiles it, \"Upload\" sends it to the board. The Servo, DHT, LiquidCrystal (I2C), U8g2 and Adafruit NeoPixel libraries are installed by themselves when you include them (#include <Servo.h>).",
+	"program.help_script":
+		"Your program runs on the computer and drives the board live: plug it in, choose its port and click \"Live\" (\"Stop\" stops it, even in an endless loop). \"Check\" reads the program without running it. Available functions:",
+	"program.help_functions":
+		"pinMode(pin, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(pin, HIGH | LOW)\ndigitalRead(pin) → HIGH or LOW\nanalogRead(A0) → 0 to 1023\nanalogWrite(pin ~, 0 to 255)\ndelay(milliseconds)    millis()\ntone(pin, frequency[, duration])    noTone(pin)\nservoWrite(pin, angle from 0 to 180)\nprint(…) → serial monitor and Live panel",
+	"program.help_loop": "You can also write setup() and loop() functions, as on an Arduino.",
+	"status.program_cpp_from_blocks":
+		"C++ mode: your code starts with the program of your blocks. Change it, then \"Check\" or \"Upload\".",
+	"status.program_cpp": "C++ mode: write your Arduino program, then \"Check\" or \"Upload\".",
+	"status.program_script": "{language} mode: your program runs on the computer and drives the board with the \"Live\" button.",
+	"status.program_blocks": "Back to the blocks: they are as you left them.",
+	"status.upload_script":
+		"A {language} program is started with the \"Live\" button: it runs on the computer and drives the board.",
+	"status.live_cpp": "A C++ program is sent to the board with \"Upload\".",
 };
 
 const messages: Record<Language, Record<MessageKey, string>> = { fr, en };

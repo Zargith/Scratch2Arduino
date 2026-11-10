@@ -4,7 +4,13 @@
 import { findBlock, shadowInputs, type CatalogBlock } from "@/catalog";
 
 export const FORMAT_NAME = "scratch2arduino-project";
+/** Version of block projects (read by every Scratch2Arduino version). */
 export const FORMAT_VERSION = 1;
+/** Version of projects written as text (see core/include/s2a/project.hpp, kFormatVersion). */
+export const TEXT_FORMAT_VERSION = 2;
+
+/** How the program of a project is written (core project::ProgramLanguage). */
+export type ProgramLanguage = "blocks" | "cpp" | "python" | "javascript";
 
 export interface ProjectInput {
 	value?: string;
@@ -45,6 +51,17 @@ export interface Project {
 	/** Left out when the project has none (as the C++ core writes it). */
 	functions?: ProjectFunction[];
 	scripts: ProjectScript[];
+	/** Left out for blocks. A text project keeps its blocks beside the code. */
+	language?: ProgramLanguage;
+	/** The program of a text project. */
+	code?: string;
+}
+
+/** The project with its program written as `language` (a block project when "blocks"). */
+export function withProgram(project: Project, language: ProgramLanguage, code: string): Project {
+	const { language: _language, code: _code, ...rest } = project;
+	if (language === "blocks") return { ...rest, formatVersion: FORMAT_VERSION };
+	return { ...rest, formatVersion: TEXT_FORMAT_VERSION, language, code };
 }
 
 /** Type of the Blockly variables that stand for functions (see blocks/definitions.ts). */
