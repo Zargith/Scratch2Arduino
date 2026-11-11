@@ -3,7 +3,8 @@
 Scratch2Arduino permet de programmer une carte Arduino (ou ESP32) avec des blocs, comme dans Scratch :
 tu assembles les blocs, et la carte allume des LED, fait tourner des moteurs, lit des capteurs…
 Ce guide présente tout le logiciel. Pour apprendre pas à pas, suis plutôt les
-[tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md).
+[tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md). Ils sont aussi
+dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à côté du moniteur série.
 
 *English version: [../en/guide.md](../en/guide.md)*
 
@@ -53,7 +54,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 ## 3. La fenêtre
 
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
-  *Projets récents* ; la carte et le port ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
+  *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
   une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
   **Téléverser** ; la langue (FR / EN). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.

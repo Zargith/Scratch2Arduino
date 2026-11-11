@@ -1,0 +1,26 @@
+/* The documentation pages of the Tutorials panel (narrow): pictures and tables fit its width. */
+.s2a-doc img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 6px;
+	border: 1px solid var(--mantine-color-gray-3);
+}
+.s2a-doc table {
+	display: block;
+	overflow-x: auto;
+	font-size: var(--mantine-font-size-xs);
+}
+.s2a-doc pre {
+	white-space: pre-wrap;
+	font-size: var(--mantine-font-size-xs);
+}
+.s2a-doc h1 {
+	font-size: var(--mantine-h3-font-size);
+	margin-top: 0;
+}
+.s2a-doc h2 {
+	font-size: var(--mantine-h4-font-size);
+}
+.s2a-doc h3 {
+	font-size: var(--mantine-h5-font-size);
+}

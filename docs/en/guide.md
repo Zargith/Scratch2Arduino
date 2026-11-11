@@ -3,7 +3,8 @@
 Scratch2Arduino lets you program an Arduino (or ESP32) board with blocks, as in Scratch: you put the
 blocks together, and the board lights LEDs, turns motors, reads sensors…
 This guide presents the whole application. To learn step by step, follow the
-[tutorials](README.md#tutorials) instead, starting with [Blink](tutorials/01-blink.md).
+[tutorials](README.md#tutorials) instead, starting with [Blink](tutorials/01-blink.md). They are also in
+the application: the **Tutorials and help** button (the graduation cap), next to the serial monitor.
 
 *Version française : [../fr/guide.md](../fr/guide.md)*
 
@@ -52,7 +53,7 @@ it does not change an Arduino IDE installed on the same computer.
 ## 3. The window
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
-  board and the port; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
+  board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
   *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the language (FR / EN). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
