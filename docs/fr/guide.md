@@ -37,6 +37,10 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
   Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
   `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
 
+**Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
+la propose (*Télécharger*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut aussi vérifier
+dans les *Paramètres* (engrenage), ou désactiver cette recherche.
+
 Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
 cette fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne
 modifie pas un Arduino IDE installé sur le même ordinateur.
@@ -57,7 +61,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
   une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
-  **Téléverser** ; la langue (FR / EN). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  **Téléverser** ; les **Paramètres** (l'engrenage : langue, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
   voir ses blocs.

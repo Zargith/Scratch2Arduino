@@ -14,6 +14,7 @@
 #include "bridge.hpp"
 
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -23,6 +24,15 @@
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
 #include <webview/webview.h>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+// After windows.h, which it needs.
+#include <shellapi.h>
+#endif
 
 namespace s2a::webview {
 
@@ -105,6 +115,38 @@ fs::path projectsDirectory() {
     return error ? documents : folder;
 }
 
+/// Opens a page of the project's repository (a release, its installer) in the user's browser.
+/// Only those pages: the editor cannot make the program open anything else.
+bool openProjectPage(const std::string& url) {
+    static const std::string kRepository = "https://github.com/Zargith/Scratch2Arduino/";
+    if (url.rfind(kRepository, 0) != 0 || url.size() > 512) {
+        return false;
+    }
+    for (const char c : url) {
+        const bool safe = std::isalnum(static_cast<unsigned char>(c)) != 0 ||
+                          std::string_view("/:.-_~%?=&#+").find(c) != std::string_view::npos;
+        if (!safe) {
+            return false;
+        }
+    }
+#ifdef _WIN32
+    const std::wstring wide(url.begin(), url.end()); // ASCII only, checked above
+    return reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", wide.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) > 32;
+#else
+#ifdef __APPLE__
+    const char* opener = "open";
+#else
+    const char* opener = "xdg-open";
+#endif
+    process::Command command;
+    command.program = opener;
+    command.args = {url};
+    command.timeout = std::chrono::seconds(15);
+    const auto result = process::run(command);
+    return result.ok() && result.value().succeeded();
+#endif
+}
+
 toolchain::ArduinoCli arduinoCli(Language language) {
     const fs::path executable = toolchain::locateArduinoCli();
     if (executable.empty()) {
@@ -132,7 +174,15 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
 } // namespace
 
 Bridge::Bridge(::webview::webview& window, Language language)
-    : window_(window), language_(language), user_(userdata::defaultDirectory()) {}
+    : window_(window), language_(language), user_(userdata::defaultDirectory()) {
+    // The language chosen in the settings wins over the system's.
+    const std::string chosen = user_.settings().language;
+    if (chosen == "fr") {
+        language_ = Language::French;
+    } else if (chosen == "en") {
+        language_ = Language::English;
+    }
+}
 
 namespace {
 
@@ -393,6 +443,32 @@ void Bridge::bind() {
                 }
                 return Json(path.u8string()).dump();
             });
+        },
+        nullptr);
+
+    // Settings of the editor: {language ("fr", "en" or "" for the system's), checkUpdates}.
+    window_.bind("s2a_settings", [this](const std::string& /*request*/) {
+        userdata::Settings settings;
+        {
+            const std::lock_guard<std::mutex> lock(userMutex_);
+            settings = user_.settings();
+        }
+        return Json{{"language", settings.language}, {"checkUpdates", settings.checkUpdates}}.dump();
+    });
+    window_.bind("s2a_save_settings", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const Json given = args.is_array() && !args.empty() && args[0].is_object() ? args[0] : Json::object();
+        userdata::Settings settings;
+        settings.language = given.value("language", std::string{});
+        settings.checkUpdates = given.value("checkUpdates", true);
+        const std::lock_guard<std::mutex> lock(userMutex_);
+        return Json(user_.saveSettings(settings).ok()).dump();
+    });
+    // Opens a page of the project's GitHub repository (new release) in the browser.
+    window_.bind(
+        "s2a_open_url",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request]() { return Json(openProjectPage(stringArg(Json::parse(request), 0))).dump(); });
         },
         nullptr);
 
