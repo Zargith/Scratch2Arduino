@@ -1,0 +1,444 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Robot télécommandé",
+  "board": "esp32",
+  "variables": [],
+  "functions": [
+    {
+      "id": "forward",
+      "name": "avancer"
+    },
+    {
+      "id": "backward",
+      "name": "reculer"
+    },
+    {
+      "id": "left",
+      "name": "tourner à gauche"
+    },
+    {
+      "id": "right",
+      "name": "tourner à droite"
+    },
+    {
+      "id": "stop",
+      "name": "arrêter"
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "first-stop",
+          "type": "functions_call",
+          "fields": {
+            "FUNCTION": "stop"
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if-avance",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-avance",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "avance"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "call-avance",
+                      "type": "functions_call",
+                      "fields": {
+                        "FUNCTION": "forward"
+                      }
+                    },
+                    {
+                      "id": "say-avance",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : avance"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-recule",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-recule",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "recule"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "call-recule",
+                      "type": "functions_call",
+                      "fields": {
+                        "FUNCTION": "backward"
+                      }
+                    },
+                    {
+                      "id": "say-recule",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : recule"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-gauche",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-gauche",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "gauche"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "call-gauche",
+                      "type": "functions_call",
+                      "fields": {
+                        "FUNCTION": "left"
+                      }
+                    },
+                    {
+                      "id": "say-gauche",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : gauche"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-droite",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-droite",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "droite"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "call-droite",
+                      "type": "functions_call",
+                      "fields": {
+                        "FUNCTION": "right"
+                      }
+                    },
+                    {
+                      "id": "say-droite",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : droite"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-stop",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-stop",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "stop"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "call-stop",
+                      "type": "functions_call",
+                      "fields": {
+                        "FUNCTION": "stop"
+                      }
+                    },
+                    {
+                      "id": "say-stop",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : stop"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "x": 600,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "define-forward",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "forward"
+          }
+        },
+        {
+          "id": "fl",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "25",
+            "IN1_PIN": "26",
+            "IN2_PIN": "27",
+            "DIRECTION": "FORWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "80"
+            }
+          }
+        },
+        {
+          "id": "fr",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "33",
+            "IN1_PIN": "18",
+            "IN2_PIN": "19",
+            "DIRECTION": "FORWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "80"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "x": 600,
+      "y": 210,
+      "blocks": [
+        {
+          "id": "define-backward",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "backward"
+          }
+        },
+        {
+          "id": "bl",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "25",
+            "IN1_PIN": "26",
+            "IN2_PIN": "27",
+            "DIRECTION": "BACKWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "80"
+            }
+          }
+        },
+        {
+          "id": "br",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "33",
+            "IN1_PIN": "18",
+            "IN2_PIN": "19",
+            "DIRECTION": "BACKWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "80"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "x": 600,
+      "y": 380,
+      "blocks": [
+        {
+          "id": "define-left",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "left"
+          }
+        },
+        {
+          "id": "ll",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "25",
+            "IN1_PIN": "26",
+            "IN2_PIN": "27",
+            "DIRECTION": "BACKWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "60"
+            }
+          }
+        },
+        {
+          "id": "lr",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "33",
+            "IN1_PIN": "18",
+            "IN2_PIN": "19",
+            "DIRECTION": "FORWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "60"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "x": 600,
+      "y": 550,
+      "blocks": [
+        {
+          "id": "define-right",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "right"
+          }
+        },
+        {
+          "id": "rl",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "25",
+            "IN1_PIN": "26",
+            "IN2_PIN": "27",
+            "DIRECTION": "FORWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "60"
+            }
+          }
+        },
+        {
+          "id": "rr",
+          "type": "motors_dc_run",
+          "fields": {
+            "EN_PIN": "33",
+            "IN1_PIN": "18",
+            "IN2_PIN": "19",
+            "DIRECTION": "BACKWARD"
+          },
+          "inputs": {
+            "SPEED": {
+              "value": "60"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "x": 600,
+      "y": 720,
+      "blocks": [
+        {
+          "id": "define-stop",
+          "type": "functions_define",
+          "fields": {
+            "FUNCTION": "stop"
+          }
+        },
+        {
+          "id": "sl",
+          "type": "motors_dc_stop",
+          "fields": {
+            "EN_PIN": "25",
+            "IN1_PIN": "26",
+            "IN2_PIN": "27"
+          }
+        },
+        {
+          "id": "sr",
+          "type": "motors_dc_stop",
+          "fields": {
+            "EN_PIN": "33",
+            "IN1_PIN": "18",
+            "IN2_PIN": "19"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -245,10 +245,11 @@ the wiring:
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
-`servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
+`button-led`, `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
 button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer). For the ESP32: `esp32-dimmer`,
 `wireless-station` (Live mode over Wi-Fi or Bluetooth) and `phone-lamp` (the phone drives the lamp over
-Bluetooth while the computer follows in Live mode over Wi-Fi). The Phone blocks also work in Live mode over
+Bluetooth while the computer follows in Live mode over Wi-Fi), and `remote-robot` (two motors on an L298N driven
+from the phone over Bluetooth, one function per move). The Phone blocks also work in Live mode over
 USB or Wi-Fi; over Bluetooth the board's only Bluetooth connection is taken by the computer, so Live refuses
 them.
 
