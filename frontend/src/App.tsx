@@ -30,6 +30,7 @@ import {
 	IconPlayerStop,
 	IconPlugConnected,
 	IconRefresh,
+	IconSchool,
 	IconTerminal2,
 	IconUpload,
 	IconWifi,
@@ -50,7 +51,8 @@ import {
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import { Editor, type EditorHandle } from "@/Editor";
-import { exampleProject, type Example } from "@/examples";
+import { type DocPath, docsHome, tutorialFor } from "@/docs";
+import { exampleProject, examples, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
 import { Library } from "@/Library";
 import { ProjectWiring } from "@/ProjectWiring";
@@ -59,6 +61,7 @@ import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberB
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
+import { Tutorials } from "@/Tutorials";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
@@ -131,6 +134,8 @@ export function App() {
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
 	const [galleryShown, setGalleryShown] = useState(false);
+	/** Page of the Tutorials panel, null when it is closed. */
+	const [tutorialPage, setTutorialPage] = useState<DocPath | null>(null);
 	/** The example being edited: its wiring diagram stays one click away. */
 	const [example, setExample] = useState<Example | null>(null);
 	const [wiringShown, setWiringShown] = useState(false);
@@ -300,11 +305,17 @@ export function App() {
 			.then(() => bridge.startupProject(language))
 			.then((opened) => {
 				if (opened) showOpenedRef.current(opened);
+				return Boolean(opened);
 			})
-			.catch(fail)
-			.then(() => found)
-			.then((saved) => {
+			.catch((error: unknown) => {
+				fail(error);
+				return true;
+			})
+			.then(async (projectGiven) => {
+				const saved = await found;
 				if (saved) setRestore(saved);
+				// First start (no project given, nothing to recover, no recent project): the tutorials.
+				else if (!projectGiven && (await bridge.recent().catch(() => null))?.length === 0) setTutorialPage(docsHome);
 			});
 		// Once, when the editor starts.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -652,6 +663,17 @@ export function App() {
 						</ActionIcon>
 					</Tooltip>
 					<Group gap="xs" ml="auto" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<Tooltip label={t("toolbar.tutorials")}>
+							<ActionIcon
+								variant={tutorialPage !== null ? "filled" : "default"}
+								size="lg"
+								aria-label={t("toolbar.tutorials")}
+								aria-pressed={tutorialPage !== null}
+								onClick={() => setTutorialPage((page) => (page === null ? docsHome : null))}
+							>
+								<IconSchool size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("monitor.toggle")}>
 							<ActionIcon
 								variant={monitorShown ? "filled" : "default"}
@@ -773,8 +795,25 @@ export function App() {
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || monitorShown) && (
+			{((live && liveRows.length > 0) || monitorShown || tutorialPage !== null) && (
 				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
+					{tutorialPage !== null && (
+						<Tutorials
+							language={language}
+							t={t}
+							page={tutorialPage}
+							height={(live && liveRows.length > 0) || monitorShown ? "45dvh" : "calc(100dvh - 104px)"}
+							onNavigate={(page, pageLanguage) => {
+								if (pageLanguage !== language) switchLanguage(pageLanguage);
+								setTutorialPage(page);
+							}}
+							onOpenExample={(exampleId) => {
+								const chosen = examples.find((candidate) => candidate.group === exampleId);
+								if (chosen) openExample(chosen);
+							}}
+							onClose={() => setTutorialPage(null)}
+						/>
+					)}
 					{live && liveRows.length > 0 && (
 						<Card withBorder shadow="sm" w={360}>
 							<Text fw={700} size="sm" mb={4}>
@@ -849,6 +888,12 @@ export function App() {
 				t={t}
 				onBlank={newProject}
 				onExample={openExample}
+				onTutorial={(group) => {
+					const tutorial = tutorialFor(group);
+					if (!tutorial) return;
+					setGalleryShown(false);
+					setTutorialPage(tutorial.path);
+				}}
 				onClose={() => setGalleryShown(false)}
 			/>
 			<Modal opened={restore !== null} onClose={discardRestore} title={t("restore.title")} centered>

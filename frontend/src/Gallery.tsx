@@ -14,6 +14,7 @@ import { IconFilePlus } from "@tabler/icons-react";
 import { useState } from "react";
 
 import type { Language } from "@/catalog";
+import { tutorialFor } from "@/docs";
 import { exampleGroups, type Example } from "@/examples";
 import type { MessageKey } from "@/i18n";
 import { ZoomableImage } from "@/ZoomableImage";
@@ -24,13 +25,15 @@ interface GalleryProps {
 	t(key: MessageKey, params?: Record<string, string>): string;
 	onBlank(): void;
 	onExample(example: Example): void;
+	/** Opens the step-by-step tutorial of an example. */
+	onTutorial(exampleGroup: string): void;
 	onClose(): void;
 }
 
 const imageHeight = 150;
 
 /** "New": a blank project, or a copy of an example with its wiring diagram. */
-export function Gallery({ opened, language, t, onBlank, onExample, onClose }: GalleryProps) {
+export function Gallery({ opened, language, t, onBlank, onExample, onTutorial, onClose }: GalleryProps) {
 	/** Example whose diagram is shown big (clicked in its card). */
 	const [zoomed, setZoomed] = useState<Example | null>(null);
 	return (
@@ -62,6 +65,7 @@ export function Gallery({ opened, language, t, onBlank, onExample, onClose }: Ga
 						language={language}
 						t={t}
 						onExample={onExample}
+						onTutorial={onTutorial}
 						onZoom={setZoomed}
 					/>
 				))}
@@ -76,11 +80,12 @@ interface ExampleCardProps {
 	language: Language;
 	t(key: MessageKey, params?: Record<string, string>): string;
 	onExample(example: Example): void;
+	onTutorial(exampleGroup: string): void;
 	/** Show the diagram big. */
 	onZoom(example: Example): void;
 }
 
-function ExampleCard({ variants, language, t, onExample, onZoom }: ExampleCardProps) {
+function ExampleCard({ variants, language, t, onExample, onTutorial, onZoom }: ExampleCardProps) {
 	const [chosen, setChosen] = useState(variants[0]?.id ?? "");
 	const example = variants.find((candidate) => candidate.id === chosen) ?? variants[0];
 	if (!example) return null;
@@ -120,6 +125,11 @@ function ExampleCard({ variants, language, t, onExample, onZoom }: ExampleCardPr
 			<Button mt="sm" variant="light" onClick={() => onExample(example)}>
 				{t("gallery.start")}
 			</Button>
+			{tutorialFor(example.group) && (
+				<Button mt={6} variant="subtle" size="compact-sm" onClick={() => onTutorial(example.group)}>
+					{t("gallery.tutorial")}
+				</Button>
+			)}
 		</Card>
 	);
 }
