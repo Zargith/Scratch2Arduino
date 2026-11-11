@@ -178,6 +178,9 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 				variableTypes: [FUNCTION_TYPE],
 				defaultType: FUNCTION_TYPE,
 			};
+		default:
+			// A kind this editor does not know (catalog newer than the editor): an empty slot, never a crash.
+			return { type: "input_dummy" };
 	}
 }
 
