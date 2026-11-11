@@ -20,10 +20,11 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
 8. [Le moniteur série](#8-le-moniteur-série)
 9. [Le schéma de câblage](#9-le-schéma-de-câblage)
 10. [Variables, fonctions et « Mes blocs »](#10-variables-fonctions-et--mes-blocs-)
-11. [Projets : enregistrer, ouvrir, partager](#11-projets--enregistrer-ouvrir-partager)
-12. [Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)](#12-sans-fil--wi-fi-et-bluetooth-esp32-esp8266)
-13. [Raccourcis clavier](#13-raccourcis-clavier)
-14. [En cas de problème](#14-en-cas-de-problème)
+11. [Écrire du code : « Mon code »](#11-écrire-du-code---mon-code-)
+12. [Projets : enregistrer, ouvrir, partager](#12-projets--enregistrer-ouvrir-partager)
+13. [Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)](#13-sans-fil--wi-fi-et-bluetooth-esp32-esp8266)
+14. [Raccourcis clavier](#14-raccourcis-clavier)
+15. [En cas de problème](#15-en-cas-de-problème)
 
 ## 1. Installer Scratch2Arduino
 
@@ -79,7 +80,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Supprimer** : glisse le bloc vers la palette ou la poubelle, ou sélectionne-le et appuie sur
   *Suppr*.
 - **Clic droit sur un bloc** : dupliquer, ajouter un commentaire, supprimer, *Enregistrer dans Mes blocs*.
-- **Annuler / rétablir** : Ctrl+Z / Ctrl+Y (voir les [raccourcis](#13-raccourcis-clavier)).
+- **Annuler / rétablir** : Ctrl+Z / Ctrl+Y (voir les [raccourcis](#14-raccourcis-clavier)).
 
 Un programme commence **toujours** par le bloc **quand le programme démarre** (famille *Événements*).
 Les blocs qui ne sont accrochés à aucun bloc de départ sont **grisés** : ils ne sont pas envoyés à la
@@ -193,7 +194,28 @@ la famille *Mes blocs* : clique dessus pour l'ajouter à ton projet. **Gérer me
 renommer, de les supprimer, de les **exporter** (fichier `.s2ablocks`) et de les **importer** sur un autre
 ordinateur.
 
-## 11. Projets : enregistrer, ouvrir, partager
+## 11. Écrire du code : « Mon code »
+
+Quand les blocs ne suffisent plus, écris tes propres fonctions en **C++**, **Python** ou **JavaScript** à
+côté des blocs : elles deviennent de nouveaux blocs.
+
+1. En haut, passe la **Vue** de *Blocs* à **Code**. L'onglet **Code des blocs** montre le code Arduino
+   fabriqué à partir de tes blocs (en lecture seule).
+2. Onglet **Mon code** : choisis un langage. Un exemple s'affiche (une variable `vitesse`, des fonctions
+   `clignoter` et `moyenne`) : modifie-le ou remplace-le. L'éditeur colore le code et propose des
+   complétions (mots du langage, fonctions Arduino, noms déjà écrits).
+3. Reviens à la vue **Blocs** : la famille **Mon code** contient un bloc par fonction (avec des cases pour
+   ses nombres), un bloc pour le résultat d'une fonction, et des blocs pour lire ou changer chaque variable.
+
+- En **C++**, ton code est compilé avec les blocs : *Vérifier* et *Téléverser* marchent comme d'habitude.
+- En **Python** ou **JavaScript**, ton code tourne sur l'ordinateur, avec le bouton **Live** (avec les
+  fonctions `digitalWrite`, `analogRead`, `delay`… de l'Arduino).
+- Les erreurs de ton code s'affichent sur leur ligne, seulement quand tu cliques sur *Vérifier*,
+  *Téléverser* ou *Live*. *Supprimer mon code* (dans l'onglet) l'enlève du projet.
+- **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
+  ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles.
+
+## 12. Projets : enregistrer, ouvrir, partager
 
 - **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).
   Un exemple ouvert est une copie : enregistre-le pour garder tes changements.
@@ -206,7 +228,7 @@ ordinateur.
 - **Sauvegarde automatique** : toutes les 15 secondes, une copie de secours est gardée. Si le logiciel
   ou l'ordinateur s'arrête, Scratch2Arduino propose au démarrage suivant de **récupérer** le projet.
 
-## 12. Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)
+## 13. Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)
 
 Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
 
@@ -223,7 +245,7 @@ Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
 
 Les programmes s'envoient toujours avec le câble USB.
 
-## 13. Raccourcis clavier
+## 14. Raccourcis clavier
 
 | Raccourci (⌘ au lieu de Ctrl sur Mac) | Action |
 |---|---|
@@ -236,7 +258,7 @@ Les programmes s'envoient toujours avec le câble USB.
 
 Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touches agissent sur le texte.
 
-## 14. En cas de problème
+## 15. En cas de problème
 
 | Ce qui se passe | Que faire |
 |---|---|

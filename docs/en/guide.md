@@ -20,10 +20,11 @@ the application: the **Tutorials and help** button (the graduation cap), next to
 8. [Serial monitor](#8-serial-monitor)
 9. [Wiring diagram](#9-wiring-diagram)
 10. [Variables, functions and "My blocks"](#10-variables-functions-and-my-blocks)
-11. [Projects: save, open, share](#11-projects-save-open-share)
-12. [Wireless: Wi-Fi and Bluetooth (ESP32, ESP8266)](#12-wireless-wi-fi-and-bluetooth-esp32-esp8266)
-13. [Keyboard shortcuts](#13-keyboard-shortcuts)
-14. [Troubleshooting](#14-troubleshooting)
+11. [Write code: "My code"](#11-write-code-my-code)
+12. [Projects: save, open, share](#12-projects-save-open-share)
+13. [Wireless: Wi-Fi and Bluetooth (ESP32, ESP8266)](#13-wireless-wi-fi-and-bluetooth-esp32-esp8266)
+14. [Keyboard shortcuts](#14-keyboard-shortcuts)
+15. [Troubleshooting](#15-troubleshooting)
 
 ## 1. Install Scratch2Arduino
 
@@ -73,7 +74,7 @@ it does not change an Arduino IDE installed on the same computer.
 - **Move**: dragging a block also takes every block attached below it.
 - **Delete**: drag the block to the palette or the trash can, or select it and press *Delete*.
 - **Right-click a block**: duplicate, add a comment, delete, *Save to My blocks*.
-- **Undo / redo**: Ctrl+Z / Ctrl+Y (see the [shortcuts](#13-keyboard-shortcuts)).
+- **Undo / redo**: Ctrl+Z / Ctrl+Y (see the [shortcuts](#14-keyboard-shortcuts)).
 
 A program **always** starts with the **when the program starts** block (*Events* category). Blocks that
 are not attached to a start block are **greyed out**: they are not sent to the board, like drafts. You
@@ -181,7 +182,28 @@ blocks** (the blocks attached below are kept too). The group appears in the *My 
 it to add it to your project. **Manage my blocks** renames, deletes, **exports** (a `.s2ablocks` file)
 and **imports** them on another computer.
 
-## 11. Projects: save, open, share
+## 11. Write code: "My code"
+
+When blocks are not enough, write your own functions in **C++**, **Python** or **JavaScript** next to the
+blocks: they become new blocks.
+
+1. At the top, switch the **View** from *Blocks* to **Code**. The **Code of the blocks** tab shows the
+   Arduino code made from your blocks (read-only).
+2. **My code** tab: choose a language. An example appears (a `speed` variable, `blink` and `average`
+   functions): change it or replace it. The editor colours the code and suggests completions (language
+   words, Arduino functions, names already written).
+3. Go back to the **Blocks** view: the **My code** category holds a block per function (with slots for its
+   numbers), a block for a function's result, and blocks to read or change each variable.
+
+- In **C++**, your code is compiled with the blocks: *Check* and *Upload* work as usual.
+- In **Python** or **JavaScript**, your code runs on the computer, with the **Live** button (with the
+  Arduino functions `digitalWrite`, `analogRead`, `delay`…).
+- Errors in your code show on their line, only when you click *Check*, *Upload* or *Live*. *Delete my
+  code* (in the tab) removes it from the project.
+- **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
+  JavaScript*); *Language help* lists the available functions.
+
+## 12. Projects: save, open, share
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).
   An opened example is a copy: save it to keep your changes.
@@ -193,7 +215,7 @@ and **imports** them on another computer.
 - **Autosave**: every 15 seconds a backup copy is kept. If the application or the computer stops,
   Scratch2Arduino offers to **recover** the project at the next start.
 
-## 12. Wireless: Wi-Fi and Bluetooth (ESP32, ESP8266)
+## 13. Wireless: Wi-Fi and Bluetooth (ESP32, ESP8266)
 
 An ESP32 or ESP8266 board can be driven in Live mode **without a cable**:
 
@@ -208,7 +230,7 @@ An ESP32 or ESP8266 board can be driven in Live mode **without a cable**:
 
 Programs are always uploaded with the USB cable.
 
-## 13. Keyboard shortcuts
+## 14. Keyboard shortcuts
 
 | Shortcut (⌘ instead of Ctrl on a Mac) | Action |
 |---|---|
@@ -221,7 +243,7 @@ Programs are always uploaded with the USB cable.
 
 While typing in a slot (a number, a text, the project name), these keys act on the text instead.
 
-## 14. Troubleshooting
+## 15. Troubleshooting
 
 | What happens | What to do |
 |---|---|

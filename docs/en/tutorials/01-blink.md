@@ -78,6 +78,6 @@ Click **Save** (or Ctrl+S) and name the file: it is stored in `Documents/Scratch
 
 - *"Plug in your Arduino board, then pick its port before uploading"*: choose the port in the top bar.
 - The port list stays empty: try another USB cable (some only charge).
-- See also [Troubleshooting](../guide.md#14-troubleshooting).
+- See also [Troubleshooting](../guide.md#15-troubleshooting).
 
 **Next**: [Tutorial 2 — Traffic light](02-traffic-light.md)

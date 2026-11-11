@@ -81,6 +81,6 @@ de tes blocs.
 
 - *« Branche ta carte Arduino puis choisis son port avant de téléverser »* : choisis le port dans la barre du haut.
 - La liste des ports reste vide : essaie un autre câble USB (certains ne font que recharger).
-- Voir aussi [En cas de problème](../guide.md#14-en-cas-de-problème).
+- Voir aussi [En cas de problème](../guide.md#15-en-cas-de-problème).
 
 **Suivant** : [Tutoriel 2 — Feu tricolore](02-traffic-light.md)
