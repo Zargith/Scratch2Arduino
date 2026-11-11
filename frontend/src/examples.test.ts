@@ -37,7 +37,7 @@ describe("example gallery", () => {
 
 	it("groups the variants of an example in one card", () => {
 		const thermometer = exampleGroups.find((group) => group[0]?.group === "thermometer");
-		expect(thermometer?.map((example) => example.id)).toEqual(["thermometer", "thermometer-lcd16"]);
+		expect(thermometer?.map((example) => example.id)).toEqual(["thermometer", "thermometer-lcd16", "thermometer-advanced"]);
 		const [i2c, parallel] = thermometer ?? [];
 		expect(i2c?.variant?.fr).toBe("Écran I2C (4 broches)");
 		expect(parallel?.parts.en).toContain("16 pins");
@@ -47,5 +47,21 @@ describe("example gallery", () => {
 		expect(wireless?.every((example) => example.project.board === "esp32")).toBe(true);
 		expect(exampleGroups.flat()).toEqual(examples);
 		expect(exampleGroups.filter((group) => group.length === 1).every((group) => group[0]?.variant === undefined)).toBe(true);
+	});
+	it("offers a novice (blocks) and an advanced (My code) level of some examples", () => {
+		const advanced = examples.filter((example) => example.id.endsWith("-advanced"));
+		expect(advanced.map((example) => example.group).sort()).toEqual(
+			["blink", "distance-alarm", "servo-potentiometer", "thermometer", "traffic-light"].sort()
+		);
+		for (const example of advanced) {
+			const novice = examples.find((candidate) => candidate.id === example.group);
+			expect(novice?.project.userCode, example.group).toBeUndefined();
+			expect(example.project.userCode?.code, example.id).toBeTruthy();
+			expect(example.project.scripts.flatMap((script) => JSON.stringify(script)).join(""), example.id).toContain("mycode_");
+			// Same parts: the advanced level shows the picture of the example.
+			expect(example.wiring, example.id).toBe(novice?.wiring);
+			expect(example.description.fr, example.id).toMatch(/^Avancé/);
+			expect(example.description.en, example.id).toMatch(/^Advanced/);
+		}
 	});
 });

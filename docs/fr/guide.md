@@ -218,7 +218,9 @@ côté des blocs : elles deviennent de nouveaux blocs.
 ## 12. Projets : enregistrer, ouvrir, partager
 
 - **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).
-  Un exemple ouvert est une copie : enregistre-le pour garder tes changements.
+  Certains exemples existent en plusieurs versions, au choix sur la carte : un autre montage (écran I2C
+  ou 16 broches), ou un autre niveau — **Novice** (blocs seuls) ou **Avancé** (avec « Mon code »). Un
+  exemple ouvert est une copie : enregistre-le pour garder tes changements.
 - **Enregistrer** (Ctrl+S) écrit un fichier **`.s2a`**, rangé par défaut dans
   `Documents/Scratch2Arduino`. Ce fichier contient tout le projet : c'est lui qu'on envoie à quelqu'un,
   qu'on met sur une clé USB ou qu'on rend à son professeur.

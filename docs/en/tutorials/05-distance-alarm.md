@@ -57,6 +57,10 @@ you are, the closer the beeps, like a car's parking sensor.
 
 Try it in **Live** (change the threshold while it runs!), then **Upload**.
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: **My code** holds `moyenne()`, which ignores impossible readings and averages the latest ones (the sensor is sometimes wrong), and `pauseEntreBips()`, which computes the beep rhythm. The blocks stay short and read like a sentence.
+
 ## Challenges
 
 - Add an orange zone between 20 and 40 cm (an **if … then … else** inside the *else*).

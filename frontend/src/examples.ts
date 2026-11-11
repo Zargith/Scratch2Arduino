@@ -32,6 +32,8 @@ interface GalleryVariant {
 	id: string;
 	label: Texts;
 	parts?: Texts;
+	/** What this variant does differently (a level: "advanced", with "My code"…). */
+	description?: Texts;
 }
 
 interface GalleryEntry {
@@ -49,7 +51,8 @@ interface GalleryEntry {
 export const examples: Example[] = (gallery.examples as GalleryEntry[]).flatMap(({ variants, ...entry }) =>
 	(variants ?? [{ id: entry.id }]).flatMap((variant: Partial<GalleryVariant> & { id: string }) => {
 		const project = projects[`${folder(variant.id)}/project.json`];
-		const wiring = diagrams[`${folder(variant.id)}/wiring.png`];
+		// A variant with the same parts (another level of the program) shows the example's diagram.
+		const wiring = diagrams[`${folder(variant.id)}/wiring.png`] ?? diagrams[`${folder(entry.id)}/wiring.png`];
 		if (!project || !wiring) return [];
 		return [
 			{
@@ -58,6 +61,7 @@ export const examples: Example[] = (gallery.examples as GalleryEntry[]).flatMap(
 				group: entry.id,
 				...(variant.label ? { variant: variant.label } : {}),
 				parts: variant.parts ?? entry.parts,
+				description: variant.description ?? entry.description,
 				project,
 				wiring,
 			},

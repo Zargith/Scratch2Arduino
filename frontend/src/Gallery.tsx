@@ -113,6 +113,7 @@ function ExampleCard({ variants, language, t, onExample, onTutorial, onZoom }: E
 					mt="xs"
 					size="xs"
 					fullWidth
+					orientation={variants.length > 2 ? "vertical" : "horizontal"}
 					value={example.id}
 					onChange={setChosen}
 					aria-label={t("gallery.variant")}

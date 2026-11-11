@@ -58,6 +58,10 @@ est proche, plus les bips sont rapprochés, comme le radar de recul d'une voitur
 
 Essaie en **Live** (change le seuil pendant que ça tourne !), puis **Téléverse**.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : **Mon code** contient `moyenne()`, qui ignore les mesures impossibles et fait la moyenne des dernières (le capteur se trompe parfois), et `pauseEntreBips()`, qui calcule le rythme des bips. Les blocs restent courts et se lisent comme une phrase.
+
 ## Défis
 
 - Ajoute une zone orange entre 20 et 40 cm (un **si … alors … sinon** dans le *sinon*).

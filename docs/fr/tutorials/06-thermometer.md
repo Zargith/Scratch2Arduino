@@ -53,6 +53,10 @@ l'humidité monte !
 
 > Le DHT11 ne peut pas être lu plus d'une fois par seconde : les **attendre 2 secondes** sont utiles.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++ (écran I2C)** dans la galerie : **Mon code** convertit la température en degrés Fahrenheit (`fahrenheit()`) et dit si l'air est agréable (`confort()`, entre 19 et 24 °C et entre 40 et 60 % d'humidité). Change les limites selon ta pièce.
+
 ## Défis
 
 - Affiche « Il fait chaud ! » au-dessus de 25 °C (**si … alors** + **… > …**).

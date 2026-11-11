@@ -29,6 +29,13 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Lampe pilotée par téléphone](#lampe-pilotée-par-téléphone--phone-controlled-lamp) (ESP32, Wi-Fi et Bluetooth) | DHT11, LED, 220 Ω, téléphone |
 | [Robot télécommandé](#robot-télécommandé--remote-robot) (ESP32, Bluetooth, fonctions / functions) | L298N, 2 moteurs, piles, batterie USB, téléphone |
 
+**Niveaux / levels** : *Clignotant*, *Feu tricolore*, *Potentiomètre et servomoteur*, *Alarme de distance*
+et *Thermomètre* existent aussi en version **avancée** (dossiers `…-advanced`) : même montage, mais une
+partie du programme est écrite dans « Mon code » (C++, ou Python en mode Live pour le Clignotant) et
+appelée par des blocs. / *Blink*, *Traffic light*, *Potentiometer and servo*, *Distance alarm* and
+*Thermometer* also come in an **advanced** version (`…-advanced` folders): same wiring, but part of the
+program is written in "My code" (C++, or Python in Live mode for Blink) and called by blocks.
+
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
 `all-blocks` uses every block to test the editor: it is not meant to be wired.
 

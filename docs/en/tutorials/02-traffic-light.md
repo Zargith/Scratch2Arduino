@@ -84,6 +84,10 @@ forever
 The program reads like a sentence! A function only runs when it is **called**.
 To compare, open the example: **New → Traffic light** (its functions have French names: *feu vert*, *feu orange*, *feu rouge*).
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: one C++ function, `feux(rouge, orange, vert)`, written in **My code**, switches the lights given (1 = on, 0 = off); `clignoterOrange(fois)` blinks the orange. In the blocks they are two blocks of the **My code** category, with slots for their numbers. C++ is compiled with the blocks: **Upload** as usual.
+
 ## Challenges
 
 - Add a blinking orange (3 times) before the red, with **repeat 3 times**.
