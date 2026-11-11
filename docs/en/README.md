@@ -4,6 +4,8 @@
 
 - **[User guide](guide.md)**: installing, the window, the blocks, Live mode, wiring, projects,
   wireless, shortcuts and troubleshooting.
+- **[Teacher and workshop kit](teachers.md)**: getting the room ready, parts, formats, session plans, assessment.
+- **[Developer guide](developer-guide.md)**: architecture and recipes to contribute.
 
 ## Tutorials
 
