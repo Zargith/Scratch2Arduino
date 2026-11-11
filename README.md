@@ -104,6 +104,10 @@ Scratch2Arduino/
 
 ## Getting started
 
+**Documentation for users, in French and English**: the [user guide](docs/en/guide.md) and
+[8 step-by-step tutorials](docs/en/README.md) — *en français : [guide d'utilisation](docs/fr/guide.md) et
+[tutoriels](docs/fr/README.md)*.
+
 ### Windows
 
 Download **`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
