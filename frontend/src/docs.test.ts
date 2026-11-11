@@ -46,7 +46,7 @@ describe("bundled documentation", () => {
 					const headings = [...target.matchAll(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/g)].map(([, text]) =>
 						headingAnchor((text ?? "").replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&"))
 					);
-					expect(headings, `${language}/${path} → ${href}`).toContain(link.anchor);
+					expect(headings, `${language}/${path} -> ${href}`).toContain(link.anchor);
 				}
 			}
 		}
@@ -71,7 +71,7 @@ describe("bundled documentation", () => {
 	});
 
 	it("gives headings the anchors of GitHub", () => {
-		expect(headingAnchor("10. Variables, fonctions et « Mes blocs »")).toBe("10-variables-fonctions-et--mes-blocs-");
+		expect(headingAnchor("10. Variables, fonctions et \"Mes blocs\"")).toBe("10-variables-fonctions-et-mes-blocs");
 		expect(headingAnchor('10. Variables, functions and "My blocks"')).toBe("10-variables-functions-and-my-blocks");
 		expect(headingAnchor("14. En cas de problème")).toBe("14-en-cas-de-problème");
 	});

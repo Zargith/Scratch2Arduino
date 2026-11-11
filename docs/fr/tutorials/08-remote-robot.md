@@ -1,13 +1,13 @@
-# Tutoriel 8 — Robot télécommandé
+# Tutoriel 8 - Robot télécommandé
 
 **Objectif** : un robot à deux roues piloté depuis un téléphone par Bluetooth.
 **Durée** : 2 heures. **Matériel** : carte ESP32 DevKit, pont en H L298N, 2 moteurs à réducteur (jaunes)
 avec leurs roues, un châssis (ou une boîte en carton), un boîtier de 4 piles AA, une batterie USB, un
-téléphone Android avec l'appli « Serial Bluetooth Terminal », fils.
+téléphone Android avec l'appli "Serial Bluetooth Terminal", fils.
 **Tu vas apprendre** : les moteurs, la communication sans fil, organiser un gros programme avec des
 fonctions.
 
-*English: [../../en/tutorials/08-remote-robot.md](../../en/tutorials/08-remote-robot.md)*
+*To read it in English, change the language in the settings.*
 
 ## 1. Le montage
 
@@ -60,7 +60,7 @@ Pour tourner sur place, une roue avance pendant que l'autre recule.
 ## 4. La télécommande
 
 Les blocs de la famille **Téléphone** parlent à un téléphone par Bluetooth :
-**le téléphone a envoyé avance** est vrai **une fois** quand le message « avance » arrive (les majuscules
+**le téléphone a envoyé avance** est vrai **une fois** quand le message "avance" arrive (les majuscules
 et les accents ne comptent pas).
 
 ```
@@ -76,12 +76,12 @@ répéter indéfiniment
     (pareil pour gauche, droite et stop)
 ```
 
-Ou ouvre l'exemple complet : **Nouveau → Robot télécommandé**.
+Ou ouvre l'exemple complet : **Nouveau -> Robot télécommandé**.
 
 1. **Téléverse** (avec le câble USB), puis débranche le câble et branche la batterie USB.
-2. Sur le téléphone : active le Bluetooth, ouvre **Serial Bluetooth Terminal**, menu **Devices →
-   Bluetooth Classic**, choisis **S2A-…** (pas de code), puis connecte-toi.
-3. Tape `avance` et envoie : le robot avance et répond « ok : avance ». Astuce : un appui long sur les
+2. Sur le téléphone : active le Bluetooth, ouvre **Serial Bluetooth Terminal**, menu **Devices ->
+   Bluetooth Classic**, choisis **S2A-...** (pas de code), puis connecte-toi.
+3. Tape `avance` et envoie : le robot avance et répond "ok : avance". Astuce : un appui long sur les
    boutons **M1** à **M5** de l'appli permet d'y ranger les 5 mots pour piloter d'un doigt.
 
 > Le mode Live par Bluetooth n'est pas possible avec les blocs Téléphone : la carte n'a qu'une seule
@@ -95,16 +95,16 @@ Choisis **Avancé : C++** dans la galerie : une seule fonction, `rouler(gauche, 
 ## Défis
 
 - Ajoute un mot `vite` qui passe la vitesse à 100, et `lent` à 50 (une variable `vitesse`).
-- Le robot s'arrête tout seul 1 seconde après chaque ordre : un vrai pilotage « pas à pas ».
+- Le robot s'arrête tout seul 1 seconde après chaque ordre : un vrai pilotage "pas à pas".
 - Ajoute un capteur à ultrasons à l'avant : le robot refuse d'avancer à moins de 15 cm d'un obstacle.
 
 ## Si ça ne marche pas
 
-- Le téléphone ne trouve pas « S2A-… » : vérifie que le programme est bien téléversé et que l'ESP32 est
+- Le téléphone ne trouve pas "S2A-..." : vérifie que le programme est bien téléversé et que l'ESP32 est
   alimentée ; sur iPhone, ce type d'appli Bluetooth n'existe pas : utilise Android.
 - Les moteurs ne tournent pas mais la carte répond : piles vides, cavaliers ENA/ENB encore en place, ou
   GND des piles non relié à l'ESP32.
 - Une seule roue tourne : vérifie IN3, IN4 et ENB.
 
 Bravo, tu as terminé la progression ! Pour aller plus loin, combine ce que tu as appris : un robot qui
-évite les obstacles, une station météo sans fil (**Nouveau → Station météo sans fil**)…
+évite les obstacles, une station météo sans fil (**Nouveau -> Station météo sans fil**)...

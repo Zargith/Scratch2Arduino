@@ -162,7 +162,7 @@ TEST(ProjectJson, RoundTripsTextProgramsInVersion2) {
     for (const ProgramLanguage language : {ProgramLanguage::Cpp, ProgramLanguage::Python, ProgramLanguage::JavaScript}) {
         Project project = blink(); // the blocks are kept beside the text
         project.language = language;
-        project.code = "void setup() {\n\tpinMode(13, OUTPUT); // « été »\n}\n";
+        project.code = "void setup() {\n\tpinMode(13, OUTPUT); // \"été\"\n}\n";
         const std::string json = toJson(project);
         EXPECT_NE(json.find("\"formatVersion\": 2"), std::string::npos);
         EXPECT_NE(json.find("\"language\": \"" + std::string(programLanguageId(language)) + "\""), std::string::npos);

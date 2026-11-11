@@ -43,6 +43,6 @@
   ],
   "userCode": {
     "language": "python",
-    "code": "# Mon code (Python) : il tourne sur l'ordinateur, en mode Live.\n# La fonction sos() devient un bloc « sos » dans la famille Mon code.\n\ncourt = 150  # durée d'un point, en millisecondes\n\n\ndef flash(duree):\n    digitalWrite(LED_BUILTIN, HIGH)\n    delay(duree)\n    digitalWrite(LED_BUILTIN, LOW)\n    delay(court)\n\n\ndef sos():\n    for duree in (court, court, court, 3 * court, 3 * court, 3 * court, court, court, court):\n        flash(duree)\n"
+    "code": "# Mon code (Python) : il tourne sur l'ordinateur, en mode Live.\n# La fonction sos() devient un bloc \"sos\" dans la famille Mon code.\n\ncourt = 150  # durée d'un point, en millisecondes\n\n\ndef flash(duree):\n    digitalWrite(LED_BUILTIN, HIGH)\n    delay(duree)\n    digitalWrite(LED_BUILTIN, LOW)\n    delay(court)\n\n\ndef sos():\n    for duree in (court, court, court, 3 * court, 3 * court, 3 * court, court, court, court):\n        flash(duree)\n"
   }
 }

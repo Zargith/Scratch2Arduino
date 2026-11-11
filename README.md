@@ -4,9 +4,9 @@
 
 # Scratch2Arduino
 
-> Program real Arduino boards with Scratch-style blocks — no coding experience required.
+> Program real Arduino boards with Scratch-style blocks - no coding experience required.
 
-**Status: pre-alpha — Phase 5 in progress (Live mode).** The block editor builds, checks and uploads programs through the bundled `arduino-cli`, and Live mode drives a connected board in real time. See the [roadmap](docs/roadmap.md).
+**Status: pre-alpha - Phase 5 in progress (Live mode).** The block editor builds, checks and uploads programs through the bundled `arduino-cli`, and Live mode drives a connected board in real time. See the [roadmap](docs/roadmap.md).
 
 ---
 
@@ -29,7 +29,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 |---|---|
 | Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; programs typed in Arduino C++, Python or JavaScript for those who move on to text |
 | Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
-| Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers… |
+| Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers... |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
 | Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
 | Wireless | Bluetooth (HC-05/HC-06) and Wi-Fi (ESP boards) |
@@ -41,8 +41,8 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 ## How it is built
 
 Scratch2Arduino is a **native C++ application embedding the system webview** (WebKitGTK on Linux,
-WKWebView on macOS, WebView2 on Windows). The block editor — [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks)
-(Blockly 12) with the `tools-react-components` theme (React + Mantine) — is bundled **offline** inside the
+WKWebView on macOS, WebView2 on Windows). The block editor - [scratch-blocks](https://github.com/scratchfoundation/scratch-blocks)
+(Blockly 12) with the `tools-react-components` theme (React + Mantine) - is bundled **offline** inside the
 application: no server, no browser, no internet needed. All the logic (projects, blocks, code generation,
 `arduino-cli`, serial port, Live mode) lives in the C++ core.
 
@@ -76,7 +76,7 @@ editor with the same look as the other tools.
                           └─────────────────────┘
 ```
 
-- **Upload mode**: blocks → validated → Arduino C++ → compiled and uploaded with the bundled `arduino-cli`. The board runs on its own.
+- **Upload mode**: blocks -> validated -> Arduino C++ -> compiled and uploaded with the bundled `arduino-cli`. The board runs on its own.
 - **Live mode**: a small *S2A live* firmware (Firmata-like) is flashed once; the computer then drives the pins in real time and streams sensor values back.
 
 ## Repository layout
@@ -105,7 +105,7 @@ Scratch2Arduino/
 ## Getting started
 
 **Documentation for users, in French and English**: the [user guide](docs/en/guide.md) and
-[8 step-by-step tutorials](docs/en/README.md) — *en français : [guide d'utilisation](docs/fr/guide.md) et
+[8 step-by-step tutorials](docs/en/README.md) - *en français : [guide d'utilisation](docs/fr/guide.md) et
 [tutoriels](docs/fr/README.md)*.
 
 ### Windows
@@ -128,7 +128,7 @@ sudo make uninstall
 
 Prerequisites:
 
-- CMake ≥ 3.25 and a C++17 compiler (GCC, Clang or MSVC)
+- CMake >= 3.25 and a C++17 compiler (GCC, Clang or MSVC)
 - WebKitGTK 4.1 + pkg-config on Linux (WebKit on macOS and WebView2 on Windows are built in)
 - Block editor (`frontend/`): Node.js 20+ and pnpm (`corepack enable`) to build it; without them
   the build downloads the prebuilt editor published with the release of the same version
@@ -227,7 +227,7 @@ The **language** list of the top bar (next to the project name) switches a proje
 
 The code editor colours the code and numbers its lines. Mistakes are shown only after **Check**, **Upload** or
 **Live**: the faulty line is underlined, with a friendly explanation in French or English ("`led` is unknown: check
-the spelling…"). **Stop** stops a Python or JavaScript program at once, even an endless loop.
+the spelling..."). **Stop** stops a Python or JavaScript program at once, even an endless loop.
 
 Python and JavaScript have the Arduino functions of the blocks, with pins given as numbers (`13`) or names
 (`A0`, `"A0"`, `LED_BUILTIN`): `pinMode`, `digitalWrite`, `digitalRead`, `analogRead`, `analogWrite`, `delay`,
@@ -251,7 +251,7 @@ Scratch2Arduino refuse with a message asking to update instead of opening them e
 
 With an ESP32 or an ESP8266, the Live mode also works without the cable. Start it once over USB: the *S2A live*
 firmware is installed with Wi-Fi. The board then creates its own network **S2A-xxxx** (password
-`scratch2arduino`): connect the computer to it and choose **Wi-Fi — the board's network** in the port
+`scratch2arduino`): connect the computer to it and choose **Wi-Fi - the board's network** in the port
 list. To keep the Internet on the computer, open the **Wi-Fi** button (shown for an ESP32 or an ESP8266), type the
 home or school network and its password and send them to the board over USB: it remembers them, joins
 that network at every start, and its address is added to the port list. Programs are still uploaded
@@ -261,9 +261,9 @@ with the cable. If the computer goes away, the board switches its outputs off.
 
 The same *S2A live* firmware is also a Bluetooth serial device named **S2A-xxxx** (no pairing code).
 Open the **Bluetooth** button (shown for an ESP32), click **Look for boards** and choose yours: it is
-added to the port list as **Bluetooth — S2A-xxxx**. On Linux the search uses `bluetoothctl` (BlueZ); on
-Windows the board is reached directly by its address. On macOS, pair **S2A-xxxx** in System Settings ›
-Bluetooth, then refresh the ports: the board appears as **Bluetooth — S2A-xxxx**. From the command line:
+added to the port list as **Bluetooth - S2A-xxxx**. On Linux the search uses `bluetoothctl` (BlueZ); on
+Windows the board is reached directly by its address. On macOS, pair **S2A-xxxx** in System Settings >
+Bluetooth, then refresh the ports: the board appears as **Bluetooth - S2A-xxxx**. From the command line:
 `s2a-cli bluetooth` lists the boards around, then `s2a-cli live <project> --port bt:<address>`.
 The example **Wireless weather station** exists in a Wi-Fi and a Bluetooth version.
 
@@ -275,11 +275,11 @@ the wiring:
 | Category | Blocks |
 |---|---|
 | Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity |
-| Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8×8 LED matrix: pictures and single dots |
+| Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8x8 LED matrix: pictures and single dots |
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
-| Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D…) forward/backward at 0–100 %, stop |
-| Screens | write a text or a value on a line of a 16×2 LCD — with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4–D7 on the chosen pins, contrast set with a potentiometer on V0) — or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
-| Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone — over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"…) connected to the board "S2A-xxxx" |
+| Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D...) forward/backward at 0-100 %, stop |
+| Screens | write a text or a value on a line of a 16x2 LCD - with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4-D7 on the chosen pins, contrast set with a potentiometer on V0) - or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
+| Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone - over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"...) connected to the board "S2A-xxxx" |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
@@ -298,7 +298,7 @@ The **Wiring** button (top bar) draws the **wiring diagram** of the current proj
 blocks, as on a breadboard simulator: the board as it looks (pins used circled), a breadboard whose + and −
 rows are fed by the board, the small parts plugged into it (LED with its resistor across the middle
 channel, button, potentiometer, buzzer, RGB LED, light sensor and its 10 kΩ), the modules (sensors,
-screens, servo, LED matrix…) above it, and one coloured jumper wire per connection (zoom with the wheel,
+screens, servo, LED matrix...) above it, and one coloured jumper wire per connection (zoom with the wheel,
 **Save the image** writes a PNG). The next tab
 lists the same thing as a table (the column *Part to put in between* names the resistor or the
 potentiometer that goes between the leg and the board pin, for example the 220 Ω resistor of an LED):
@@ -322,7 +322,7 @@ functions *feu vert*, *feu orange* and *feu rouge*.
 ### Serial monitor
 
 The **serial monitor** button (top bar) opens a panel showing what the board writes. Use the block
-**write … to the serial monitor** (category *Serial monitor*), upload, then click **Connect** (9600 bauds,
+**write ... to the serial monitor** (category *Serial monitor*), upload, then click **Connect** (9600 bauds,
 the speed of the generated code). A line typed at the bottom is sent to the board. Uploading pauses the
 monitor and reconnects it afterwards; in Live mode the panel shows what the blocks write.
 
@@ -364,7 +364,7 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built. The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0–D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built. The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0-D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 

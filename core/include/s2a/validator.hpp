@@ -54,7 +54,7 @@ struct Issue {
 
 [[nodiscard]] bool hasErrors(const std::vector<Issue>& issues);
 
-/// "validation.<rule>" — the message — and "validation.<rule>_hint" — how to fix it.
+/// "validation.<rule>" - the message - and "validation.<rule>_hint" - how to fix it.
 [[nodiscard]] std::string_view ruleKey(Rule rule) noexcept;
 
 /// Message followed by the hint, in `language`.

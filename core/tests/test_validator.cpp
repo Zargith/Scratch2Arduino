@@ -122,7 +122,7 @@ TEST(Validator, MissingFunction) {
 TEST(Validator, FunctionNotDefined) {
     const Issue issue = single(check(withFunctions({hat(), call("c", "f")}, {})));
     EXPECT_EQ(issue.rule, Rule::FunctionNotDefined);
-    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("« définir blink »"), std::string::npos);
+    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("\"définir blink\""), std::string::npos);
 }
 
 TEST(Validator, FunctionDefinedTwice) {
@@ -153,7 +153,7 @@ TEST(Validator, EmptyMouth) {
     const Issue issue = single(check(program({hat(), block("repeat", "control_repeat")}), Language::French));
     EXPECT_EQ(issue.rule, Rule::EmptyMouth);
     EXPECT_EQ(issue.blockId, "repeat");
-    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("« répéter … fois » est vide"), std::string::npos)
+    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("\"répéter ... fois\" est vide"), std::string::npos)
         << s2a::validation::describe(issue, Language::French);
 }
 

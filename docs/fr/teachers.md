@@ -5,7 +5,7 @@ Ce kit aide à faire découvrir la programmation et l'électronique avec Scratch
 [8 tutoriels](README.md#tutoriels) : chaque séance correspond à un tutoriel, que les élèves peuvent
 suivre en autonomie.
 
-*English: [../en/teachers.md](../en/teachers.md)*
+*To read it in English, change the language in the settings.*
 
 ## Public et prérequis
 
@@ -29,10 +29,10 @@ Une semaine avant :
    l'exemple *Clignotant* sur chaque type de carte utilisé. Les outils sont rangés dans le dossier de
    l'utilisateur : refais-le pour chaque compte.
 3. **Teste chaque kit** : branche la carte, `s2a-cli ports` (ou le menu *Port*) doit la montrer ; ouvre
-   *Nouveau → Clignotant*, clique sur *Téléverser* ; la LED **L** clignote.
+   *Nouveau -> Clignotant*, clique sur *Téléverser* ; la LED **L** clignote.
 4. **Prépare des boîtes** numérotées (une par binôme) avec le matériel de la séance, et quelques câbles
    USB, LED et résistances de rechange.
-5. Imprime les schémas de câblage des exemples (fenêtre *Schéma de câblage → Enregistrer l'image*, ou
+5. Imprime les schémas de câblage des exemples (fenêtre *Schéma de câblage -> Enregistrer l'image*, ou
    les images de [`examples/`](../../examples/README.md)).
 
 ## Règles de sécurité à annoncer
@@ -45,7 +45,7 @@ Une semaine avant :
 
 ## Matériel
 
-Par binôme, pour les tutoriels 1 à 7 (kit « débutant Arduino » courant) :
+Par binôme, pour les tutoriels 1 à 7 (kit "débutant Arduino" courant) :
 
 | Matériel | Quantité | Tutoriels |
 |---|---|---|
@@ -61,13 +61,13 @@ Par binôme, pour les tutoriels 1 à 7 (kit « débutant Arduino » courant) :
 | LED RGB à cathode commune | 1 | 5 |
 | Buzzer **passif** | 1 | 5, 7 |
 | Capteur DHT11 (ou DHT22) | 1 | 6 |
-| Écran LCD 16×2 avec module I2C | 1 | 6 |
+| Écran LCD 16x2 avec module I2C | 1 | 6 |
 | Écran OLED SSD1306 0,96" I2C | 1 | 7 |
-| Matrice de LED 8×8 MAX7219 (module) | 1 | 7 |
+| Matrice de LED 8x8 MAX7219 (module) | 1 | 7 |
 
 Pour le tutoriel 8 (robot), par groupe : ESP32 DevKit + câble micro-USB, pont en H L298N, 2 moteurs à
 réducteur jaunes avec roues, un châssis avec roue folle (ou du carton), boîtier 4 piles AA + piles,
-batterie USB, un téléphone **Android** avec l'appli « Serial Bluetooth Terminal ».
+batterie USB, un téléphone **Android** avec l'appli "Serial Bluetooth Terminal".
 
 ## Formats
 
@@ -81,7 +81,7 @@ batterie USB, un téléphone **Android** avec l'appli « Serial Bluetooth Termin
 
 | Temps | Étape | Rôle de l'animateur |
 |---|---|---|
-| 10 min | Rappel et objectif | Montrer le résultat attendu (montage qui fonctionne), poser une question : « à votre avis, comment la carte sait-elle que… ? » |
+| 10 min | Rappel et objectif | Montrer le résultat attendu (montage qui fonctionne), poser une question : "à votre avis, comment la carte sait-elle que... ?" |
 | 10 min | Câblage | Les binômes câblent **carte débranchée** à partir du schéma ; l'animateur valide chaque montage |
 | 40 min | Programme | Les élèves suivent le tutoriel. Encourager le **mode Live** pour essayer, puis *Téléverser* |
 | 20 min | Défis | Les défis du tutoriel, au choix ; les plus rapides aident les autres |
@@ -91,27 +91,27 @@ batterie USB, un téléphone **Android** avec l'appli « Serial Bluetooth Termin
 
 ### 1. Clignotant
 - **Notions** : programme, instruction, séquence, boucle infinie, sortie, téléverser.
-- **Idée reçue** : « sans le second *attendre*, la LED clignote » — faire constater qu'elle reste
+- **Idée reçue** : "sans le second *attendre*, la LED clignote" - faire constater qu'elle reste
   allumée.
 - **Bilan** : que fait la carte quand on la rebranche ? Différence entre *Live* et *Téléverser* ?
 
 ### 2. Feu tricolore
 - **Notions** : LED (polarité), résistance, broche HAUT/BAS, séquence, fonction.
-- **Idée reçue** : « la LED marche dans les deux sens » — faire retourner une LED.
+- **Idée reçue** : "la LED marche dans les deux sens" - faire retourner une LED.
 - **Bilan** : à quoi sert la résistance ? Pourquoi les fonctions rendent-elles le programme plus lisible ?
 
 ### 3. Bouton et LED
-- **Notions** : entrée, condition (vrai / faux), si … alors … sinon, boucle de surveillance, variable
+- **Notions** : entrée, condition (vrai / faux), si ... alors ... sinon, boucle de surveillance, variable
   (interrupteur).
-- **Idée reçue** : « le programme réagit au bouton tout seul » — retirer *répéter indéfiniment* pour
+- **Idée reçue** : "le programme réagit au bouton tout seul" - retirer *répéter indéfiniment* pour
   montrer qu'il ne lit le bouton qu'une fois.
-- **Bilan** : quelle est la différence entre « appuyé » et « a été appuyé » ? Pourquoi attendre qu'on
+- **Bilan** : quelle est la différence entre "appuyé" et "a été appuyé" ? Pourquoi attendre qu'on
   relâche le bouton ?
 
 ### 4. Potentiomètre et servomoteur
 - **Notions** : grandeur analogique, plage de valeurs, variable, proportionnalité (convertir).
 - **Lien maths** : la règle de trois du bloc *convertir*.
-- **Bilan** : quelles valeurs donne le potentiomètre ? Que devient 25 après conversion vers 0 – 180 ?
+- **Bilan** : quelles valeurs donne le potentiomètre ? Que devient 25 après conversion vers 0 - 180 ?
 
 ### 5. Alarme de distance
 - **Notions** : capteur, mesure, seuil, comparaison, valeur qui règle une durée.
@@ -125,7 +125,7 @@ batterie USB, un téléphone **Android** avec l'appli « Serial Bluetooth Termin
 
 ### 7. Jeu de réaction
 - **Notions** : hasard, attente d'un événement, score (variable qui s'accumule), projet complet.
-- **Idée reçue** : « le hasard est vraiment imprévisible » — discuter des nombres pseudo-aléatoires.
+- **Idée reçue** : "le hasard est vraiment imprévisible" - discuter des nombres pseudo-aléatoires.
 - **Bilan** : comment empêcher la triche ? Comment mesurer le temps de réaction ?
 
 ### 8. Robot télécommandé
@@ -154,4 +154,4 @@ batterie USB, un téléphone **Android** avec l'appli « Serial Bluetooth Termin
 - **Mes blocs** permet de distribuer un morceau de programme : l'enseignant l'exporte
   (`.s2ablocks`), les élèves l'importent.
 - Le **moniteur série** et le panneau **Live** rendent visibles les valeurs des capteurs : idéal pour
-  les questions « combien ? ».
+  les questions "combien ?".

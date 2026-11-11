@@ -12,7 +12,7 @@ describe("block definitions", () => {
 		expect(field?.getText()).toBe("do 4");
 		expect(field?.getTooltip()).toBe("do 4 : 262 Hz");
 		field?.setValue("440");
-		expect(field?.getTooltip()).toBe("la 4 : 440 Hz — le la du diapason");
+		expect(field?.getTooltip()).toBe("la 4 : 440 Hz - le la du diapason");
 		expect(note.getTooltip()).toContain("à glisser dans un bloc du buzzer");
 		workspace.dispose();
 	});
@@ -42,7 +42,7 @@ describe("block definitions", () => {
 		field.setValue("f1");
 		const labels = field.getOptions(false).map((option) => (option as unknown[])[0]);
 		expect(labels).toContain("Renommer la fonction");
-		expect(labels).toContain("Supprimer la fonction « clignoter »");
+		expect(labels).toContain("Supprimer la fonction \"clignoter\"");
 		expect(labels.some((label) => String(label).includes("variable"))).toBe(false);
 		workspace.dispose();
 	});

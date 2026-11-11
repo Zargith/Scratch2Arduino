@@ -14,7 +14,7 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
   "type": "pins_digital_write",
   "shape": "statement",
   "message": { "fr": "mettre la broche %1 à l'état %2", "en": "set pin %1 to %2" },
-  "tooltip": { "fr": "…", "en": "…" },
+  "tooltip": { "fr": "...", "en": "..." },
   "args": [
     { "name": "PIN", "kind": "pin", "capability": "digital", "default": "13" },
     { "name": "STATE", "kind": "dropdown", "default": "HIGH",
@@ -30,10 +30,10 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
 
 | Item | Rule |
 |---|---|
-| `type` | `lower_snake_case`, unique, prefixed by the category id (`pins_…`). Stored in projects: never rename a released block. |
-| `shape` | `hat` (starts a script), `statement`, `c` (wraps stacks, needs ≥ 1 `statement` argument), `reporter` (number/text), `boolean`. |
+| `type` | `lower_snake_case`, unique, prefixed by the category id (`pins_...`). Stored in projects: never rename a released block. |
+| `shape` | `hat` (starts a script), `statement`, `c` (wraps stacks, needs >= 1 `statement` argument), `reporter` (number/text), `boolean`. |
 | `terminal` | `true` when nothing can be attached below (`control_forever`). Not allowed on reporters and booleans. |
-| `message` | French **and** English. `%1`…`%n` refer to the arguments in declaration order; each appears exactly once per language, in any order (`"ajouter %2 à %1"` / `"change %1 by %2"`). |
+| `message` | French **and** English. `%1`...`%n` refer to the arguments in declaration order; each appears exactly once per language, in any order (`"ajouter %2 à %1"` / `"change %1 by %2"`). |
 | `tooltip` | French and English, written for beginners. |
 | `args[].name` | `UPPER_CASE`, unique in the block. Stored in projects. |
 | `args[].kind` | `number`, `text`, `boolean` (slots), `pin`, `dropdown`, `variable`, `function` (menus of the project's variables and functions), `statement` (inside a `c` block). |

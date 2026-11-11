@@ -5,7 +5,7 @@
       "id": "blink",
       "title": { "fr": "Clignotant", "en": "Blink" },
       "description": {
-        "fr": "La LED « L » soudée sur la carte clignote : rien à brancher.",
+        "fr": "La LED \"L\" soudée sur la carte clignote : rien à brancher.",
         "en": "The on-board \"L\" LED blinks: nothing to wire."
       },
       "parts": { "fr": "aucun composant", "en": "no parts" },
@@ -15,7 +15,7 @@
           "id": "blink-advanced",
           "label": {"fr": "Avancé : Python (Live)", "en": "Advanced: Python (Live)"},
           "description": {
-            "fr": "Avancé : la fonction sos(), écrite en Python dans « Mon code », fait clignoter SOS en morse. Elle tourne sur l'ordinateur : lance-la avec le bouton Live.",
+            "fr": "Avancé : la fonction sos(), écrite en Python dans \"Mon code\", fait clignoter SOS en morse. Elle tourne sur l'ordinateur : lance-la avec le bouton Live.",
             "en": "Advanced: the sos() function, written in Python in \"My code\", blinks SOS in Morse code. It runs on the computer: start it with the Live button."
           }
         }
@@ -28,14 +28,14 @@
         "fr": "Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une fonction.",
         "en": "Green 3 s, orange 1 s, red 3 s, forever. Each colour is a function."
       },
-      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" },
+      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 x 220 Ω resistors" },
       "variants": [
         { "id": "traffic-light", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
         {
           "id": "traffic-light-advanced",
           "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
           "description": {
-            "fr": "Avancé : une fonction C++ feux(rouge, orange, vert) dans « Mon code » allume les feux demandés, et l'orange clignote avant le rouge.",
+            "fr": "Avancé : une fonction C++ feux(rouge, orange, vert) dans \"Mon code\" allume les feux demandés, et l'orange clignote avant le rouge.",
             "en": "Advanced: a C++ function feux(rouge, orange, vert) in \"My code\" switches the lights given, and the orange blinks before the red."
           }
         }
@@ -45,8 +45,8 @@
       "id": "button-led",
       "title": { "fr": "Bouton et LED", "en": "Button and LED" },
       "description": {
-        "fr": "La LED s'allume tant que le bouton est appuyé : un « si … alors … sinon » qui tourne sans fin.",
-        "en": "The LED is on while the button is held down: an \"if … then … else\" running forever."
+        "fr": "La LED s'allume tant que le bouton est appuyé : un \"si ... alors ... sinon\" qui tourne sans fin.",
+        "en": "The LED is on while the button is held down: an \"if ... then ... else\" running forever."
       },
       "parts": { "fr": "bouton-poussoir, LED, résistance de 220 Ω", "en": "push button, LED, 220 Ω resistor" },
       "variants": [
@@ -55,8 +55,8 @@
           "id": "button-led-advanced",
           "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
           "description": {
-            "fr": "Avancé : « Mon code » en C++ fait du bouton un vrai interrupteur — un appui allume, l'appui suivant éteint — avec un anti-rebond.",
-            "en": "Advanced: \"My code\" in C++ turns the button into a real switch — one press on, the next one off — with debouncing."
+            "fr": "Avancé : \"Mon code\" en C++ fait du bouton un vrai interrupteur - un appui allume, l'appui suivant éteint - avec un anti-rebond.",
+            "en": "Advanced: \"My code\" in C++ turns the button into a real switch - one press on, the next one off - with debouncing."
           }
         }
       ]
@@ -75,7 +75,7 @@
           "id": "servo-potentiometer-advanced",
           "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
           "description": {
-            "fr": "Avancé : la fonction C++ angleLisse() de « Mon code » lisse la mesure du potentiomètre : le bras ne tremble plus.",
+            "fr": "Avancé : la fonction C++ angleLisse() de \"Mon code\" lisse la mesure du potentiomètre : le bras ne tremble plus.",
             "en": "Advanced: the C++ function angleLisse() of \"My code\" smooths the knob reading: the arm no longer jitters."
           }
         }
@@ -88,14 +88,14 @@
         "fr": "LED verte quand rien n'est proche ; à moins de 20 cm elle devient rouge et le buzzer bipe de plus en plus vite.",
         "en": "Green LED when nothing is near; under 20 cm it turns red and the buzzer beeps faster and faster."
       },
-      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" },
+      "parts": { "fr": "HC-SR04, LED RGB, 3 x 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 x 220 Ω, buzzer" },
       "variants": [
         { "id": "distance-alarm", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
         {
           "id": "distance-alarm-advanced",
           "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
           "description": {
-            "fr": "Avancé : « Mon code » en C++ fait la moyenne des mesures (le capteur se trompe parfois) et calcule le rythme des bips.",
+            "fr": "Avancé : \"Mon code\" en C++ fait la moyenne des mesures (le capteur se trompe parfois) et calcule le rythme des bips.",
             "en": "Advanced: \"My code\" in C++ averages the readings (the sensor is sometimes wrong) and computes the beep rhythm."
           }
         }
@@ -108,7 +108,7 @@
         "fr": "L'écran affiche la température puis l'humidité, toutes les 2 secondes.",
         "en": "The screen shows the temperature, then the humidity, every 2 seconds."
       },
-      "parts": { "fr": "DHT11, écran LCD 16×2 I2C", "en": "DHT11, 16×2 I2C LCD screen" },
+      "parts": { "fr": "DHT11, écran LCD 16x2 I2C", "en": "DHT11, 16x2 I2C LCD screen" },
       "variants": [
         {
           "id": "thermometer",
@@ -118,15 +118,15 @@
           "id": "thermometer-lcd16",
           "label": { "fr": "Écran 16 broches", "en": "16-pin screen" },
           "parts": {
-            "fr": "DHT11, écran LCD 16×2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
-            "en": "DHT11, 16×2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
+            "fr": "DHT11, écran LCD 16x2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
+            "en": "DHT11, 16x2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
           }
         },
         {
           "id": "thermometer-advanced",
           "label": {"fr": "Avancé : C++ (écran I2C)", "en": "Advanced: C++ (I2C screen)"},
           "description": {
-            "fr": "Avancé : « Mon code » en C++ convertit la température en degrés Fahrenheit et dit si l’air est agréable (température et humidité).",
+            "fr": "Avancé : \"Mon code\" en C++ convertit la température en degrés Fahrenheit et dit si l'air est agréable (température et humidité).",
             "en": "Advanced: \"My code\" in C++ converts the temperature to degrees Fahrenheit and tells whether the air is pleasant (temperature and humidity)."
           }
         }
@@ -146,7 +146,7 @@
           "id": "reaction-game-advanced",
           "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
           "description": {
-            "fr": "Avancé : « Mon code » en C++ garde le record dans la mémoire EEPROM de la carte : il reste même quand on la débranche.",
+            "fr": "Avancé : \"Mon code\" en C++ garde le record dans la mémoire EEPROM de la carte : il reste même quand on la débranche.",
             "en": "Advanced: \"My code\" in C++ keeps the record in the board's EEPROM memory: it stays even when the board is unplugged."
           }
         }
@@ -159,7 +159,7 @@
         "fr": "Plus on tourne le potentiomètre, plus il y a de LED allumées sur le ruban.",
         "en": "The more the knob is turned, the more LEDs light up on the strip."
       },
-      "parts": { "fr": "potentiomètre, ruban NeoPixel ×8", "en": "potentiometer, NeoPixel strip ×8" }
+      "parts": { "fr": "potentiomètre, ruban NeoPixel x8", "en": "potentiometer, NeoPixel strip x8" }
     },
     {
       "id": "esp32-dimmer",

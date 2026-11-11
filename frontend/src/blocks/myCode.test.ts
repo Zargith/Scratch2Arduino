@@ -14,8 +14,8 @@ const declaration = (overrides: Partial<UserDeclaration>): UserDeclaration => ({
 
 describe("My code palette", () => {
 	it("invites to write code when there is none", () => {
-		expect(myCodeContents([], "Write my code…")).toEqual([
-			{ kind: "button", text: "Write my code…", callbackkey: OPEN_CODE_CALLBACK },
+		expect(myCodeContents([], "Write my code...")).toEqual([
+			{ kind: "button", text: "Write my code...", callbackkey: OPEN_CODE_CALLBACK },
 		]);
 	});
 

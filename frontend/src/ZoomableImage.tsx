@@ -10,7 +10,7 @@ const STEP = 1.5;
 
 export interface View {
 	zoom: number;
-	/** Position of the picture's top-left corner in the frame, in pixels (≤ 0 once zoomed). */
+	/** Position of the picture's top-left corner in the frame, in pixels (<= 0 once zoomed). */
 	x: number;
 	y: number;
 }
@@ -24,7 +24,7 @@ export function clamp(view: View, width: number, height: number): View {
 }
 
 /**
- * The view after zooming to `zoom` around the point (px, py) of a frame of `width` × `height`:
+ * The view after zooming to `zoom` around the point (px, py) of a frame of `width` x `height`:
  * that point stays under the pointer, and the picture always covers the frame.
  */
 export function zoomAt(view: View, zoom: number, px: number, py: number, width: number, height: number): View {

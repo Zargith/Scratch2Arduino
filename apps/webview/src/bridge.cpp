@@ -291,7 +291,7 @@ void Bridge::bind() {
                 }
                 Json result{{"components", components}, {"warnings", warnings}};
                 if (board != nullptr) {
-                    result["svg"] = wiring::svg(plan, *board, project.name + " — " + board->name);
+                    result["svg"] = wiring::svg(plan, *board, project.name + " - " + board->name);
                 }
                 return result.dump();
             });
@@ -611,9 +611,9 @@ void Bridge::bind() {
                     }
                     const auto* board = BoardDatabase::builtin().find(port.boardId);
                     Json entry{{"address", port.address},
-                               {"label", board != nullptr ? port.label + " — " + board->name : port.label}};
+                               {"label", board != nullptr ? port.label + " - " + board->name : port.label}};
                     if (network::isWireless(port.address)) { // a board paired over Bluetooth (macOS)
-                        entry["label"] = "Bluetooth — " + port.address.substr(port.address.find(network::kBoardNamePrefix));
+                        entry["label"] = "Bluetooth - " + port.address.substr(port.address.find(network::kBoardNamePrefix));
                         entry["bluetooth"] = true;
                     }
                     if (!port.boardId.empty()) {

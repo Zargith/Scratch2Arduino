@@ -109,7 +109,7 @@
         "en": "temperature in °C from the %1 sensor of pin %2"
       },
       "tooltip": {
-        "fr": "Température mesurée en degrés Celsius. Capteur DHT11 (bleu) ou DHT22 (blanc) : broche « + » ou VCC sur 5V, « - » sur GND, « out » ou DATA sur la broche choisie. Il mesure une fois par seconde (DHT11) ou toutes les deux secondes (DHT22).",
+        "fr": "Température mesurée en degrés Celsius. Capteur DHT11 (bleu) ou DHT22 (blanc) : broche \"+\" ou VCC sur 5V, \"-\" sur GND, \"out\" ou DATA sur la broche choisie. Il mesure une fois par seconde (DHT11) ou toutes les deux secondes (DHT22).",
         "en": "Temperature in degrees Celsius. DHT11 (blue) or DHT22 (white) sensor: \"+\" or VCC pin to 5V, \"-\" to GND, \"out\" or DATA to the chosen pin. It measures once a second (DHT11) or every two seconds (DHT22)."
       },
       "args": [
@@ -151,7 +151,7 @@
         "en": "air humidity (0 to 100) from the %1 sensor of pin %2"
       },
       "tooltip": {
-        "fr": "Humidité de l'air en pourcents : 0 pour de l'air très sec, 100 pour de l'air saturé d'eau. Capteur DHT11 (bleu) ou DHT22 (blanc) : broche « + » ou VCC sur 5V, « - » sur GND, « out » ou DATA sur la broche choisie. Il mesure une fois par seconde (DHT11) ou toutes les deux secondes (DHT22).",
+        "fr": "Humidité de l'air en pourcents : 0 pour de l'air très sec, 100 pour de l'air saturé d'eau. Capteur DHT11 (bleu) ou DHT22 (blanc) : broche \"+\" ou VCC sur 5V, \"-\" sur GND, \"out\" ou DATA sur la broche choisie. Il mesure une fois par seconde (DHT11) ou toutes les deux secondes (DHT22).",
         "en": "Air humidity in percent: 0 for very dry air, 100 for air full of water. DHT11 (blue) or DHT22 (white) sensor: \"+\" or VCC pin to 5V, \"-\" to GND, \"out\" or DATA to the chosen pin. It measures once a second (DHT11) or every two seconds (DHT22)."
       },
       "args": [
