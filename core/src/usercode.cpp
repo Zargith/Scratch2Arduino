@@ -4,6 +4,7 @@
 #include <cctype>
 #include <regex>
 #include <set>
+#include <sstream>
 
 namespace s2a::usercode {
 
@@ -223,7 +224,8 @@ std::vector<Statement> topLevel(const std::string& code, bool newlines) {
 }
 
 void add(std::vector<Declaration>& found, std::set<std::string>& names, Declaration declaration) {
-    if (declaration.name.empty() || declaration.name.front() == '_' || !names.insert(declaration.name).second) {
+    // "__x" names are reserved (C++, Python); "_x" ones are the user's like any other.
+    if (declaration.name.empty() || declaration.name.rfind("__", 0) == 0 || !names.insert(declaration.name).second) {
         return;
     }
     found.push_back(std::move(declaration));
@@ -234,12 +236,15 @@ void add(std::vector<Declaration>& found, std::set<std::string>& names, Declarat
 const char* const kCppNumber =
     R"((?:unsigned\s+long|unsigned\s+int|unsigned\s+char|unsigned|long\s+long|long|int|short|float|double|bool|boolean|byte|char|word|u?int(?:8|16|32|64)_t|size_t))";
 
+/// A number or an Arduino String: what a "My code" variable or result block can hold.
+const std::string kCppValue = std::string("(?:String|") + kCppNumber + ")";
+
 std::vector<Declaration> cppDeclarations(std::string_view code) {
-    static const std::regex function(std::string(R"(^(?:(?:static|inline)\s+)*(void|)") + kCppNumber +
+    static const std::regex function(std::string(R"(^(?:(?:static|inline)\s+)*(void|)") + kCppValue +
                                      R"()\s+([A-Za-z_]\w*)\s*\(([^()]*)\)$)");
     static const std::regex parameter(std::string(R"(^(?:const\s+)?)") + kCppNumber +
                                       R"(\s+([A-Za-z_]\w*)(?:\s*=.*)?$)");
-    static const std::regex variable(std::string(R"(^((?:(?:static|volatile|const)\s+)*))") + kCppNumber +
+    static const std::regex variable(std::string(R"(^((?:(?:static|volatile|const)\s+)*))") + kCppValue +
                                      R"(\s+(.+)$)");
     static const std::regex name(R"(^([A-Za-z_]\w*)\s*(?:=.*)?$)");
     std::vector<Declaration> found;
@@ -254,6 +259,7 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
             declaration.kind = Declaration::Kind::Function;
             declaration.name = match[2].str();
             declaration.returnsValue = match[1].str() != "void";
+            declaration.text = match[1].str() == "String";
             declaration.line = statement.line;
             bool usable = true;
             const std::string list = trim(match[3].str());
@@ -276,6 +282,8 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
             continue;
         }
         const bool constant = match[1].str().find("const") != std::string::npos;
+        static const std::regex textType(R"(^(?:(?:static|volatile|const)\s+)*String\s)");
+        const bool text = std::regex_search(statement.text, textType);
         for (const std::string& part : splitCommas(match[2].str())) {
             std::smatch each;
             if (std::regex_match(part, each, name)) {
@@ -283,6 +291,7 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
                 declaration.kind = Declaration::Kind::Variable;
                 declaration.name = each[1].str();
                 declaration.readOnly = constant;
+                declaration.text = text;
                 declaration.line = statement.line;
                 add(found, names, std::move(declaration));
             }
@@ -437,7 +446,48 @@ std::vector<Declaration> pythonDeclarations(std::string_view code) {
 
 } // namespace
 
-std::vector<Declaration> declarations(ProgramLanguage language, std::string_view code) {
+namespace {
+
+/// Names a C++ or JavaScript function body changes: "x = ", "x += ", "x++", "++x"...
+void changedNames(const std::string& body, std::set<std::string>& names) {
+    static const std::regex assigned(R"(([A-Za-z_$][\w$]*)\s*(?:<<|>>|[-+*/%&|^])?=(?!=))");
+    static const std::regex stepped(R"((?:\+\+|--)\s*([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*(?:\+\+|--))");
+    for (auto it = std::sregex_iterator(body.begin(), body.end(), assigned); it != std::sregex_iterator(); ++it) {
+        names.insert((*it)[1].str());
+    }
+    for (auto it = std::sregex_iterator(body.begin(), body.end(), stepped); it != std::sregex_iterator(); ++it) {
+        names.insert((*it)[1].matched ? (*it)[1].str() : (*it)[2].str());
+    }
+}
+
+/// The global variables the code's own functions change. Python: the names a function declares
+/// "global" (needed to change one). C++ and JavaScript: the names assigned in a function body.
+std::set<std::string> changedByFunctions(ProgramLanguage language, std::string_view code) {
+    std::set<std::string> names;
+    if (language == ProgramLanguage::Python) {
+        static const std::regex global(R"(^\s+global\s+([^#]+))");
+        std::istringstream lines{std::string(code)};
+        std::string line;
+        while (std::getline(lines, line)) {
+            std::smatch match;
+            if (std::regex_search(line, match, global)) {
+                for (const std::string& name : splitCommas(match[1].str())) {
+                    names.insert(trim(name));
+                }
+            }
+        }
+        return names;
+    }
+    const bool cpp = language == ProgramLanguage::Cpp;
+    for (const Statement& statement : topLevel(blankComments(code, cpp, !cpp), !cpp)) {
+        if (statement.block) {
+            changedNames(statement.body, names);
+        }
+    }
+    return names;
+}
+
+std::vector<Declaration> scan(ProgramLanguage language, std::string_view code) {
     switch (language) {
     case ProgramLanguage::Cpp:
         return cppDeclarations(code);
@@ -449,6 +499,19 @@ std::vector<Declaration> declarations(ProgramLanguage language, std::string_view
         break;
     }
     return {};
+}
+
+} // namespace
+
+std::vector<Declaration> declarations(ProgramLanguage language, std::string_view code) {
+    std::vector<Declaration> found = scan(language, code);
+    const std::set<std::string> changed = changedByFunctions(language, code);
+    for (Declaration& declaration : found) {
+        if (declaration.kind == Declaration::Kind::Variable && changed.count(declaration.name) != 0) {
+            declaration.changedByCode = true;
+        }
+    }
+    return found;
 }
 
 std::vector<Declaration> declarations(const project::Project& project) {

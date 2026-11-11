@@ -1,12 +1,12 @@
-# Tutorial 8 — Remote robot
+# Tutorial 8 - Remote robot
 
 **Goal**: a two-wheeled robot driven from a phone over Bluetooth.
 **Time**: 2 hours. **Parts**: ESP32 DevKit board, L298N H-bridge, 2 (yellow) gear motors with their
-wheels, a chassis (or a cardboard box), a 4 × AA battery holder, a USB power bank, an Android phone with
+wheels, a chassis (or a cardboard box), a 4 x AA battery holder, a USB power bank, an Android phone with
 the "Serial Bluetooth Terminal" app, wires.
 **You will learn**: motors, wireless communication, organising a big program with functions.
 
-*Français : [../../fr/tutorials/08-remote-robot.md](../../fr/tutorials/08-remote-robot.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. The circuit
 
@@ -74,11 +74,11 @@ forever
     (the same for gauche, droite and stop)
 ```
 
-Or open the complete example: **New → Remote robot** (its functions have French names: *avancer*, *reculer*, *tourner à gauche*, *tourner à droite*, *arrêter*).
+Or open the complete example: **New -> Remote robot** (its functions have French names: *avancer*, *reculer*, *tourner à gauche*, *tourner à droite*, *arrêter*).
 
 1. **Upload** (with the USB cable), then unplug the cable and plug in the USB power bank.
-2. On the phone: switch Bluetooth on, open **Serial Bluetooth Terminal**, menu **Devices → Bluetooth
-   Classic**, choose **S2A-…** (no code), then connect.
+2. On the phone: switch Bluetooth on, open **Serial Bluetooth Terminal**, menu **Devices -> Bluetooth
+   Classic**, choose **S2A-...** (no code), then connect.
 3. Type `avance` and send it: the robot moves forward and answers "ok : avance". Tip: a long press on the
    app's **M1** to **M5** buttons stores the 5 words, to drive with one finger.
 
@@ -98,11 +98,11 @@ Choose **Advanced: C++** in the gallery: one function, `rouler(gauche, droite)`,
 
 ## If it does not work
 
-- The phone does not find "S2A-…": check that the program is uploaded and the ESP32 is powered; iPhones
+- The phone does not find "S2A-...": check that the program is uploaded and the ESP32 is powered; iPhones
   have no such Bluetooth app: use Android.
 - The motors do not turn but the board answers: flat batteries, ENA/ENB jumpers still on, or battery GND
   not joined to the ESP32.
 - Only one wheel turns: check IN3, IN4 and ENB.
 
 Well done, you have finished the progression! To go further, combine what you have learnt: a robot that
-avoids obstacles, a wireless weather station (**New → Wireless weather station**)…
+avoids obstacles, a wireless weather station (**New -> Wireless weather station**)...

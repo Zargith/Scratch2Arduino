@@ -12,8 +12,8 @@
       "shape": "boolean",
       "message": { "fr": "le téléphone a envoyé %1", "en": "the phone sent %1" },
       "tooltip": {
-        "fr": "Vrai une fois quand le téléphone envoie ce message par Bluetooth (sans compter les majuscules ni les accents). Sur le téléphone, une appli de terminal Bluetooth (par exemple « Serial Bluetooth Terminal ») se connecte à la carte « S2A-… ». Cartes avec Bluetooth seulement (ESP32).",
-        "en": "True once when the phone sends this message over Bluetooth (capital letters and accents do not matter). On the phone, a Bluetooth terminal app (for example \"Serial Bluetooth Terminal\") connects to the \"S2A-…\" board. Boards with Bluetooth only (ESP32)."
+        "fr": "Vrai une fois quand le téléphone envoie ce message par Bluetooth (sans compter les majuscules ni les accents). Sur le téléphone, une appli de terminal Bluetooth (par exemple \"Serial Bluetooth Terminal\") se connecte à la carte \"S2A-...\". Cartes avec Bluetooth seulement (ESP32).",
+        "en": "True once when the phone sends this message over Bluetooth (capital letters and accents do not matter). On the phone, a Bluetooth terminal app (for example \"Serial Bluetooth Terminal\") connects to the \"S2A-...\" board. Boards with Bluetooth only (ESP32)."
       },
       "args": [{ "name": "MESSAGE", "kind": "text", "default": "allume" }]
     },

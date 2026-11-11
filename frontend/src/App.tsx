@@ -18,6 +18,7 @@ import {
 	Text,
 	TextInput,
 	Tooltip,
+	useMantineColorScheme,
 } from "@mantine/core";
 import {
 	IconBluetooth,
@@ -33,6 +34,7 @@ import {
 	IconPlugConnected,
 	IconRefresh,
 	IconSchool,
+	IconSettings,
 	IconTerminal2,
 	IconUpload,
 	IconWifi,
@@ -50,6 +52,7 @@ import {
 	type Outcome,
 	type Port,
 	type RecentProject,
+	type Settings as SavedSettings,
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import type { UserDeclaration } from "@/blocks/definitions";
@@ -65,6 +68,8 @@ import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberB
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
+import { Settings } from "@/Settings";
+import { findUpdate, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
@@ -133,7 +138,7 @@ export function App() {
 	/** Blocks view, or code view (the code of the blocks and "My code"). */
 	const [view, setView] = useState<"blocks" | "code">("blocks");
 	const [codeTab, setCodeTab] = useState<CodeTab>("blocks");
-	/** Shown over the window while a view is prepared ("Converting the blocks to code…"). */
+	/** Shown over the window while a view is prepared ("Converting the blocks to code..."). */
 	const [loading, setLoading] = useState<string | null>(null);
 	/** The code of the blocks, for the code view. */
 	const [blocksCode, setBlocksCode] = useState("");
@@ -142,6 +147,8 @@ export function App() {
 	const userCodeRef = useRef<UserCode | null>(null);
 	/** Its functions and variables, as blocks of the "My code" category. */
 	const [declarations, setDeclarations] = useState<UserDeclaration[]>([]);
+	/** Counts the "My code" scans: an older one (another project) never fills the palette. */
+	const declarationsRequest = useRef(0);
 	/** Mistakes of the last Check, Upload or Live: in "My code", and in an expert program. */
 	const [userProblems, setUserProblems] = useState<CodeProblem[]>([]);
 	const [programProblems, setProgramProblems] = useState<CodeProblem[]>([]);
@@ -171,12 +178,22 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** The output panel opened by itself once in this Live session (at the first printed line). */
+	const outputShown = useRef(false);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
 	const [galleryShown, setGalleryShown] = useState(false);
+	const [settingsShown, setSettingsShown] = useState(false);
+	const [settings, setSettings] = useState<SavedSettings>({ language: "", checkUpdates: true, theme: "" });
+	const { setColorScheme } = useMantineColorScheme();
+	useEffect(() => setColorScheme(settings.theme === "" ? "auto" : settings.theme), [settings.theme, setColorScheme]);
+	/** Installed version, told by the host ("" outside the application). */
+	const [version, setVersion] = useState("");
+	/** A newer release, offered until the user says "Later" (never forced). */
+	const [update, setUpdate] = useState<Release | null>(null);
 	/** Page of the Tutorials panel, null when it is closed. */
 	const [tutorialPage, setTutorialPage] = useState<DocPath | null>(null);
 	/** The example being edited: its wiring diagram stays one click away. */
@@ -234,12 +251,15 @@ export function App() {
 		setView(language === "blocks" ? "blocks" : "code");
 		setCodeTab("blocks");
 		setDeclarations([]);
+		const request = ++declarationsRequest.current;
 		const found = project.userCode;
 		if (found && hasHost()) {
 			bridge
 				.codeDeclarations(found.language, found.code)
-				.then(setDeclarations)
-				.catch(() => setDeclarations([]));
+				.catch(() => [])
+				.then((list) => {
+					if (request === declarationsRequest.current) setDeclarations(list);
+				});
 		}
 	}, []);
 
@@ -288,7 +308,7 @@ export function App() {
 	useEffect(() => {
 		if (!hasHost()) return;
 		const file = path === "" ? name : path.split(/[\\/]/).pop() ?? name;
-		void bridge.setTitle(`${dirty ? "• " : ""}${file} — ${t("app.title")}`).catch(() => undefined);
+		void bridge.setTitle(`${dirty ? "* " : ""}${file} - ${t("app.title")}`).catch(() => undefined);
 	}, [name, path, dirty, t]);
 
 	const switchLanguage = (next: Language) => {
@@ -302,6 +322,12 @@ export function App() {
 	const switchLanguageRef = useRef(switchLanguage);
 	switchLanguageRef.current = switchLanguage;
 
+	/** Applies and saves the settings (outside the application they only last until it closes). */
+	const changeSettings = (next: SavedSettings) => {
+		setSettings(next);
+		if (hasHost()) void bridge.saveSettings(next).catch(() => undefined);
+	};
+
 	// Once, at start-up: the host tells the system language. Later language changes are the
 	// user's (the FR/EN switch) and must not be overridden.
 	const startup = useRef({ fail, refreshPorts });
@@ -309,7 +335,21 @@ export function App() {
 		if (!hasHost()) return;
 		void bridge
 			.hello()
-			.then((info) => switchLanguageRef.current(info.language))
+			.then(async (info) => {
+				switchLanguageRef.current(info.language);
+				setVersion(info.version);
+				const saved = await bridge.settings().catch(() => null);
+				if (!saved) return;
+				setSettings(saved);
+				// In the background: the editor is usable at once, and no network is no problem.
+				if (saved.checkUpdates) {
+					void findUpdate(info.version)
+						.then((release) => {
+							if (release) setUpdate(release);
+						})
+						.catch(() => undefined);
+				}
+			})
 			.catch(startup.current.fail);
 		void startup.current.refreshPorts();
 	}, []);
@@ -568,11 +608,9 @@ export function App() {
 		setLoading(t("view.loading_blocks"));
 		try {
 			const mine = userCodeRef.current;
-			if (mine && hasHost()) {
-				setDeclarations(await bridge.codeDeclarations(mine.language, mine.code).catch(() => []));
-			} else {
-				setDeclarations([]);
-			}
+			const request = ++declarationsRequest.current;
+			const list = mine && hasHost() ? await bridge.codeDeclarations(mine.language, mine.code).catch(() => []) : [];
+			if (request === declarationsRequest.current) setDeclarations(list);
 			await nextFrame();
 			setView("blocks");
 			await nextFrame(); // the blocks are built while the overlay is shown
@@ -582,20 +620,41 @@ export function App() {
 	};
 
 	/** Creates, switches or deletes "My code"; typed code is only lost after a confirmation. */
-	const changeUserLanguage = (next: Exclude<ProgramLanguage, "blocks"> | null) => {
+	/** Tells what a conversion did (and which lines are left to the user). */
+	const showConverted = (next: Exclude<ProgramLanguage, "blocks">, toCheck: number[]) => {
+		setStatus(
+			toCheck.length > 0
+				? { kind: "info", message: t("status.converted_check", { language: programNames[next], lines: toCheck.join(", ") }) }
+				: { kind: "success", message: t("status.converted", { language: programNames[next] }) }
+		);
+	};
+
+	/** "My code" in another language: typed code is converted (after a yes), an untouched example is replaced. */
+	const changeUserLanguage = async (next: Exclude<ProgramLanguage, "blocks"> | null) => {
 		const current = userCodeRef.current;
 		if (current && next === current.language) return;
 		const typed = current !== null && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		let code = next === null ? "" : starterUserCode(next, language);
 		if (next === null) {
 			if (!window.confirm(t("code.confirm_remove"))) return;
-		} else if (
-			current &&
-			typed &&
-			!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))
-		) {
-			return;
+		} else if (current && typed) {
+			if (!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))) {
+				return;
+			}
+			if (!hasHost()) {
+				setStatus({ kind: "info", message: t("status.no_host") });
+				return;
+			}
+			try {
+				const converted = await bridge.convert(current.code, current.language, next);
+				code = converted.code;
+				showConverted(next, converted.toCheck);
+			} catch (error) {
+				fail(error);
+				return;
+			}
 		}
-		userCodeRef.current = next === null ? null : { language: next, code: starterUserCode(next, language) };
+		userCodeRef.current = next === null ? null : { language: next, code };
 		setUserCode(userCodeRef.current);
 		setUserProblems([]);
 		markDirty();
@@ -618,12 +677,27 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.program_blocks") });
 			return;
 		}
-		if (
-			program !== "blocks" &&
-			typed &&
-			!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))
-		)
+		if (program !== "blocks" && typed) {
+			// A typed program is converted (after a yes), never thrown away.
+			if (!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))) {
+				return;
+			}
+			if (!hasHost()) {
+				setStatus({ kind: "info", message: t("status.no_host") });
+				return;
+			}
+			try {
+				const converted = await bridge.convert(codeRef.current, program, next);
+				codeRef.current = converted.code;
+				codeEdited.current = true;
+				setProgram(next);
+				markDirty();
+				showConverted(next, converted.toCheck);
+			} catch (error) {
+				fail(error);
+			}
 			return;
+		}
 		if (program === "blocks") initialState.current = editor.current?.save() ?? initialState.current;
 		setView("code");
 		let start = starterCode(next, language);
@@ -676,7 +750,7 @@ export function App() {
 			const warning = outcome.ok ? outcome.warnings?.[0] : undefined;
 			setStatus({
 				kind: outcome.ok ? (warning ? "info" : "success") : "error",
-				message: warning ? `${outcome.message} ⚠ ${warning}` : outcome.message,
+				message: warning ? `${outcome.message}\n${warning}` : outcome.message,
 				details: outcome.details,
 			});
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
@@ -711,6 +785,7 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			outputShown.current = false;
 			history.current = new Map();
 			setLive(true);
 		} catch (error) {
@@ -734,6 +809,11 @@ export function App() {
 					for (const [id, value] of Object.entries(snapshot.variables ?? {})) record(`var:${id}`, value);
 					for (const [pin, value] of Object.entries(snapshot.readings ?? {})) record(`pin:${pin}`, value);
 					setLiveSnapshot(snapshot);
+					// The program printed something (print, printError, an error): show it, once.
+					if ((snapshot.outputCount ?? 0) > 0 && !outputShown.current) {
+						outputShown.current = true;
+						setMonitorShown(true);
+					}
 					setVariableNames(
 						new Map((editor.current?.save().variables ?? []).map((variable) => [variable.id, variable.name] as const))
 					);
@@ -979,15 +1059,11 @@ export function App() {
 								{compact ? <IconUpload size={18} /> : t("toolbar.upload")}
 							</Button>
 						</Tooltip>
-						<SegmentedControl
-							aria-label={t("language.label")}
-							data={[
-								{ value: "fr", label: "FR" },
-								{ value: "en", label: "EN" },
-							]}
-							value={language}
-							onChange={(value) => switchLanguage(value as Language)}
-						/>
+						<Tooltip label={t("settings.title")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("settings.title")} onClick={() => setSettingsShown(true)}>
+								<IconSettings size={18} />
+							</ActionIcon>
+						</Tooltip>
 					</Group>
 				</Group>
 			</AppShell.Header>
@@ -1148,6 +1224,47 @@ export function App() {
 				</div>
 			)}
 
+			<Settings
+				opened={settingsShown}
+				language={language}
+				t={t}
+				version={version}
+				settings={settings}
+				onLanguage={(next) => {
+					switchLanguage(next);
+					changeSettings({ ...settings, language: next });
+				}}
+				onSettings={changeSettings}
+				onUpdate={setUpdate}
+				onClose={() => setSettingsShown(false)}
+			/>
+			{update && (
+				<Card
+					withBorder
+					shadow="md"
+					padding="sm"
+					w={460}
+					style={{ position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)", zIndex: 200 }}
+				>
+					<Text size="sm" fw={600}>
+						{t("update.available", { version: update.version, current: version })}
+					</Text>
+					<Text size="xs" c="dimmed" mt={4}>
+						{t("update.help")}
+					</Text>
+					<Group gap="xs" mt="sm" justify="flex-end">
+						<Button size="xs" variant="subtle" color="gray" onClick={() => setUpdate(null)}>
+							{t("update.later")}
+						</Button>
+						<Button size="xs" variant="light" onClick={() => void bridge.openUrl(update.page).catch(fail)}>
+							{t("update.notes")}
+						</Button>
+						<Button size="xs" onClick={() => void bridge.openUrl(update.download).catch(fail)}>
+							{t("update.download")}
+						</Button>
+					</Group>
+				</Card>
+			)}
 			<Gallery
 				opened={galleryShown}
 				language={language}
@@ -1231,7 +1348,7 @@ export function App() {
 			<Modal
 				opened={helpShown}
 				onClose={() => setHelpShown(false)}
-				title={`${t("program.help")} — ${programName(helpLanguage, t("program.blocks"))}`}
+				title={`${t("program.help")} - ${programName(helpLanguage, t("program.blocks"))}`}
 				size="lg"
 			>
 				{helpLanguage === "cpp" ? (

@@ -16,6 +16,7 @@ namespace fs = std::filesystem;
 using Json = nlohmann::json;
 
 constexpr const char* kRecentFile = "recent.json";
+constexpr const char* kSettingsFile = "settings.json";
 constexpr const char* kAutosaveFile = "autosave.s2a";
 constexpr const char* kAutosaveInfoFile = "autosave.json";
 /// Bigger files are not ours: they are ignored rather than read into memory.
@@ -364,6 +365,45 @@ Result<std::size_t> Store::importLibrary(const fs::path& file) {
         return written.error();
     }
     return imported.value().size();
+}
+
+namespace {
+
+bool knownLanguage(const std::string& code) {
+    return code == "fr" || code == "en";
+}
+
+bool knownTheme(const std::string& theme) {
+    return theme == "light" || theme == "dark";
+}
+
+} // namespace
+
+Settings Store::settings() const {
+    Settings settings;
+    const auto json = readJson(directory_ / kSettingsFile);
+    if (!json || !json->is_object()) {
+        return settings;
+    }
+    if (const auto language = json->find("language"); language != json->end() && language->is_string() &&
+                                                      knownLanguage(language->get<std::string>())) {
+        settings.language = language->get<std::string>();
+    }
+    if (const auto check = json->find("checkUpdates"); check != json->end() && check->is_boolean()) {
+        settings.checkUpdates = check->get<bool>();
+    }
+    if (const auto theme = json->find("theme"); theme != json->end() && theme->is_string() &&
+                                                knownTheme(theme->get<std::string>())) {
+        settings.theme = theme->get<std::string>();
+    }
+    return settings;
+}
+
+Status Store::saveSettings(const Settings& settings) const {
+    const Json json{{"language", knownLanguage(settings.language) ? settings.language : std::string{}},
+                    {"checkUpdates", settings.checkUpdates},
+                    {"theme", knownTheme(settings.theme) ? settings.theme : std::string{}}};
+    return writeFileAtomically(directory_ / kSettingsFile, json.dump(2) + "\n");
 }
 
 } // namespace s2a::userdata

@@ -555,7 +555,7 @@ def power_rails(c: Canvas, uno: Uno, board: Breadboard, lane_y: float, plus="bot
 def blink(c: Canvas):
     uno = Uno(c, 540, 330)
     c.circle(uno.x + 196, uno.y + 103, 24, None, outline="#FBC02D", width=4)
-    c.text(800, 250, "La LED « L » de la carte est reliée à la broche 13 : aucun câblage.", 18, "#37474F",
+    c.text(800, 250, "La LED \"L\" de la carte est reliée à la broche 13 : aucun câblage.", 18, "#37474F",
            anchor="mm")
     c.text(800, 278, "The on-board \"L\" LED is wired to pin 13: nothing to wire.", 15, "#607D8B", anchor="mm")
 
@@ -589,7 +589,7 @@ def distance_alarm(c: Canvas):
     for i in (0, 2, 3):  # one resistor per colour, across the middle channel
         resistor(c, board.hole(4 + i, "e"), board.hole(4 + i, "f"), "")
     channel_y = (board.hole(1, "e")[1] + board.hole(1, "f")[1]) / 2
-    c.text(board.hole(8, "e")[0] + 4, channel_y, "3 × 220 Ω", 10, "#455A64", anchor="lm")
+    c.text(board.hole(8, "e")[0] + 4, channel_y, "3 x 220 Ω", 10, "#455A64", anchor="lm")
     # Longest leg of the LED (column 5) and - of the buzzer: jumpers down to the - rail.
     c.wire(path(board.hole(5, "e"), ("y", board.rail("bot-", 5)[1])), BLACK)
     buzzer(c, board, 15)
@@ -686,8 +686,8 @@ def thermometer_lcd16(c: Canvas):
     c.wire(path(board.rail("top-", 4), ("y", 500), ("x", 126), ("y", sensor["GND"][1]), sensor["GND"]), BLACK)
 
     legend(c, 670, 640, [("VSS, RW, K", "GND (-)"), ("VDD", "5V (+)"), ("V0", "potentiomètre / potentiometer"),
-                        ("A", "220 Ω → 5V (+)"), ("RS, E", "12, 11"), ("D4…D7", "10, 9, 8, 7"),
-                        ("D0…D3", "rien / not wired")], "LCD 16 broches / 16-pin LCD")
+                        ("A", "220 Ω -> 5V (+)"), ("RS, E", "12, 11"), ("D4...D7", "10, 9, 8, 7"),
+                        ("D0...D3", "rien / not wired")], "LCD 16 broches / 16-pin LCD")
 
 
 def reaction_game(c: Canvas):
@@ -867,9 +867,9 @@ def remote_robot(c: Canvas):
     c.text(720, 722, "batterie USB", 10, "#FFFFFF", bold=True, anchor="mm")
     c.text(720, 740, "USB power bank", 9, "#CFD8DC", anchor="mm")
     c.line([(esp.x + esp.w + 26, esp.y + 125), (660, 730)], "#212121", 5)
-    c.text(60, 90, "Le téléphone envoie avance, recule, gauche, droite ou stop par Bluetooth (« S2A-… »).", 17,
+    c.text(60, 90, "Le téléphone envoie avance, recule, gauche, droite ou stop par Bluetooth (\"S2A-...\").", 17,
            "#37474F")
-    c.text(60, 114, "The phone sends avance, recule, gauche, droite or stop over Bluetooth (\"S2A-…\").", 14,
+    c.text(60, 114, "The phone sends avance, recule, gauche, droite or stop over Bluetooth (\"S2A-...\").", 14,
            "#607D8B")
     c.text(60, 140, "Enlève les cavaliers ENA et ENB du L298N. Les GND de l'ESP32 et des piles sont reliés.", 15,
            "#37474F")
@@ -950,7 +950,7 @@ def phone(c: Canvas, x, y, lines):
     c.rect(x, y, 130, 250, "#263238", radius=18)
     c.rect(x + 8, y + 24, 114, 196, "#FAFAFA", radius=4)
     c.rect(x + 8, y + 24, 114, 24, BLUE, radius=4)
-    c.text(x + 65, y + 36, "S2A-…", 11, "#FFFFFF", bold=True, anchor="mm")
+    c.text(x + 65, y + 36, "S2A-...", 11, "#FFFFFF", bold=True, anchor="mm")
     for i, (text, mine) in enumerate(lines):
         c.text(x + (118 if mine else 14), y + 64 + i * 22, text, 10, BLUE if mine else "#37474F",
                anchor="rm" if mine else "lm")
@@ -966,12 +966,12 @@ def wireless_station(c: Canvas, link: str):
         steps = [
             ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
              "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
-            ("2. Débranche le câble, alimente la carte (chargeur USB ou pile), connecte l'ordinateur au Wi-Fi « S2A-… »"
+            ("2. Débranche le câble, alimente la carte (chargeur USB ou pile), connecte l'ordinateur au Wi-Fi \"S2A-...\""
              " (mot de passe scratch2arduino).",
-             "2. Unplug the cable, power the board (USB charger or battery), connect the computer to the \"S2A-…\" Wi-Fi"
+             "2. Unplug the cable, power the board (USB charger or battery), connect the computer to the \"S2A-...\" Wi-Fi"
              " (password scratch2arduino)."),
-            ("3. Choisis le port « Wi-Fi — réseau de la carte », puis lance le mode Live.",
-             "3. Choose the \"Wi-Fi — the board's network\" port, then start the Live mode."),
+            ("3. Choisis le port \"Wi-Fi - réseau de la carte\", puis lance le mode Live.",
+             "3. Choose the \"Wi-Fi - the board's network\" port, then start the Live mode."),
         ]
     else:
         steps = [
@@ -979,8 +979,8 @@ def wireless_station(c: Canvas, link: str):
              "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
             ("2. Débranche le câble et alimente la carte (chargeur USB ou pile), près de l'ordinateur.",
              "2. Unplug the cable and power the board (USB charger or battery), near the computer."),
-            ("3. Bouton Bluetooth › « Chercher les cartes » › choisis « S2A-… », puis lance le mode Live.",
-             "3. Bluetooth button › \"Look for boards\" › choose \"S2A-…\", then start the Live mode."),
+            ("3. Bouton Bluetooth > \"Chercher les cartes\" > choisis \"S2A-...\", puis lance le mode Live.",
+             "3. Bluetooth button > \"Look for boards\" > choose \"S2A-...\", then start the Live mode."),
         ]
     for i, (french, english) in enumerate(steps):
         c.text(60, 820 + i * 52, french, 15, "#37474F")
@@ -1001,10 +1001,10 @@ def phone_lamp(c: Canvas):
     steps = [
         ("1. Une fois avec le câble USB : lance le mode Live (le programme Live s'installe).",
          "1. Once with the USB cable: start the Live mode (the Live program is installed)."),
-        ("2. Ordinateur : Wi-Fi « S2A-… » (mot de passe scratch2arduino), port « Wi-Fi — réseau de la carte », mode Live.",
-         "2. Computer: \"S2A-…\" Wi-Fi (password scratch2arduino), \"Wi-Fi — the board's network\" port, Live mode."),
-        ("3. Téléphone : appli « Serial Bluetooth Terminal », connecte « S2A-… », envoie allume, eteins ou temperature.",
-         "3. Phone: \"Serial Bluetooth Terminal\" app, connect \"S2A-…\", send allume, eteins or temperature."),
+        ("2. Ordinateur : Wi-Fi \"S2A-...\" (mot de passe scratch2arduino), port \"Wi-Fi - réseau de la carte\", mode Live.",
+         "2. Computer: \"S2A-...\" Wi-Fi (password scratch2arduino), \"Wi-Fi - the board's network\" port, Live mode."),
+        ("3. Téléphone : appli \"Serial Bluetooth Terminal\", connecte \"S2A-...\", envoie allume, eteins ou temperature.",
+         "3. Phone: \"Serial Bluetooth Terminal\" app, connect \"S2A-...\", send allume, eteins or temperature."),
     ]
     for i, (french, english) in enumerate(steps):
         c.text(60, 820 + i * 52, french, 15, "#37474F")
@@ -1022,7 +1022,7 @@ def main(names: list[str]) -> int:
     for name in names or list(EXAMPLES):
         folder = ROOT / "examples" / "projects" / name
         project = json.loads((folder / "project.json").read_text(encoding="utf-8"))
-        canvas = Canvas(project["name"] + " — " + BOARD_NAMES.get(project.get("board", "uno"), "Arduino Uno"))
+        canvas = Canvas(project["name"] + " - " + BOARD_NAMES.get(project.get("board", "uno"), "Arduino Uno"))
         EXAMPLES[name](canvas)
         canvas.save(folder / "wiring.png")
         print((folder / "wiring.png").relative_to(ROOT))

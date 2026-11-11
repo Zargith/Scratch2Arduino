@@ -1,12 +1,12 @@
 # Scratch2Arduino user guide
 
 Scratch2Arduino lets you program an Arduino (or ESP32) board with blocks, as in Scratch: you put the
-blocks together, and the board lights LEDs, turns motors, reads sensors…
+blocks together, and the board lights LEDs, turns motors, reads sensors...
 This guide presents the whole application. To learn step by step, follow the
 [tutorials](README.md#tutorials) instead, starting with [Blink](tutorials/01-blink.md). They are also in
 the application: the **Tutorials and help** button (the graduation cap), next to the serial monitor.
 
-*Version française : [../fr/guide.md](../fr/guide.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## Contents
 
@@ -37,6 +37,10 @@ the application: the **Tutorials and help** button (the graduation cap), next to
   On Linux, to be allowed to send programs to the board, type once
   `sudo usermod -aG dialout $USER`, then log out and back in.
 
+**Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
+(*Download*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or
+switch this check off.
+
 The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
 (Internet is needed that time, then never again for that board). It keeps its own copy of those tools:
 it does not change an Arduino IDE installed on the same computer.
@@ -55,13 +59,13 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
-  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the language (FR / EN). On a small
+  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
   **=** buttons (bottom right) zoom; the **trash can** throws away the blocks dropped on it.
 - **Panels** (right, when open): the live values of Live mode, the serial monitor.
-- **Status bar** (bottom): what is going on ("Checking the program…") and the problems to fix.
+- **Status bar** (bottom): what is going on ("Checking the program...") and the problems to fix.
 
 ## 4. Build a program with blocks
 
@@ -70,7 +74,7 @@ it does not change an Arduino IDE installed on the same computer.
   in when a grey shadow appears.
 - **Fill a slot**: click a white slot to type a number or a text; drag a round block (a value) or a
   hexagonal block (a condition, true or false) into the slot that has its shape.
-- **Choose from a menu**: click the small arrow (a pin number, *HIGH* / *LOW*, a colour, a note…).
+- **Choose from a menu**: click the small arrow (a pin number, *HIGH* / *LOW*, a colour, a note...).
 - **Move**: dragging a block also takes every block attached below it.
 - **Delete**: drag the block to the palette or the trash can, or select it and press *Delete*.
 - **Right-click a block**: duplicate, add a comment, delete, *Save to My blocks*.
@@ -88,18 +92,18 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Category | What it is for | Example blocks |
 |---|---|---|
 | Events | Where the program starts | when the program starts |
-| Control | Wait, repeat, choose | wait 1 seconds, repeat 10 times, forever, if … then … else, wait until |
+| Control | Wait, repeat, choose | wait 1 seconds, repeat 10 times, forever, if ... then ... else, wait until |
 | Pins | The board's pins | turn the built-in LED on, set pin 13 to HIGH, pin 2 is HIGH, analog value of pin A0, set PWM output of pin 9 to 128 |
 | Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22) |
-| Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8×8 LED matrix (MAX7219) |
+| Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8x8 LED matrix (MAX7219) |
 | Sound | The buzzer | play 440 Hz for 1 seconds, start / stop the buzzer, note C4 |
 | Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D) |
-| Screens | Show text | 16×2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen |
-| Operators | Compute, compare | + − × ÷, pick random, map, <, >, =, and, or, not |
-| Variables | Remember values | *Make a variable*, set … to …, change … by … |
-| Functions | Reuse a group of blocks | *Make a function*, define …, call … |
-| Serial monitor | Write to the computer | write … to the serial monitor |
-| Phone (ESP32) | Talk to a phone over Bluetooth | the phone sent …, number received from the phone, send … to the phone |
+| Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen |
+| Operators | Compute, compare | + − x /, pick random, map, <, >, =, and, or, not |
+| Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |
+| Functions | Reuse a group of blocks | *Make a function*, define ..., call ... |
+| Serial monitor | Write to the computer | write ... to the serial monitor |
+| Phone (ESP32) | Talk to a phone over Bluetooth | the phone sent ..., number received from the phone, send ... to the phone |
 | My blocks | Your saved block groups | see [My blocks](#my-blocks) |
 
 Hover a block of the palette: a tooltip explains what it does and **how to wire the part**. The full
@@ -117,9 +121,9 @@ list is in the [block catalog](../block-catalog.md).
 When something is wrong, the status bar explains **what is wrong** and **how to fix it**, and the block
 concerned is highlighted in the workspace. For example:
 
-- "Your program does not start anywhere." → add *when the program starts* and attach your blocks below it;
-- "A condition is missing in the "if … then" block." → drag a hexagonal block into the empty slot;
-- "Pin 7 of the Arduino Uno board cannot do "PWM output"." → choose one of the pins offered (those marked with
+- "Your program does not start anywhere." -> add *when the program starts* and attach your blocks below it;
+- "A condition is missing in the "if ... then" block." -> drag a hexagonal block into the empty slot;
+- "Pin 7 of the Arduino Uno board cannot do "PWM output"." -> choose one of the pins offered (those marked with
   a `~` on the board).
 
 ## 7. Live mode
@@ -130,7 +134,12 @@ see the effect of a change at once, without uploading:
 - the running scripts **glow**;
 - the right panel shows the **variables** and the **sensors** read by the blocks, with a graph of the
   last 30 seconds;
-- change a block (a number, a pin, an added block…): the board follows immediately.
+- change a block (a number, a pin, an added block...): the board follows immediately.
+
+**Program output**: what your program writes (the *write ... to the serial monitor* block, `print()` in
+Python or JavaScript) shows in the serial monitor panel, which opens by itself at the first line. To debug,
+`printError()` (and `console.error()` in JavaScript) writes in red, on the error output; the error that
+stops a program also stays there, with its line, after the stop.
 
 The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
 computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
@@ -139,7 +148,7 @@ off. For the board to work on its own, without the computer, use **Upload**.
 ## 8. Serial monitor
 
 The **Serial monitor** button opens a panel showing what the board writes with the block
-*write … to the serial monitor*. Upload your program, then click **Connect** (speed 9600). A line typed at
+*write ... to the serial monitor*. Upload your program, then click **Connect** (speed 9600). A line typed at
 the bottom is sent to the board. During an upload the monitor pauses, then reconnects. In Live mode the
 panel shows what the blocks write.
 
@@ -149,7 +158,7 @@ The **Wiring diagram** button shows how to wire the parts **used by your blocks*
 
 - **Wiring diagram**: the board, a breadboard and the parts, with one coloured wire per connection
   (wheel or double-click to zoom, drag to move around, *Save the image* to print it);
-- **Components to wire**: the same wiring as a table — each leg of each part, the board pin it goes to
+- **Components to wire**: the same wiring as a table - each leg of each part, the board pin it goes to
   and what to put in between (for example the 220 Ω resistor of an LED); *Show the blocks* highlights the
   blocks concerned;
 - **Example layout** (for an example): the hand-drawn layout.
@@ -164,20 +173,20 @@ Breadboard reminders: the 5 holes of a column (a to e, or f to j) are joined; th
 
 ### Variables
 
-A variable is a box that remembers a value (a score, a distance…). In the *Variables* category, click
-**Make a variable** and give it a name. Then use *set … to …*, *change … by …* and the round block
+A variable is a box that remembers a value (a score, a distance...). In the *Variables* category, click
+**Make a variable** and give it a name. Then use *set ... to ...*, *change ... by ...* and the round block
 bearing its name. In Live mode its value shows on the right.
 
 ### Functions
 
 A function gives a name to a group of blocks to reuse it (like Scratch's "My Blocks"). In the
-*Functions* category, click **Make a function**, attach blocks under **define …**, then use **call …** as
+*Functions* category, click **Make a function**, attach blocks under **define ...**, then use **call ...** as
 many times as you like. A function does not run on its own at start-up, and it cannot call itself.
 Right-click *define* to rename or delete it. Example: the [traffic light](tutorials/02-traffic-light.md).
 
 ### My blocks
 
-To keep a group of blocks **for all your projects**: right-click its first block → **Save to My
+To keep a group of blocks **for all your projects**: right-click its first block -> **Save to My
 blocks** (the blocks attached below are kept too). The group appears in the *My blocks* category: click
 it to add it to your project. **Manage my blocks** renames, deletes, **exports** (a `.s2ablocks` file)
 and **imports** them on another computer.
@@ -193,13 +202,20 @@ blocks: they become new blocks.
    functions): change it or replace it. The editor colours the code and suggests completions (language
    words, Arduino functions, names already written).
 3. Go back to the **Blocks** view: the **My code** category holds a block per function (with slots for its
-   numbers), a block for a function's result, and blocks to read or change each variable.
+   numbers), a block for a function's result, and blocks to read or change each variable (numbers, and
+   `String` texts in C++). A constant, or a variable your code changes itself in one of its functions (its
+   state, like `lampe` of a switch), only has a block to read it: a block changing it would disturb your
+   code.
 
 - In **C++**, your code is compiled with the blocks: *Check* and *Upload* work as usual.
 - In **Python** or **JavaScript**, your code runs on the computer, with the **Live** button (with the
-  Arduino functions `digitalWrite`, `analogRead`, `delay`…).
+  Arduino functions `digitalWrite`, `analogRead`, `delay`...).
 - Errors in your code show on their line, only when you click *Check*, *Upload* or *Live*. *Delete my
   code* (in the tab) removes it from the project.
+- **Change language**: choose another language for "My code" (or for the program in expert mode) and
+  your code is **converted**: C++, Python and JavaScript in every direction. Variables, functions,
+  if / else, loops and the Arduino functions are translated; what the conversion cannot translate stays as
+  comments, and the message tells which lines to finish by hand.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
   JavaScript*); *Language help* lists the available functions.
 
@@ -207,7 +223,7 @@ blocks: they become new blocks.
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).
   Some examples come in several versions, to choose on the card: other parts (I2C or 16-pin screen), or
-  another level — **Beginner** (blocks only) or **Advanced** (with "My code"). An opened example is a
+  another level - **Beginner** (blocks only) or **Advanced** (with "My code"). An opened example is a
   copy: save it to keep your changes.
 - **Save** (Ctrl+S) writes a **`.s2a`** file, stored by default in `Documents/Scratch2Arduino`. That file
   holds the whole project: it is what you send to someone, copy to a USB stick or hand in to your teacher.
@@ -223,10 +239,10 @@ An ESP32 or ESP8266 board can be driven in Live mode **without a cable**:
 
 - **Wi-Fi** (ESP32, ESP8266): start Live mode once over the USB cable. The board then creates its own
   **S2A-xxxx** network (password `scratch2arduino`): connect the computer to it and choose the port
-  **Wi-Fi — the board's network**. The **Wi-Fi** button can also make it join the home or school network
+  **Wi-Fi - the board's network**. The **Wi-Fi** button can also make it join the home or school network
   (the computer then keeps its Internet).
-- **Bluetooth** (ESP32): start Live mode once over the USB cable, then **Bluetooth** button → **Look for
-  boards** → choose your "S2A-…" board. On a Mac, first connect "S2A-…" in *System Settings › Bluetooth*.
+- **Bluetooth** (ESP32): start Live mode once over the USB cable, then **Bluetooth** button -> **Look for
+  boards** -> choose your "S2A-..." board. On a Mac, first connect "S2A-..." in *System Settings > Bluetooth*.
 - **Phone** (ESP32): the *Phone* blocks exchange messages with a Bluetooth terminal app on the phone
   (for example "Serial Bluetooth Terminal" on Android). See the [remote robot](tutorials/08-remote-robot.md).
 
@@ -251,10 +267,10 @@ While typing in a slot (a number, a text, the project name), these keys act on t
 |---|---|
 | The port list is empty | Click *Look for plugged-in boards*. Try another cable (some carry no data) or another USB port. On Linux, check the `dialout` group ([install](#1-install-scratch2arduino)). "Compatible" boards with a CH340 chip sometimes need a driver on Windows and macOS. |
 | "The board's port cannot be used" | Another program uses the board: close the Arduino IDE or another serial monitor, then try again. |
-| "The board does not answer" | Unplug the board, plug it back in, choose its port again, then try again. Check that the right board is chosen (Uno, Nano…). |
+| "The board does not answer" | Unplug the board, plug it back in, choose its port again, then try again. Check that the right board is chosen (Uno, Nano...). |
 | The first upload is slow | Normal: the board's tools are downloaded once (Internet needed). |
-| The program is sent but nothing happens | Open the *Wiring diagram* and compare it with your circuit: an LED the wrong way round (long leg = +), a wire in the wrong breadboard column, a missing GND… |
-| An LED does not light | It may be the wrong way round, or without a resistor (it may have burnt out). Try it with the block *set pin … to HIGH* alone. |
+| The program is sent but nothing happens | Open the *Wiring diagram* and compare it with your circuit: an LED the wrong way round (long leg = +), a wire in the wrong breadboard column, a missing GND... |
+| An LED does not light | It may be the wrong way round, or without a resistor (it may have burnt out). Try it with the block *set pin ... to HIGH* alone. |
 | The buzzer plays only one sound | Use a **passive** buzzer to play notes; an active buzzer only makes one sound. |
 | The LCD screen stays blank | Turn the small contrast potentiometer (on the back of the I2C module, or the one wired to V0 for a 16-pin screen). |
 | "Oops, the editor stopped" | Click *Start again*: your saved projects are not touched. If it happens again, send the details shown to the developers (see [contributing](../../CONTRIBUTING.md)). |

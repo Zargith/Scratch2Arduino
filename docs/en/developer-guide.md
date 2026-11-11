@@ -23,7 +23,7 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
   `frontend/src/bridge.ts`). Long tasks run on worker threads and answer the promise when done.
 - **`core/`** (`s2a_core`, C++17, no GUI) holds everything else and is unit-tested with GoogleTest.
 - **`tools/s2a-cli/`** exposes the core on the command line (`generate`, `compile`, `upload`, `live`,
-  `wiring`, `ports`, `setup`…): handy to test without the GUI.
+  `wiring`, `ports`, `setup`...): handy to test without the GUI.
 - **`firmware/s2a_live/`** is the Arduino sketch used by Live mode.
 
 ### Core modules (`core/include/s2a`, `core/src`)
@@ -34,8 +34,8 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
 | `blocks` | Loads `blocks/catalog/*.json` (the block catalog) |
 | `boards` | Loads `resources/boards/*.json` (pins, capabilities, FQBN, drawing) |
 | `validator` | Rules run **only** on Check / Upload / Live; returns localized problems tied to block ids |
-| `codegen` | Block tree → Arduino C++ sketch (`.ino`) |
-| `build` | Check / Upload pipeline: validate → generate → compile → upload |
+| `codegen` | Block tree -> Arduino C++ sketch (`.ino`) |
+| `build` | Check / Upload pipeline: validate -> generate -> compile -> upload |
 | `arduino_cli` | Wrapper around the bundled `arduino-cli`; `requiredLibraries` installs libraries from the `#include`s |
 | `diagnostics` | Turns compiler / uploader output into friendly messages, mapped back to blocks |
 | `live` | `LiveLink` (protocol client), `Interpreter` (runs the blocks on the computer), `Session` |
@@ -44,10 +44,10 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
 | `userdata` | Recent projects, autosave, "My blocks" library |
 | `i18n`, `resources` | `resources/i18n/{fr,en}.json` messages; locating the resource folder |
 
-### What happens on…
+### What happens on...
 
 - **Check**: the frontend converts the workspace (`frontend/src/project/convert.ts`) and calls
-  `s2a_build` → `build` runs the `validator`; on problems they come back with block ids (highlighted by
+  `s2a_build` -> `build` runs the `validator`; on problems they come back with block ids (highlighted by
   the editor); otherwise `codegen` writes the sketch and `arduino_cli` compiles it; compiler errors go
   through `diagnostics`.
 - **Upload**: the same, then `arduino-cli upload` to the chosen port (`s2a_upload`).
@@ -84,7 +84,7 @@ The catalog format and its rules are described in [docs/block-catalog.md](../blo
 3. **Live mode**: handle it in the `Interpreter` (`core/src/live.cpp`). If the board needs a new command,
    add it to `firmware/s2a_live/s2a_live.ino` (document it in the header comment), to `LiveLink`, and
    change `kHello` (`core/include/s2a/live.hpp`) so that older firmware is uploaded again.
-4. **Validation**: if it can be misused (missing input, pin without the capability…), add a rule in
+4. **Validation**: if it can be misused (missing input, pin without the capability...), add a rule in
    `core/src/validator.cpp` with French and English messages + hint in `resources/i18n/*.json`, and a
    test in `core/tests/test_validator.cpp`.
 5. **Libraries**: when the generated code includes an Arduino library, add its header to
@@ -98,9 +98,9 @@ The editor needs no change: the palette, the menus and the tooltips are built fr
 ### Add a component (for the wiring diagram)
 
 1. Describe it in `resources/components.json`: `name`, the `current` it draws (mA, for the USB power
-   warning), its `connections` — each leg (`pin` text, `to` = an argument name of the block such as
-   `PIN` or `TRIG_PIN`, or `5V`, `VCC` (the board voltage), `GND`, `SDA`, `SCL` — an optional `via` part such as a resistor, and a
-   `short` label for the drawing) — and an optional `note`.
+   warning), its `connections` - each leg (`pin` text, `to` = an argument name of the block such as
+   `PIN` or `TRIG_PIN`, or `5V`, `VCC` (the board voltage), `GND`, `SDA`, `SCL` - an optional `via` part such as a resistor, and a
+   `short` label for the drawing) - and an optional `note`.
 2. Set `"component": "<id>"` on the catalog blocks that use it.
 3. Check the drawing: `s2a-cli wiring <project.json> --svg out.svg`; extend `core/src/wiring_svg.cpp` if
    the part needs its own picture, and add tests in `core/tests/test_wiring.cpp`.

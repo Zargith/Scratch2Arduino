@@ -1,11 +1,11 @@
-# Tutorial 2 — Traffic light
+# Tutorial 2 - Traffic light
 
 **Goal**: a traffic light: green 3 seconds, orange 1 second, red 3 seconds, forever.
-**Time**: 45 minutes. **Parts**: Uno board, breadboard, 3 LEDs (red, orange, green), 3 × 220 Ω resistors
+**Time**: 45 minutes. **Parts**: Uno board, breadboard, 3 LEDs (red, orange, green), 3 x 220 Ω resistors
 (red-red-brown), 5 wires.
 **You will learn**: wiring an LED, a sequence of actions, functions.
 
-*Français : [../../fr/tutorials/02-traffic-light.md](../../fr/tutorials/02-traffic-light.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. The circuit
 
@@ -19,7 +19,7 @@ Board **unplugged**:
    resistor, the LED gets too much current and burns out.
 3. Wire the board's **5V** to the **+** row (red) and **GND** to the **−** row (blue), then each short leg
    to the − row.
-4. Wires from the board: red LED → pin **12**, orange → **11**, green → **10**.
+4. Wires from the board: red LED -> pin **12**, orange -> **11**, green -> **10**.
 
 > On the breadboard, the 5 holes of a column (a to e, or f to j) are joined together.
 
@@ -32,7 +32,7 @@ when the program starts
 set pin 12 to HIGH
 ```
 
-The **set pin … to …** block is in the **Pins** category. Choose pin **12** in its menu. **HIGH** = 5 volts
+The **set pin ... to ...** block is in the **Pins** category. Choose pin **12** in its menu. **HIGH** = 5 volts
 on the pin: the LED lights up. **LOW** = 0 volts: it goes off. Click **Live**: the red LED lights up. Try
 pins 11 and 10. If an LED stays off, turn it round.
 
@@ -57,7 +57,7 @@ forever
     wait 3 seconds
 ```
 
-Tip: **right-click → Duplicate** a block to copy it with the blocks below it. Try it in **Live**, then
+Tip: **right-click -> Duplicate** a block to copy it with the blocks below it. Try it in **Live**, then
 **Upload**.
 
 ## 4. Tidy up with functions
@@ -65,7 +65,7 @@ Tip: **right-click → Duplicate** a block to copy it with the blocks below it. 
 The program is long and the three colours are hard to see. A **function** gives a name to a group of
 blocks:
 
-1. **Functions** category → **Make a function** → name it `green light`.
+1. **Functions** category -> **Make a function** -> name it `green light`.
 2. A **define green light** block appears: attach below it the three blocks that light the green.
 3. Do the same for `orange light` and `red light`.
 4. The main program becomes:
@@ -82,7 +82,7 @@ forever
 ```
 
 The program reads like a sentence! A function only runs when it is **called**.
-To compare, open the example: **New → Traffic light** (its functions have French names: *feu vert*, *feu orange*, *feu rouge*).
+To compare, open the example: **New -> Traffic light** (its functions have French names: *feu vert*, *feu orange*, *feu rouge*).
 
 ## Advanced version: with code
 
@@ -100,4 +100,4 @@ Choose **Advanced: C++** in the gallery: one C++ function, `feux(rouge, orange, 
 - No LED lights up: check the GND wire and the − row of the breadboard.
 - Open **Wiring diagram**: it draws the circuit matching **your** blocks.
 
-**Next**: [Tutorial 3 — Button and LED](03-button-led.md)
+**Next**: [Tutorial 3 - Button and LED](03-button-led.md)

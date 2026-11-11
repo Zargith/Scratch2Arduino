@@ -39,21 +39,37 @@ if (-not $BuildDir) { $BuildDir = Join-Path $InstallDir 'build' }
 if (-not $LogFile) { $LogFile = Join-Path $InstallDir 'install-log.txt' }
 New-Item -ItemType Directory -Force -Path (Split-Path $LogFile) | Out-Null
 
-# Appends a line to the log (or starts it again). Another program may be reading the log at
-# that moment (the CI shows it while the installer runs): retry for a short while.
-function Write-Log([string]$Line, [switch]$Reset) {
-    for ($attempt = 1; ; $attempt++) {
+# The log stays open for the whole run, shared: the CI shows it (and the installer reads it after a
+# failure) while it is written. Opening the file again for each line made writes collide with those
+# readers. A line that cannot be written is dropped: the log never stops an installation.
+$script:LogWriter = $null
+
+function Open-Log([switch]$Reset) {
+    if ($script:LogWriter) {
+        try { $script:LogWriter.Dispose() } catch { }
+        $script:LogWriter = $null
+    }
+    $mode = if ($Reset) { [IO.FileMode]::Create } else { [IO.FileMode]::Append }
+    $share = [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
+    for ($attempt = 1; $attempt -le 40; $attempt++) {
         try {
-            if ($Reset) {
-                Set-Content -Path $LogFile -Value $Line -Encoding UTF8 -ErrorAction Stop
-            } else {
-                Add-Content -Path $LogFile -Value $Line -Encoding UTF8 -ErrorAction Stop
-            }
+            $stream = New-Object IO.FileStream($LogFile, $mode, [IO.FileAccess]::Write, $share)
+            $script:LogWriter = New-Object IO.StreamWriter($stream, (New-Object Text.UTF8Encoding($false)))
+            $script:LogWriter.AutoFlush = $true
             return
         } catch {
-            if ($attempt -ge 40) { throw }
             Start-Sleep -Milliseconds 50
         }
+    }
+}
+
+# Appends a line to the log (or starts it again). Never throws.
+function Write-Log([string]$Line, [switch]$Reset) {
+    try {
+        if ($Reset -or -not $script:LogWriter) { Open-Log -Reset:$Reset }
+        if ($script:LogWriter) { $script:LogWriter.WriteLine($Line) }
+    } catch {
+        # A lost log line is not worth a failed installation.
     }
 }
 
@@ -94,7 +110,7 @@ function Update-SessionPath {
 
 function Install-WithWinget([string]$Id, [string[]]$Extra = @()) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Fail "winget est introuvable : installe « $Id » manuellement puis relance l'installation." `
+        Fail "winget est introuvable : installe "$Id" manuellement puis relance l'installation." `
              "winget not found: install '$Id' manually, then run the installer again."
     }
     Say "Installation de $Id..." "Installing $Id..."

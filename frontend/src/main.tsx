@@ -1,4 +1,5 @@
 import "@mantine/core/styles.css";
+import "@/theme/dark.css";
 
 import { MantineProvider } from "@mantine/core";
 import { StrictMode } from "react";
@@ -13,7 +14,7 @@ if (!root) throw new Error("index.html has no #root element");
 
 createRoot(root).render(
 	<StrictMode>
-		<MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="light">
+		<MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
 			<ErrorBoundary>{(attempt) => <App key={attempt} />}</ErrorBoundary>
 		</MantineProvider>
 	</StrictMode>

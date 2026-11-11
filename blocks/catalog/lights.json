@@ -358,8 +358,8 @@
         "en": "show %4 on the LED matrix (DIN %1, CLK %2, CS %3)"
       },
       "tooltip": {
-        "fr": "Dessine une image sur une matrice de 8×8 LED. Matrice 8×8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
-        "en": "Draws a picture on an 8×8 LED matrix. 8×8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
+        "fr": "Dessine une image sur une matrice de 8x8 LED. Matrice 8x8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
+        "en": "Draws a picture on an 8x8 LED matrix. 8x8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
       },
       "args": [
         {
@@ -475,8 +475,8 @@
         "en": "turn %6 the dot x %4 y %5 of the LED matrix (DIN %1, CLK %2, CS %3)"
       },
       "tooltip": {
-        "fr": "Allume ou éteint un seul point : x va de 1 (à gauche) à 8 (à droite), y de 1 (en haut) à 8 (en bas). Matrice 8×8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
-        "en": "Turns one dot on or off: x goes from 1 (left) to 8 (right), y from 1 (top) to 8 (bottom). 8×8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
+        "fr": "Allume ou éteint un seul point : x va de 1 (à gauche) à 8 (à droite), y de 1 (en haut) à 8 (en bas). Matrice 8x8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
+        "en": "Turns one dot on or off: x goes from 1 (left) to 8 (right), y from 1 (top) to 8 (bottom). 8x8 matrix with a MAX7219 chip: VCC to 5V, GND to GND, DIN, CS and CLK to the chosen pins."
       },
       "args": [
         {

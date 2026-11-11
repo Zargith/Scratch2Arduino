@@ -42,6 +42,20 @@ struct SavedBlocks {
 /// a library at all is an error.
 [[nodiscard]] Result<std::vector<SavedBlocks>> libraryFromJson(std::string_view json);
 
+/// The user's preferences (the Settings window of the editor).
+struct Settings {
+    /// "fr" or "en"; empty: the language of the system.
+    std::string language;
+    /// Look for a newer release of Scratch2Arduino in the background at start-up.
+    bool checkUpdates = true;
+    /// "light" or "dark"; empty: the one of the system.
+    std::string theme;
+};
+
+inline bool operator==(const Settings& a, const Settings& b) {
+    return a.language == b.language && a.checkUpdates == b.checkUpdates && a.theme == b.theme;
+}
+
 /// The user's data in one folder. Every reader tolerates missing or damaged files (it
 /// behaves as if they were empty): this data is a convenience, never a reason to fail.
 class Store {
@@ -107,6 +121,14 @@ public:
     /// Adds the groups of a .s2ablocks file to the library (new ids, a name already used gets
     /// " (2)", " (3)"...). Returns how many groups were added.
     [[nodiscard]] Result<std::size_t> importLibrary(const std::filesystem::path& file);
+
+    // --- Settings --------------------------------------------------------------------
+
+    /// The saved settings; the defaults when there are none, or for a value that is not valid.
+    [[nodiscard]] Settings settings() const;
+
+    /// Saves the settings (settings.json). An unknown language is saved as "" (the system's).
+    [[nodiscard]] Status saveSettings(const Settings& settings) const;
 
 private:
     [[nodiscard]] Status writeLibrary(const std::vector<SavedBlocks>& groups) const;

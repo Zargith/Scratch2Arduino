@@ -1,10 +1,10 @@
-# Tutorial 4 — Potentiometer and servo
+# Tutorial 4 - Potentiometer and servo
 
 **Goal**: turning a knob (potentiometer) turns the arm of a servo motor.
 **Time**: 45 minutes. **Parts**: Uno board, breadboard, 10 kΩ potentiometer, SG90 servo, wires.
 **You will learn**: an analog input (a value, not just yes/no), variables, mapping a range of values.
 
-*Français : [../../fr/tutorials/04-servo-potentiometer.md](../../fr/tutorials/04-servo-potentiometer.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. The circuit
 
@@ -13,7 +13,7 @@
 Board **unplugged**:
 
 1. **Potentiometer**: one outer leg to **5V**, the other to **GND**, the **middle** leg to pin **A0**.
-2. **Servo**: brown wire → GND, red wire → 5V, orange wire (signal) → pin **9**.
+2. **Servo**: brown wire -> GND, red wire -> 5V, orange wire (signal) -> pin **9**.
 
 ## 2. Read the potentiometer
 
@@ -33,7 +33,7 @@ Start **Live** and turn the knob: the value shows on the right with a **graph**.
 ## 3. Drive the servo
 
 A servo goes to the angle it is given, from **0 to 180 degrees**. But the potentiometer gives 0 to 100:
-the value must be **mapped**. The **map … from 0 – 100 to 0 – 180** block (**Operators** category) does
+the value must be **mapped**. The **map ... from 0 - 100 to 0 - 180** block (**Operators** category) does
 the rule of three: 50 becomes 90, 100 becomes 180.
 
 1. Make a variable `angle` (**Variables** category).
@@ -42,7 +42,7 @@ the rule of three: 50 becomes 90, 100 becomes 180.
 ```
 when the program starts
 forever
-    set angle to map (position of the potentiometer of pin A0) from 0 – 100 to 0 – 180
+    set angle to map (position of the potentiometer of pin A0) from 0 - 100 to 0 - 180
     turn the servo of pin 9 to angle degrees
     wait 0.05 seconds
 ```
@@ -60,7 +60,7 @@ Choose **Advanced: C++** in the gallery: the `angleLisse()` function of **My cod
 ## Challenges
 
 - Keep the arm between 45 and 135 degrees.
-- Replace the servo with an LED on pin 9 and the block **set PWM output of pin 9 to …** (0 to 255): you
+- Replace the servo with an LED on pin 9 and the block **set PWM output of pin 9 to ...** (0 to 255): you
   get a light dimmer.
 - With a light sensor (photoresistor), make a needle showing the light in the room.
 
@@ -71,4 +71,4 @@ Choose **Advanced: C++** in the gallery: the `angleLisse()` function of **My cod
 - The board restarts when the servo moves: it draws too much current; use a USB port of the computer
   (not a hub), or a separate power supply for the servo.
 
-**Next**: [Tutorial 5 — Distance alarm](05-distance-alarm.md)
+**Next**: [Tutorial 5 - Distance alarm](05-distance-alarm.md)

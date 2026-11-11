@@ -513,3 +513,25 @@ TEST(Codegen, Identifiers) {
 }
 
 } // namespace
+
+// Reported by the user: a String variable of "My code" used by blocks.
+TEST(Codegen, MyCodeStringVariablesWorkInNumberAndTextSlots) {
+    const auto project = fromJson(R"json({
+      "format": "scratch2arduino-project", "formatVersion": 2, "name": "str", "board": "uno", "variables": [],
+      "scripts": [{"x": 0, "y": 0, "blocks": [
+        {"id": "s", "type": "events_when_program_starts"},
+        {"id": "set", "type": "mycode_set", "fields": {"NAME": "str"}, "inputs": {"VALUE": {"value": "5"}}},
+        {"id": "print", "type": "serial_print",
+         "inputs": {"VALUE": {"block": {"id": "g1", "type": "mycode_get", "fields": {"NAME": "str"}}}}},
+        {"id": "wait", "type": "control_wait",
+         "inputs": {"SECONDS": {"block": {"id": "g2", "type": "mycode_get", "fields": {"NAME": "str"}}}}},
+        {"id": "set2", "type": "mycode_set", "fields": {"NAME": "_f"}, "inputs": {"VALUE": {"value": "1.5"}}}]}],
+      "userCode": {"language": "cpp", "code": "String str = \"\";\nfloat _f;\n"}})json");
+    ASSERT_TRUE(project.ok());
+    const std::string code = generate(project.value()).source;
+    EXPECT_NE(code.find("str = s2a_text(5);"), std::string::npos) << code;
+    EXPECT_NE(code.find("s2a_print(str);"), std::string::npos) << code;
+    EXPECT_NE(code.find("void s2a_print(const String& value)"), std::string::npos) << code;
+    EXPECT_NE(code.find("s2a_wait(str.toFloat());"), std::string::npos) << code;
+    EXPECT_NE(code.find("_f = 1.5;"), std::string::npos) << code;
+}

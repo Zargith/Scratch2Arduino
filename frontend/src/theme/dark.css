@@ -1,0 +1,46 @@
+/* Dark theme for the block area (scratch-blocks draws it with its own light colours). The blocks
+   keep their category colours. Mantine puts data-mantine-color-scheme on <html>. */
+[data-mantine-color-scheme="dark"] .blocklyMainBackground {
+	fill: #1a1b1e !important;
+	stroke: none !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyToolbox,
+[data-mantine-color-scheme="dark"] .blocklyToolboxDiv,
+[data-mantine-color-scheme="dark"] .scratchCategoryMenu {
+	background-color: #25262b !important;
+	color: #e9ecef !important;
+	border-color: #373a40 !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyToolboxCategory,
+[data-mantine-color-scheme="dark"] .blocklyToolboxCategoryLabel,
+[data-mantine-color-scheme="dark"] .scratchCategoryMenuItem,
+[data-mantine-color-scheme="dark"] .scratchCategoryMenuItemLabel {
+	color: #e9ecef !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyToolboxSelected,
+[data-mantine-color-scheme="dark"] .scratchCategoryMenuItem.categorySelected {
+	background-color: #373a40 !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyFlyoutBackground {
+	fill: #2c2e33 !important;
+	fill-opacity: 1 !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyFlyoutLabelText,
+[data-mantine-color-scheme="dark"] .blocklyFlyoutButton .blocklyText {
+	fill: #e9ecef !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyFlyoutButtonBackground,
+[data-mantine-color-scheme="dark"] .blocklyFlyoutButton rect {
+	fill: #373a40 !important;
+	stroke: #5c5f66 !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyScrollbarHandle {
+	fill: #5c5f66 !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyScrollbarBackground {
+	fill: transparent !important;
+}
+[data-mantine-color-scheme="dark"] .blocklyZoom > image,
+[data-mantine-color-scheme="dark"] .blocklyTrash > image {
+	filter: invert(0.85);
+}

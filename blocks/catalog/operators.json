@@ -24,14 +24,14 @@
     {
       "type": "operators_multiply",
       "shape": "reporter",
-      "message": { "fr": "%1 × %2", "en": "%1 × %2" },
+      "message": { "fr": "%1 * %2", "en": "%1 * %2" },
       "tooltip": { "fr": "Multiplie deux nombres.", "en": "Multiplies two numbers." },
       "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
     },
     {
       "type": "operators_divide",
       "shape": "reporter",
-      "message": { "fr": "%1 ÷ %2", "en": "%1 ÷ %2" },
+      "message": { "fr": "%1 / %2", "en": "%1 / %2" },
       "tooltip": { "fr": "Divise le premier nombre par le second.", "en": "Divides the first number by the second." },
       "args": [{ "name": "NUM1", "kind": "number" }, { "name": "NUM2", "kind": "number" }]
     },
@@ -48,8 +48,8 @@
     {
       "type": "operators_map",
       "shape": "reporter",
-      "message": { "fr": "convertir %1 de %2 – %3 vers %4 – %5", "en": "map %1 from %2 – %3 to %4 – %5" },
-      "tooltip": { "fr": "Change l'échelle d'une valeur, par exemple 0–1023 (potentiomètre) vers 0–180 (servomoteur).", "en": "Rescales a value, for example 0–1023 (potentiometer) to 0–180 (servo)." },
+      "message": { "fr": "convertir %1 de %2 à %3 vers %4 à %5", "en": "map %1 from %2 to %3 into %4 to %5" },
+      "tooltip": { "fr": "Change l'échelle d'une valeur, par exemple 0-1023 (potentiomètre) vers 0-180 (servomoteur).", "en": "Rescales a value, for example 0-1023 (potentiometer) to 0-180 (servo)." },
       "args": [
         { "name": "VALUE", "kind": "number" },
         { "name": "FROM_LOW", "kind": "number", "default": 0 },

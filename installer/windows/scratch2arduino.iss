@@ -11,7 +11,7 @@
 
 #define AppName "Scratch2Arduino"
 #ifndef AppVersion
-  #define AppVersion "0.9.0"
+  #define AppVersion "0.10.0"
 #endif
 #define SourceRoot "..\.."
 
@@ -62,7 +62,7 @@ french.Updating=Mise à jour de Scratch2Arduino (seules les modifications sont r
 english.Updating=Updating Scratch2Arduino (only the changes are recompiled)...
 french.BuildFailed=La compilation de Scratch2Arduino a échoué.%n%nConsulte le journal :%n%1
 english.BuildFailed=Building Scratch2Arduino failed.%n%nSee the log:%n%1
-french.AppRunning=Scratch2Arduino est ouvert.%n%nEnregistre ton projet, ferme Scratch2Arduino, puis clique sur « Réessayer ».
+french.AppRunning=Scratch2Arduino est ouvert.%n%nEnregistre ton projet, ferme Scratch2Arduino, puis clique sur "Réessayer\".
 english.AppRunning=Scratch2Arduino is open.%n%nSave your project, close Scratch2Arduino, then click "Retry".
 french.AppRunningCancelled=Installation annulée : Scratch2Arduino est encore ouvert.
 english.AppRunningCancelled=Setup cancelled: Scratch2Arduino is still open.

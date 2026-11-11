@@ -255,3 +255,34 @@ TEST(UserData, DefaultDirectoryIsNamedAfterTheProgram) {
 }
 
 } // namespace
+
+TEST(UserData, SettingsHaveDefaultsAndAreSaved) {
+    const TempDir dir;
+    const Store store(dir.path() / "data");
+    const s2a::userdata::Settings defaults = store.settings();
+    EXPECT_EQ(defaults.language, "");
+    EXPECT_TRUE(defaults.checkUpdates);
+
+    s2a::userdata::Settings chosen;
+    chosen.language = "en";
+    chosen.checkUpdates = false;
+    chosen.theme = "dark";
+    ASSERT_TRUE(store.saveSettings(chosen).ok());
+    EXPECT_EQ(store.settings(), chosen);
+
+    chosen.language = "klingon"; // not a language of the application: the system's is used
+    chosen.theme = "pink";       // nor a theme
+    ASSERT_TRUE(store.saveSettings(chosen).ok());
+    EXPECT_EQ(store.settings().language, "");
+    EXPECT_EQ(store.settings().theme, "");
+}
+
+TEST(UserData, DamagedSettingsGiveTheDefaults) {
+    const TempDir dir;
+    fs::create_directories(dir.path());
+    std::ofstream(dir.path() / "settings.json") << R"({"language": 3, "checkUpdates": "no"})";
+    const Store store(dir.path());
+    EXPECT_EQ(store.settings(), s2a::userdata::Settings{});
+    std::ofstream(dir.path() / "settings.json") << "not json";
+    EXPECT_EQ(store.settings(), s2a::userdata::Settings{});
+}

@@ -1,10 +1,10 @@
-# Tutorial 1 — Blink
+# Tutorial 1 - Blink
 
 **Goal**: make the small LED soldered on the board blink.
 **Time**: 20 minutes. **Parts**: an Arduino Uno board (or Nano, Mega) and its USB cable. Nothing to wire!
 **You will learn**: the start block, an output, waiting, forever, uploading, Live mode.
 
-*Français : [../../fr/tutorials/01-blink.md](../../fr/tutorials/01-blink.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. Get the board ready
 
@@ -70,7 +70,7 @@ Click **Save** (or Ctrl+S) and name the file: it is stored in `Documents/Scratch
 
 ## Advanced version: with code
 
-In the gallery (**New → Blink**), choose **Advanced: Python (Live)**: the `sos()` function, written in Python in the **My code** tab (**Code** view), blinks SOS in Morse code. It becomes a **sos** block in the **My code** category. Python runs on the computer: start it with **Live**. Read the code: can you spot the *turn on*, *wait* and *repeat* blocks?
+In the gallery (**New -> Blink**), choose **Advanced: Python (Live)**: the `sos()` function, written in Python in the **My code** tab (**Code** view), blinks SOS in Morse code. It becomes a **sos** block in the **My code** category. Python runs on the computer: start it with **Live**. Read the code: can you spot the *turn on*, *wait* and *repeat* blocks?
 
 ## Challenges
 
@@ -84,4 +84,4 @@ In the gallery (**New → Blink**), choose **Advanced: Python (Live)**: the `sos
 - The port list stays empty: try another USB cable (some only charge).
 - See also [Troubleshooting](../guide.md#15-troubleshooting).
 
-**Next**: [Tutorial 2 — Traffic light](02-traffic-light.md)
+**Next**: [Tutorial 2 - Traffic light](02-traffic-light.md)

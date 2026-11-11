@@ -12,7 +12,7 @@
       "shape": "statement",
       "message": { "fr": "%1 %2 %3 %4 %5", "en": "%1 %2 %3 %4 %5" },
       "tooltip": {
-        "fr": "Exécute une fonction écrite dans « Mon code », avec les nombres donnés.",
+        "fr": "Exécute une fonction écrite dans \"Mon code\", avec les nombres donnés.",
         "en": "Runs a function written in \"My code\", with the numbers given."
       },
       "args": [
@@ -28,7 +28,7 @@
       "shape": "reporter",
       "message": { "fr": "%1 %2 %3 %4 %5", "en": "%1 %2 %3 %4 %5" },
       "tooltip": {
-        "fr": "Le résultat d'une fonction écrite dans « Mon code ».",
+        "fr": "Le résultat d'une fonction écrite dans \"Mon code\".",
         "en": "The result of a function written in \"My code\"."
       },
       "args": [
@@ -44,7 +44,7 @@
       "shape": "reporter",
       "message": { "fr": "%1", "en": "%1" },
       "tooltip": {
-        "fr": "La valeur d'une variable de « Mon code ».",
+        "fr": "La valeur d'une variable de \"Mon code\".",
         "en": "The value of a variable of \"My code\"."
       },
       "args": [{ "name": "NAME", "kind": "usercode" }]
@@ -54,7 +54,7 @@
       "shape": "statement",
       "message": { "fr": "mettre %1 à %2", "en": "set %1 to %2" },
       "tooltip": {
-        "fr": "Donne une nouvelle valeur à une variable de « Mon code ».",
+        "fr": "Donne une nouvelle valeur à une variable de \"Mon code\".",
         "en": "Gives a new value to a variable of \"My code\"."
       },
       "args": [

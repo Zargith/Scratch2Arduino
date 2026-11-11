@@ -11,14 +11,14 @@ When run, the installer:
 
 1. asks for the language (French by default, English); when Scratch2Arduino is already installed, it says so
    and updates that installation in place;
-2. if Scratch2Arduino is open, asks to save the project and close it (Retry / Cancel) — the same before
+2. if Scratch2Arduino is open, asks to save the project and close it (Retry / Cancel) - the same before
    uninstalling; the program declares the `Scratch2ArduinoRunning` mutex, older versions are found by their
    process name;
 3. unpacks the sources into `<install dir>\staging`;
 4. runs [`build-and-install.ps1`](build-and-install.ps1) without a console window: its output is shown in the
    installer window, under the progress bar (the current step above it). The script
    - installs only the missing prerequisites with `winget` (CMake, Visual Studio 2022 Build Tools with the
-     C++ workload, the WebView2 runtime) — those already present are kept;
+     C++ workload, the WebView2 runtime) - those already present are kept;
    - copies into `<install dir>\src` only the source files whose content changed;
    - runs CMake configure, build and install, reusing the build tree kept in `<install dir>\build`, so an
      update recompiles only what changed (if that tree cannot be reused, it rebuilds everything);

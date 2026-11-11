@@ -58,7 +58,7 @@ TEST(DiagnoseCompile, MissingLibrary) {
         failedCompile("/s/bad/bad.ino:1:10: fatal error: Servo.h: No such file or directory\n #include <Servo.h>\n"));
     EXPECT_EQ(diagnosis.problem, Problem::LibraryMissing);
     EXPECT_EQ(describe(diagnosis, Language::French),
-              "Le programme utilise la bibliothèque « Servo », qui n'est pas installée.");
+              "Le programme utilise la bibliothèque \"Servo\", qui n'est pas installée.");
     EXPECT_EQ(describe(diagnosis, Language::English), "The program uses the \"Servo\" library, which is not installed.");
 }
 
@@ -183,7 +183,7 @@ TEST(ExplainCompilerMessage, ExplainsCommonMistakesOfTypedCode) {
     const auto explain = [](std::string text, s2a::Language language) {
         return explainCompilerMessage(CompilerMessage{"a.ino", 1, 1, "error", std::move(text)}, language);
     };
-    EXPECT_EQ(explain("'led' was not declared in this scope", s2a::Language::French).find("« led » est inconnu"), 0U);
+    EXPECT_EQ(explain("'led' was not declared in this scope", s2a::Language::French).find("\"led\" est inconnu"), 0U);
     EXPECT_NE(explain("\xe2\x80\x98led\xe2\x80\x99 was not declared in this scope", s2a::Language::English).find("\"led\""),
               std::string::npos);
     EXPECT_NE(explain("expected ';' before '}' token", s2a::Language::English).find("\";\" is missing"), std::string::npos);

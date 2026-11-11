@@ -1151,12 +1151,7 @@ void Session::run(project::Project project) {
             snapshot_.variables = interpreter->variables();
             snapshot_.readings = interpreter->readings();
             for (std::string& line : interpreter->takeOutput()) {
-                snapshot_.output.push_back(std::move(line));
-                ++snapshot_.outputCount;
-            }
-            if (snapshot_.output.size() > kOutputLines) {
-                snapshot_.output.erase(snapshot_.output.begin(),
-                                       snapshot_.output.end() - static_cast<std::ptrdiff_t>(kOutputLines));
+                addOutput(std::move(line), false);
             }
         }
         if (interpreter->finished()) {
@@ -1196,11 +1191,11 @@ script::Host Session::scriptHost(LiveLink& link, std::optional<Error>& linkError
     host.stop = &stopping_;
     host.print = [this](const std::string& line) {
         const std::lock_guard<std::mutex> lock(mutex_);
-        snapshot_.output.push_back(line);
-        ++snapshot_.outputCount;
-        if (snapshot_.output.size() > kOutputLines) {
-            snapshot_.output.erase(snapshot_.output.begin());
-        }
+        addOutput(line, false);
+    };
+    host.printError = [this](const std::string& line) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        addOutput(line, true);
     };
     host.reading = [this](const std::string& label, double value) {
         const std::lock_guard<std::mutex> lock(mutex_);
@@ -1225,12 +1220,32 @@ script::Host Session::scriptHost(LiveLink& link, std::optional<Error>& linkError
 }
 
 void Session::failScript(const script::ScriptError& error, const std::string& file) {
-    set(State::Failed, (file.empty() ? std::string{} : tr("text.in_user_code", language_) + " ") +
-                           script::describe(error, language_),
-        error.details);
+    const std::string message = (file.empty() ? std::string{} : tr("text.in_user_code", language_) + " ") +
+                                script::describe(error, language_);
+    set(State::Failed, message, error.details);
     const std::lock_guard<std::mutex> lock(mutex_);
     snapshot_.errorLine = error.line;
     snapshot_.errorFile = file;
+    // On the error output too, with what the interpreter said: it stays there to read after the stop.
+    addOutput(message, true);
+    if (!error.details.empty() && error.details != message) {
+        std::istringstream details(error.details);
+        std::string line;
+        while (std::getline(details, line)) {
+            if (!line.empty()) {
+                addOutput(line, true);
+            }
+        }
+    }
+}
+
+void Session::addOutput(std::string text, bool error) {
+    snapshot_.output.push_back({std::move(text), error});
+    ++snapshot_.outputCount;
+    if (snapshot_.output.size() > kOutputLines) {
+        snapshot_.output.erase(snapshot_.output.begin(),
+                               snapshot_.output.end() - static_cast<std::ptrdiff_t>(kOutputLines));
+    }
 }
 
 void Session::runScript(const project::Project& project, LiveLink& link) {

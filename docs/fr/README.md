@@ -1,6 +1,6 @@
 # Documentation de Scratch2Arduino
 
-*English: [../en/README.md](../en/README.md)*
+*To read it in English, change the language in the settings.*
 
 - **[Guide d'utilisation](guide.md)** : installer le logiciel, la fenêtre, les blocs, le mode Live, le
   câblage, les projets, le sans-fil, les raccourcis et que faire en cas de problème.
@@ -16,7 +16,7 @@ Huit projets, du plus simple au plus complet. Chacun correspond à un exemple de
 |---|---|---|---|---|
 | 1 | [Clignotant](tutorials/01-blink.md) | la carte seule | bloc de départ, sortie, attendre, répéter indéfiniment, téléverser, Live | 20 min |
 | 2 | [Feu tricolore](tutorials/02-traffic-light.md) | 3 LED, 3 résistances | brancher une LED, séquence, fonctions | 45 min |
-| 3 | [Bouton et LED](tutorials/03-button-led.md) | bouton, LED, résistance | entrée, si … alors … sinon, variable | 40 min |
+| 3 | [Bouton et LED](tutorials/03-button-led.md) | bouton, LED, résistance | entrée, si ... alors ... sinon, variable | 40 min |
 | 4 | [Potentiomètre et servomoteur](tutorials/04-servo-potentiometer.md) | potentiomètre, servo SG90 | entrée analogique, variable, convertir | 45 min |
 | 5 | [Alarme de distance](tutorials/05-distance-alarm.md) | HC-SR04, LED RGB, buzzer | capteur, seuil, durée calculée | 1 h |
 | 6 | [Thermomètre](tutorials/06-thermometer.md) | DHT11, écran LCD | capteur numérique, écran, texte et nombres | 1 h |

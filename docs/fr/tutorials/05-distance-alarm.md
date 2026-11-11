@@ -1,4 +1,4 @@
-# Tutoriel 5 — Alarme de distance
+# Tutoriel 5 - Alarme de distance
 
 **Objectif** : une LED verte quand rien n'est proche ; à moins de 20 cm, elle devient rouge et un buzzer
 bipe, de plus en plus vite quand on s'approche.
@@ -7,7 +7,7 @@ bipe, de plus en plus vite quand on s'approche.
 **Tu vas apprendre** : mesurer une distance, comparer à un seuil, utiliser une valeur pour régler une
 durée.
 
-*English: [../../en/tutorials/05-distance-alarm.md](../../en/tutorials/05-distance-alarm.md)*
+*To read it in English, change the language in the settings.*
 
 ## 1. Le montage
 
@@ -15,11 +15,11 @@ durée.
 
 | Composant | Branchement |
 |---|---|
-| HC-SR04 | VCC → 5V, Trig → **12**, Echo → **11**, Gnd → GND |
-| LED RGB | R → **9**, V → **10**, B → **6**, chacune par une résistance de 220 Ω ; patte la plus longue (−) → GND |
-| Buzzer | + → **8**, − → GND |
+| HC-SR04 | VCC -> 5V, Trig -> **12**, Echo -> **11**, Gnd -> GND |
+| LED RGB | R -> **9**, V -> **10**, B -> **6**, chacune par une résistance de 220 Ω ; patte la plus longue (−) -> GND |
+| Buzzer | + -> **8**, − -> GND |
 
-Le capteur envoie un « cri » d'ultrasons (trop aigu pour nos oreilles) et mesure le temps que met l'écho
+Le capteur envoie un "cri" d'ultrasons (trop aigu pour nos oreilles) et mesure le temps que met l'écho
 pour revenir, comme une chauve-souris.
 
 ## 2. Mesure
@@ -38,7 +38,7 @@ Lance **Live** : la distance s'affiche à droite, avec son graphique. Approche t
 
 ## 3. L'alarme
 
-On compare la distance à un **seuil** : 20 cm. Le bloc **… < …** est dans **Opérateurs**.
+On compare la distance à un **seuil** : 20 cm. Le bloc **... < ...** est dans **Opérateurs**.
 
 ```
 quand le programme démarre
@@ -47,13 +47,13 @@ répéter indéfiniment
     si distance < 20 alors
         mettre la LED RGB (R 9, V 10, B 6) en rouge
         jouer 880 Hz pendant 0.1 secondes sur le buzzer de la broche 8
-        attendre distance ÷ 100 secondes
+        attendre distance / 100 secondes
     sinon
         mettre la LED RGB (R 9, V 10, B 6) en vert
         attendre 0.1 secondes
 ```
 
-L'astuce : **attendre distance ÷ 100 secondes**. À 20 cm, la pause dure 0,2 s ; à 5 cm, 0,05 s : plus on
+L'astuce : **attendre distance / 100 secondes**. À 20 cm, la pause dure 0,2 s ; à 5 cm, 0,05 s : plus on
 est proche, plus les bips sont rapprochés, comme le radar de recul d'une voiture.
 
 Essaie en **Live** (change le seuil pendant que ça tourne !), puis **Téléverse**.
@@ -64,13 +64,13 @@ Choisis **Avancé : C++** dans la galerie : **Mon code** contient `moyenne()`, q
 
 ## Défis
 
-- Ajoute une zone orange entre 20 et 40 cm (un **si … alors … sinon** dans le *sinon*).
+- Ajoute une zone orange entre 20 et 40 cm (un **si ... alors ... sinon** dans le *sinon*).
 - Joue une note plus aiguë quand on est très proche.
-- Fais un « mètre » : écris la distance sur le moniteur série.
+- Fais un "mètre" : écris la distance sur le moniteur série.
 
 ## Si ça ne marche pas
 
 - La distance vaut toujours 0 : Trig et Echo sont peut-être inversés.
 - La LED a une mauvaise couleur : vérifie l'ordre des pattes (R, −, V, B) ; la plus longue est le −.
 
-**Suivant** : [Tutoriel 6 — Thermomètre](06-thermometer.md)
+**Suivant** : [Tutoriel 6 - Thermomètre](06-thermometer.md)

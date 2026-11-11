@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 
-const labels = { accessPoint: "Wi-Fi — the board's network", home: "Wi-Fi — {address}" };
+const labels = { accessPoint: "Wi-Fi - the board's network", home: "Wi-Fi - {address}" };
 
 describe("Wi-Fi ports", () => {
 	beforeEach(() => {
@@ -21,8 +21,8 @@ describe("Wi-Fi ports", () => {
 		expect(hasWifi("uno")).toBe(false);
 		expect(wifiPorts("uno", ["192.168.1.42"], labels)).toEqual([]);
 		expect(wifiPorts("esp32", ["192.168.1.42", "192.168.4.1"], labels)).toEqual([
-			{ address: "wifi:192.168.4.1", label: "Wi-Fi — the board's network" },
-			{ address: "wifi:192.168.1.42", label: "Wi-Fi — 192.168.1.42" },
+			{ address: "wifi:192.168.4.1", label: "Wi-Fi - the board's network" },
+			{ address: "wifi:192.168.1.42", label: "Wi-Fi - 192.168.1.42" },
 		]);
 	});
 

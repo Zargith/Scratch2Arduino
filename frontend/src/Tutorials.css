@@ -3,7 +3,7 @@
 	max-width: 100%;
 	height: auto;
 	border-radius: 6px;
-	border: 1px solid var(--mantine-color-gray-3);
+	border: 1px solid var(--mantine-color-default-border);
 }
 .s2a-doc table {
 	display: block;

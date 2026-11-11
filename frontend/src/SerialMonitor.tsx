@@ -6,7 +6,7 @@ import { ActionIcon, Button, Card, CloseButton, Group, ScrollArea, Select, Text,
 import { IconPlugConnected, IconPlugConnectedX, IconSend, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 
-import { bridge, hasHost } from "@/bridge";
+import { bridge, type OutputLine, hasHost } from "@/bridge";
 import type { Language } from "@/catalog";
 import type { MessageKey } from "@/i18n";
 
@@ -23,7 +23,7 @@ interface SerialMonitorProps {
 	port: string | null;
 	/** Live mode running: show its output, do not touch the port. */
 	live: boolean;
-	liveLines: string[];
+	liveLines: OutputLine[];
 	/** An upload is using the port. */
 	busy: boolean;
 	onError: (message: string, details?: string) => void;
@@ -90,7 +90,9 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 	// Closing the panel frees the port.
 	useEffect(() => closePort, []);
 
-	const shown = live ? liveLines : lines;
+	// After a Live session the panel keeps its output (an error to read) until the monitor connects.
+	const showLive = live || (!wanted && liveLines.length > 0);
+	const shown: OutputLine[] = showLive ? liveLines : lines.map((text) => ({ text, error: false }));
 	useEffect(() => {
 		viewport.current?.scrollTo({ top: viewport.current.scrollHeight });
 	}, [shown]);
@@ -163,7 +165,18 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 					</Text>
 				) : (
 					<Text size="xs" p="xs" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-						{shown.join("\n")}
+						{shown.map((line, index) =>
+							line.error ? (
+								// The error output: red, and marked so that it is not told by the colour only.
+								<span key={index} style={{ color: "var(--mantine-color-red-text)", display: "block" }}>
+									{`! ${line.text}`}
+								</span>
+							) : (
+								<span key={index} style={{ display: "block" }}>
+									{line.text}
+								</span>
+							)
+						)}
 					</Text>
 				)}
 			</ScrollArea>

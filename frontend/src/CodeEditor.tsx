@@ -9,9 +9,9 @@ import { python } from "@codemirror/lang-python";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import {
 	bracketMatching,
-	defaultHighlightStyle,
 	foldGutter,
 	foldKeymap,
+	HighlightStyle,
 	indentOnInput,
 	syntaxHighlighting,
 } from "@codemirror/language";
@@ -27,6 +27,7 @@ import {
 	keymap,
 	lineNumbers,
 } from "@codemirror/view";
+import { tags } from "@lezer/highlight";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import type { Language } from "@/catalog";
@@ -64,7 +65,7 @@ function setup(program: TextLanguage, language: () => Language, readOnly: boolea
 		dropCursor(),
 		EditorState.allowMultipleSelections.of(true),
 		indentOnInput(),
-		syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+		syntaxHighlighting(colours),
 		bracketMatching(),
 		closeBrackets(),
 		autocompletion({ override: [completionSource(program, language)], icons: true }),
@@ -113,8 +114,40 @@ const frenchPhrases: Record<string, string> = {
 	"No diagnostics": "Aucune erreur",
 };
 
+/** Code colours from the Mantine palette: readable in the light and the dark themes. */
+const colours = HighlightStyle.define([
+	{ tag: [tags.keyword, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword], color: "var(--mantine-color-violet-text)" },
+	{ tag: [tags.number, tags.bool, tags.null, tags.atom], color: "var(--mantine-color-teal-text)" },
+	{ tag: [tags.string, tags.special(tags.string)], color: "var(--mantine-color-orange-text)" },
+	{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: "var(--mantine-color-dimmed)", fontStyle: "italic" },
+	{ tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "var(--mantine-color-blue-text)" },
+	{ tag: [tags.typeName, tags.className, tags.standard(tags.typeName)], color: "var(--mantine-color-cyan-text)" },
+	{ tag: [tags.processingInstruction, tags.macroName], color: "var(--mantine-color-pink-text)" },
+	{ tag: tags.invalid, color: "var(--mantine-color-red-text)" },
+]);
+
 const look = EditorView.theme({
-	"&": { height: "100%", fontSize: "15px" },
+	"&": {
+		height: "100%",
+		fontSize: "15px",
+		backgroundColor: "var(--mantine-color-body)",
+		color: "var(--mantine-color-text)",
+	},
+	".cm-gutters": {
+		backgroundColor: "var(--mantine-color-default-hover)",
+		color: "var(--mantine-color-dimmed)",
+		borderRight: "1px solid var(--mantine-color-default-border)",
+	},
+	".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "var(--mantine-color-default-hover)" },
+	".cm-cursor": { borderLeftColor: "var(--mantine-color-text)" },
+	"&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+		backgroundColor: "var(--mantine-primary-color-light) !important",
+	},
+	".cm-tooltip": {
+		backgroundColor: "var(--mantine-color-body)",
+		color: "var(--mantine-color-text)",
+		border: "1px solid var(--mantine-color-default-border)",
+	},
 	".cm-scroller": { fontFamily: "'Space Mono', monospace", lineHeight: "1.6" },
 	".cm-content": { paddingBottom: "40vh" }, // the last lines are not hidden by the status bar
 });
@@ -198,7 +231,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 	};
 
 	useEffect(() => {
-		if (problems && problems.length > 0) show(problems, false);
+		// An empty list clears the marks of an earlier Check (the code was fixed).
+		show(problems ?? [], false);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [problems]);
 

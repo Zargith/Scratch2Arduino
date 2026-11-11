@@ -24,6 +24,8 @@ export interface UserDeclaration {
 	parameters: string[];
 	returnsValue: boolean;
 	readOnly: boolean;
+	/** Changed by a function of the code itself (its state): blocks read it, never set it. */
+	changedByCode?: boolean;
 	line: number;
 }
 
@@ -306,9 +308,21 @@ export function defineBlocks(language: Language): void {
 					}
 				},
 			};
+			if (NAMED_BY_LABEL.has(block.type)) {
+				// The palette recycles blocks without extra state when it is rebuilt, and a recycled
+				// block keeps its label: "lampe" showed "avant", and spare ones piled up at the top of
+				// the palette. An (empty) extra state makes Blockly create these blocks afresh.
+				Object.assign(Blockly.Blocks[block.type], {
+					saveExtraState: () => null,
+					loadExtraState: () => undefined,
+				});
+			}
 		}
 	}
 }
+
+/** Blocks whose name is a label set from the palette ("My code" variables): never recycled. */
+const NAMED_BY_LABEL = new Set(["mycode_get", "mycode_set"]);
 
 function shade(hex: string, factor: number): string {
 	const value = Number.parseInt(hex.slice(1), 16);
@@ -425,7 +439,8 @@ export function myCodeContents(declarations: UserDeclaration[], empty: string): 
 			}
 		} else {
 			contents.push({ kind: "block", type: "mycode_get", fields: { NAME: declaration.name } });
-			if (!declaration.readOnly) {
+			// Only variables that blocks may change: not the constants, not the code's own state.
+			if (!declaration.readOnly && !declaration.changedByCode) {
 				contents.push({ kind: "block", type: "mycode_set", fields: { NAME: declaration.name }, inputs: numberShadows(["VALUE"]) });
 			}
 		}

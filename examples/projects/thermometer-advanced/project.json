@@ -183,6 +183,6 @@
   ],
   "userCode": {
     "language": "cpp",
-    "code": "// Mon code (C++) : des calculs sur la température et l'humidité.\n\n// Degrés Celsius → degrés Fahrenheit (l'unité des États-Unis).\nfloat fahrenheit(float celsius) {\n  return celsius * 9 / 5 + 32;\n}\n\n// 1 quand l'air est agréable (19 à 24 °C, 40 à 60 % d'humidité), sinon 0.\nint confort(float celsius, float humidite) {\n  if (celsius >= 19 && celsius <= 24 && humidite >= 40 && humidite <= 60) {\n    return 1;\n  }\n  return 0;\n}\n"
+    "code": "// Mon code (C++) : des calculs sur la température et l'humidité.\n\n// Degrés Celsius -> degrés Fahrenheit (l'unité des États-Unis).\nfloat fahrenheit(float celsius) {\n  return celsius * 9 / 5 + 32;\n}\n\n// 1 quand l'air est agréable (19 à 24 °C, 40 à 60 % d'humidité), sinon 0.\nint confort(float celsius, float humidite) {\n  if (celsius >= 19 && celsius <= 24 && humidite >= 40 && humidite <= 60) {\n    return 1;\n  }\n  return 0;\n}\n"
   }
 }

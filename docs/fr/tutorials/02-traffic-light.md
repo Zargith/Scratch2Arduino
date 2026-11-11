@@ -1,11 +1,11 @@
-# Tutoriel 2 — Feu tricolore
+# Tutoriel 2 - Feu tricolore
 
 **Objectif** : un feu de circulation : vert 3 secondes, orange 1 seconde, rouge 3 secondes, sans fin.
 **Durée** : 45 minutes. **Matériel** : carte Uno, platine d'essai, 3 LED (rouge, orange, verte),
 3 résistances de 220 Ω (rouge-rouge-marron), 5 fils.
 **Tu vas apprendre** : brancher une LED, une séquence d'actions, les fonctions.
 
-*English: [../../en/tutorials/02-traffic-light.md](../../en/tutorials/02-traffic-light.md)*
+*To read it in English, change the language in the settings.*
 
 ## 1. Le montage
 
@@ -19,7 +19,7 @@ Carte **débranchée** :
    résistance, la LED reçoit trop de courant et grille.
 3. Relie le **5V** de la carte à la rangée **+** (rouge) et le **GND** à la rangée **−** (bleue), puis
    chaque patte courte à la rangée −.
-4. Fils de la carte : LED rouge → broche **12**, orange → **11**, verte → **10**.
+4. Fils de la carte : LED rouge -> broche **12**, orange -> **11**, verte -> **10**.
 
 > Dans la platine, les 5 trous d'une même colonne (a à e, ou f à j) sont reliés entre eux.
 
@@ -32,7 +32,7 @@ quand le programme démarre
 mettre la broche 12 à l'état HAUT
 ```
 
-Le bloc **mettre la broche … à l'état …** est dans la famille **Broches**. Choisis la broche **12** dans
+Le bloc **mettre la broche ... à l'état ...** est dans la famille **Broches**. Choisis la broche **12** dans
 son menu. **HAUT** = 5 volts sur la broche : la LED s'allume. **BAS** = 0 volt : elle s'éteint. Clique sur
 **Live** : la LED rouge s'allume. Essaie les broches 11 et 10. Si une LED reste éteinte, retourne-la.
 
@@ -57,7 +57,7 @@ répéter indéfiniment
     attendre 3 secondes
 ```
 
-Astuce : fais un **clic droit → Dupliquer** sur un bloc pour le copier avec ceux qui sont en dessous.
+Astuce : fais un **clic droit -> Dupliquer** sur un bloc pour le copier avec ceux qui sont en dessous.
 Essaie en **Live**, puis **Téléverse**.
 
 ## 4. Range avec des fonctions
@@ -65,7 +65,7 @@ Essaie en **Live**, puis **Téléverse**.
 Le programme est long et on ne voit pas bien les trois couleurs. Une **fonction** donne un nom à un
 groupe de blocs :
 
-1. Famille **Fonctions** → **Créer une fonction** → nomme-la `feu vert`.
+1. Famille **Fonctions** -> **Créer une fonction** -> nomme-la `feu vert`.
 2. Un bloc **définir feu vert** apparaît : accroche dessous les trois blocs qui allument le vert.
 3. Fais pareil pour `feu orange` et `feu rouge`.
 4. Le programme principal devient :
@@ -82,7 +82,7 @@ répéter indéfiniment
 ```
 
 Le programme se lit comme une phrase ! Une fonction ne s'exécute que quand on l'**appelle**.
-Pour comparer, ouvre l'exemple : **Nouveau → Feu tricolore**.
+Pour comparer, ouvre l'exemple : **Nouveau -> Feu tricolore**.
 
 ## Version avancée : avec du code
 
@@ -100,4 +100,4 @@ Choisis **Avancé : C++** dans la galerie : une seule fonction C++, `feux(rouge,
 - Aucune LED ne s'allume : vérifie le fil GND et la rangée − de la platine.
 - Ouvre **Schéma de câblage** : il dessine le montage correspondant à **tes** blocs.
 
-**Suivant** : [Tutoriel 3 — Bouton et LED](03-button-led.md)
+**Suivant** : [Tutoriel 3 - Bouton et LED](03-button-led.md)

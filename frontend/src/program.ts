@@ -121,7 +121,7 @@ export function starterUserCode(program: Exclude<ProgramLanguage, "blocks">, lan
 	const fr = language === "fr";
 	const [speed, blink, times, average] = fr ? ["vitesse", "clignoter", "fois", "moyenne"] : ["speed", "blink", "times", "average"];
 	const intro = fr
-		? "Mon code : les fonctions et les variables écrites ici deviennent des blocs « Mon code »."
+		? "Mon code : les fonctions et les variables écrites ici deviennent des blocs \"Mon code\"."
 		: "My code: the functions and variables written here become \"My code\" blocks.";
 	switch (program) {
 		case "cpp":

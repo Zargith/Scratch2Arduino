@@ -37,6 +37,7 @@ enum class Rule {
     UserCodeMissing,    ///< A "My code" block whose function or variable is not in the code (any more).
     UserCodeNoValue,    ///< The result of a "My code" function that gives no value.
     UserCodeReadOnly,   ///< Setting a constant of "My code".
+    UserCodeOwned,      ///< Setting a variable that the functions of "My code" change themselves.
 };
 
 struct Issue {
@@ -54,7 +55,7 @@ struct Issue {
 
 [[nodiscard]] bool hasErrors(const std::vector<Issue>& issues);
 
-/// "validation.<rule>" — the message — and "validation.<rule>_hint" — how to fix it.
+/// "validation.<rule>" - the message - and "validation.<rule>_hint" - how to fix it.
 [[nodiscard]] std::string_view ruleKey(Rule rule) noexcept;
 
 /// Message followed by the hint, in `language`.

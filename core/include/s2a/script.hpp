@@ -45,8 +45,10 @@ struct ScriptError {
 struct Host {
     live::Pins* pins = nullptr;
     const Board* board = nullptr;
-    /// A line written by print().
+    /// A line written by print() (the standard output).
     std::function<void(const std::string&)> print;
+    /// A line written by printError() / console.error() (the error output); print() when not set.
+    std::function<void(const std::string&)> printError;
     /// A value read on a pin (label "A0", "2"), for the Live panel and its graphs.
     std::function<void(const std::string&, double)> reading;
     /// Waits; returns false when the program must stop (Stop button). Defaults to a real wait.
@@ -106,6 +108,7 @@ public:
     void noTone(int pin);
     void servoWrite(int pin, double angle);
     void print(const std::string& text);
+    void printError(const std::string& text);
     /// Throws Stopped when the Stop button was pressed.
     void checkStop() const;
     [[nodiscard]] bool stopRequested() const;

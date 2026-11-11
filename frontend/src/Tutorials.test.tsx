@@ -38,16 +38,12 @@ describe("tutorials panel", () => {
 				</MantineProvider>
 			)
 		);
-		expect(container.querySelector("h1")?.textContent).toBe("Tutoriel 1 — Clignotant");
+		expect(container.querySelector("h1")?.textContent).toBe("Tutoriel 1 - Clignotant");
 
 		const next = [...container.querySelectorAll("a")].find((link) => link.textContent?.includes("Feu tricolore"));
 		expect(next).toBeDefined();
 		await act(async () => next?.click());
 		expect(onNavigate).toHaveBeenCalledWith("tutorials/02-traffic-light.md", "fr");
-
-		const english = [...container.querySelectorAll("a")].find((link) => link.getAttribute("href")?.includes("/en/"));
-		await act(async () => english?.click());
-		expect(onNavigate).toHaveBeenLastCalledWith("tutorials/01-blink.md", "en");
 
 		const open = [...container.querySelectorAll("button")].find((button) => button.textContent === "Ouvrir l'exemple");
 		await act(async () => open?.click());

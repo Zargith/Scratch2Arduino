@@ -1,12 +1,12 @@
-# Tutorial 7 — Reaction game
+# Tutorial 7 - Reaction game
 
 **Goal**: a game! Wait for the heart to appear on the LED matrix, then press as fast as you can.
 Pressing too early loses. The score shows on a small screen.
-**Time**: 1 h 30. **Parts**: Uno board, MAX7219 8×8 LED matrix, SSD1306 OLED screen (I2C), push button,
+**Time**: 1 h 30. **Parts**: Uno board, MAX7219 8x8 LED matrix, SSD1306 OLED screen (I2C), push button,
 passive buzzer, breadboard, wires.
 **You will learn**: randomness, waiting for an event, keeping a score, a complete project.
 
-*Français : [../../fr/tutorials/07-reaction-game.md](../../fr/tutorials/07-reaction-game.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. The circuit
 
@@ -14,20 +14,20 @@ passive buzzer, breadboard, wires.
 
 | Part | Wiring |
 |---|---|
-| MAX7219 matrix | VCC → 5V, GND → GND, DIN → **12**, CS → **10**, CLK → **11** |
-| OLED screen | VCC → 5V, GND → GND, SDA → **A4**, SCL → **A5** |
-| Button | one side → **2**, the other → GND |
-| Buzzer | + → **8**, − → GND |
+| MAX7219 matrix | VCC -> 5V, GND -> GND, DIN -> **12**, CS -> **10**, CLK -> **11** |
+| OLED screen | VCC -> 5V, GND -> GND, SDA -> **A4**, SCL -> **A5** |
+| Button | one side -> **2**, the other -> GND |
+| Buzzer | + -> **8**, − -> GND |
 
 ## 2. The pieces of the game
 
 Try each block alone before putting everything together (in **Live**, it is instant):
 
 - **show heart on the LED matrix (DIN 12, CLK 11, CS 10)** (**Lights** category): choose the picture in
-  the menu (heart, sad, check mark, all off…).
-- **write … on line 1 of the OLED screen** (**Screens** category).
+  the menu (heart, sad, check mark, all off...).
+- **write ... on line 1 of the OLED screen** (**Screens** category).
 - **pick random 1 to 4** (**Operators** category): a different number every time.
-- **wait until …** (**Control** category): the program stops until the condition is true.
+- **wait until ...** (**Control** category): the program stops until the condition is true.
 
 ## 3. The game
 
@@ -59,7 +59,7 @@ Read it like a story: wait for the player to let go of the button, switch off, w
 nobody can guess). If the button is already pressed at that moment, the player cheated: sad face.
 Otherwise the heart appears, we wait for the press, and a point is won.
 
-To save time, open the example: **New → Reaction game**.
+To save time, open the example: **New -> Reaction game**.
 
 ## Advanced version: with code
 
@@ -78,4 +78,4 @@ Choose **Advanced: C++** in the gallery: **My code** keeps the **record** in the
 - The buzzer hums all the time: it is an active buzzer; use a **passive** one.
 - The OLED screen stays black: check SDA (A4) and SCL (A5).
 
-**Next**: [Tutorial 8 — Remote robot](08-remote-robot.md)
+**Next**: [Tutorial 8 - Remote robot](08-remote-robot.md)

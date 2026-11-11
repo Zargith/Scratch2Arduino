@@ -146,7 +146,7 @@ private:
         }
     }
 
-    /// Block text without its slots: "repeat %1 times %2" -> "repeat … times".
+    /// Block text without its slots: "repeat %1 times %2" -> "repeat ... times".
     std::string name(const BlockDefinition* definition) const {
         if (definition == nullptr) {
             return "?";
@@ -158,16 +158,16 @@ private:
                 while (i + 1 < message.size() && std::isdigit(static_cast<unsigned char>(message[i + 1])) != 0) {
                     ++i;
                 }
-                result += "…";
+                result += "...";
             } else {
                 result += message[i];
             }
         }
-        // Drop a trailing "…" (C-block mouth) and spaces.
+        // Drop a trailing "..." (C-block mouth) and spaces.
         while (!result.empty() && (result.back() == ' ')) {
             result.pop_back();
         }
-        const std::string ellipsis = "…";
+        const std::string ellipsis = "...";
         if (result.size() >= ellipsis.size() && result.compare(result.size() - ellipsis.size(), ellipsis.size(), ellipsis) == 0) {
             result.erase(result.size() - ellipsis.size());
             while (!result.empty() && result.back() == ' ') {
@@ -332,6 +332,8 @@ private:
             add(Rule::UserCodeNoValue, Severity::Error, block, {{"name", name}});
         } else if (block.type == usercode::kSetBlock && found->readOnly) {
             add(Rule::UserCodeReadOnly, Severity::Error, block, {{"name", name}});
+        } else if (block.type == usercode::kSetBlock && found->changedByCode) {
+            add(Rule::UserCodeOwned, Severity::Error, block, {{"name", name}});
         }
     }
 
@@ -399,6 +401,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.usercode_no_value";
     case Rule::UserCodeReadOnly:
         return "validation.usercode_read_only";
+    case Rule::UserCodeOwned:
+        return "validation.usercode_owned";
     }
     return "validation.unknown_block";
 }
