@@ -1,0 +1,32 @@
+name: Set up apt
+description: >-
+  Makes apt fail fast and retry, and stops using the Azure Ubuntu mirror of the runner when it does not
+  answer (it hung the Linux jobs for an hour on 2026-11-11: each package waited for a DNS timeout).
+
+runs:
+  using: composite
+  steps:
+    - name: Set up apt (timeouts, retries, mirror)
+      shell: bash
+      run: |
+        # Short timeouts and a few retries for every apt-get call of the job (the installer script too).
+        printf '%s\n' \
+          'Acquire::Retries "3";' \
+          'Acquire::http::Timeout "15";' \
+          'Acquire::https::Timeout "15";' \
+          | sudo tee /etc/apt/apt.conf.d/99-s2a-ci >/dev/null
+
+        # The runner reads its mirrors from /etc/apt/apt-mirrors.txt, Azure first. When Azure does not
+        # answer, put the main Ubuntu archive first so apt does not wait for Azure on each package.
+        mirrors=/etc/apt/apt-mirrors.txt
+        azure=http://azure.archive.ubuntu.com/ubuntu/dists/noble/InRelease
+        if curl -fsSI --max-time 10 --retry 2 "$azure" >/dev/null; then
+          echo "The Azure Ubuntu mirror answers: kept."
+        else
+          echo "::warning::The Azure Ubuntu mirror does not answer: using archive.ubuntu.com instead."
+          printf 'http://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://security.ubuntu.com/ubuntu/\tpriority:2\n' \
+            | sudo tee "$mirrors" >/dev/null
+          # Runner images without the mirror list name the Azure mirror in their sources directly.
+          sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+        fi
