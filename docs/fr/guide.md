@@ -209,7 +209,8 @@ côté des blocs : elles deviennent de nouveaux blocs.
    `clignoter` et `moyenne`) : modifie-le ou remplace-le. L'éditeur colore le code et propose des
    complétions (mots du langage, fonctions Arduino, noms déjà écrits).
 3. Reviens à la vue **Blocs** : la famille **Mon code** contient un bloc par fonction (avec des cases pour
-   ses nombres), un bloc pour le résultat d'une fonction, et des blocs pour lire ou changer chaque variable.
+   ses nombres), un bloc pour le résultat d'une fonction, et des blocs pour lire ou changer chaque variable
+   (nombres, et textes `String` en C++).
 
 - En **C++**, ton code est compilé avec les blocs : *Vérifier* et *Téléverser* marchent comme d'habitude.
 - En **Python** ou **JavaScript**, ton code tourne sur l'ordinateur, avec le bouton **Live** (avec les

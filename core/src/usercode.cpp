@@ -223,7 +223,8 @@ std::vector<Statement> topLevel(const std::string& code, bool newlines) {
 }
 
 void add(std::vector<Declaration>& found, std::set<std::string>& names, Declaration declaration) {
-    if (declaration.name.empty() || declaration.name.front() == '_' || !names.insert(declaration.name).second) {
+    // "__x" names are reserved (C++, Python); "_x" ones are the user's like any other.
+    if (declaration.name.empty() || declaration.name.rfind("__", 0) == 0 || !names.insert(declaration.name).second) {
         return;
     }
     found.push_back(std::move(declaration));
@@ -234,12 +235,15 @@ void add(std::vector<Declaration>& found, std::set<std::string>& names, Declarat
 const char* const kCppNumber =
     R"((?:unsigned\s+long|unsigned\s+int|unsigned\s+char|unsigned|long\s+long|long|int|short|float|double|bool|boolean|byte|char|word|u?int(?:8|16|32|64)_t|size_t))";
 
+/// A number or an Arduino String: what a "My code" variable or result block can hold.
+const std::string kCppValue = std::string("(?:String|") + kCppNumber + ")";
+
 std::vector<Declaration> cppDeclarations(std::string_view code) {
-    static const std::regex function(std::string(R"(^(?:(?:static|inline)\s+)*(void|)") + kCppNumber +
+    static const std::regex function(std::string(R"(^(?:(?:static|inline)\s+)*(void|)") + kCppValue +
                                      R"()\s+([A-Za-z_]\w*)\s*\(([^()]*)\)$)");
     static const std::regex parameter(std::string(R"(^(?:const\s+)?)") + kCppNumber +
                                       R"(\s+([A-Za-z_]\w*)(?:\s*=.*)?$)");
-    static const std::regex variable(std::string(R"(^((?:(?:static|volatile|const)\s+)*))") + kCppNumber +
+    static const std::regex variable(std::string(R"(^((?:(?:static|volatile|const)\s+)*))") + kCppValue +
                                      R"(\s+(.+)$)");
     static const std::regex name(R"(^([A-Za-z_]\w*)\s*(?:=.*)?$)");
     std::vector<Declaration> found;
@@ -254,6 +258,7 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
             declaration.kind = Declaration::Kind::Function;
             declaration.name = match[2].str();
             declaration.returnsValue = match[1].str() != "void";
+            declaration.text = match[1].str() == "String";
             declaration.line = statement.line;
             bool usable = true;
             const std::string list = trim(match[3].str());
@@ -276,6 +281,8 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
             continue;
         }
         const bool constant = match[1].str().find("const") != std::string::npos;
+        static const std::regex textType(R"(^(?:(?:static|volatile|const)\s+)*String\s)");
+        const bool text = std::regex_search(statement.text, textType);
         for (const std::string& part : splitCommas(match[2].str())) {
             std::smatch each;
             if (std::regex_match(part, each, name)) {
@@ -283,6 +290,7 @@ std::vector<Declaration> cppDeclarations(std::string_view code) {
                 declaration.kind = Declaration::Kind::Variable;
                 declaration.name = each[1].str();
                 declaration.readOnly = constant;
+                declaration.text = text;
                 declaration.line = statement.line;
                 add(found, names, std::move(declaration));
             }

@@ -197,7 +197,8 @@ blocks: they become new blocks.
    functions): change it or replace it. The editor colours the code and suggests completions (language
    words, Arduino functions, names already written).
 3. Go back to the **Blocks** view: the **My code** category holds a block per function (with slots for its
-   numbers), a block for a function's result, and blocks to read or change each variable.
+   numbers), a block for a function's result, and blocks to read or change each variable (numbers, and
+   `String` texts in C++).
 
 - In **C++**, your code is compiled with the blocks: *Check* and *Upload* work as usual.
 - In **Python** or **JavaScript**, your code runs on the computer, with the **Live** button (with the
