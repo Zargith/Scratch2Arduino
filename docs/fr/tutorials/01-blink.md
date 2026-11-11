@@ -71,6 +71,10 @@ Clique sur **Enregistrer** (ou Ctrl+S), donne un nom au fichier : il est rangé 
 `Documents/Scratch2Arduino`. Clique sur **Voir le code** pour découvrir le code Arduino fabriqué à partir
 de tes blocs.
 
+## Version avancée : avec du code
+
+Dans la galerie (**Nouveau → Clignotant**), choisis **Avancé : Python (Live)** : la fonction `sos()`, écrite en Python dans l'onglet **Mon code** (vue **Code**), fait clignoter SOS en morse. Elle devient un bloc **sos** de la famille **Mon code**. Le Python tourne sur l'ordinateur : lance-le avec **Live**. Lis le code : reconnais-tu les blocs *allumer*, *attendre* et *répéter* ?
+
 ## Défis
 
 - Fais un clignotement très rapide (0.1 seconde), puis très lent.

@@ -84,6 +84,10 @@ répéter indéfiniment
 Le programme se lit comme une phrase ! Une fonction ne s'exécute que quand on l'**appelle**.
 Pour comparer, ouvre l'exemple : **Nouveau → Feu tricolore**.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : une seule fonction C++, `feux(rouge, orange, vert)`, écrite dans **Mon code**, allume les feux demandés (1 = allumé, 0 = éteint) ; `clignoterOrange(fois)` fait clignoter l'orange. Dans les blocs, ce sont deux blocs de la famille **Mon code**, avec des cases pour leurs nombres. Le C++ est compilé avec les blocs : **Téléverse** comme d'habitude.
+
 ## Défis
 
 - Ajoute un orange clignotant (3 fois) avant le rouge, avec **répéter 3 fois**.

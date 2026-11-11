@@ -53,6 +53,10 @@ in **Live**: the value of `angle` shows on the right. Then **Upload**.
 > **Why a variable?** It keeps the computed value and gives it a name: the program is easier to read,
 > and you can follow its value live.
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: the `angleLisse()` function of **My code** "smooths" the reading (it only goes a fifth of the way towards each new reading) and maps it to an angle. The arm no longer jitters. Try replacing `/ 5` with `/ 20`: what happens?
+
 ## Challenges
 
 - Keep the arm between 45 and 135 degrees.

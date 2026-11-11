@@ -68,6 +68,10 @@ to work on its own, you need to **upload**.
 Click **Save** (or Ctrl+S) and name the file: it is stored in `Documents/Scratch2Arduino`. Click
 **Show code** to discover the Arduino code made from your blocks.
 
+## Advanced version: with code
+
+In the gallery (**New → Blink**), choose **Advanced: Python (Live)**: the `sos()` function, written in Python in the **My code** tab (**Code** view), blinks SOS in Morse code. It becomes a **sos** block in the **My code** category. Python runs on the computer: start it with **Live**. Read the code: can you spot the *turn on*, *wait* and *repeat* blocks?
+
 ## Challenges
 
 - Make a very fast blink (0.1 second), then a very slow one.

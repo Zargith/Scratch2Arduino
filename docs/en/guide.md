@@ -206,7 +206,9 @@ blocks: they become new blocks.
 ## 12. Projects: save, open, share
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).
-  An opened example is a copy: save it to keep your changes.
+  Some examples come in several versions, to choose on the card: other parts (I2C or 16-pin screen), or
+  another level — **Beginner** (blocks only) or **Advanced** (with "My code"). An opened example is a
+  copy: save it to keep your changes.
 - **Save** (Ctrl+S) writes a **`.s2a`** file, stored by default in `Documents/Scratch2Arduino`. That file
   holds the whole project: it is what you send to someone, copy to a USB stick or hand in to your teacher.
 - **Open** reads a `.s2a` back. On Windows, double-clicking a `.s2a` opens it too, and a project can be

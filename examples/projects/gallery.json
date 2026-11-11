@@ -1,5 +1,5 @@
 {
-  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, same program) is one card with a choice: each variant id is a folder, its parts replace those of the example.",
+  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, or another level of the same project such as \"advanced\" with My code) is one card with a choice: each variant id is a folder, its parts and description replace those of the example, and a variant without wiring.png shows the example's.",
   "examples": [
     {
       "id": "blink",
@@ -8,7 +8,18 @@
         "fr": "La LED « L » soudée sur la carte clignote : rien à brancher.",
         "en": "The on-board \"L\" LED blinks: nothing to wire."
       },
-      "parts": { "fr": "aucun composant", "en": "no parts" }
+      "parts": { "fr": "aucun composant", "en": "no parts" },
+      "variants": [
+        { "id": "blink", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "blink-advanced",
+          "label": {"fr": "Avancé : Python (Live)", "en": "Advanced: Python (Live)"},
+          "description": {
+            "fr": "Avancé : la fonction sos(), écrite en Python dans « Mon code », fait clignoter SOS en morse. Elle tourne sur l'ordinateur : lance-la avec le bouton Live.",
+            "en": "Advanced: the sos() function, written in Python in \"My code\", blinks SOS in Morse code. It runs on the computer: start it with the Live button."
+          }
+        }
+      ]
     },
     {
       "id": "traffic-light",
@@ -17,7 +28,18 @@
         "fr": "Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une fonction.",
         "en": "Green 3 s, orange 1 s, red 3 s, forever. Each colour is a function."
       },
-      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" }
+      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" },
+      "variants": [
+        { "id": "traffic-light", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "traffic-light-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : une fonction C++ feux(rouge, orange, vert) dans « Mon code » allume les feux demandés, et l'orange clignote avant le rouge.",
+            "en": "Advanced: a C++ function feux(rouge, orange, vert) in \"My code\" switches the lights given, and the orange blinks before the red."
+          }
+        }
+      ]
     },
     {
       "id": "button-led",
@@ -35,7 +57,18 @@
         "fr": "Tourner le potentiomètre fait tourner le bras du servomoteur de 0 à 180°.",
         "en": "Turning the knob moves the servo arm from 0 to 180°."
       },
-      "parts": { "fr": "potentiomètre, servomoteur SG90", "en": "potentiometer, SG90 servo" }
+      "parts": { "fr": "potentiomètre, servomoteur SG90", "en": "potentiometer, SG90 servo" },
+      "variants": [
+        { "id": "servo-potentiometer", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "servo-potentiometer-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : la fonction C++ angleLisse() de « Mon code » lisse la mesure du potentiomètre : le bras ne tremble plus.",
+            "en": "Advanced: the C++ function angleLisse() of \"My code\" smooths the knob reading: the arm no longer jitters."
+          }
+        }
+      ]
     },
     {
       "id": "distance-alarm",
@@ -44,7 +77,18 @@
         "fr": "LED verte quand rien n'est proche ; à moins de 20 cm elle devient rouge et le buzzer bipe de plus en plus vite.",
         "en": "Green LED when nothing is near; under 20 cm it turns red and the buzzer beeps faster and faster."
       },
-      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" }
+      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" },
+      "variants": [
+        { "id": "distance-alarm", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "distance-alarm-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ fait la moyenne des mesures (le capteur se trompe parfois) et calcule le rythme des bips.",
+            "en": "Advanced: \"My code\" in C++ averages the readings (the sensor is sometimes wrong) and computes the beep rhythm."
+          }
+        }
+      ]
     },
     {
       "id": "thermometer",
@@ -65,6 +109,14 @@
           "parts": {
             "fr": "DHT11, écran LCD 16×2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
             "en": "DHT11, 16×2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
+          }
+        },
+        {
+          "id": "thermometer-advanced",
+          "label": {"fr": "Avancé : C++ (écran I2C)", "en": "Advanced: C++ (I2C screen)"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ convertit la température en degrés Fahrenheit et dit si l’air est agréable (température et humidité).",
+            "en": "Advanced: \"My code\" in C++ converts the temperature to degrees Fahrenheit and tells whether the air is pleasant (temperature and humidity)."
           }
         }
       ]

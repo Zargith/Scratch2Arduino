@@ -52,6 +52,10 @@ The round **temperature** and **humidity** blocks are in **Sensors**: drag them 
 
 > A DHT11 cannot be read more than once a second: the **wait 2 seconds** blocks matter.
 
+## Advanced version: with code
+
+Choose **Advanced: C++ (I2C screen)** in the gallery: **My code** converts the temperature to degrees Fahrenheit (`fahrenheit()`) and tells whether the air is pleasant (`confort()`, between 19 and 24 °C and between 40 and 60 % humidity). Change the limits to suit your room.
+
 ## Challenges
 
 - Show "It is hot!" above 25 °C (**if … then** + **… > …**).

@@ -56,6 +56,10 @@ servomoteur. Essaie en **Live** : la valeur de `angle` s'affiche à droite. Puis
 > **Pourquoi une variable ?** Elle retient la valeur calculée et lui donne un nom : le programme est plus
 > facile à lire, et tu peux suivre sa valeur en direct.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : la fonction `angleLisse()` de **Mon code** « lisse » la mesure (elle ne fait qu'un cinquième du chemin vers chaque nouvelle mesure) et la convertit en angle. Le bras ne tremble plus. Essaie de remplacer `/ 5` par `/ 20` : que se passe-t-il ?
+
 ## Défis
 
 - Limite le bras entre 45 et 135 degrés.
