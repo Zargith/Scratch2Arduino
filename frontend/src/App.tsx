@@ -1002,7 +1002,8 @@ export function App() {
 							}}
 							programProblems={programProblems}
 							generated={blocksCode}
-							userCode={userCode}
+							// The ref, not the state: it holds what was typed since (the editor remounts on each tab or view switch).
+							userCode={userCodeRef.current}
 							onUserCode={(typed) => {
 								if (userCodeRef.current) userCodeRef.current = { ...userCodeRef.current, code: typed };
 								markDirty();
