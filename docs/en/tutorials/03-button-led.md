@@ -68,6 +68,10 @@ forever
 The last block waits for the button to be **released**: otherwise, while the finger presses, the lamp
 would change hundreds of times a second. The **=** and **not** blocks are in the **Operators** category.
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: the `surveillerBouton()` function of **My code** turns the button into a real switch, without waiting for the release: it compares the button with its state the time before, and ignores the contact's "bounces". The code's `lampe` variable is read by a **lampe** block of the **My code** category.
+
 ## Challenges
 
 - The other way round: the LED is on, and goes off while the button is pressed.

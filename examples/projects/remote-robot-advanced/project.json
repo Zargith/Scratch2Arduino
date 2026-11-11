@@ -1,0 +1,271 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Robot télécommandé",
+  "board": "esp32",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "first-stop",
+          "type": "mycode_call",
+          "fields": {
+            "NAME": "rouler"
+          },
+          "inputs": {
+            "ARG1": {
+              "value": "0"
+            },
+            "ARG2": {
+              "value": "0"
+            }
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if-avance",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-avance",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "avance"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "move-avance",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "rouler"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "value": "80"
+                        },
+                        "ARG2": {
+                          "value": "80"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-avance",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : avance"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-recule",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-recule",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "recule"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "move-recule",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "rouler"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "value": "-80"
+                        },
+                        "ARG2": {
+                          "value": "-80"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-recule",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : recule"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-gauche",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-gauche",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "gauche"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "move-gauche",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "rouler"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "value": "-60"
+                        },
+                        "ARG2": {
+                          "value": "60"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-gauche",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : gauche"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-droite",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-droite",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "droite"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "move-droite",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "rouler"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "value": "60"
+                        },
+                        "ARG2": {
+                          "value": "-60"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-droite",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : droite"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if-stop",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "sent-stop",
+                      "type": "phone_received",
+                      "inputs": {
+                        "MESSAGE": {
+                          "value": "stop"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "move-stop",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "rouler"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "value": "0"
+                        },
+                        "ARG2": {
+                          "value": "0"
+                        }
+                      }
+                    },
+                    {
+                      "id": "say-stop",
+                      "type": "phone_send",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "ok : stop"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : une seule fonction pilote les deux roues.\n// Vitesse de -100 (en arrière, à fond) à 100 (en avant, à fond) ; 0 arrête la roue.\n\n// Une roue du pont en H L298N : broche de vitesse (EN) et broches de sens (IN1, IN2).\nvoid roue(int en, int in1, int in2, int vitesse) {\n  pinMode(en, OUTPUT);\n  pinMode(in1, OUTPUT);\n  pinMode(in2, OUTPUT);\n  digitalWrite(in1, vitesse > 0 ? HIGH : LOW);\n  digitalWrite(in2, vitesse < 0 ? HIGH : LOW);\n  analogWrite(en, constrain(abs(vitesse), 0, 100) * 255 / 100);\n}\n\n// Roue gauche : ENA 25, IN1 26, IN2 27. Roue droite : ENB 33, IN3 18, IN4 19.\nvoid rouler(int gauche, int droite) {\n  roue(25, 26, 27, gauche);\n  roue(33, 18, 19, droite);\n}\n"
+  }
+}

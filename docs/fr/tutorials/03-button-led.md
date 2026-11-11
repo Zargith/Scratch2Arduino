@@ -70,6 +70,10 @@ répéter indéfiniment
 Le dernier bloc attend qu'on **relâche** le bouton : sinon, tant que le doigt appuie, la lampe changerait
 des centaines de fois par seconde. Les blocs **=** et **non** sont dans la famille **Opérateurs**.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : la fonction `surveillerBouton()` de **Mon code** fait du bouton un vrai interrupteur, sans attendre qu'on le relâche : elle compare l'état du bouton avec celui de la fois d'avant, et ignore les « rebonds » du contact. La variable `lampe` du code est lue par un bloc **lampe** de la famille **Mon code**.
+
 ## Défis
 
 - Inverse : la LED est allumée, et s'éteint quand on appuie.

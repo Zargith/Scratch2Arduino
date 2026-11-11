@@ -62,6 +62,10 @@ triché : visage triste. Sinon le cœur apparaît, on attend l'appui, et on gagn
 
 Pour gagner du temps, tu peux ouvrir l'exemple : **Nouveau → Jeu de réaction**.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : **Mon code** garde le **record** dans la mémoire EEPROM de la carte (`record()` et `nouveauRecord(score)`), qui ne s'efface pas quand on débranche. Le record s'affiche sous le score.
+
 ## Défis
 
 - Le joueur perd un point quand il appuie trop tôt (**ajouter -1 à score**).

@@ -61,6 +61,10 @@ Otherwise the heart appears, we wait for the press, and a point is won.
 
 To save time, open the example: **New → Reaction game**.
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: **My code** keeps the **record** in the board's EEPROM memory (`record()` and `nouveauRecord(score)`), which is not erased when the board is unplugged. The record shows under the score.
+
 ## Challenges
 
 - The player loses a point when pressing too early (**change score by -1**).

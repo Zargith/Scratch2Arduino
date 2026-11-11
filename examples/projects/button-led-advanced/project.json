@@ -1,0 +1,87 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Bouton et LED",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "watch",
+                "type": "mycode_call",
+                "fields": {
+                  "NAME": "surveillerBouton"
+                },
+                "inputs": {}
+              },
+              {
+                "id": "if",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "eq",
+                      "type": "operators_equals",
+                      "inputs": {
+                        "NUM1": {
+                          "block": {
+                            "id": "lamp",
+                            "type": "mycode_get",
+                            "fields": {
+                              "NAME": "lampe"
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "1"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : un vrai interrupteur. Un appui allume, l'appui suivant éteint.\nconst int BOUTON = 2;\n\nint lampe = 0;     // 0 = éteinte, 1 = allumée (lue par le bloc « lampe »)\nint avant = HIGH;  // l'état du bouton la fois d'avant (HIGH = relâché)\n\nvoid surveillerBouton() {\n  pinMode(BOUTON, INPUT_PULLUP);\n  int maintenant = digitalRead(BOUTON);\n  if (avant == HIGH && maintenant == LOW) {  // il vient juste d'être enfoncé\n    lampe = 1 - lampe;\n    delay(30);  // anti-rebond : le contact « rebondit » quelques millisecondes\n  }\n  avant = maintenant;\n}\n"
+  }
+}
