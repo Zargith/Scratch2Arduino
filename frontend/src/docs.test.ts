@@ -73,6 +73,6 @@ describe("bundled documentation", () => {
 	it("gives headings the anchors of GitHub", () => {
 		expect(headingAnchor("10. Variables, fonctions et « Mes blocs »")).toBe("10-variables-fonctions-et--mes-blocs-");
 		expect(headingAnchor('10. Variables, functions and "My blocks"')).toBe("10-variables-functions-and-my-blocks");
-		expect(headingAnchor("14. En cas de problème")).toBe("15-en-cas-de-problème");
+		expect(headingAnchor("14. En cas de problème")).toBe("14-en-cas-de-problème");
 	});
 });
