@@ -22,6 +22,42 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 12 - Variant comparison | Dropped (only the webview application is kept) |
 | 13 - Automatic wiring diagram | Done: part 1 - components and pins computed from the blocks (`resources/components.json`, core `wiring::plan`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), "Wiring" window for every project; diagrams can be zoomed. Part 2 - diagram drawn by the core (SVG) for every project and board (Uno, Nano, Mega, ESP32, ESP8266): board headers as printed, numbered component cards, + / GND rails, one routed wire per leg with its resistor, PNG export. Decision (user, 2026-11-10): examples keep their hand-drawn breadboard pictures (shown first), projects made from scratch use the generated diagram. Done |
 
+## Remaining work (2026-11-11)
+
+Everything the phases plan is built. What is left:
+
+### Checks on real hardware
+
+Nothing below has run on a real board yet (only CI, core tests with a fake board and compile checks):
+
+- upload from the editor and from `s2a-cli` on Uno, Nano and Mega, on the three OS (Phases 2 and 3a);
+- Live mode over USB: firmware flashed in one click, blocks changed while running (Phase 5);
+- every component of Phase 6 with its example project, in upload and Live modes (Phase 6 "done when");
+- ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
+- ESP8266 (NodeMCU): Live over Wi-Fi;
+- HC-05 / HC-06 on Uno, Nano and Mega: pins saved from the Bluetooth window, Live mode through the module, "Bluetooth module" block in upload and Live, the Uno + HC-05 remote robot (no module at hand yet);
+- Python and JavaScript in Live mode, and C++ projects, on a real board (Phase 9).
+
+### Phase 10: workshop
+
+- Run a workshop (or a test with a newcomer) on the first tutorial to close the phase.
+- Fix the guide, tutorials and teacher kit from what the workshop shows.
+
+### Known limits
+
+- On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
+- The CI fallback for the apt mirror (`.github/actions/setup-apt`, switch to `archive.ubuntu.com` when the Azure mirror does not answer) has not run for real yet: check it the next time the Azure mirror fails.
+
+### Next features (to choose)
+
+Goals of the project not yet covered, in the suggested order:
+
+1. **Step-by-step mode in Live mode** ("real-time debugging"): Pause and "Next block" buttons, the program advances one block at a time while the variables and pins panel updates.
+2. **Arduino library manager** ("extensive library support"): search and install an `arduino-cli` library from the editor, then use it from "My code" in C++.
+3. **Wiring check in Live mode**: before starting, read the inputs (buttons, sensors) and warn when a value looks wrong (for example a button always pressed).
+
+Phase 11 (packaging and release) stays dropped for now and may come back later.
+
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/...` (or `fix/...`, `docs/...`) branch merged into `dev` through a pull request once CI is green.
 
