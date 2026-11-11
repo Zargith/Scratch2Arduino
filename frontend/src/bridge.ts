@@ -128,6 +128,13 @@ export interface Settings {
 	checkUpdates: boolean;
 }
 
+/** A program rewritten in another language (core convert::convert). */
+export interface Converted {
+	code: string;
+	/** Lines of the original code kept as comments, to convert by hand. */
+	toCheck: number[];
+}
+
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
@@ -141,6 +148,7 @@ interface HostFunctions {
 	s2a_settings(): Promise<Settings>;
 	s2a_save_settings(settings: Settings): Promise<boolean>;
 	s2a_open_url(url: string): Promise<boolean>;
+	s2a_convert(code: string, from: string, to: string): Promise<Converted>;
 	s2a_open_recent(path: string, language: Language): Promise<OpenedProject>;
 	s2a_autosave(project: Project, path: string): Promise<null>;
 	s2a_autosaved(): Promise<AutosavedProject | null>;
@@ -191,6 +199,8 @@ export const bridge = {
 	saveSettings: (settings: Settings) => host("s2a_save_settings")(settings),
 	/** Opens a page of the project's GitHub repository in the browser (the host refuses any other). */
 	openUrl: (url: string) => host("s2a_open_url")(url),
+	/** Rewrites C++, Python or JavaScript code in another of these languages (never fails). */
+	convert: (code: string, from: string, to: string) => host("s2a_convert")(code, from, to),
 	generate: (project: Project) => host("s2a_generate")(project),
 	/** Functions and variables of a "My code" file, found by the core (never fails). */
 	codeDeclarations: (language: string, code: string) => host("s2a_code_declarations")(language, code),

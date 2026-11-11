@@ -18,6 +18,7 @@ add_library(s2a_core STATIC
     src/project.cpp
     src/script.cpp
     src/usercode.cpp
+    src/convert.cpp
     src/script_javascript.cpp
     src/script_python.cpp
     src/resources.cpp
