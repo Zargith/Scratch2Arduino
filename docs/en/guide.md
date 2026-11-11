@@ -103,7 +103,7 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |
 | Functions | Reuse a group of blocks | *Make a function*, define ..., call ... |
 | Serial monitor | Write to the computer | write ... to the serial monitor |
-| Phone (ESP32) | Talk to a phone over Bluetooth | the phone sent ..., number received from the phone, send ... to the phone |
+| Phone (ESP32, or Arduino with an HC-05 / HC-06 module) | Talk to a phone over Bluetooth | HC-05 / HC-06 Bluetooth module, the phone sent ..., number received from the phone, send ... to the phone |
 | My blocks | Your saved block groups | see [My blocks](#my-blocks) |
 
 Hover a block of the palette: a tooltip explains what it does and **how to wire the part**. The full
@@ -259,6 +259,10 @@ An ESP32 or ESP8266 board can be driven in Live mode **without a cable**:
   53 or A8 to A15, or use one of its serial ports (19 and 18, 17 and 16, 15 and 14). The module is a
   plain serial link: if the computer goes away, the board does not know it and keeps its outputs; the
   **Stop** button switches them off.
+- **Phone with a module** (Uno, Nano, Mega): add the **HC-05 / HC-06 Bluetooth module** block under
+  "when the program starts", with the pins where the module is wired (same wiring as above). The
+  *Phone* blocks then go through the module, when uploaded and in Live mode over the USB cable. On the
+  phone, the app connects to "HC-05" (code 1234 or 0000). Without this block, Check says so.
 - **Phone** (ESP32): the *Phone* blocks exchange messages with a Bluetooth terminal app on the phone
   (for example "Serial Bluetooth Terminal" on Android). See the [remote robot](tutorials/08-remote-robot.md).
 

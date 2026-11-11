@@ -32,7 +32,7 @@ struct ScriptError;
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 8"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 9"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -75,6 +75,11 @@ public:
     [[nodiscard]] virtual std::optional<std::string> phoneMessage() { return std::nullopt; }
     /// Sends a line to the phone connected to the board over Bluetooth.
     virtual void phoneSend(const std::string& text) { (void)text; }
+    /// The phone talks through an HC-05 / HC-06 module on these pins (Arduino boards).
+    virtual void phoneModule(int rx, int tx) {
+        (void)rx;
+        (void)tx;
+    }
 };
 
 /// The user's own code ("My code", Python or JavaScript) as the blocks use it in Live mode.
@@ -140,6 +145,7 @@ public:
     void reset() override;
     [[nodiscard]] std::optional<std::string> phoneMessage() override;
     void phoneSend(const std::string& text) override;
+    void phoneModule(int rx, int tx) override;
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();

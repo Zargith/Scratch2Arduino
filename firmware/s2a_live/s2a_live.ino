@@ -38,11 +38,14 @@
 // Arduino boards (Uno, Nano, Mega), with an HC-05 / HC-06 Bluetooth module:
 //   J <rx> <tx> <baud>  the module is wired to these pins (<rx>: the pin that receives, wired to TXD of
 //                   the module; <tx>: the pin that sends, wired to RXD), at this speed; saved on the board
-//                   and used at every start. "J" alone forgets it                    -> "ok"
+//                   and used at once and at every start. "J" alone forgets it (the link stops at the
+//                   next start)                                                       -> "ok"
 //   K               module settings -> "k <rx> <tx> <baud>", or "k -" when there is none
-// The module takes the same commands as USB; it is a plain serial link, so the board cannot know when
-// the computer goes away. The Mega uses its serial ports for 19/18, 17/16 and 15/14, other pins and the
-// other boards use SoftwareSerial.
+//   B, Y            as on the ESP32 below, with the phone connected to the module
+// The module takes the same commands as USB, from a computer that says "?" first; any other line comes
+// from a phone (a Bluetooth terminal app) and is kept for "B". It is a plain serial link, so the board
+// cannot know when the computer goes away. The Mega uses its serial ports for 19/18, 17/16 and 15/14,
+// other pins and the other boards use SoftwareSerial.
 // The ESP32 and the ESP8266 also create their own Wi-Fi network "S2A-xxxx" (password
 // "scratch2arduino") and accept the same commands on TCP port 3333 (one computer at a time; it
 // answers "S2A <version>" when it connects). ESP32 only: B and Y, and a Bluetooth serial device
@@ -85,7 +88,7 @@
 #endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 8";
+const char* const kHello = "S2A 9";
 #if defined(S2A_WIFI)
 const int kMaxLine = 120; // room for a Wi-Fi name and password
 #else
@@ -116,6 +119,8 @@ char accessPoint[16] = "S2A"; // also the Bluetooth name
 #if defined(S2A_MODULE)
 // The module's serial link: a serial port of the Mega, or SoftwareSerial (created once its pins are known).
 Stream* modulePort = nullptr;
+bool moduleSoftware = false; // modulePort is a SoftwareSerial (else a serial port of the Mega)
+bool moduleComputer = false; // false: a phone (or nothing yet)
 Input module = {nullptr, {0}, 0};
 long moduleRx = -1;
 long moduleTx = -1;
@@ -126,7 +131,9 @@ BluetoothSerial bluetoothPort;
 Input bluetooth = {&bluetoothPort, {0}, 0};
 bool bluetoothConnected = false;
 bool bluetoothComputer = false; // false: a phone (or nothing yet)
-char phoneMessage[kMaxLine + 1] = "";
+#endif
+#if defined(S2A_BLUETOOTH) || defined(S2A_MODULE)
+char phoneMessage[kMaxLine + 1] = ""; // last line of the phone, until "B" reads it
 #endif
 bool output[kMaxPins];
 Servo servos[kMaxServos];
@@ -570,9 +577,20 @@ bool modulePinsOk(long rx, long tx, long baud) {
 
 // Starts the link with the module; false when these pins cannot be used.
 bool startModule(long rx, long tx, long baud) {
-  if (!modulePinsOk(rx, tx, baud) || modulePort != nullptr) {
-    return false; // pins 0 and 1 are the USB link; a running link cannot move (restart the board)
+  if (!modulePinsOk(rx, tx, baud)) {
+    return false;
   }
+  if (modulePort != nullptr) { // moves: the previous link stops
+    if (moduleSoftware) {
+      delete (SoftwareSerial*)modulePort;
+    } else {
+      ((HardwareSerial*)modulePort)->end();
+    }
+    modulePort = nullptr;
+    module.stream = nullptr;
+  }
+  moduleSoftware = false;
+  moduleComputer = false;
 #if defined(HAVE_HWSERIAL1)
   // The Mega's own serial ports, when the module is on them.
   HardwareSerial* hardware = nullptr;
@@ -602,6 +620,7 @@ bool startModule(long rx, long tx, long baud) {
     software->begin(baud);
     software->listen();
     modulePort = software;
+    moduleSoftware = true;
   }
   module.stream = modulePort;
   module.length = 0;
@@ -640,18 +659,17 @@ bool setupModule(const char* command, int position) {
   if (!readNumber(command, &position, &tx) || !readNumber(command, &position, &baud)) {
     return false;
   }
-  if (rx == moduleRx && tx == moduleTx && baud == moduleBaud) {
-    saveModule(rx, tx, baud);
-    return true;
-  }
   if (!modulePinsOk(rx, tx, baud)) {
     return false;
   }
   saveModule(rx, tx, baud);
-  if (modulePort == nullptr) {
-    startModule(rx, tx, baud);
+  if (rx != moduleRx || tx != moduleTx || baud != moduleBaud) {
+    if (out == modulePort) {
+      return true; // the computer talks through it: the new pins are used from the next start
+    }
+    return startModule(rx, tx, baud);
   }
-  return true; // other pins than the running ones: used from the next start
+  return true;
 }
 #endif
 
@@ -725,7 +743,7 @@ void execute(const char* command) {
     }
     return;
 #endif
-#if defined(S2A_BLUETOOTH)
+#if defined(S2A_BLUETOOTH) || defined(S2A_MODULE)
   case 'B':
     out->print('b');
     if (phoneMessage[0] != '\0') {
@@ -736,9 +754,15 @@ void execute(const char* command) {
     out->println();
     return;
   case 'Y':
+#if defined(S2A_BLUETOOTH)
     if (bluetoothConnected && !bluetoothComputer) {
       bluetoothPort.println(textAfter(command, position));
     }
+#else
+    if (modulePort != nullptr && !moduleComputer) {
+      modulePort->println(textAfter(command, position));
+    }
+#endif
     reply("ok");
     return;
 #endif
@@ -934,6 +958,19 @@ void readFrom(Input& input) {
       if (&input == &bluetooth && !bluetoothComputer) {
         if (strcmp(input.text, "?") == 0) {
           bluetoothComputer = true; // the Live mode of a computer
+        } else {
+          if (input.length > 0) {
+            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command
+          }
+          input.length = 0;
+          continue;
+        }
+      }
+#endif
+#if defined(S2A_MODULE)
+      if (&input == &module && !moduleComputer) {
+        if (strcmp(input.text, "?") == 0) {
+          moduleComputer = true; // the Live mode of a computer
         } else {
           if (input.length > 0) {
             strcpy(phoneMessage, input.text); // a phone: kept for the "B" command

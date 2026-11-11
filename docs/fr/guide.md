@@ -109,7 +109,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Variables | Retenir des valeurs | *Créer une variable*, mettre ... à ..., ajouter ... à ... |
 | Fonctions | Réutiliser un groupe de blocs | *Créer une fonction*, définir ..., appeler ... |
 | Moniteur série | Écrire à l'ordinateur | écrire ... sur le moniteur série |
-| Téléphone (ESP32) | Parler à un téléphone par Bluetooth | le téléphone a envoyé ..., nombre reçu du téléphone, envoyer ... au téléphone |
+| Téléphone (ESP32, ou Arduino avec un module HC-05 / HC-06) | Parler à un téléphone par Bluetooth | module Bluetooth HC-05 / HC-06, le téléphone a envoyé ..., nombre reçu du téléphone, envoyer ... au téléphone |
 | Mes blocs | Tes groupes de blocs enregistrés | voir [Mes blocs](#mes-blocs) |
 
 Passe la souris sur un bloc de la palette : une bulle explique ce qu'il fait et **comment brancher le
@@ -273,6 +273,11 @@ Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
   être 10 à 13, 50 à 53 ou A8 à A15, ou alors utilise un de ses ports série (19 et 18, 17 et 16, 15 et 14).
   Le module est une simple liaison série : si l'ordinateur s'éloigne, la carte ne le sait pas et garde
   ses sorties ; le bouton **Arrêter** les éteint.
+- **Téléphone avec un module** (Uno, Nano, Mega) : ajoute le bloc **module Bluetooth HC-05 / HC-06**
+  sous "quand le programme démarre", avec les broches où le module est branché (même câblage que
+  ci-dessus). Les blocs *Téléphone* passent alors par le module, en téléversement comme en mode Live
+  par le câble USB. Sur le téléphone, l'appli se connecte à "HC-05" (code 1234 ou 0000). Sans ce bloc,
+  la vérification le signale.
 - **Téléphone** (ESP32) : les blocs *Téléphone* échangent des messages avec une appli de terminal
   Bluetooth sur le téléphone (par exemple "Serial Bluetooth Terminal" sur Android). Voir le
   [Robot télécommandé](tutorials/08-remote-robot.md).

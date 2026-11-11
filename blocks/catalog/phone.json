@@ -8,12 +8,29 @@
   },
   "blocks": [
     {
+      "type": "phone_module",
+      "shape": "statement",
+      "component": "bluetooth_module",
+      "message": {
+        "fr": "module Bluetooth HC-05 / HC-06 : TXD sur la broche %1, RXD sur la broche %2",
+        "en": "HC-05 / HC-06 Bluetooth module: TXD to pin %1, RXD to pin %2"
+      },
+      "tooltip": {
+        "fr": "Pour les cartes Arduino (Uno, Nano, Mega), qui n'ont pas de Bluetooth : dit où le module est branché, pour que les blocs Téléphone passent par lui. Mets-le sous \"quand le programme démarre\". Sur le téléphone, une appli de terminal Bluetooth se connecte à \"HC-05\" (code 1234 ou 0000).",
+        "en": "For Arduino boards (Uno, Nano, Mega), which have no Bluetooth: tells where the module is wired, so that the Phone blocks go through it. Put it under \"when the program starts\". On the phone, a Bluetooth terminal app connects to \"HC-05\" (code 1234 or 0000)."
+      },
+      "args": [
+        { "name": "RX_PIN", "kind": "pin", "capability": "digital", "default": "10" },
+        { "name": "TX_PIN", "kind": "pin", "capability": "digital", "default": "11" }
+      ]
+    },
+    {
       "type": "phone_received",
       "shape": "boolean",
       "message": { "fr": "le téléphone a envoyé %1", "en": "the phone sent %1" },
       "tooltip": {
-        "fr": "Vrai une fois quand le téléphone envoie ce message par Bluetooth (sans compter les majuscules ni les accents). Sur le téléphone, une appli de terminal Bluetooth (par exemple \"Serial Bluetooth Terminal\") se connecte à la carte \"S2A-...\". Cartes avec Bluetooth seulement (ESP32).",
-        "en": "True once when the phone sends this message over Bluetooth (capital letters and accents do not matter). On the phone, a Bluetooth terminal app (for example \"Serial Bluetooth Terminal\") connects to the \"S2A-...\" board. Boards with Bluetooth only (ESP32)."
+        "fr": "Vrai une fois quand le téléphone envoie ce message par Bluetooth (sans compter les majuscules ni les accents). Sur le téléphone, une appli de terminal Bluetooth (par exemple \"Serial Bluetooth Terminal\") se connecte à la carte \"S2A-...\". Avec une ESP32 (Bluetooth intégré), ou une carte Arduino et un module HC-05 / HC-06 (bloc \"module Bluetooth\").",
+        "en": "True once when the phone sends this message over Bluetooth (capital letters and accents do not matter). On the phone, a Bluetooth terminal app (for example \"Serial Bluetooth Terminal\") connects to the \"S2A-...\" board. With an ESP32 (built-in Bluetooth), or an Arduino board and an HC-05 / HC-06 module (\"Bluetooth module\" block)."
       },
       "args": [{ "name": "MESSAGE", "kind": "text", "default": "allume" }]
     },

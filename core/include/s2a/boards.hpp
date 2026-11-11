@@ -94,6 +94,16 @@ struct Board {
     [[nodiscard]] std::vector<const Pin*> pinsWith(PinCapability capability) const;
 };
 
+/// Why an HC-05 / HC-06 module cannot be wired to `board` on these pins (board pin numbers), or ""
+/// when it can. A key of the "module" i18n section: "no_module" (the board takes no module),
+/// "pins_usb" (0 and 1 are the USB link), "pins_same", "pin_missing", "pin_receive" (on a Mega, a
+/// pin that cannot receive with SoftwareSerial), "speed".
+[[nodiscard]] std::string bluetoothModuleProblem(const Board& board, int rx, int tx, int baud = 9600);
+
+/// The serial port of the board (1 for Serial1...) whose pins are `rx` and `tx`, as the module can use
+/// on a Mega (19/18, 17/16, 15/14); 0 when SoftwareSerial is needed.
+[[nodiscard]] int moduleSerialPort(const Board& board, int rx, int tx);
+
 /// The boards Scratch2Arduino knows about.
 class BoardDatabase {
 public:

@@ -267,6 +267,9 @@ std::pair<double, double> moduleSize(const std::string& kind, std::size_t pins) 
     if (kind == "dht") {
         return {std::max(minimum, 90.0), 130};
     }
+    if (kind == "bluetooth_module") {
+        return {std::max(minimum, 120.0), 130};
+    }
     return {std::max(minimum, 100.0), 110};
 }
 
@@ -322,6 +325,17 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.text({at.x + 30, at.y + 64}, "21", 15, "#1B5E20", "start", true);
         svg.text({at.x + w - 14, at.y + 96}, kind == "lcd16" ? "LCD 16x2" : "LCD 16x2 I2C", 10, "#FFFFFF", "end",
                  true);
+    } else if (kind == "bluetooth_module") {
+        // The small HC-05 board on its blue carrier: antenna track at the top, chip below.
+        svg.rect(at.x + 14, at.y + 10, w - 28, 72, "#2E7D32", "#1B5E20", 3, 2);
+        std::vector<Point> antenna;
+        for (int i = 0; i <= 8; ++i) {
+            const double x = at.x + 24 + i * ((w - 48) / 8);
+            antenna.push_back({x, at.y + (i % 2 == 0 ? 18 : 30)});
+        }
+        svg.line(antenna, "#FDD835", 2);
+        svg.rect(at.x + w / 2 - 18, at.y + 40, 36, 30, "#212121", {}, 2);
+        svg.text({at.x + w / 2, at.y + 98}, "HC-05", 11, "#FFFFFF", "middle", true);
     } else if (kind == "oled") {
         svg.rect(at.x + 12, at.y + 14, w - 24, 64, "#000000", {}, 3);
         svg.line({{at.x + 22, at.y + 34}, {at.x + w - 30, at.y + 34}}, "#4FC3F7", 3);
@@ -346,6 +360,9 @@ std::string moduleColour(const std::string& kind) {
     }
     if (kind == "lcd_i2c" || kind == "lcd16") {
         return "#2E7D32";
+    }
+    if (kind == "bluetooth_module") {
+        return "#1565C0";
     }
     return "#6A1B9A";
 }
