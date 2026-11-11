@@ -27,8 +27,8 @@
       "component": "dc_motor",
       "message": { "fr": "faire tourner le moteur (EN %1, IN1 %2, IN2 %3) %4 à la vitesse %5", "en": "run the motor (EN %1, IN1 %2, IN2 %3) %4 at speed %5" },
       "tooltip": {
-        "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D…). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
-        "en": "Runs a motor wired to an H-bridge (L298N, L293D…). EN sets the speed (PWM pin ~), IN1 and IN2 choose the direction. The speed goes from 0 to 100 %."
+        "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D...). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
+        "en": "Runs a motor wired to an H-bridge (L298N, L293D...). EN sets the speed (PWM pin ~), IN1 and IN2 choose the direction. The speed goes from 0 to 100 %."
       },
       "args": [
         { "name": "EN_PIN", "kind": "pin", "capability": "pwm", "default": "6" },

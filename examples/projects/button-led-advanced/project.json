@@ -82,6 +82,6 @@
   ],
   "userCode": {
     "language": "cpp",
-    "code": "// Mon code (C++) : un vrai interrupteur. Un appui allume, l'appui suivant éteint.\nconst int BOUTON = 2;\n\nint lampe = 0;     // 0 = éteinte, 1 = allumée (lue par le bloc « lampe »)\nint avant = HIGH;  // l'état du bouton la fois d'avant (HIGH = relâché)\n\nvoid surveillerBouton() {\n  pinMode(BOUTON, INPUT_PULLUP);\n  int maintenant = digitalRead(BOUTON);\n  if (avant == HIGH && maintenant == LOW) {  // il vient juste d'être enfoncé\n    lampe = 1 - lampe;\n    delay(30);  // anti-rebond : le contact « rebondit » quelques millisecondes\n  }\n  avant = maintenant;\n}\n"
+    "code": "// Mon code (C++) : un vrai interrupteur. Un appui allume, l'appui suivant éteint.\nconst int BOUTON = 2;\n\nint lampe = 0;     // 0 = éteinte, 1 = allumée (lue par le bloc \"lampe\")\nint avant = HIGH;  // l'état du bouton la fois d'avant (HIGH = relâché)\n\nvoid surveillerBouton() {\n  pinMode(BOUTON, INPUT_PULLUP);\n  int maintenant = digitalRead(BOUTON);\n  if (avant == HIGH && maintenant == LOW) {  // il vient juste d'être enfoncé\n    lampe = 1 - lampe;\n    delay(30);  // anti-rebond : le contact \"rebondit\" quelques millisecondes\n  }\n  avant = maintenant;\n}\n"
   }
 }

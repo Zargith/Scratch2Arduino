@@ -42,7 +42,7 @@ cmake --build --preset core-only && ctest --preset core-only
 
 - `main`: stable states only, updated from `dev`.
 - `dev`: integration branch; open pull requests against it.
-- One branch per change: `feature/…`, `fix/…`, `docs/…`, `ci/…`, merged into `dev`.
+- One branch per change: `feature/...`, `fix/...`, `docs/...`, `ci/...`, merged into `dev`.
 - `dev` is merged into `main` when its CI is green (typically at the end of a roadmap phase).
 
 ## Releases

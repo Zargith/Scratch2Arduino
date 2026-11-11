@@ -1,11 +1,11 @@
-# Tutorial 6 — Thermometer
+# Tutorial 6 - Thermometer
 
 **Goal**: a screen shows the temperature, then the air humidity, every 2 seconds.
-**Time**: 1 hour. **Parts**: Uno board, DHT11 sensor, 16×2 LCD screen with an I2C module (4 pins), wires.
+**Time**: 1 hour. **Parts**: Uno board, DHT11 sensor, 16x2 LCD screen with an I2C module (4 pins), wires.
 (Variant: 16-pin LCD screen + 10 kΩ potentiometer + 220 Ω resistor.)
 **You will learn**: a digital sensor, a screen, showing text and numbers.
 
-*Français : [../../fr/tutorials/06-thermometer.md](../../fr/tutorials/06-thermometer.md)*
+*Pour le lire en français, change la langue dans les paramètres.*
 
 ## 1. The circuit
 
@@ -13,8 +13,8 @@
 
 | Part | Wiring |
 |---|---|
-| DHT11 | VCC → 5V, DATA → **3**, GND → GND |
-| I2C LCD screen | GND → GND, VCC → 5V, SDA → **A4**, SCL → **A5** |
+| DHT11 | VCC -> 5V, DATA -> **3**, GND -> GND |
+| I2C LCD screen | GND -> GND, VCC -> 5V, SDA -> **A4**, SCL -> **A5** |
 
 The I2C screen needs only 2 data wires: SDA and SCL. On a Mega they are pins 20 and 21.
 
@@ -58,7 +58,7 @@ Choose **Advanced: C++ (I2C screen)** in the gallery: **My code** converts the t
 
 ## Challenges
 
-- Show "It is hot!" above 25 °C (**if … then** + **… > …**).
+- Show "It is hot!" above 25 °C (**if ... then** + **... > ...**).
 - Remember the highest temperature in a `record` variable and show it.
 - Add a blue LED that lights up when it is cold.
 
@@ -67,4 +67,4 @@ Choose **Advanced: C++ (I2C screen)** in the gallery: **My code** converts the t
 - The screen shows boxes on line 1: the program did not get there; check SDA and SCL.
 - The temperature is 0 or never changes: check the DATA pin (3) and the sensor type chosen.
 
-**Next**: [Tutorial 7 — Reaction game](07-reaction-game.md)
+**Next**: [Tutorial 7 - Reaction game](07-reaction-game.md)

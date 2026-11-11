@@ -53,7 +53,7 @@
         "en": "start the buzzer of pin %1 at %2 Hz"
       },
       "tooltip": {
-        "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise « arrêter le buzzer » pour le faire taire. Un seul buzzer peut sonner à la fois. Il faut un buzzer passif (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille au lieu de jouer la note.",
+        "fr": "Le buzzer sonne sans s'arrêter, et le programme continue tout de suite. Utilise \"arrêter le buzzer\" pour le faire taire. Un seul buzzer peut sonner à la fois. Il faut un buzzer passif (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille au lieu de jouer la note.",
         "en": "The buzzer keeps sounding and the program goes on at once. Use \"stop the buzzer\" to silence it. Only one buzzer can sound at a time. It needs a passive buzzer (no sticker, the circuit board shows underneath): an active buzzer crackles instead of playing the note."
       },
       "args": [
@@ -348,8 +348,8 @@
                 "en": "A4"
               },
               "tooltip": {
-                "fr": "la 4 : 440 Hz — le la du diapason",
-                "en": "A4: 440 Hz — the tuning A"
+                "fr": "la 4 : 440 Hz - le la du diapason",
+                "en": "A4: 440 Hz - the tuning A"
               }
             },
             {

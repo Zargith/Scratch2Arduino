@@ -315,7 +315,7 @@ TEST_F(Build, PointsErrorsOfMyCodeAtItsLines) {
     ASSERT_EQ(result.problems.size(), 1U);
     EXPECT_EQ(result.problems[0].file, "user");
     EXPECT_EQ(result.problems[0].line, 2);
-    EXPECT_NE(result.message.find("« Mon code » a 1 erreur(s). Ligne 2"), std::string::npos) << result.message;
+    EXPECT_NE(result.message.find("\"Mon code\" a 1 erreur(s). Ligne 2"), std::string::npos) << result.message;
 }
 
 TEST_F(Build, ReportsMissingFunctionsOfMyCode) {

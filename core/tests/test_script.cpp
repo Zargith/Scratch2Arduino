@@ -144,7 +144,7 @@ TEST_P(Script, ExplainsMistakesWithTheirLine) {
                      Language::French);
     ASSERT_TRUE(error);
     EXPECT_EQ(error->line, 3);
-    EXPECT_NE(error->message.find("« led » est inconnu"), std::string::npos) << error->message;
+    EXPECT_NE(error->message.find("\"led\" est inconnu"), std::string::npos) << error->message;
     EXPECT_NE(s2a::script::describe(*error, Language::French).find("Ligne 3"), std::string::npos);
 
     error = run(python() ? "x = 1\ndigitalWrite(99, HIGH)\n" : "let x = 1;\ndigitalWrite(99, HIGH);\n");

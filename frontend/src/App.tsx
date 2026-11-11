@@ -133,7 +133,7 @@ export function App() {
 	/** Blocks view, or code view (the code of the blocks and "My code"). */
 	const [view, setView] = useState<"blocks" | "code">("blocks");
 	const [codeTab, setCodeTab] = useState<CodeTab>("blocks");
-	/** Shown over the window while a view is prepared ("Converting the blocks to code…"). */
+	/** Shown over the window while a view is prepared ("Converting the blocks to code..."). */
 	const [loading, setLoading] = useState<string | null>(null);
 	/** The code of the blocks, for the code view. */
 	const [blocksCode, setBlocksCode] = useState("");
@@ -288,7 +288,7 @@ export function App() {
 	useEffect(() => {
 		if (!hasHost()) return;
 		const file = path === "" ? name : path.split(/[\\/]/).pop() ?? name;
-		void bridge.setTitle(`${dirty ? "• " : ""}${file} — ${t("app.title")}`).catch(() => undefined);
+		void bridge.setTitle(`${dirty ? "* " : ""}${file} - ${t("app.title")}`).catch(() => undefined);
 	}, [name, path, dirty, t]);
 
 	const switchLanguage = (next: Language) => {
@@ -676,7 +676,7 @@ export function App() {
 			const warning = outcome.ok ? outcome.warnings?.[0] : undefined;
 			setStatus({
 				kind: outcome.ok ? (warning ? "info" : "success") : "error",
-				message: warning ? `${outcome.message} ⚠ ${warning}` : outcome.message,
+				message: warning ? `${outcome.message}\n${warning}` : outcome.message,
 				details: outcome.details,
 			});
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
@@ -1231,7 +1231,7 @@ export function App() {
 			<Modal
 				opened={helpShown}
 				onClose={() => setHelpShown(false)}
-				title={`${t("program.help")} — ${programName(helpLanguage, t("program.blocks"))}`}
+				title={`${t("program.help")} - ${programName(helpLanguage, t("program.blocks"))}`}
 				size="lg"
 			>
 				{helpLanguage === "cpp" ? (

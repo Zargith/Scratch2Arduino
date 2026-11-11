@@ -88,6 +88,6 @@
   ],
   "userCode": {
     "language": "cpp",
-    "code": "// Mon code (C++) : la mesure est « lissée » pour que le bras ne tremble pas.\nfloat lisse = 0;  // la mesure lissée, de 0 à 100\n\n// Reçoit la position du potentiomètre (0 à 100), donne l'angle du servomoteur (0 à 180).\nint angleLisse(float mesure) {\n  // On ne fait qu'un cinquième du chemin vers la nouvelle mesure : les petits sauts disparaissent.\n  lisse = lisse + (mesure - lisse) / 5;\n  return (int)(lisse * 180 / 100);\n}\n"
+    "code": "// Mon code (C++) : la mesure est \"lissée\" pour que le bras ne tremble pas.\nfloat lisse = 0;  // la mesure lissée, de 0 à 100\n\n// Reçoit la position du potentiomètre (0 à 100), donne l'angle du servomoteur (0 à 180).\nint angleLisse(float mesure) {\n  // On ne fait qu'un cinquième du chemin vers la nouvelle mesure : les petits sauts disparaissent.\n  lisse = lisse + (mesure - lisse) / 5;\n  return (int)(lisse * 180 / 100);\n}\n"
   }
 }

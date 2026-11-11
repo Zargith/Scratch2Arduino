@@ -12,7 +12,7 @@
       "shape": "hat",
       "message": { "fr": "définir %1", "en": "define %1" },
       "tooltip": {
-        "fr": "Les blocs accrochés dessous forment une fonction : ils s'exécutent chaque fois qu'un bloc « appeler » utilise cette fonction, pas au démarrage.",
+        "fr": "Les blocs accrochés dessous forment une fonction : ils s'exécutent chaque fois qu'un bloc \"appeler\" utilise cette fonction, pas au démarrage.",
         "en": "The blocks below make a function: they run each time a \"call\" block uses this function, not at start-up."
       },
       "args": [{ "name": "FUNCTION", "kind": "function" }]

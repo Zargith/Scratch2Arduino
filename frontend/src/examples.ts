@@ -32,7 +32,7 @@ interface GalleryVariant {
 	id: string;
 	label: Texts;
 	parts?: Texts;
-	/** What this variant does differently (a level: "advanced", with "My code"…). */
+	/** What this variant does differently (a level: "advanced", with "My code"...). */
 	description?: Texts;
 }
 

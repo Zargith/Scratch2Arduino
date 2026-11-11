@@ -16,24 +16,24 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | Projet / Project | Composants / Parts |
 |---|---|
 | [Clignotant / Blink](#clignotant--blink) | aucun / none |
-| [Feu tricolore](#feu-tricolore--traffic-light) (fonctions / functions) | 3 LED, 3 × 220 Ω |
+| [Feu tricolore](#feu-tricolore--traffic-light) (fonctions / functions) | 3 LED, 3 x 220 Ω |
 | [Bouton et LED](#bouton-et-led--button-and-led) | bouton, LED, 220 Ω |
 | [Potentiomètre et servomoteur](#potentiomètre-et-servomoteur--potentiometer-and-servo) | potentiomètre, servo SG90 |
-| [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 × 220 Ω, buzzer |
-| [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16×2 I2C |
-| [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16×2 à 16 broches, potentiomètre, 220 Ω |
+| [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 x 220 Ω, buzzer |
+| [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16x2 I2C |
+| [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16x2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
-| [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel ×8 |
+| [Jauge lumineuse](#jauge-lumineuse--light-gauge) | potentiomètre, ruban NeoPixel x8 |
 | [Variateur ESP32](#variateur-esp32--esp32-dimmer) (ESP32) | potentiomètre, LED, 220 Ω |
 | [Station météo sans fil](#station-météo-sans-fil--wireless-weather-station) (ESP32, Wi-Fi ou Bluetooth) | DHT11, LED, 220 Ω |
 | [Lampe pilotée par téléphone](#lampe-pilotée-par-téléphone--phone-controlled-lamp) (ESP32, Wi-Fi et Bluetooth) | DHT11, LED, 220 Ω, téléphone |
 | [Robot télécommandé](#robot-télécommandé--remote-robot) (ESP32, Bluetooth, fonctions / functions) | L298N, 2 moteurs, piles, batterie USB, téléphone |
 
 **Niveaux / levels** : *Clignotant*, *Feu tricolore*, *Bouton et LED*, *Potentiomètre et servomoteur*, *Alarme de
-distance*, *Thermomètre*, *Jeu de réaction* et *Robot télécommandé* existent aussi en version **avancée** (dossiers `…-advanced`) : même montage, mais une
-partie du programme est écrite dans « Mon code » (C++, ou Python en mode Live pour le Clignotant) et
+distance*, *Thermomètre*, *Jeu de réaction* et *Robot télécommandé* existent aussi en version **avancée** (dossiers `...-advanced`) : même montage, mais une
+partie du programme est écrite dans "Mon code" (C++, ou Python en mode Live pour le Clignotant) et
 appelée par des blocs. / *Blink*, *Traffic light*, *Button and LED*, *Potentiometer and servo*, *Distance alarm*,
-*Thermometer*, *Reaction game* and *Remote robot* also come in an **advanced** version (`…-advanced` folders): same wiring, but part of the
+*Thermometer*, *Reaction game* and *Remote robot* also come in an **advanced** version (`...-advanced` folders): same wiring, but part of the
 program is written in "My code" (C++, or Python in Live mode for Blink) and called by blocks.
 
 `all-blocks` contient tous les blocs pour tester l'éditeur : ce n'est pas un montage à réaliser.
@@ -45,7 +45,7 @@ program is written in "My code" (C++, or Python in Live mode for Blink) and call
 
 ![Clignotant](projects/blink/wiring.png)
 
-La LED « L » soudée sur la carte clignote : rien à brancher. / The on-board "L" LED blinks: nothing to wire.
+La LED "L" soudée sur la carte clignote : rien à brancher. / The on-board "L" LED blinks: nothing to wire.
 
 ## Feu tricolore / Traffic light
 
@@ -67,9 +67,9 @@ Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une **fonction** (
 ![Bouton et LED](projects/button-led/wiring.png)
 
 La LED s'allume tant que le bouton est appuyé. Le bouton va d'un côté sur la broche 2, de l'autre au GND,
-**sans résistance** : le bloc « le bouton de la broche … est appuyé » active la résistance de tirage
+**sans résistance** : le bloc "le bouton de la broche ... est appuyé" active la résistance de tirage
 intégrée à la carte. / The LED is on while the button is held down. One side of the button goes to pin 2,
-the other to GND, **no resistor**: the block "button of pin … is pressed" switches on the board's built-in
+the other to GND, **no resistor**: the block "button of pin ... is pressed" switches on the board's built-in
 pull-up resistor.
 
 | Composant / Part | Broche / Pin |
@@ -121,7 +121,7 @@ The screen shows the temperature, then the humidity, every 2 seconds.
 |---|---|
 | DHT11 : VCC / GND | 5V / GND |
 | DHT11 : DATA (out) | 3 |
-| LCD 16×2 I2C : GND / VCC | GND / 5V |
+| LCD 16x2 I2C : GND / VCC | GND / 5V |
 | LCD : SDA / SCL | A4 / A5 |
 
 Si l'écran reste vide, tourne la petite vis bleue derrière le module I2C (contraste).
@@ -191,7 +191,7 @@ The more the knob is turned, the more LEDs light up on the strip.
 
 ![Variateur ESP32](projects/esp32-dimmer/wiring.png)
 
-Pour essayer une carte ESP32 (choisir « ESP32 (DevKit) ») : la LED bleue de la carte (broche 2) clignote, le
+Pour essayer une carte ESP32 (choisir "ESP32 (DevKit)") : la LED bleue de la carte (broche 2) clignote, le
 potentiomètre règle la lumière de la LED et sa valeur (0 à 255) s'affiche sur le moniteur série. Les deux
 scripts tournent en même temps. Marche aussi en mode Live, par USB ou par Wi-Fi.
 To try an ESP32 board (choose "ESP32 (DevKit)"): the blue on-board LED (pin 2) blinks, the knob sets the
@@ -234,14 +234,14 @@ board changes (the steps are on each diagram).
 
 ![Lampe pilotée par téléphone](projects/phone-lamp/wiring.png)
 
-Wi-Fi et Bluetooth ensemble. Sur le téléphone, une appli de terminal Bluetooth (par exemple « Serial
-Bluetooth Terminal » sur Android) se connecte à la carte « S2A-… » et envoie `allume`, `eteins` ou
+Wi-Fi et Bluetooth ensemble. Sur le téléphone, une appli de terminal Bluetooth (par exemple "Serial
+Bluetooth Terminal" sur Android) se connecte à la carte "S2A-..." et envoie `allume`, `eteins` ou
 `temperature` (les majuscules et les accents ne comptent pas) : la carte répond. Pendant ce temps,
 l'ordinateur suit la lampe et la température en mode Live par Wi-Fi, et peut changer les blocs.
 Téléversé, le programme marche aussi avec le téléphone seul. Le mode Live par Bluetooth n'est pas possible
 avec les blocs Téléphone : la carte n'a qu'une connexion Bluetooth, prise par le téléphone.
 Wi-Fi and Bluetooth together. On the phone, a Bluetooth terminal app (for example "Serial Bluetooth
-Terminal" on Android) connects to the "S2A-…" board and sends `allume`, `eteins` or `temperature` (capital
+Terminal" on Android) connects to the "S2A-..." board and sends `allume`, `eteins` or `temperature` (capital
 letters and accents do not matter): the board answers. Meanwhile the computer follows the lamp and the
 temperature in Live mode over Wi-Fi, and can change the blocks. Uploaded, the program also works with the
 phone alone. Live mode over Bluetooth is not possible with the Phone blocks: the board has one Bluetooth
@@ -256,14 +256,14 @@ Wiring: the same as the wireless weather station (DHT11 on 4, LED on 25, powered
 
 Deux moteurs, pilotés depuis un téléphone par Bluetooth. Téléverse le programme sur l'ESP32, débranche le
 câble USB et alimente la carte par une batterie USB. Sur le téléphone, une appli de terminal Bluetooth
-(par exemple « Serial Bluetooth Terminal » sur Android, dont les boutons M1 à M5 peuvent recevoir les mots)
-se connecte à « S2A-… » et envoie `avance`, `recule`, `gauche`, `droite` ou `stop` : le robot bouge et
-répond « ok : … ». Chaque mouvement est une **fonction** (*avancer*, *reculer*, *tourner à gauche*,
+(par exemple "Serial Bluetooth Terminal" sur Android, dont les boutons M1 à M5 peuvent recevoir les mots)
+se connecte à "S2A-..." et envoie `avance`, `recule`, `gauche`, `droite` ou `stop` : le robot bouge et
+répond "ok : ...". Chaque mouvement est une **fonction** (*avancer*, *reculer*, *tourner à gauche*,
 *tourner à droite*, *arrêter*). Si une roue tourne à l'envers, inverse ses deux fils sur le L298N.
 Two motors, driven from a phone over Bluetooth. Upload the program to the ESP32, unplug the USB cable and
 power the board from a USB power bank. On the phone, a Bluetooth terminal app (for example "Serial
-Bluetooth Terminal" on Android, whose M1 to M5 buttons can hold the words) connects to "S2A-…" and sends
-`avance`, `recule`, `gauche`, `droite` or `stop`: the robot moves and answers "ok : …". Each move is a
+Bluetooth Terminal" on Android, whose M1 to M5 buttons can hold the words) connects to "S2A-..." and sends
+`avance`, `recule`, `gauche`, `droite` or `stop`: the robot moves and answers "ok : ...". Each move is a
 **function**. If a wheel turns the wrong way, swap its two wires on the L298N.
 
 Un seul L298N commande les deux moteurs : le moteur de gauche utilise ENA, IN1, IN2 (sorties OUT1, OUT2),

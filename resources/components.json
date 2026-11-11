@@ -10,14 +10,14 @@
       ]
     },
     "input": {
-      "name": { "fr": "Entrée (bouton, capteur…)", "en": "Input (button, sensor…)" },
+      "name": { "fr": "Entrée (bouton, capteur...)", "en": "Input (button, sensor...)" },
       "current": 0,
       "connections": [
         { "pin": { "fr": "signal", "en": "signal" }, "to": "PIN", "short": "S" },
         { "pin": { "fr": "autre patte d'un bouton", "en": "other leg of a button" }, "to": "GND", "short": "GND" }
       ],
       "note": {
-        "fr": "Un bouton entre la broche et GND a besoin du mode « entrée avec pull-up ».",
+        "fr": "Un bouton entre la broche et GND a besoin du mode \"entrée avec pull-up\".",
         "en": "A button between the pin and GND needs the \"input with pull-up\" mode."
       }
     },
@@ -136,7 +136,7 @@
       ]
     },
     "lcd_i2c": {
-      "name": { "fr": "Écran LCD 16×2 I2C", "en": "16×2 I2C LCD screen" },
+      "name": { "fr": "Écran LCD 16x2 I2C", "en": "16x2 I2C LCD screen" },
       "current": 30,
       "connections": [
         { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
@@ -156,7 +156,7 @@
       ]
     },
     "lcd16": {
-      "name": { "fr": "Écran LCD 16×2 à 16 broches", "en": "16×2 LCD screen with 16 pins" },
+      "name": { "fr": "Écran LCD 16x2 à 16 broches", "en": "16x2 LCD screen with 16 pins" },
       "current": 30,
       "connections": [
         { "pin": { "fr": "VSS (1)", "en": "VSS (1)" }, "to": "GND", "short": "VSS" },

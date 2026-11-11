@@ -94,7 +94,7 @@ function Update-SessionPath {
 
 function Install-WithWinget([string]$Id, [string[]]$Extra = @()) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Fail "winget est introuvable : installe « $Id » manuellement puis relance l'installation." `
+        Fail "winget est introuvable : installe "$Id" manuellement puis relance l'installation." `
              "winget not found: install '$Id' manually, then run the installer again."
     }
     Say "Installation de $Id..." "Installing $Id..."

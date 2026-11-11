@@ -76,7 +76,7 @@ export function resolveLink(language: Language, from: DocPath, href: string): Do
 	return { kind: "page", language: pageLanguage, path, anchor };
 }
 
-/** The anchor GitHub gives a heading ("10. Variables, fonctions" → "10-variables-fonctions"). */
+/** The anchor GitHub gives a heading ("10. Variables, fonctions" -> "10-variables-fonctions"). */
 export function headingAnchor(text: string): string {
 	return text
 		.trim()

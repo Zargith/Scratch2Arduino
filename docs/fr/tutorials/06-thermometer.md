@@ -1,11 +1,11 @@
-# Tutoriel 6 — Thermomètre
+# Tutoriel 6 - Thermomètre
 
 **Objectif** : un écran affiche la température, puis l'humidité de l'air, toutes les 2 secondes.
-**Durée** : 1 heure. **Matériel** : carte Uno, capteur DHT11, écran LCD 16×2 avec module I2C (4 broches),
+**Durée** : 1 heure. **Matériel** : carte Uno, capteur DHT11, écran LCD 16x2 avec module I2C (4 broches),
 fils. (Variante : écran LCD à 16 broches + potentiomètre 10 kΩ + résistance 220 Ω.)
 **Tu vas apprendre** : un capteur numérique, un écran, afficher du texte et des nombres.
 
-*English: [../../en/tutorials/06-thermometer.md](../../en/tutorials/06-thermometer.md)*
+*To read it in English, change the language in the settings.*
 
 ## 1. Le montage
 
@@ -13,8 +13,8 @@ fils. (Variante : écran LCD à 16 broches + potentiomètre 10 kΩ + résistance
 
 | Composant | Branchement |
 |---|---|
-| DHT11 | VCC → 5V, DATA → **3**, GND → GND |
-| Écran LCD I2C | GND → GND, VCC → 5V, SDA → **A4**, SCL → **A5** |
+| DHT11 | VCC -> 5V, DATA -> **3**, GND -> GND |
+| Écran LCD I2C | GND -> GND, VCC -> 5V, SDA -> **A4**, SCL -> **A5** |
 
 L'écran I2C n'a besoin que de 2 fils de données : SDA et SCL. Sur une Mega, ce sont les broches 20 et 21.
 
@@ -59,7 +59,7 @@ Choisis **Avancé : C++ (écran I2C)** dans la galerie : **Mon code** convertit 
 
 ## Défis
 
-- Affiche « Il fait chaud ! » au-dessus de 25 °C (**si … alors** + **… > …**).
+- Affiche "Il fait chaud !" au-dessus de 25 °C (**si ... alors** + **... > ...**).
 - Retiens la température la plus haute dans une variable `record` et affiche-la.
 - Ajoute une LED bleue qui s'allume quand il fait froid.
 
@@ -68,4 +68,4 @@ Choisis **Avancé : C++ (écran I2C)** dans la galerie : **Mon code** convertit 
 - L'écran affiche des carrés sur la 1ʳᵉ ligne : le programme n'est pas arrivé ; vérifie SDA et SCL.
 - La température vaut 0 ou ne change jamais : vérifie la broche DATA (3) et le type de capteur choisi.
 
-**Suivant** : [Tutoriel 7 — Jeu de réaction](07-reaction-game.md)
+**Suivant** : [Tutoriel 7 - Jeu de réaction](07-reaction-game.md)

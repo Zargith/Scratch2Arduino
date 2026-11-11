@@ -18,9 +18,9 @@ describe("Bluetooth ports", () => {
 		expect(hasBluetooth("esp32")).toBe(true);
 		expect(hasBluetooth("uno")).toBe(false);
 		const boards = [{ name: "S2A-BBCC", address: "24:6F:28:AA:BB:CC" }];
-		expect(bluetoothPorts("uno", boards, "Bluetooth — {name}")).toEqual([]);
-		expect(bluetoothPorts("esp32", boards, "Bluetooth — {name}")).toEqual([
-			{ address: "bt:24:6F:28:AA:BB:CC", label: "Bluetooth — S2A-BBCC" },
+		expect(bluetoothPorts("uno", boards, "Bluetooth - {name}")).toEqual([]);
+		expect(bluetoothPorts("esp32", boards, "Bluetooth - {name}")).toEqual([
+			{ address: "bt:24:6F:28:AA:BB:CC", label: "Bluetooth - S2A-BBCC" },
 		]);
 	});
 

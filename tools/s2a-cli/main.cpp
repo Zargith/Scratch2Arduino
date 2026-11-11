@@ -414,7 +414,7 @@ int Cli::wiringCommand() const {
     }
     const auto plan = s2a::wiring::plan(*project, s2a::BlockCatalog::builtin(), *selected, options_.language);
     for (const auto& warning : plan.warnings) {
-        std::cout << "⚠ " << warning.message << '\n';
+        std::cout << "! " << warning.message << '\n';
     }
     int number = 0;
     for (const auto& component : plan.components) {
@@ -432,7 +432,7 @@ int Cli::wiringCommand() const {
     }
     if (!options_.svg.empty()) {
         std::ofstream file(fs::u8path(options_.svg), std::ios::binary);
-        file << s2a::wiring::svg(plan, *selected, project->name + " — " + selected->name);
+        file << s2a::wiring::svg(plan, *selected, project->name + " - " + selected->name);
         if (!file) {
             std::cerr << tr(s2a::errorMessageKey(s2a::ErrorCode::WriteFailed)) << '\n';
             return kFailure;
@@ -546,7 +546,7 @@ int Cli::liveCommand() const {
                                  : s2a::validation::validate(*project, s2a::BlockCatalog::builtin(), selected,
                                                              options_.language);
     for (const auto& issue : issues) {
-        std::cerr << (issue.severity == s2a::validation::Severity::Error ? "✗ " : "⚠ ")
+        std::cerr << (issue.severity == s2a::validation::Severity::Error ? "x " : "! ")
                   << s2a::validation::describe(issue, options_.language) << '\n';
     }
     if (s2a::validation::hasErrors(issues)) {

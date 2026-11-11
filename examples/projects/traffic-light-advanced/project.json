@@ -92,6 +92,6 @@
   ],
   "userCode": {
     "language": "cpp",
-    "code": "// Mon code (C++) : compilé avec les blocs. Chaque fonction devient un bloc « Mon code ».\nconst int ROUGE = 12;\nconst int ORANGE = 11;\nconst int VERT = 10;\n\n// Allume les feux demandés : 1 = allumé, 0 = éteint.\nvoid feux(int rouge, int orange, int vert) {\n  pinMode(ROUGE, OUTPUT);\n  pinMode(ORANGE, OUTPUT);\n  pinMode(VERT, OUTPUT);\n  digitalWrite(ROUGE, rouge);\n  digitalWrite(ORANGE, orange);\n  digitalWrite(VERT, vert);\n}\n\n// Le feu orange clignote, puis reste allumé une seconde.\nvoid clignoterOrange(int fois) {\n  for (int i = 0; i < fois; i++) {\n    feux(0, 1, 0);\n    delay(300);\n    feux(0, 0, 0);\n    delay(300);\n  }\n  feux(0, 1, 0);\n  delay(1000);\n}\n"
+    "code": "// Mon code (C++) : compilé avec les blocs. Chaque fonction devient un bloc \"Mon code\".\nconst int ROUGE = 12;\nconst int ORANGE = 11;\nconst int VERT = 10;\n\n// Allume les feux demandés : 1 = allumé, 0 = éteint.\nvoid feux(int rouge, int orange, int vert) {\n  pinMode(ROUGE, OUTPUT);\n  pinMode(ORANGE, OUTPUT);\n  pinMode(VERT, OUTPUT);\n  digitalWrite(ROUGE, rouge);\n  digitalWrite(ORANGE, orange);\n  digitalWrite(VERT, vert);\n}\n\n// Le feu orange clignote, puis reste allumé une seconde.\nvoid clignoterOrange(int fois) {\n  for (int i = 0; i < fois; i++) {\n    feux(0, 1, 0);\n    delay(300);\n    feux(0, 0, 0);\n    delay(300);\n  }\n  feux(0, 1, 0);\n  delay(1000);\n}\n"
   }
 }

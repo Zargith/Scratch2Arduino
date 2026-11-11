@@ -27,7 +27,7 @@ describe("code editor", () => {
 		expect(container.querySelector(".cm-lintRange-error")).toBeNull(); // nothing is checked while typing
 
 		await act(async () => {
-			ref.current?.showProblems([{ line: 3, message: "« led » est inconnu" }]);
+			ref.current?.showProblems([{ line: 3, message: "\"led\" est inconnu" }]);
 		});
 		expect(container.querySelector(".cm-lintRange-error")?.textContent).toContain("pinMode");
 

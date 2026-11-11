@@ -1,12 +1,12 @@
-# Tutoriel 7 — Jeu de réaction
+# Tutoriel 7 - Jeu de réaction
 
 **Objectif** : un jeu ! Attends que le cœur apparaisse sur la matrice de LED, puis appuie le plus vite
 possible. Appuyer trop tôt, c'est perdu. Le score s'affiche sur un petit écran.
-**Durée** : 1 h 30. **Matériel** : carte Uno, matrice de LED 8×8 MAX7219, écran OLED SSD1306 (I2C),
+**Durée** : 1 h 30. **Matériel** : carte Uno, matrice de LED 8x8 MAX7219, écran OLED SSD1306 (I2C),
 bouton-poussoir, buzzer passif, platine d'essai, fils.
 **Tu vas apprendre** : le hasard, attendre un événement, compter un score, un projet complet.
 
-*English: [../../en/tutorials/07-reaction-game.md](../../en/tutorials/07-reaction-game.md)*
+*To read it in English, change the language in the settings.*
 
 ## 1. Le montage
 
@@ -14,20 +14,20 @@ bouton-poussoir, buzzer passif, platine d'essai, fils.
 
 | Composant | Branchement |
 |---|---|
-| Matrice MAX7219 | VCC → 5V, GND → GND, DIN → **12**, CS → **10**, CLK → **11** |
-| Écran OLED | VCC → 5V, GND → GND, SDA → **A4**, SCL → **A5** |
-| Bouton | un côté → **2**, l'autre → GND |
-| Buzzer | + → **8**, − → GND |
+| Matrice MAX7219 | VCC -> 5V, GND -> GND, DIN -> **12**, CS -> **10**, CLK -> **11** |
+| Écran OLED | VCC -> 5V, GND -> GND, SDA -> **A4**, SCL -> **A5** |
+| Bouton | un côté -> **2**, l'autre -> GND |
+| Buzzer | + -> **8**, − -> GND |
 
 ## 2. Les morceaux du jeu
 
 Essaie chaque bloc seul avant de tout assembler (en **Live**, c'est immédiat) :
 
 - **afficher cœur sur la matrice de LED (DIN 12, CLK 11, CS 10)** (famille **Lumières**) : choisis le
-  dessin dans le menu (cœur, triste, coche, tout éteint…).
-- **écrire … sur la ligne 1 de l'écran OLED** (famille **Écrans**).
+  dessin dans le menu (cœur, triste, coche, tout éteint...).
+- **écrire ... sur la ligne 1 de l'écran OLED** (famille **Écrans**).
 - **nombre aléatoire entre 1 et 4** (famille **Opérateurs**) : un nombre différent à chaque fois.
-- **attendre jusqu'à ce que …** (famille **Contrôle**) : le programme s'arrête jusqu'à ce que la
+- **attendre jusqu'à ce que ...** (famille **Contrôle**) : le programme s'arrête jusqu'à ce que la
   condition soit vraie.
 
 ## 3. Le jeu
@@ -60,7 +60,7 @@ Lis-le comme une histoire : on attend que le joueur lâche le bouton, on éteint
 hasard** (pour qu'on ne puisse pas deviner). Si le bouton est déjà appuyé à ce moment-là, le joueur a
 triché : visage triste. Sinon le cœur apparaît, on attend l'appui, et on gagne un point.
 
-Pour gagner du temps, tu peux ouvrir l'exemple : **Nouveau → Jeu de réaction**.
+Pour gagner du temps, tu peux ouvrir l'exemple : **Nouveau -> Jeu de réaction**.
 
 ## Version avancée : avec du code
 
@@ -79,4 +79,4 @@ Choisis **Avancé : C++** dans la galerie : **Mon code** garde le **record** dan
 - Le buzzer bourdonne en permanence : c'est un buzzer actif ; prends un buzzer **passif**.
 - L'écran OLED reste noir : vérifie SDA (A4) et SCL (A5).
 
-**Suivant** : [Tutoriel 8 — Robot télécommandé](08-remote-robot.md)
+**Suivant** : [Tutoriel 8 - Robot télécommandé](08-remote-robot.md)
