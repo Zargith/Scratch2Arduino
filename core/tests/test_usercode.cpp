@@ -60,6 +60,22 @@ long seconds(void)
                                         "average(a,b)=@15", "seconds()=@20"}));
 }
 
+// Reported by the user: String variables and names starting with "_" gave no block.
+TEST(UserCode, FindsStringVariablesAndNamesStartingWithAnUnderscore) {
+    const std::string code = R"cpp(String str = "";
+float _f;
+int __reserved = 1;
+
+void incrment_str(float _str) {
+    str += _str;
+}
+
+String hello() { return "hi"; }
+)cpp";
+    EXPECT_EQ(summary(ProgramLanguage::Cpp, code),
+              (std::vector<std::string>{"str@1", "_f@2", "incrment_str(_str)@5", "hello()=@9"}));
+}
+
 TEST(UserCode, FindsPythonFunctionsAndGlobals) {
     const std::string code = R"py("""Mes fonctions.
 def hidden():

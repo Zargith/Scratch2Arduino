@@ -179,9 +179,21 @@ private:
             return numberLiteral(defaultValue(block, name));
         }
         if (found->second.block) {
-            return expression(*found->second.block);
+            // A String of "My code" in a number slot: its number ("12.5" -> 12.5).
+            return expression(*found->second.block) + (isUserText(*found->second.block) ? ".toFloat()" : "");
         }
         return numberLiteral(found->second.value);
+    }
+
+    /// A "My code" block giving an Arduino String (a String variable, or a function returning one).
+    bool isUserText(const Block& block) const {
+        const bool get = block.type == usercode::kGetBlock;
+        if (!get && block.type != usercode::kValueBlock) {
+            return false;
+        }
+        const auto* found =
+            userDeclaration(block, get ? usercode::Declaration::Kind::Variable : usercode::Declaration::Kind::Function);
+        return found != nullptr && found->text;
     }
 
     std::string condition(const Block& block, const std::string& name) {
@@ -739,7 +751,12 @@ private:
         } else if (type == usercode::kSetBlock) {
             const auto* found = userDeclaration(block, usercode::Declaration::Kind::Variable);
             if (found != nullptr && !found->readOnly) {
-                body.add(depth, found->name + " = " + number(block, "VALUE") + ";");
+                if (found->text) { // a String: the number written as text, like the serial monitor does
+                    helpers_.insert("text");
+                    body.add(depth, found->name + " = s2a_text(" + number(block, "VALUE") + ");");
+                } else {
+                    body.add(depth, found->name + " = " + number(block, "VALUE") + ";");
+                }
             }
         } else if (type == "variables_set" || type == "variables_change") {
             const std::string name = variable(block);
@@ -804,7 +821,8 @@ private:
         helper(out, "print",
                {"void s2a_print(double value) {",
                 "  if (value == floor(value) && fabs(value) < 2000000000.0) {",
-                "    Serial.println((long)value);", "  } else {", "    Serial.println(value, 2);", "  }", "}"});
+                "    Serial.println((long)value);", "  } else {", "    Serial.println(value, 2);", "  }", "}", "",
+                "void s2a_print(const String& value) {", "  Serial.println(value);", "}"});
         helper(out, "wait",
                {"void s2a_wait(double seconds) {", "  if (seconds > 0) {",
                 "    delay((unsigned long)(seconds * 1000.0));", "  }", "}"});
@@ -827,7 +845,8 @@ private:
         helper(out, "text",
                {"String s2a_text(double value) {",
                 "  if (value == floor(value) && fabs(value) < 2000000000.0) {", "    return String((long)value);",
-                "  }", "  return String(value, 2);", "}"});
+                "  }", "  return String(value, 2);", "}", "", "String s2a_text(const String& value) {",
+                "  return value;", "}"});
         helper(out, "phone",
                {"// Phone over Bluetooth: named \"S2A-xxxx\" like the Live program, pairing without a code.",
                 "String s2a_phone_line;   // last message, until a block recognises it",

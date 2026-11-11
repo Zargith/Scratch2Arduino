@@ -40,4 +40,23 @@ describe("code editor", () => {
 		await act(async () => root.unmount());
 		container.remove();
 	}, 30_000); // CodeMirror's first start is slow in jsdom when the whole suite runs
+	// Regression: after a failed Check, a Check that compiled left the underline and the red dot.
+	it("clears the marks when a later Check finds nothing", async () => {
+		const container = document.createElement("div");
+		document.body.append(container);
+		const root = createRoot(container);
+		const render = (problems: { line: number; message: string }[]) =>
+			act(async () => {
+				root.render(
+					<CodeEditor program="python" language="fr" initialCode={starterCode("python", "fr")} onChange={() => undefined} problems={problems} />
+				);
+			});
+		await render([{ line: 3, message: "erreur" }]);
+		expect(container.querySelector(".cm-lintRange-error")).not.toBeNull();
+		await render([]);
+		expect(container.querySelector(".cm-lintRange-error")).toBeNull();
+		expect(container.querySelector(".cm-lint-marker-error")).toBeNull();
+		await act(async () => root.unmount());
+		container.remove();
+	}, 30_000);
 });

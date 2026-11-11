@@ -25,11 +25,13 @@ struct Declaration {
     std::vector<std::string> parameters; ///< Functions: parameter names (numbers), at most kMaxParameters.
     bool returnsValue = false;           ///< Functions: gives a value (a reporter block), else a "call" block.
     bool readOnly = false;               ///< Variables: const, cannot be set by a block.
+    bool text = false;                   ///< C++: an Arduino String (variable, or a function giving one).
     int line = 0;                        ///< 1-based line of the declaration.
 };
 
 /// The declarations of `code` usable by blocks, in the order of the file (one per name).
-/// C++: functions returning void or a number with number parameters, and number variables, at
+/// C++: functions returning void, a number or a String, with number parameters, and number or
+/// String variables, at
 /// file scope (setup and loop are left out: the blocks make them). Python: top-level def and
 /// assignments. JavaScript: top-level function declarations and let/var/const.
 [[nodiscard]] std::vector<Declaration> declarations(project::ProgramLanguage language, std::string_view code);

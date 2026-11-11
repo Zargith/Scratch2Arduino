@@ -231,7 +231,8 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
 	};
 
 	useEffect(() => {
-		if (problems && problems.length > 0) show(problems, false);
+		// An empty list clears the marks of an earlier Check (the code was fixed).
+		show(problems ?? [], false);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [problems]);
 
