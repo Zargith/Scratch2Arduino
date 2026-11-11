@@ -147,6 +147,8 @@ export function App() {
 	const userCodeRef = useRef<UserCode | null>(null);
 	/** Its functions and variables, as blocks of the "My code" category. */
 	const [declarations, setDeclarations] = useState<UserDeclaration[]>([]);
+	/** Counts the "My code" scans: an older one (another project) never fills the palette. */
+	const declarationsRequest = useRef(0);
 	/** Mistakes of the last Check, Upload or Live: in "My code", and in an expert program. */
 	const [userProblems, setUserProblems] = useState<CodeProblem[]>([]);
 	const [programProblems, setProgramProblems] = useState<CodeProblem[]>([]);
@@ -249,12 +251,15 @@ export function App() {
 		setView(language === "blocks" ? "blocks" : "code");
 		setCodeTab("blocks");
 		setDeclarations([]);
+		const request = ++declarationsRequest.current;
 		const found = project.userCode;
 		if (found && hasHost()) {
 			bridge
 				.codeDeclarations(found.language, found.code)
-				.then(setDeclarations)
-				.catch(() => setDeclarations([]));
+				.catch(() => [])
+				.then((list) => {
+					if (request === declarationsRequest.current) setDeclarations(list);
+				});
 		}
 	}, []);
 
@@ -603,11 +608,9 @@ export function App() {
 		setLoading(t("view.loading_blocks"));
 		try {
 			const mine = userCodeRef.current;
-			if (mine && hasHost()) {
-				setDeclarations(await bridge.codeDeclarations(mine.language, mine.code).catch(() => []));
-			} else {
-				setDeclarations([]);
-			}
+			const request = ++declarationsRequest.current;
+			const list = mine && hasHost() ? await bridge.codeDeclarations(mine.language, mine.code).catch(() => []) : [];
+			if (request === declarationsRequest.current) setDeclarations(list);
 			await nextFrame();
 			setView("blocks");
 			await nextFrame(); // the blocks are built while the overlay is shown

@@ -26,6 +26,9 @@ struct Declaration {
     bool returnsValue = false;           ///< Functions: gives a value (a reporter block), else a "call" block.
     bool readOnly = false;               ///< Variables: const, cannot be set by a block.
     bool text = false;                   ///< C++: an Arduino String (variable, or a function giving one).
+    /// Variables: changed by a function of the code itself (its state, like "lampe" of a switch).
+    /// Blocks may read it but not set it: they would disturb the code.
+    bool changedByCode = false;
     int line = 0;                        ///< 1-based line of the declaration.
 };
 

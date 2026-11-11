@@ -24,6 +24,8 @@ std::vector<std::string> summary(ProgramLanguage language, const std::string& co
             text += declaration.returnsValue ? ")=" : ")";
         } else if (declaration.readOnly) {
             text += "!";
+        } else if (declaration.changedByCode) {
+            text += "~"; // the code's own state: read only from blocks
         }
         result.push_back(text + "@" + std::to_string(declaration.line));
     }
@@ -73,7 +75,7 @@ void incrment_str(float _str) {
 String hello() { return "hi"; }
 )cpp";
     EXPECT_EQ(summary(ProgramLanguage::Cpp, code),
-              (std::vector<std::string>{"str@1", "_f@2", "incrment_str(_str)@5", "hello()=@9"}));
+              (std::vector<std::string>{"str~@1", "_f@2", "incrment_str(_str)@5", "hello()=@9"}));
 }
 
 TEST(UserCode, FindsPythonFunctionsAndGlobals) {
@@ -150,3 +152,18 @@ TEST(UserCode, FindsDeclarationsOfAProjectAndItsBlocks) {
 }
 
 } // namespace
+
+// The code's own state (changed by its functions) is read-only for blocks, in every language;
+// comparisons do not count as changes.
+TEST(UserCode, MarksTheVariablesTheCodeChangesItself) {
+    EXPECT_EQ(summary(ProgramLanguage::Cpp, "int lampe = 0;\nint avant = 1;\nint seuil = 3;\nint compte;\n"
+                                            "void f() {\n  if (seuil == 2 || seuil <= 1 || seuil != 0) { lampe = 1 - lampe; }\n"
+                                            "  avant += 2;\n  ++compte;\n}\n"),
+              (std::vector<std::string>{"lampe~@1", "avant~@2", "seuil@3", "compte~@4", "f()@5"}));
+    EXPECT_EQ(summary(ProgramLanguage::Python, "lampe = 0\nvitesse = 2\n\ndef basculer():\n    global lampe\n"
+                                               "    if vitesse == 2:\n        lampe = 1 - lampe\n"),
+              (std::vector<std::string>{"lampe~@1", "vitesse@2", "basculer()@4"}));
+    EXPECT_EQ(summary(ProgramLanguage::JavaScript, "let lampe = 0;\nlet vitesse = 2;\nfunction basculer() {\n"
+                                                   "  if (vitesse === 2) { lampe = 1 - lampe; }\n}\n"),
+              (std::vector<std::string>{"lampe~@1", "vitesse@2", "basculer()@3"}));
+}

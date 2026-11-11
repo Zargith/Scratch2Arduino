@@ -332,6 +332,8 @@ private:
             add(Rule::UserCodeNoValue, Severity::Error, block, {{"name", name}});
         } else if (block.type == usercode::kSetBlock && found->readOnly) {
             add(Rule::UserCodeReadOnly, Severity::Error, block, {{"name", name}});
+        } else if (block.type == usercode::kSetBlock && found->changedByCode) {
+            add(Rule::UserCodeOwned, Severity::Error, block, {{"name", name}});
         }
     }
 
@@ -399,6 +401,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.usercode_no_value";
     case Rule::UserCodeReadOnly:
         return "validation.usercode_read_only";
+    case Rule::UserCodeOwned:
+        return "validation.usercode_owned";
     }
     return "validation.unknown_block";
 }

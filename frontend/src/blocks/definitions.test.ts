@@ -46,4 +46,21 @@ describe("block definitions", () => {
 		expect(labels.some((label) => String(label).includes("variable"))).toBe(false);
 		workspace.dispose();
 	});
+	// Regression: the palette recycled "My code" variable blocks when it was rebuilt, keeping their
+	// old label ("lampe" showed "avant") and leaving spare ones over "Events". Blockly never
+	// recycles a block with extra state.
+	it("never lets the palette recycle the My code variable blocks", () => {
+		defineBlocks("fr");
+		const workspace = new Blockly.Workspace();
+		for (const type of ["mycode_get", "mycode_set", "mycode_call", "mycode_value"]) {
+			const block = workspace.newBlock(type) as Blockly.Block & { saveExtraState?: unknown; loadExtraState?: unknown };
+			expect(typeof block.saveExtraState, type).toBe("function");
+			expect(typeof block.loadExtraState, type).toBe("function");
+		}
+		const get = workspace.newBlock("mycode_get");
+		get.setFieldValue("lampe", "NAME");
+		const saved = Blockly.serialization.blocks.save(get) as { fields?: { NAME?: string } };
+		expect(saved.fields?.NAME).toBe("lampe"); // the name is still saved with the project
+		workspace.dispose();
+	});
 });

@@ -127,7 +127,9 @@
     "usercode_no_value": "The function \"{name}\" gives no value: it cannot go in a slot.",
     "usercode_no_value_hint": "Add a \"return\" with a value to your function, or use the block that runs it.",
     "usercode_read_only": "\"{name}\" is a constant: a block cannot change it.",
-    "usercode_read_only_hint": "Remove \"const\" in your code if it must change."
+    "usercode_read_only_hint": "Remove \"const\" in your code if it must change.",
+    "usercode_owned": "\"{name}\" is changed by a function of \"My code\": blocks can read it, not change it (they would disturb your code).",
+    "usercode_owned_hint": "Change it in your code, or write in \"My code\" a function that changes it and call it with a block."
   },
   "editor": {
     "new": "New",

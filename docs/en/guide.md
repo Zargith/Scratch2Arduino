@@ -203,7 +203,9 @@ blocks: they become new blocks.
    words, Arduino functions, names already written).
 3. Go back to the **Blocks** view: the **My code** category holds a block per function (with slots for its
    numbers), a block for a function's result, and blocks to read or change each variable (numbers, and
-   `String` texts in C++).
+   `String` texts in C++). A constant, or a variable your code changes itself in one of its functions (its
+   state, like `lampe` of a switch), only has a block to read it: a block changing it would disturb your
+   code.
 
 - In **C++**, your code is compiled with the blocks: *Check* and *Upload* work as usual.
 - In **Python** or **JavaScript**, your code runs on the computer, with the **Live** button (with the

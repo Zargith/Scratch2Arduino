@@ -127,7 +127,9 @@
     "usercode_no_value": "La fonction \"{name}\" ne donne pas de valeur : elle ne peut pas aller dans une case.",
     "usercode_no_value_hint": "Ajoute un \"return\" avec une valeur dans ta fonction, ou utilise le bloc qui l'exécute.",
     "usercode_read_only": "\"{name}\" est une constante : un bloc ne peut pas la changer.",
-    "usercode_read_only_hint": "Enlève \"const\" dans ton code si elle doit changer."
+    "usercode_read_only_hint": "Enlève \"const\" dans ton code si elle doit changer.",
+    "usercode_owned": "\"{name}\" est changée par une fonction de \"Mon code\" : les blocs peuvent la lire, pas la changer (ils dérangeraient ton code).",
+    "usercode_owned_hint": "Change-la dans ton code, ou écris dans \"Mon code\" une fonction qui la change et appelle-la avec un bloc."
   },
   "editor": {
     "new": "Nouveau",

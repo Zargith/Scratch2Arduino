@@ -330,6 +330,7 @@ void Bridge::bind() {
                             {"parameters", declaration.parameters},
                             {"returnsValue", declaration.returnsValue},
                             {"readOnly", declaration.readOnly},
+                            {"changedByCode", declaration.changedByCode},
                             {"line", declaration.line}});
         }
         return list.dump();

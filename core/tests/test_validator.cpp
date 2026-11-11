@@ -1,5 +1,6 @@
 #include "s2a/validator.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <sstream>
@@ -263,3 +264,39 @@ TEST(Validator, PhoneBlocksNeedBluetooth) {
 }
 
 } // namespace
+
+// Reported by the user: "set lampe to 0" was offered for the state of the advanced button example.
+TEST(Validator, RefusesToSetAVariableThatMyCodeChangesItself) {
+    Project project = program({block("start", "events_when_program_starts")});
+    Block set = block("set", "mycode_set");
+    set.fields["NAME"] = "lampe";
+    set.inputs["VALUE"].value = "0";
+    Block config = block("config", "mycode_set");
+    config.fields["NAME"] = "speed";
+    config.inputs["VALUE"].value = "5";
+    project.scripts[0].blocks.push_back(set);
+    project.scripts[0].blocks.push_back(config);
+    project.userCode = UserCode{ProgramLanguage::Cpp,
+                                "int lampe = 0;\nint speed = 2;\nvoid toggle() {\n  lampe = 1 - lampe;\n}\n"};
+    const Issue issue = single(check(project));
+    EXPECT_EQ(issue.rule, Rule::UserCodeOwned);
+    EXPECT_EQ(issue.blockId, "set");
+    EXPECT_NE(s2a::validation::describe(issue, Language::English).find("\"lampe\" is changed by a function"),
+              std::string::npos);
+}
+
+// No example offers or uses a block that would disturb its own code, and every example is valid.
+TEST(Validator, EveryExampleIsValidAndOnlySetsFreeVariables) {
+    for (const auto& entry : std::filesystem::directory_iterator(S2A_EXAMPLES_DIR)) {
+        const auto file = entry.path() / "project.json";
+        if (!std::filesystem::exists(file)) {
+            continue;
+        }
+        const auto project = load(file);
+        ASSERT_TRUE(project.ok()) << file;
+        for (const Issue& issue : check(project.value())) {
+            EXPECT_NE(issue.severity, Severity::Error)
+                << entry.path().filename() << ": " << s2a::validation::describe(issue, Language::English);
+        }
+    }
+}
