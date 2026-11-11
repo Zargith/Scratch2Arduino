@@ -3,6 +3,9 @@
 Thanks for helping! The project is in its early phases (see [`docs/roadmap.md`](docs/roadmap.md)),
 so this guide is a draft and will grow with the code.
 
+The [developer guide](docs/en/developer-guide.md) explains the architecture and gives step-by-step
+recipes (add a block, a component, a board, a translation, an example, a tutorial).
+
 ## Ways to help
 
 - **Bug reports and feature ideas**: open an issue describing what you did, what you expected and what happened

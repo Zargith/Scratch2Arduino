@@ -20,6 +20,15 @@
       "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" }
     },
     {
+      "id": "button-led",
+      "title": { "fr": "Bouton et LED", "en": "Button and LED" },
+      "description": {
+        "fr": "La LED s'allume tant que le bouton est appuyé : un « si … alors … sinon » qui tourne sans fin.",
+        "en": "The LED is on while the button is held down: an \"if … then … else\" running forever."
+      },
+      "parts": { "fr": "bouton-poussoir, LED, résistance de 220 Ω", "en": "push button, LED, 220 Ω resistor" }
+    },
+    {
       "id": "servo-potentiometer",
       "title": { "fr": "Potentiomètre et servomoteur", "en": "Potentiometer and servo" },
       "description": {
@@ -114,6 +123,18 @@
         "en": "Wi-Fi and Bluetooth together: the phone switches the lamp on or off and asks for the temperature over Bluetooth, while the computer follows everything in Live mode over Wi-Fi. Uploaded, the program also works with the phone alone."
       },
       "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, téléphone avec une appli de terminal Bluetooth", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, phone with a Bluetooth terminal app" }
+    },
+    {
+      "id": "remote-robot",
+      "title": { "fr": "Robot télécommandé", "en": "Remote robot" },
+      "description": {
+        "fr": "Deux moteurs pilotés depuis un téléphone par Bluetooth : avance, recule, gauche, droite, stop. Chaque mouvement est une fonction.",
+        "en": "Two motors driven from a phone over Bluetooth: avance, recule, gauche, droite, stop (forward, back, left, right, stop). Each move is a function."
+      },
+      "parts": {
+        "fr": "carte ESP32, pont en H L298N, 2 moteurs à réducteur, 4 piles AA, batterie USB, téléphone",
+        "en": "ESP32 board, L298N H-bridge, 2 gear motors, 4 AA batteries, USB power bank, phone"
+      }
     }
   ]
 }

@@ -774,6 +774,109 @@ def esp32_dimmer(c: Canvas):
            anchor="mm")
 
 
+def button_led(c: Canvas):
+    uno = Uno(c, 60, 380)
+    board = Breadboard(c, 720, 480, 24)
+    power_rails(c, uno, board, uno.y + uno.h + 60)
+    # LED and its resistor on pin 8, - leg to the - rail.
+    led(c, board, 5, "#E53935")
+    resistor(c, board.hole(5, "e"), board.hole(5, "f"))
+    c.wire(path(board.hole(6, "e"), ("x", board.hole(7, "e")[0]), ("y", board.rail("bot-", 7)[1])), BLACK)
+    target = board.hole(5, "h")
+    c.wire(path(uno.pin("8"), ("y", 340), ("x", 680), ("y", target[1]), target), RED)
+    # Button across the middle channel: one side to pin 2, the other to GND (no resistor: the blocks
+    # switch on the board's own pull-up).
+    button(c, board, 14)
+    target = board.hole(14, "i")
+    c.wire(path(uno.pin("2"), ("y", 325), ("x", 692), ("y", target[1] + 0), target), WHITE)
+    c.wire(path(board.hole(16, "j"), ("y", board.rail("bot-", 16)[1])), BLACK)
+    c.text(800, 250, "Le bouton va au GND, sans résistance : la carte s'en charge.", 18, "#37474F", anchor="mm")
+    c.text(800, 278, "The button goes to GND, no resistor: the board takes care of it.", 15, "#607D8B",
+           anchor="mm")
+
+
+def l298n(c: Canvas, x, y):
+    """L298N dual H-bridge: screw terminals OUT1/OUT2 (left), OUT3/OUT4 (right), +12V GND +5V (top),
+    logic pins ENA IN1 IN2 IN3 IN4 ENB (bottom). The ENA/ENB jumpers are removed."""
+    w, h = 320, 200
+    pins = module(c, x, y, w, h, "#C62828", ["ENA", "IN1", "IN2", "IN3", "IN4", "ENB"], pitch=30)
+    c.text(x + w / 2, y + 150, "L298N", 13, "#FFFFFF", bold=True, anchor="mm")
+    c.rect(x + 110, y + 60, 100, 70, "#212121", radius=3)  # heat sink
+    for i in range(6):
+        c.rect(x + 116 + i * 16, y + 64, 6, 62, "#424242")
+
+    def terminal(tx, ty, name, vertical):
+        c.rect(tx - 13, ty - 13, 26, 26, "#1976D2", outline="#0D47A1", radius=3)
+        c.circle(tx, ty, 6, "#B0BEC5", outline="#607D8B")
+        c.line([(tx - 4, ty), (tx + 4, ty)], "#455A64", 2)
+        if vertical:
+            c.text(tx, ty + 24, name, 9, "#FFFFFF", anchor="mm")
+        else:
+            c.text(tx + (30 if tx < x + w / 2 else -30), ty, name, 9, "#FFFFFF", anchor="mm")
+        pins[name] = (tx, ty)
+
+    for i, name in enumerate(("+12V", "GND", "+5V")):
+        terminal(x + 120 + i * 40, y + 16, name, True)
+    terminal(x + 16, y + 70, "OUT1", False)
+    terminal(x + 16, y + 110, "OUT2", False)
+    terminal(x + w - 16, y + 70, "OUT3", False)
+    terminal(x + w - 16, y + 110, "OUT4", False)
+    return pins
+
+
+def dc_motor(c: Canvas, x, y, label):
+    """Yellow gear motor (as in robot kits), its two wires ending at `x`, `y` + 70 and + 84."""
+    c.rect(x + 3, y + 5, 150, 56, "#B0BEC5", radius=6)
+    c.rect(x, y, 100, 56, "#FBC02D", outline="#F9A825", radius=6, width=2)
+    c.rect(x + 100, y + 8, 50, 40, "#B0BEC5", outline="#78909C", radius=10, width=2)
+    c.rect(x + 40, y - 14, 12, 14, "#FAFAFA", outline="#BDBDBD")  # shaft
+    c.text(x + 50, y + 30, label, 11, "#5D4037", bold=True, anchor="mm")
+    return {"+": (x + 140, y + 48), "-": (x + 112, y + 48)}
+
+
+def remote_robot(c: Canvas):
+    esp = Esp32(c, 60, 600)
+    bridge = l298n(c, 820, 400)
+    # Motors: left on OUT1/OUT2 (ENA, IN1, IN2), right on OUT3/OUT4 (ENB, IN3, IN4).
+    left = dc_motor(c, 560, 200, "gauche / left")
+    right = dc_motor(c, 1290, 520, "droite / right")
+    c.wire(path(left["+"], ("y", 300), ("x", 770), ("y", bridge["OUT1"][1]), bridge["OUT1"]), RED)
+    c.wire(path(left["-"], ("y", 315), ("x", 755), ("y", bridge["OUT2"][1]), bridge["OUT2"]), BLACK)
+    c.wire(path(right["+"], ("y", 640), ("x", 1210), ("y", bridge["OUT3"][1]), bridge["OUT3"]), RED)
+    c.wire(path(right["-"], ("y", 655), ("x", 1195), ("y", bridge["OUT4"][1]), bridge["OUT4"]), BLACK)
+    # Battery pack for the motors (4 or 6 AA), its - joined to the GND of the ESP32.
+    c.rect(1203, 186, 240, 90, "#B0BEC5", radius=6)
+    c.rect(1200, 180, 240, 90, "#263238", radius=6)
+    for i in range(4):
+        c.rect(1212 + i * 57, 196, 48, 58, "#43A047", outline="#2E7D32", radius=8)
+        c.text(1236 + i * 57, 225, "AA", 11, "#FFFFFF", bold=True, anchor="mm")
+    c.text(1440, 292, "piles des moteurs / motor batteries", 10, "#455A64", anchor="rm")
+    c.wire(path((1210, 270), ("y", 330), ("x", bridge["+12V"][0]), bridge["+12V"]), RED)
+    c.wire(path((1230, 270), ("y", 345), ("x", bridge["GND"][0]), bridge["GND"]), BLACK)
+    c.wire(path(esp.pin("GND"), ("y", 360), ("x", bridge["GND"][0] + 0), ("y", 380), bridge["GND"]), BLACK)
+    # Signals: bottom header (25, 26, 27, 33) from below, top header (18, 19) around the left of the bridge.
+    for k, (pin, name, colour) in enumerate((("25", "ENA", ORANGE), ("26", "IN1", YELLOW), ("27", "IN2", GREEN),
+                                             ("33", "ENB", PURPLE))):
+        c.wire(path(esp.pin(pin), ("y", 900 + k * 16), ("x", bridge[name][0]), bridge[name]), colour)
+    for k, (pin, name, colour) in enumerate((("18", "IN3", BLUE), ("19", "IN4", WHITE))):
+        c.wire(path(esp.pin(pin), ("y", 560 - k * 16), ("x", 740 - k * 14), ("y", 660 + k * 16),
+                    ("x", bridge[name][0]), bridge[name]), colour)
+    # The ESP32 runs on a USB power bank.
+    c.rect(663, 703, 120, 60, "#B0BEC5", radius=8)
+    c.rect(660, 700, 120, 60, "#455A64", radius=8)
+    c.text(720, 722, "batterie USB", 10, "#FFFFFF", bold=True, anchor="mm")
+    c.text(720, 740, "USB power bank", 9, "#CFD8DC", anchor="mm")
+    c.line([(esp.x + esp.w + 26, esp.y + 125), (660, 730)], "#212121", 5)
+    c.text(60, 90, "Le téléphone envoie avance, recule, gauche, droite ou stop par Bluetooth (« S2A-… »).", 17,
+           "#37474F")
+    c.text(60, 114, "The phone sends avance, recule, gauche, droite or stop over Bluetooth (\"S2A-…\").", 14,
+           "#607D8B")
+    c.text(60, 140, "Enlève les cavaliers ENA et ENB du L298N. Les GND de l'ESP32 et des piles sont reliés.", 15,
+           "#37474F")
+    c.text(60, 160, "Remove the ENA and ENB jumpers of the L298N. The GNDs of the ESP32 and the batteries are joined.",
+           13, "#607D8B")
+
+
 EXAMPLES = {
     "blink": blink,
     "servo-potentiometer": servo_potentiometer,
@@ -783,10 +886,12 @@ EXAMPLES = {
     "reaction-game": reaction_game,
     "light-gauge": light_gauge,
     "traffic-light": traffic_light,
+    "button-led": button_led,
     "esp32-dimmer": esp32_dimmer,
     "wireless-station-wifi": lambda c: wireless_station(c, "wifi"),
     "wireless-station-bluetooth": lambda c: wireless_station(c, "bluetooth"),
     "phone-lamp": lambda c: phone_lamp(c),
+    "remote-robot": remote_robot,
 }
 
 
