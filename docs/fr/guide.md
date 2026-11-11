@@ -1,0 +1,250 @@
+# Guide d'utilisation de Scratch2Arduino
+
+Scratch2Arduino permet de programmer une carte Arduino (ou ESP32) avec des blocs, comme dans Scratch :
+tu assembles les blocs, et la carte allume des LED, fait tourner des moteurs, lit des capteurs…
+Ce guide présente tout le logiciel. Pour apprendre pas à pas, suis plutôt les
+[tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md).
+
+*English version: [../en/guide.md](../en/guide.md)*
+
+## Sommaire
+
+1. [Installer Scratch2Arduino](#1-installer-scratch2arduino)
+2. [Brancher la carte](#2-brancher-la-carte)
+3. [La fenêtre](#3-la-fenêtre)
+4. [Construire un programme avec des blocs](#4-construire-un-programme-avec-des-blocs)
+5. [Les familles de blocs](#5-les-familles-de-blocs)
+6. [Vérifier et téléverser](#6-vérifier-et-téléverser)
+7. [Le mode Live](#7-le-mode-live)
+8. [Le moniteur série](#8-le-moniteur-série)
+9. [Le schéma de câblage](#9-le-schéma-de-câblage)
+10. [Variables, fonctions et « Mes blocs »](#10-variables-fonctions-et--mes-blocs-)
+11. [Projets : enregistrer, ouvrir, partager](#11-projets--enregistrer-ouvrir-partager)
+12. [Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)](#12-sans-fil--wi-fi-et-bluetooth-esp32-esp8266)
+13. [Raccourcis clavier](#13-raccourcis-clavier)
+14. [En cas de problème](#14-en-cas-de-problème)
+
+## 1. Installer Scratch2Arduino
+
+- **Windows** : télécharge `Scratch2Arduino_installer.exe` (page *Releases* du projet) et lance-le.
+  Il installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le menu Démarrer.
+  Si Windows affiche « Windows a protégé votre ordinateur », clique sur *Informations complémentaires*
+  puis *Exécuter quand même* (le programme n'est pas encore signé).
+- **Linux et macOS** : télécharge `Scratch2Arduino_installer.sh`, puis dans un terminal :
+  `sh Scratch2Arduino_installer.sh` (ou `--user` pour l'installer seulement pour toi).
+  Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
+  `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
+
+Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
+cette fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne
+modifie pas un Arduino IDE installé sur le même ordinateur.
+
+## 2. Brancher la carte
+
+1. Branche la carte avec un câble USB **de données** (certains câbles ne servent qu'à recharger : si la
+   carte n'apparaît jamais, essaie un autre câble).
+2. Dans la barre du haut, choisis la **Carte** (Arduino Uno, Nano, Mega 2560, ESP32 DevKit ou
+   ESP8266 NodeMCU).
+3. Choisis le **Port** : la liste montre les cartes branchées. Si elle est vide, clique sur
+   **Chercher les cartes branchées** (la flèche qui tourne, à côté).
+
+> Débranche toujours la carte avant de modifier les fils, et vérifie le montage avant de la rebrancher.
+
+## 3. La fenêtre
+
+- **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
+  *Projets récents* ; la carte et le port ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
+  une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
+  **Téléverser** ; la langue (FR / EN). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  leur icône : passe la souris dessus pour lire leur nom.
+- **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
+  voir ses blocs.
+- **Zone de travail** (au centre) : là où tu assembles les blocs. La molette fait défiler ; les boutons
+  **+**, **−** et **=** (en bas à droite) zooment ; la **poubelle** jette les blocs qu'on y dépose.
+- **Panneaux** (à droite, quand ils sont ouverts) : les valeurs en direct du mode Live, le moniteur série.
+- **Barre d'état** (en bas) : ce qui se passe (« Vérification du programme… ») et les problèmes à
+  corriger.
+
+## 4. Construire un programme avec des blocs
+
+- **Ajouter un bloc** : fais-le glisser depuis la palette vers la zone de travail.
+- **Accrocher** : approche un bloc sous un autre, ou dans la « bouche » d'un bloc comme
+  *répéter indéfiniment* : il s'emboîte quand une ombre grise apparaît.
+- **Remplir une case** : clique dans une case blanche pour taper un nombre ou un texte ; glisse un bloc
+  arrondi (une valeur) ou hexagonal (une condition, vrai ou faux) dans l'emplacement qui a sa forme.
+- **Choisir dans un menu** : clique sur la petite flèche (un numéro de broche, *HAUT* / *BAS*, une
+  couleur, une note…).
+- **Déplacer** : glisser un bloc emporte aussi tous les blocs accrochés en dessous.
+- **Supprimer** : glisse le bloc vers la palette ou la poubelle, ou sélectionne-le et appuie sur
+  *Suppr*.
+- **Clic droit sur un bloc** : dupliquer, ajouter un commentaire, supprimer, *Enregistrer dans Mes blocs*.
+- **Annuler / rétablir** : Ctrl+Z / Ctrl+Y (voir les [raccourcis](#13-raccourcis-clavier)).
+
+Un programme commence **toujours** par le bloc **quand le programme démarre** (famille *Événements*).
+Les blocs qui ne sont accrochés à aucun bloc de départ sont **grisés** : ils ne sont pas envoyés à la
+carte, comme des brouillons. Tu peux en laisser traîner pendant que tu cherches.
+
+Pendant que tu construis, l'éditeur ne t'interrompt jamais : les erreurs ne sont cherchées que quand tu
+cliques sur **Vérifier**, **Téléverser** ou **Live**.
+
+## 5. Les familles de blocs
+
+| Famille | À quoi elle sert | Exemples de blocs |
+|---|---|---|
+| Événements | Le départ du programme | quand le programme démarre |
+| Contrôle | Attendre, répéter, choisir | attendre 1 secondes, répéter 10 fois, répéter indéfiniment, si … alors … sinon, attendre jusqu'à ce que |
+| Broches | Les broches de la carte | allumer la LED intégrée, mettre la broche 13 à l'état HAUT, la broche 2 est à l'état HAUT, valeur analogique de la broche A0, mettre la sortie PWM de la broche 9 à 128 |
+| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22) |
+| Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8×8 (MAX7219) |
+| Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
+| Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D) |
+| Écrans | Afficher du texte | écran LCD 16×2 (module I2C ou 16 broches), écran OLED SSD1306 |
+| Opérateurs | Calculer, comparer | + − × ÷, nombre aléatoire, convertir, <, >, =, et, ou, non |
+| Variables | Retenir des valeurs | *Créer une variable*, mettre … à …, ajouter … à … |
+| Fonctions | Réutiliser un groupe de blocs | *Créer une fonction*, définir …, appeler … |
+| Moniteur série | Écrire à l'ordinateur | écrire … sur le moniteur série |
+| Téléphone (ESP32) | Parler à un téléphone par Bluetooth | le téléphone a envoyé …, nombre reçu du téléphone, envoyer … au téléphone |
+| Mes blocs | Tes groupes de blocs enregistrés | voir [Mes blocs](#mes-blocs) |
+
+Passe la souris sur un bloc de la palette : une bulle explique ce qu'il fait et **comment brancher le
+composant**. La liste complète est dans le [catalogue des blocs](../block-catalog.md) (en anglais).
+
+## 6. Vérifier et téléverser
+
+- **Vérifier** cherche les problèmes du programme puis le traduit en code Arduino (C++) et le compile,
+  sans rien envoyer. C'est utile même sans carte branchée.
+- **Téléverser** fait la même chose puis envoie le programme dans la carte. Il y reste, même débranchée :
+  il redémarre chaque fois que la carte est alimentée (par USB, une pile ou un chargeur).
+- **Voir le code** montre le code Arduino fabriqué à partir de tes blocs : une bonne façon de découvrir
+  le « vrai » langage de l'Arduino.
+
+Quand il y a un problème, la barre d'état explique **ce qui ne va pas** et **comment le corriger**, et
+le bloc concerné est mis en évidence dans la zone de travail. Exemples :
+
+- « Ton programme ne commence nulle part. » → ajoute *quand le programme démarre* et accroche tes blocs
+  dessous ;
+- « Il manque une condition dans le bloc « si … alors ». » → glisse un bloc hexagonal dans la case vide ;
+- « La broche 7 de la carte Arduino Uno ne sait pas faire « sortie PWM » (bloc « … »). » → choisis une des broches
+  proposées (celles marquées d'un `~` sur la carte).
+
+## 7. Le mode Live
+
+Clique sur **Live** : les blocs s'exécutent **sur l'ordinateur**, qui commande la carte en direct par le
+câble. Tu vois tout de suite l'effet d'un changement, sans téléverser :
+
+- les scripts qui tournent sont **éclairés** ;
+- le panneau de droite montre les **variables** et les **capteurs** lus par les blocs, avec un graphique
+  des 30 dernières secondes ;
+- modifie un bloc (un nombre, une broche, un bloc ajouté…) : la carte suit immédiatement.
+
+La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
+ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les
+sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
+**Téléverser**.
+
+## 8. Le moniteur série
+
+Le bouton **Moniteur série** ouvre un panneau qui affiche ce que la carte écrit avec le bloc
+*écrire … sur le moniteur série*. Téléverse ton programme, puis clique sur **Connecter** (vitesse 9600).
+Une ligne tapée en bas est envoyée à la carte. Pendant un téléversement le moniteur se met en pause puis
+se reconnecte. En mode Live, le panneau montre ce que les blocs écrivent.
+
+## 9. Le schéma de câblage
+
+Le bouton **Schéma de câblage** montre comment brancher les composants **utilisés par tes blocs** :
+
+- **Schéma de câblage** : la carte, une platine d'essai et les composants, avec un fil de couleur par
+  branchement (molette ou double-clic pour zoomer, glisser pour se déplacer, *Enregistrer l'image* pour
+  l'imprimer) ;
+- **Composants à brancher** : le même câblage en tableau — chaque patte de chaque composant, la broche
+  de la carte où elle va et ce qu'il faut mettre entre les deux (par exemple la résistance de 220 Ω d'une
+  LED) ; *Voir les blocs* montre les blocs concernés ;
+- **Montage de l'exemple** (pour un exemple) : le montage dessiné à la main.
+
+Le schéma prévient aussi quand une broche sert à deux composants, quand un écran I2C n'a plus ses broches
+SDA/SCL, ou quand les composants demandent plus de courant qu'un port USB n'en donne.
+
+Rappels pour la platine d'essai : les 5 trous d'une même colonne (a à e, ou f à j) sont reliés ; les
+rangées **+** (rouge) et **−** (bleu) des bords sont reliées sur toute leur longueur. Fil rouge = 5V,
+fil noir = GND.
+
+## 10. Variables, fonctions et « Mes blocs »
+
+### Variables
+
+Une variable est une boîte qui retient une valeur (un score, une distance…). Dans la famille
+*Variables*, clique sur **Créer une variable** et donne-lui un nom. Utilise ensuite *mettre … à …*,
+*ajouter … à …* et le bloc arrondi qui porte son nom. En mode Live, sa valeur s'affiche à droite.
+
+### Fonctions
+
+Une fonction donne un nom à un groupe de blocs pour le réutiliser (comme « Mes blocs » de Scratch).
+Dans la famille *Fonctions*, clique sur **Créer une fonction**, accroche des blocs sous **définir …**,
+puis utilise **appeler …** autant de fois que tu veux. Une fonction ne s'exécute pas toute seule au
+démarrage, et elle ne peut pas s'appeler elle-même. Clic droit sur *définir* pour la renommer ou la
+supprimer. Exemple : le [Feu tricolore](tutorials/02-traffic-light.md).
+
+### Mes blocs
+
+Pour garder un groupe de blocs **pour tous tes projets** : clic droit sur le premier bloc →
+**Enregistrer dans Mes blocs** (les blocs accrochés dessous sont gardés aussi). Le groupe apparaît dans
+la famille *Mes blocs* : clique dessus pour l'ajouter à ton projet. **Gérer mes blocs** permet de les
+renommer, de les supprimer, de les **exporter** (fichier `.s2ablocks`) et de les **importer** sur un autre
+ordinateur.
+
+## 11. Projets : enregistrer, ouvrir, partager
+
+- **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).
+  Un exemple ouvert est une copie : enregistre-le pour garder tes changements.
+- **Enregistrer** (Ctrl+S) écrit un fichier **`.s2a`**, rangé par défaut dans
+  `Documents/Scratch2Arduino`. Ce fichier contient tout le projet : c'est lui qu'on envoie à quelqu'un,
+  qu'on met sur une clé USB ou qu'on rend à son professeur.
+- **Ouvrir** relit un `.s2a`. Sous Windows, un double-clic sur un `.s2a` l'ouvre aussi, et on peut
+  déposer un projet sur l'icône de Scratch2Arduino.
+- **Projets récents** (l'horloge) rouvre les derniers projets.
+- **Sauvegarde automatique** : toutes les 15 secondes, une copie de secours est gardée. Si le logiciel
+  ou l'ordinateur s'arrête, Scratch2Arduino propose au démarrage suivant de **récupérer** le projet.
+
+## 12. Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)
+
+Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
+
+- **Wi-Fi** (ESP32, ESP8266) : lance une fois le mode Live par le câble USB. La carte crée ensuite son
+  propre réseau **S2A-xxxx** (mot de passe `scratch2arduino`) : connecte l'ordinateur à ce réseau et
+  choisis le port **Wi-Fi — réseau de la carte**. Le bouton **Wi-Fi** permet aussi de lui faire rejoindre
+  le réseau de la maison ou de l'école (l'ordinateur garde alors Internet).
+- **Bluetooth** (ESP32) : lance une fois le mode Live par le câble USB, puis bouton **Bluetooth** →
+  **Chercher les cartes** → choisis ta carte « S2A-… ». Sur Mac, connecte d'abord « S2A-… » dans
+  *Réglages Système › Bluetooth*.
+- **Téléphone** (ESP32) : les blocs *Téléphone* échangent des messages avec une appli de terminal
+  Bluetooth sur le téléphone (par exemple « Serial Bluetooth Terminal » sur Android). Voir le
+  [Robot télécommandé](tutorials/08-remote-robot.md).
+
+Les programmes s'envoient toujours avec le câble USB.
+
+## 13. Raccourcis clavier
+
+| Raccourci (⌘ au lieu de Ctrl sur Mac) | Action |
+|---|---|
+| Ctrl+S | Enregistrer le projet |
+| Ctrl+C / Ctrl+X | Copier / couper le bloc sélectionné, avec les blocs en dessous |
+| Ctrl+V | Coller |
+| Ctrl+Z | Annuler |
+| Ctrl+Y ou Ctrl+Maj+Z | Rétablir |
+| Suppr ou Retour arrière | Supprimer le bloc sélectionné |
+
+Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touches agissent sur le texte.
+
+## 14. En cas de problème
+
+| Ce qui se passe | Que faire |
+|---|---|
+| La liste des ports est vide | Clique sur *Chercher les cartes branchées*. Essaie un autre câble (certains ne transportent pas de données) ou un autre port USB. Sur Linux, vérifie le groupe `dialout` ([installation](#1-installer-scratch2arduino)). Les cartes « compatibles » à puce CH340 demandent parfois un pilote sous Windows et macOS. |
+| « Impossible d'utiliser le port de la carte » | Un autre programme utilise la carte : ferme l'Arduino IDE ou un autre moniteur série, puis réessaie. |
+| « La carte ne répond pas » | Débranche la carte, rebranche-la, choisis de nouveau son port, puis réessaie. Vérifie que la bonne carte est choisie (Uno, Nano…). |
+| Le premier téléversement est long | Normal : les outils de la carte se téléchargent une seule fois (il faut Internet). |
+| Le programme est envoyé mais rien ne se passe | Ouvre le *Schéma de câblage* et compare avec ton montage : une LED montée à l'envers (patte longue = +), un fil dans la mauvaise colonne de la platine, un GND oublié… |
+| Une LED ne s'allume pas | Elle est peut-être à l'envers, ou sans résistance (elle a pu griller). Essaie-la avec le bloc *mettre la broche … à l'état HAUT* tout seul. |
+| Le buzzer ne joue qu'un seul son | Utilise un buzzer **passif** pour jouer des notes ; un buzzer actif ne fait qu'un seul son. |
+| L'écran LCD reste vide | Tourne le petit potentiomètre de contraste (à l'arrière du module I2C, ou celui branché sur V0 pour un écran à 16 broches). |
+| « Oups, l'éditeur s'est arrêté » | Clique sur *Recommencer* : tes projets enregistrés ne sont pas touchés. Si cela recommence, envoie les détails affichés aux développeurs (voir [contribuer](../../CONTRIBUTING.md)). |
