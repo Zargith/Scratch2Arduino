@@ -17,7 +17,6 @@ import {
 	Stack,
 	Text,
 	TextInput,
-	Title,
 	Tooltip,
 } from "@mantine/core";
 import {
@@ -37,6 +36,7 @@ import {
 	IconUpload,
 	IconWifi,
 } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -152,6 +152,8 @@ export function App() {
 
 	const [name, setName] = useState(() => translate(detectLanguage(), "project.untitled"));
 	const [boardId, setBoardId] = useState(defaultBoardId);
+	/** Narrow window: the Live, Check and Upload buttons show only their icon so that nothing overflows. */
+	const compact = useMediaQuery("(max-width: 1600px)") ?? false;
 	const [path, setPath] = useState("");
 	const [dirty, setDirty] = useState(false);
 	const [ports, setPorts] = useState<Port[]>([]);
@@ -761,10 +763,8 @@ export function App() {
 		<AppShell header={{ height: 64 }} padding={0}>
 			<AppShell.Header px="md">
 				<Group h="100%" gap="sm" wrap="nowrap">
-					<img src={logo} alt="" width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
-					<Title order={4} visibleFrom="xl" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
-						{t("app.title")}
-					</Title>
+					{/* The name of the tool is in the window title: the logo is enough here. */}
+					<img src={logo} alt={t("app.title")} width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
 					<TextInput
 						aria-label={t("project.name")}
 						value={name}
@@ -772,11 +772,11 @@ export function App() {
 							setName(event.currentTarget.value);
 							markDirty();
 						}}
-						miw={120}
+						miw={80}
 						maw={200}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 80 }}
 					/>
-					<ActionIcon.Group>
+					<ActionIcon.Group style={{ flexShrink: 0 }}>
 						<Tooltip label={t("toolbar.new")}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.new")} onClick={() => setGalleryShown(true)}>
 								<IconFilePlus size={18} />
@@ -836,9 +836,9 @@ export function App() {
 							}
 						}}
 						allowDeselect={false}
-						miw={130}
+						miw={100}
 						maw={190}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 100 }}
 					/>
 					<Select
 						aria-label={t("port.label")}
@@ -853,9 +853,9 @@ export function App() {
 						].map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
-						miw={130}
+						miw={100}
 						maw={240}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 100 }}
 					/>
 					<Tooltip label={t("port.refresh")}>
 						<ActionIcon variant="default" size="lg" aria-label={t("port.refresh")} onClick={() => void refreshPorts()}>
@@ -913,27 +913,50 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						<Button
-							color={live ? "pink" : "blue"}
-							variant={live ? "filled" : "light"}
-							leftSection={live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />}
-							disabled={program === "cpp"}
-							onClick={() => void toggleLive()}
-						>
-							{t(live ? "toolbar.stop_live" : "toolbar.live")}
-						</Button>
-						<Button color="green" leftSection={<IconCheck size={18} />} loading={busy} disabled={live} onClick={() => void run("build")}>
-							{t("toolbar.build")}
-						</Button>
-						<Button
-							color="orange"
-							leftSection={<IconUpload size={18} />}
-							loading={busy}
-							disabled={live || isScript(program)}
-							onClick={() => void run("upload")}
-						>
-							{t("toolbar.upload")}
-						</Button>
+						{/* On a narrow window these three buttons keep only their icon (the name in a tooltip). */}
+						<Tooltip label={t(live ? "toolbar.stop_live" : "toolbar.live")} disabled={!compact}>
+							<Button
+								color={live ? "pink" : "blue"}
+								variant={live ? "filled" : "light"}
+								leftSection={compact ? undefined : live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />}
+								aria-label={t(live ? "toolbar.stop_live" : "toolbar.live")}
+								px={compact ? "xs" : undefined}
+								disabled={program === "cpp"}
+								onClick={() => void toggleLive()}
+							>
+								{compact ? (
+									live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />
+								) : (
+									t(live ? "toolbar.stop_live" : "toolbar.live")
+								)}
+							</Button>
+						</Tooltip>
+						<Tooltip label={t("toolbar.build")} disabled={!compact}>
+							<Button
+								color="green"
+								leftSection={compact ? undefined : <IconCheck size={18} />}
+								aria-label={t("toolbar.build")}
+								px={compact ? "xs" : undefined}
+								loading={busy}
+								disabled={live}
+								onClick={() => void run("build")}
+							>
+								{compact ? <IconCheck size={18} /> : t("toolbar.build")}
+							</Button>
+						</Tooltip>
+						<Tooltip label={t("toolbar.upload")} disabled={!compact}>
+							<Button
+								color="orange"
+								leftSection={compact ? undefined : <IconUpload size={18} />}
+								aria-label={t("toolbar.upload")}
+								px={compact ? "xs" : undefined}
+								loading={busy}
+								disabled={live || isScript(program)}
+								onClick={() => void run("upload")}
+							>
+								{compact ? <IconUpload size={18} /> : t("toolbar.upload")}
+							</Button>
+						</Tooltip>
 						<SegmentedControl
 							aria-label={t("language.label")}
 							data={[

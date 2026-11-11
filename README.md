@@ -290,9 +290,13 @@ them.
 ### Wiring
 
 The **Wiring** button (top bar) draws the **wiring diagram** of the current project, computed from its
-blocks: the board with the pins used circled, each component as a numbered card, the + and GND rails and
-one wire per leg, with its resistor (zoom with the wheel, **Save the image** writes a PNG). The next tab
-lists the same thing as a table:
+blocks, as on a breadboard simulator: the board as it looks (pins used circled), a breadboard whose + and −
+rows are fed by the board, the small parts plugged into it (LED with its resistor across the middle
+channel, button, potentiometer, buzzer, RGB LED, light sensor and its 10 kΩ), the modules (sensors,
+screens, servo, LED matrix…) above it, and one coloured jumper wire per connection (zoom with the wheel,
+**Save the image** writes a PNG). The next tab
+lists the same thing as a table (the column *Part to put in between* names the resistor or the
+potentiometer that goes between the leg and the board pin, for example the 220 Ω resistor of an LED):
 each component, each of its legs and the board pin it goes to (with the resistor to add, if any), and
 warnings for a pin used by two components, an I2C screen whose SDA/SCL pin drives something else, or
 more current than a USB port gives. **Show the blocks** highlights the blocks concerned. An example opens
