@@ -158,6 +158,7 @@ s2a-cli compile examples/sketches/blink --board uno
 s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 on Windows
 
 s2a-cli generate examples/projects/blink/project.json # Arduino code made from a block project
+s2a-cli convert my_code.py --to cpp                   # rewrite a .ino/.cpp, .py or .js program in another language
 s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the board comes from the project
 s2a-cli live examples/projects/blink/project.json --port /dev/ttyACM0   # Live mode (Ctrl+C stops)
 ```

@@ -172,7 +172,7 @@ const fr = {
 	"code.mine_help_script": "{language} : tourne sur l'ordinateur avec tes blocs, avec le bouton \"Live\".",
 	"code.mine_remove": "Supprimer mon code",
 	"code.confirm_remove": "Supprimer \"Mon code\" ? Les blocs qui l'utilisent ne marcheront plus.",
-	"code.confirm_language": "Passer \"Mon code\" en {to} remplace ton code {from} par un exemple. Continuer ?",
+	"code.confirm_language": "Convertir ton code {from} en {to} ? Ce que la conversion ne sait pas traduire reste en commentaires, à reprendre à la main.",
 	"program.expert": "Mode expert",
 	"program.expert_blocks": "Blocs + mon code",
 	"program.expert_text": "Programme entier en {language}",
@@ -180,7 +180,9 @@ const fr = {
 	"program.blocks": "Blocs",
 	"program.confirm_blocks":
 		"Revenir aux blocs efface ton code {language}. Tes blocs reviennent comme tu les avais laissés. Continuer ?",
-	"program.confirm_replace": "Passer en {to} remplace ton code {from} par un exemple en {to}. Continuer ?",
+	"program.confirm_replace": "Convertir ton programme {from} en {to} ? Ce que la conversion ne sait pas traduire reste en commentaires, à reprendre à la main.",
+	"status.converted": "Code converti en {language}. Relis-le avant de le lancer.",
+	"status.converted_check": "Code converti en {language}. À reprendre à la main (gardé en commentaires) : ligne(s) {lines} du code d'origine.",
 	"program.help": "Aide du langage",
 	"program.help_cpp":
 		"Tu écris un vrai programme Arduino en C++ : setup() s'exécute une fois au démarrage, puis loop() recommence sans arrêt. \"Vérifier\" le compile, \"Téléverser\" l'envoie à la carte. Les bibliothèques Servo, DHT, LiquidCrystal (I2C), U8g2 et Adafruit NeoPixel s'installent toutes seules quand tu les inclus (#include <Servo.h>).",
@@ -374,7 +376,7 @@ const en: Record<MessageKey, string> = {
 	"code.mine_help_script": "{language}: runs on the computer with your blocks, with the \"Live\" button.",
 	"code.mine_remove": "Delete my code",
 	"code.confirm_remove": "Delete \"My code\"? The blocks using it will not work any more.",
-	"code.confirm_language": "Switching \"My code\" to {to} replaces your {from} code with an example. Continue?",
+	"code.confirm_language": "Convert your {from} code to {to}? What the conversion cannot translate stays as comments, to finish by hand.",
 	"program.expert": "Expert mode",
 	"program.expert_blocks": "Blocks + my code",
 	"program.expert_text": "Whole program in {language}",
@@ -382,7 +384,9 @@ const en: Record<MessageKey, string> = {
 	"program.blocks": "Blocks",
 	"program.confirm_blocks":
 		"Going back to the blocks deletes your {language} code. Your blocks come back as you left them. Continue?",
-	"program.confirm_replace": "Switching to {to} replaces your {from} code with a {to} example. Continue?",
+	"program.confirm_replace": "Convert your {from} program to {to}? What the conversion cannot translate stays as comments, to finish by hand.",
+	"status.converted": "Code converted to {language}. Read it again before running it.",
+	"status.converted_check": "Code converted to {language}. To finish by hand (kept as comments): line(s) {lines} of the original code.",
 	"program.help": "Language help",
 	"program.help_cpp":
 		"You write a real Arduino program in C++: setup() runs once at start, then loop() runs again and again. \"Check\" compiles it, \"Upload\" sends it to the board. The Servo, DHT, LiquidCrystal (I2C), U8g2 and Adafruit NeoPixel libraries are installed by themselves when you include them (#include <Servo.h>).",

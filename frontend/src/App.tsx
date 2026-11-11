@@ -612,20 +612,41 @@ export function App() {
 	};
 
 	/** Creates, switches or deletes "My code"; typed code is only lost after a confirmation. */
-	const changeUserLanguage = (next: Exclude<ProgramLanguage, "blocks"> | null) => {
+	/** Tells what a conversion did (and which lines are left to the user). */
+	const showConverted = (next: Exclude<ProgramLanguage, "blocks">, toCheck: number[]) => {
+		setStatus(
+			toCheck.length > 0
+				? { kind: "info", message: t("status.converted_check", { language: programNames[next], lines: toCheck.join(", ") }) }
+				: { kind: "success", message: t("status.converted", { language: programNames[next] }) }
+		);
+	};
+
+	/** "My code" in another language: typed code is converted (after a yes), an untouched example is replaced. */
+	const changeUserLanguage = async (next: Exclude<ProgramLanguage, "blocks"> | null) => {
 		const current = userCodeRef.current;
 		if (current && next === current.language) return;
 		const typed = current !== null && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		let code = next === null ? "" : starterUserCode(next, language);
 		if (next === null) {
 			if (!window.confirm(t("code.confirm_remove"))) return;
-		} else if (
-			current &&
-			typed &&
-			!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))
-		) {
-			return;
+		} else if (current && typed) {
+			if (!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))) {
+				return;
+			}
+			if (!hasHost()) {
+				setStatus({ kind: "info", message: t("status.no_host") });
+				return;
+			}
+			try {
+				const converted = await bridge.convert(current.code, current.language, next);
+				code = converted.code;
+				showConverted(next, converted.toCheck);
+			} catch (error) {
+				fail(error);
+				return;
+			}
 		}
-		userCodeRef.current = next === null ? null : { language: next, code: starterUserCode(next, language) };
+		userCodeRef.current = next === null ? null : { language: next, code };
 		setUserCode(userCodeRef.current);
 		setUserProblems([]);
 		markDirty();
@@ -648,12 +669,27 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.program_blocks") });
 			return;
 		}
-		if (
-			program !== "blocks" &&
-			typed &&
-			!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))
-		)
+		if (program !== "blocks" && typed) {
+			// A typed program is converted (after a yes), never thrown away.
+			if (!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))) {
+				return;
+			}
+			if (!hasHost()) {
+				setStatus({ kind: "info", message: t("status.no_host") });
+				return;
+			}
+			try {
+				const converted = await bridge.convert(codeRef.current, program, next);
+				codeRef.current = converted.code;
+				codeEdited.current = true;
+				setProgram(next);
+				markDirty();
+				showConverted(next, converted.toCheck);
+			} catch (error) {
+				fail(error);
+			}
 			return;
+		}
 		if (program === "blocks") initialState.current = editor.current?.save() ?? initialState.current;
 		setView("code");
 		let start = starterCode(next, language);

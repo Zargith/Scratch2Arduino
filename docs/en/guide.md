@@ -204,6 +204,10 @@ blocks: they become new blocks.
   Arduino functions `digitalWrite`, `analogRead`, `delay`...).
 - Errors in your code show on their line, only when you click *Check*, *Upload* or *Live*. *Delete my
   code* (in the tab) removes it from the project.
+- **Change language**: choose another language for "My code" (or for the program in expert mode) and
+  your code is **converted**: C++, Python and JavaScript in every direction. Variables, functions,
+  if / else, loops and the Arduino functions are translated; what the conversion cannot translate stays as
+  comments, and the message tells which lines to finish by hand.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
   JavaScript*); *Language help* lists the available functions.
 

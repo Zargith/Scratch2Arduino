@@ -3,6 +3,7 @@
 #include "s2a/boards.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
+#include "s2a/convert.hpp"
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
@@ -293,6 +294,20 @@ void Bridge::bind() {
 
     // Functions and variables of a "My code" file, for its palette category: (language, code).
     // Quick and never failing: called each time the user goes back to the blocks.
+    // Rewrites a program in another text language: (code, from, to) -> {code, toCheck: [lines]}.
+    // Never fails: what it does not understand comes back as comments, their lines in toCheck.
+    window_.bind("s2a_convert", [](const std::string& request) {
+        const Json args = Json::parse(request);
+        const auto from = project::programLanguageFromId(stringArg(args, 1));
+        const auto to = project::programLanguageFromId(stringArg(args, 2));
+        const std::string code = stringArg(args, 0);
+        if (!from || !to) {
+            return Json{{"code", code}, {"toCheck", Json::array()}}.dump();
+        }
+        const auto converted = convert::convert(code, *from, *to);
+        return Json{{"code", converted.code}, {"toCheck", converted.toCheck}}.dump();
+    });
+
     window_.bind("s2a_code_declarations", [](const std::string& request) {
         const Json args = Json::parse(request);
         const auto language = project::programLanguageFromId(stringArg(args, 0));

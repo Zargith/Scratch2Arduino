@@ -14,6 +14,7 @@
 #include "s2a/arduino_cli.hpp"
 #include "s2a/boards.hpp"
 #include "s2a/codegen.hpp"
+#include "s2a/convert.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/i18n.hpp"
 #include "s2a/live.hpp"
@@ -25,7 +26,9 @@
 #include "s2a/wiring.hpp"
 #include "s2a/version.hpp"
 
+#include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
@@ -70,6 +73,7 @@ struct Options {
     bool boardGiven = false;
     double seconds = 0; ///< live: stop after this many seconds (0 = until Ctrl+C).
     std::string svg;    ///< wiring: also write the diagram to this SVG file.
+    std::string to;     ///< convert: target language (cpp, python, javascript).
 };
 
 std::atomic<bool> stopRequested{false};
@@ -138,6 +142,7 @@ private:
     int bluetooth() const;
     int setup() const;
     int generateCommand() const;
+    int convertCommand() const;
     int wiringCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
@@ -396,6 +401,51 @@ int Cli::generateCommand() const {
         return kSuccess;
     }
     std::cout << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), selected).source;
+    return kSuccess;
+}
+
+namespace {
+
+/// "cpp", "python", "javascript" (or a file extension: ino, py, js...): the language, or Blocks.
+s2a::project::ProgramLanguage textLanguage(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (name == "cpp" || name == "c++" || name == "ino" || name == "h" || name == "hpp" || name == "arduino") {
+        return s2a::project::ProgramLanguage::Cpp;
+    }
+    if (name == "python" || name == "py") {
+        return s2a::project::ProgramLanguage::Python;
+    }
+    if (name == "javascript" || name == "js") {
+        return s2a::project::ProgramLanguage::JavaScript;
+    }
+    return s2a::project::ProgramLanguage::Blocks;
+}
+
+} // namespace
+
+int Cli::convertCommand() const {
+    using s2a::project::ProgramLanguage;
+    if (options_.positional.size() != 1 || textLanguage(options_.to) == ProgramLanguage::Blocks) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const fs::path file = fs::u8path(options_.positional[0]);
+    const ProgramLanguage from = textLanguage(file.extension().u8string().substr(file.has_extension() ? 1 : 0));
+    std::ifstream input(file, std::ios::binary);
+    if (from == ProgramLanguage::Blocks || !input) {
+        print("cli.convert_source");
+        return kUsage;
+    }
+    const std::string source((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    const auto converted = s2a::convert::convert(source, from, textLanguage(options_.to));
+    std::cout << converted.code;
+    if (!converted.toCheck.empty()) {
+        std::string lines;
+        for (const int line : converted.toCheck) {
+            lines += (lines.empty() ? "" : ", ") + std::to_string(line);
+        }
+        std::cerr << s2a::tr("cli.convert_check", options_.language, {{"lines", lines}}) << '\n';
+    }
     return kSuccess;
 }
 
@@ -689,6 +739,9 @@ int Cli::run() {
     if (options_.command == "generate") {
         return generateCommand();
     }
+    if (options_.command == "convert") {
+        return convertCommand();
+    }
     if (options_.command == "wiring") {
         return wiringCommand();
     }
@@ -734,6 +787,12 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
                 return std::nullopt;
             }
             options.language = s2a::languageFromLocale(*language);
+        } else if (arg == "--to") {
+            const auto target = value();
+            if (!target) {
+                return std::nullopt;
+            }
+            options.to = *target;
         } else if (arg == "--svg") {
             const auto file = value();
             if (!file) {

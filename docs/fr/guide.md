@@ -216,6 +216,10 @@ côté des blocs : elles deviennent de nouveaux blocs.
   fonctions `digitalWrite`, `analogRead`, `delay`... de l'Arduino).
 - Les erreurs de ton code s'affichent sur leur ligne, seulement quand tu cliques sur *Vérifier*,
   *Téléverser* ou *Live*. *Supprimer mon code* (dans l'onglet) l'enlève du projet.
+- **Changer de langage** : choisis un autre langage pour "Mon code" (ou pour le programme en mode
+  expert) et ton code est **converti** : C++, Python et JavaScript dans tous les sens. Les variables, les
+  fonctions, les si / sinon, les boucles et les fonctions Arduino sont traduits ; ce que la conversion ne
+  sait pas traduire reste en commentaires, et le message dit quelles lignes reprendre à la main.
 - **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
   ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles.
 
