@@ -26,6 +26,8 @@ describe("My code palette", () => {
 				declaration({ name: "average", parameters: ["a", "b"], returnsValue: true }),
 				declaration({ kind: "variable", name: "speed" }),
 				declaration({ kind: "variable", name: "LIMIT", readOnly: true }),
+				// Changed by the code itself (the state of a switch): read only, from blocks.
+				declaration({ kind: "variable", name: "lampe", changedByCode: true }),
 			],
 			""
 		) as { type: string; fields?: { NAME: string }; extraState?: unknown; inputs?: object }[];
@@ -36,6 +38,7 @@ describe("My code palette", () => {
 			"mycode_get:speed",
 			"mycode_set:speed",
 			"mycode_get:LIMIT",
+			"mycode_get:lampe",
 		]);
 		expect(contents[0].extraState).toEqual({ name: "blink", params: 2 });
 		expect(Object.keys(contents[0].inputs ?? {})).toEqual(["ARG1", "ARG2"]);

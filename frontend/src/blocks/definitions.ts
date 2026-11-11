@@ -24,6 +24,8 @@ export interface UserDeclaration {
 	parameters: string[];
 	returnsValue: boolean;
 	readOnly: boolean;
+	/** Changed by a function of the code itself (its state): blocks read it, never set it. */
+	changedByCode?: boolean;
 	line: number;
 }
 
@@ -425,7 +427,8 @@ export function myCodeContents(declarations: UserDeclaration[], empty: string): 
 			}
 		} else {
 			contents.push({ kind: "block", type: "mycode_get", fields: { NAME: declaration.name } });
-			if (!declaration.readOnly) {
+			// Only variables that blocks may change: not the constants, not the code's own state.
+			if (!declaration.readOnly && !declaration.changedByCode) {
 				contents.push({ kind: "block", type: "mycode_set", fields: { NAME: declaration.name }, inputs: numberShadows(["VALUE"]) });
 			}
 		}

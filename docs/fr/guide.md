@@ -215,7 +215,9 @@ côté des blocs : elles deviennent de nouveaux blocs.
    complétions (mots du langage, fonctions Arduino, noms déjà écrits).
 3. Reviens à la vue **Blocs** : la famille **Mon code** contient un bloc par fonction (avec des cases pour
    ses nombres), un bloc pour le résultat d'une fonction, et des blocs pour lire ou changer chaque variable
-   (nombres, et textes `String` en C++).
+   (nombres, et textes `String` en C++). Une constante, ou une variable que ton code change lui-même dans
+   une de ses fonctions (son état, comme `lampe` d'un interrupteur), a seulement un bloc pour la lire : un
+   bloc qui la changerait dérangerait ton code.
 
 - En **C++**, ton code est compilé avec les blocs : *Vérifier* et *Téléverser* marchent comme d'habitude.
 - En **Python** ou **JavaScript**, ton code tourne sur l'ordinateur, avec le bouton **Live** (avec les

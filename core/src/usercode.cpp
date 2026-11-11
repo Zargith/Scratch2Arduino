@@ -4,6 +4,7 @@
 #include <cctype>
 #include <regex>
 #include <set>
+#include <sstream>
 
 namespace s2a::usercode {
 
@@ -445,7 +446,48 @@ std::vector<Declaration> pythonDeclarations(std::string_view code) {
 
 } // namespace
 
-std::vector<Declaration> declarations(ProgramLanguage language, std::string_view code) {
+namespace {
+
+/// Names a C++ or JavaScript function body changes: "x = ", "x += ", "x++", "++x"...
+void changedNames(const std::string& body, std::set<std::string>& names) {
+    static const std::regex assigned(R"(([A-Za-z_$][\w$]*)\s*(?:<<|>>|[-+*/%&|^])?=(?!=))");
+    static const std::regex stepped(R"((?:\+\+|--)\s*([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*(?:\+\+|--))");
+    for (auto it = std::sregex_iterator(body.begin(), body.end(), assigned); it != std::sregex_iterator(); ++it) {
+        names.insert((*it)[1].str());
+    }
+    for (auto it = std::sregex_iterator(body.begin(), body.end(), stepped); it != std::sregex_iterator(); ++it) {
+        names.insert((*it)[1].matched ? (*it)[1].str() : (*it)[2].str());
+    }
+}
+
+/// The global variables the code's own functions change. Python: the names a function declares
+/// "global" (needed to change one). C++ and JavaScript: the names assigned in a function body.
+std::set<std::string> changedByFunctions(ProgramLanguage language, std::string_view code) {
+    std::set<std::string> names;
+    if (language == ProgramLanguage::Python) {
+        static const std::regex global(R"(^\s+global\s+([^#]+))");
+        std::istringstream lines{std::string(code)};
+        std::string line;
+        while (std::getline(lines, line)) {
+            std::smatch match;
+            if (std::regex_search(line, match, global)) {
+                for (const std::string& name : splitCommas(match[1].str())) {
+                    names.insert(trim(name));
+                }
+            }
+        }
+        return names;
+    }
+    const bool cpp = language == ProgramLanguage::Cpp;
+    for (const Statement& statement : topLevel(blankComments(code, cpp, !cpp), !cpp)) {
+        if (statement.block) {
+            changedNames(statement.body, names);
+        }
+    }
+    return names;
+}
+
+std::vector<Declaration> scan(ProgramLanguage language, std::string_view code) {
     switch (language) {
     case ProgramLanguage::Cpp:
         return cppDeclarations(code);
@@ -457,6 +499,19 @@ std::vector<Declaration> declarations(ProgramLanguage language, std::string_view
         break;
     }
     return {};
+}
+
+} // namespace
+
+std::vector<Declaration> declarations(ProgramLanguage language, std::string_view code) {
+    std::vector<Declaration> found = scan(language, code);
+    const std::set<std::string> changed = changedByFunctions(language, code);
+    for (Declaration& declaration : found) {
+        if (declaration.kind == Declaration::Kind::Variable && changed.count(declaration.name) != 0) {
+            declaration.changedByCode = true;
+        }
+    }
+    return found;
 }
 
 std::vector<Declaration> declarations(const project::Project& project) {
