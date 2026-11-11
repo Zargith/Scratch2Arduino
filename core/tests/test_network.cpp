@@ -114,18 +114,32 @@ TEST(Bluetooth, KnowsTheWirelessPorts) {
     EXPECT_TRUE(s2a::network::isWireless("wifi:192.168.4.1"));
     EXPECT_TRUE(s2a::network::isWireless("bt:24:6F:28:AA:BB:CC"));
     EXPECT_TRUE(s2a::network::isWireless("/dev/cu.S2A-1A2B")); // paired on macOS
+    EXPECT_TRUE(s2a::network::isWireless("/dev/cu.HC-05"));    // an HC-05 module paired on macOS
+    EXPECT_TRUE(s2a::network::isWireless("/dev/cu.DSDTECHHC-06-SPPDev"));
+    EXPECT_FALSE(s2a::network::isWireless("/dev/cu.usbmodem14101"));
     EXPECT_FALSE(s2a::network::isWireless("/dev/ttyUSB0"));
     EXPECT_FALSE(s2a::network::isWireless("COM3"));
+}
+
+TEST(Bluetooth, KnowsTheNamesOfTheModules) {
+    for (const char* name : {"HC-05", "HC-06", "hc05", "DSD TECH HC-05", "linvor", "H-C-2010-06-01", "BT05", "JDY-31-SPP"}) {
+        EXPECT_TRUE(s2a::network::isModuleName(name)) << name;
+    }
+    for (const char* name : {"S2A-1A2B", "Headphones", "HC", ""}) {
+        EXPECT_FALSE(s2a::network::isModuleName(name)) << name;
+    }
 }
 
 TEST(Bluetooth, KeepsTheBoardsListedByBluetoothctl) {
     const std::string output = "Device 24:6F:28:AA:BB:CC S2A-BBCC\n"
                                "Device 11:22:33:44:55:66 Headphones\n"
+                               "Device 98:D3:31:F5:12:34 HC-05\n"
                                "\x1b[0;94m[bluetooth]\x1b[0m# Device a4:cf:12:01:02:03 S2A-0203 \r\n"
                                "Device 24:6F:28:AA:BB:CC S2A-BBCC\n"
                                "Device 77:88:99:AA:BB:CC\n"
                                "garbage\n";
-    const std::vector<BluetoothDevice> expected{{"S2A-BBCC", "24:6F:28:AA:BB:CC"}, {"S2A-0203", "A4:CF:12:01:02:03"}};
+    const std::vector<BluetoothDevice> expected{{"S2A-BBCC", "24:6F:28:AA:BB:CC"}, {"HC-05", "98:D3:31:F5:12:34"},
+                                                {"S2A-0203", "A4:CF:12:01:02:03"}};
     EXPECT_EQ(s2a::network::parseBluetoothctlDevices(output), expected);
     EXPECT_TRUE(s2a::network::parseBluetoothctlDevices("").empty());
 }

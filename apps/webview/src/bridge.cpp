@@ -241,6 +241,38 @@ Bridge::~Bridge() {
     }
 }
 
+std::unique_ptr<serial::SerialPort> Bridge::openLiveOverUsb(const Board& board, const std::string& port,
+                                                            Language language) {
+    closeMonitor();
+    {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        live_.reset(); // the port is needed
+    }
+    const auto failure = [&](const Error& error) { return UserError{tr(errorMessageKey(error.code), language)}; };
+    auto opened = serial::SerialPort::open(port, live::kBaud);
+    if (!opened.ok()) {
+        throw failure(opened.error());
+    }
+    std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
+    if (live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
+        return connection;
+    }
+    connection.reset(); // no Live firmware yet: install it, then connect again
+    std::string details;
+    if (const auto flashed = live::Session::arduinoCliFlasher(board, port)(details); !flashed.ok()) {
+        throw failure(flashed.error());
+    }
+    opened = serial::SerialPort::open(port, live::kBaud);
+    if (!opened.ok()) {
+        throw failure(opened.error());
+    }
+    connection = std::move(opened).value();
+    if (const auto ready = live::LiveLink(*connection).handshake(); !ready.ok()) {
+        throw failure(ready.error());
+    }
+    return connection;
+}
+
 template <typename Work> void Bridge::async(const std::string& id, Work work) {
     const std::lock_guard<std::mutex> lock(mutex_);
     for (auto it = workers_.begin(); it != workers_.end();) {
@@ -716,7 +748,14 @@ void Bridge::bind() {
                     Json entry{{"address", port.address},
                                {"label", board != nullptr ? port.label + " - " + board->name : port.label}};
                     if (network::isWireless(port.address)) { // a board paired over Bluetooth (macOS)
-                        entry["label"] = "Bluetooth - " + port.address.substr(port.address.find(network::kBoardNamePrefix));
+                        // "/dev/cu.S2A-1A2B" -> "S2A-1A2B", "/dev/cu.HC-05" -> "HC-05"
+                        std::string name = port.address.substr(port.address.rfind('/') + 1);
+                        for (const std::string_view prefix : {"cu.", "tty."}) {
+                            if (name.rfind(prefix, 0) == 0) {
+                                name.erase(0, prefix.size());
+                            }
+                        }
+                        entry["label"] = "Bluetooth - " + name;
                         entry["bluetooth"] = true;
                     }
                     if (!port.boardId.empty()) {
@@ -881,34 +920,10 @@ void Bridge::bind() {
                 if (board == nullptr || port.empty() || network::isWireless(port)) {
                     throw UserError{tr("live.wifi_upload", language)};
                 }
-                closeMonitor();
-                {
-                    const std::lock_guard<std::mutex> lock(liveMutex_);
-                    live_.reset(); // the port is needed
-                }
                 const auto failure = [&](const Error& error) {
                     return UserError{tr(errorMessageKey(error.code), language)};
                 };
-                auto opened = serial::SerialPort::open(port, live::kBaud);
-                if (!opened.ok()) {
-                    throw failure(opened.error());
-                }
-                std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
-                if (!live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
-                    connection.reset(); // no Live firmware yet: install it (with Wi-Fi), then connect again
-                    std::string details;
-                    if (const auto flashed = live::Session::arduinoCliFlasher(*board, port)(details); !flashed.ok()) {
-                        throw failure(flashed.error());
-                    }
-                    opened = serial::SerialPort::open(port, live::kBaud);
-                    if (!opened.ok()) {
-                        throw failure(opened.error());
-                    }
-                    connection = std::move(opened).value();
-                    if (const auto ready = live::LiveLink(*connection).handshake(); !ready.ok()) {
-                        throw failure(ready.error());
-                    }
-                }
+                const auto connection = openLiveOverUsb(*board, port, language);
                 live::LiveLink link(*connection);
                 if (const auto joined = link.joinNetwork(name, password); !joined.ok()) {
                     throw failure(joined.error());
@@ -937,6 +952,71 @@ void Bridge::bind() {
                             {"message", tr(key, language, {{"network", name}, {"address", state.address},
                                                            {"access_point", state.accessPoint}})}};
                 return result.dump();
+            });
+        },
+        nullptr);
+
+    // HC-05 / HC-06 module of an Arduino board, over its USB cable: saves its pins and speed on
+    // the board (the Live firmware is uploaded first if needed); null forgets it.
+    window_.bind(
+        "s2a_bluetooth_module",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 3, language_);
+                const std::string port = stringArg(args, 0);
+                const Board* board = BoardDatabase::builtin().find(stringArg(args, 1));
+                if (board == nullptr || port.empty() || network::isWireless(port)) {
+                    throw UserError{tr("module.usb", language)};
+                }
+                std::optional<live::BluetoothModule> wanted;
+                if (args.size() > 2 && args[2].is_object()) {
+                    // Pins by the label printed on the board ("10", "A8"), as the editor shows them.
+                    const auto pinNumber = [&](const char* key, int fallback) {
+                        const Json& value = args[2].contains(key) ? args[2].at(key) : Json();
+                        if (value.is_number_integer()) {
+                            return value.get<int>();
+                        }
+                        const Pin* pin = value.is_string() ? board->findPin(value.get<std::string>()) : nullptr;
+                        return pin != nullptr ? pin->number : (value.is_null() ? fallback : -1);
+                    };
+                    live::BluetoothModule module;
+                    module.rx = pinNumber("rx", module.rx);
+                    module.tx = pinNumber("tx", module.tx);
+                    module.baud = args[2].value("baud", module.baud);
+                    if (module.rx < 0 || module.tx < 0) {
+                        throw UserError{tr("module.pin_missing", language)};
+                    }
+                    if (const std::string problem = live::bluetoothModuleProblem(*board, module); !problem.empty()) {
+                        throw UserError{tr("module." + problem, language)};
+                    }
+                    wanted = module;
+                }
+                const auto connection = openLiveOverUsb(*board, port, language);
+                live::LiveLink link(*connection);
+                const auto failure = [&](const Error& error) {
+                    return UserError{tr(errorMessageKey(error.code), language)};
+                };
+                if (const auto saved = link.setBluetoothModule(wanted); !saved.ok()) {
+                    throw failure(saved.error());
+                }
+                const auto running = link.bluetoothModule();
+                if (!running.ok()) {
+                    throw failure(running.error());
+                }
+                const auto label = [board](int number) {
+                    const Pin* pin = board->findPin(number);
+                    return pin != nullptr ? pin->label : std::to_string(number);
+                };
+                std::string message;
+                if (!wanted) {
+                    message = tr("module.forgotten", language);
+                } else {
+                    const std::string key = running.value() == wanted ? "module.saved" : "module.saved_restart";
+                    message = tr(key, language, {{"rx", label(wanted->rx)}, {"tx", label(wanted->tx)},
+                                                 {"baud", std::to_string(wanted->baud)}});
+                }
+                return Json{{"ok", true}, {"message", message}}.dump();
             });
         },
         nullptr);

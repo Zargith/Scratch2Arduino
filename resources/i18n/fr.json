@@ -173,7 +173,8 @@
     "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi ou Bluetooth, ce que les blocs écrivent s'affiche dans le panneau Live.",
     "bluetooth_no_firmware": "La carte ne répond pas par le Bluetooth. Vérifie qu'elle est allumée et près de l'ordinateur. La première fois, branche-la avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Bluetooth.",
     "bluetooth_off": "Impossible de chercher les cartes Bluetooth : le Bluetooth de l'ordinateur est peut-être éteint. Allume-le, puis réessaie.",
-    "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi."
+    "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi.",
+    "module_pins": "Les broches {rx} et {tx} sont prises par le module Bluetooth (HC-05 / HC-06) : les blocs en surbrillance doivent utiliser d'autres broches, ou le module doit être branché sur d'autres broches (bouton Bluetooth)."
   },
   "wiring": {
     "pin_twice": "La broche {pin} est utilisée à la fois par \"{first}\" et par \"{second}\" : chaque composant a besoin de sa propre broche.",
@@ -211,5 +212,17 @@
     "usercode_upload_only": "Tes blocs utilisent \"Mon code\" écrit en C++ : il est compilé pour la carte, envoie le programme avec Téléverser (ou écris \"Mon code\" en Python ou JavaScript pour le mode Live).",
     "usercode_errors": "\"Mon code\" a {count} erreur(s). Ligne {line} : {message}",
     "in_user_code": "Dans \"Mon code\" :"
+  },
+  "module": {
+    "usb": "Les broches du module s'enregistrent sur la carte par le câble USB : branche la carte et choisis son port USB.",
+    "no_module": "Cette carte ne prend pas de module HC-05 / HC-06 : elle a déjà le Bluetooth.",
+    "pins_usb": "Les broches 0 et 1 servent au câble USB : branche le module sur d'autres broches (10 et 11 par exemple).",
+    "pins_same": "Le module a besoin de deux broches différentes : une qui reçoit (reliée à TXD) et une qui envoie (reliée à RXD).",
+    "pin_missing": "Cette carte n'a pas cette broche numérique : choisis des broches écrites sur la carte.",
+    "pin_receive": "Sur une Mega, la broche qui reçoit doit être 10, 11, 12, 13, 50, 51, 52, 53 ou A8 à A15, ou alors utilise un port série de la carte : 19 et 18, 17 et 16, ou 15 et 14.",
+    "speed": "Le module ne connaît pas cette vitesse : utilise 9600 (la vitesse d'un module neuf), 19200, 38400, 57600 ou 115200.",
+    "saved": "Enregistré sur la carte : le module est sur les broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appaire maintenant le module avec l'ordinateur, puis cherche-le.",
+    "saved_restart": "Enregistré sur la carte : broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appuie sur le bouton reset de la carte (ou débranche-la et rebranche-la) pour qu'elle les utilise.",
+    "forgotten": "La carte a oublié le module : ses broches seront libres au prochain démarrage de la carte."
   }
 }

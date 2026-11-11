@@ -32,7 +32,7 @@ struct ScriptError;
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 7"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 8"; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -99,6 +99,22 @@ public:
 /// "eteins" (how the phone blocks compare messages, as the generated code does).
 [[nodiscard]] std::string simpleText(std::string_view text);
 
+/// How an HC-05 / HC-06 Bluetooth module is wired to an Arduino board running the Live firmware.
+struct BluetoothModule {
+    int rx = 10;     ///< Board pin that receives: wired to TXD of the module.
+    int tx = 11;     ///< Board pin that sends: wired to RXD of the module (through a divider).
+    int baud = 9600; ///< Speed of the module (9600 for a new HC-05 or HC-06).
+
+    friend bool operator==(const BluetoothModule& a, const BluetoothModule& b) {
+        return a.rx == b.rx && a.tx == b.tx && a.baud == b.baud;
+    }
+};
+
+/// Why `module` cannot be used on `board` (a key of the "module" i18n section), or "" when it can:
+/// "no_module" (the board takes no module), "pins_usb" (0 and 1 are the USB link), "pins_same",
+/// "pin_missing", "pin_receive" (on a Mega, a pin that cannot receive with SoftwareSerial), "speed".
+[[nodiscard]] std::string bluetoothModuleProblem(const Board& board, const BluetoothModule& module);
+
 /// Pins of a board running the S2A live firmware, over a line transport.
 class LiveLink final : public Pins {
 public:
@@ -137,6 +153,13 @@ public:
     [[nodiscard]] Result<NetworkState> networkState();
     /// Saves the home network on the board and joins it (an empty name forgets it).
     [[nodiscard]] Status joinNetwork(const std::string& name, const std::string& password);
+
+    /// HC-05 / HC-06 Bluetooth module of an Arduino board (see BluetoothModule).
+    /// The settings saved on the board, nullopt when it has none (or its firmware has no module).
+    [[nodiscard]] Result<std::optional<BluetoothModule>> bluetoothModule();
+    /// Saves the module's pins and speed on the board (nullopt forgets them). The firmware starts
+    /// the link at once, or at its next start when another link already runs.
+    [[nodiscard]] Status setBluetoothModule(const std::optional<BluetoothModule>& module);
 
 private:
     /// True when the firmware answers a "?" now (false while the board restarts).

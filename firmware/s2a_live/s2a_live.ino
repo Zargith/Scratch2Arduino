@@ -35,6 +35,14 @@
 //   B               last message of the phone connected over Bluetooth, once -> "b <text>", or
 //                   "b" when it sent nothing new
 //   Y <text>        sends a line to that phone                           -> "ok"
+// Arduino boards (Uno, Nano, Mega), with an HC-05 / HC-06 Bluetooth module:
+//   J <rx> <tx> <baud>  the module is wired to these pins (<rx>: the pin that receives, wired to TXD of
+//                   the module; <tx>: the pin that sends, wired to RXD), at this speed; saved on the board
+//                   and used at every start. "J" alone forgets it                    -> "ok"
+//   K               module settings -> "k <rx> <tx> <baud>", or "k -" when there is none
+// The module takes the same commands as USB; it is a plain serial link, so the board cannot know when
+// the computer goes away. The Mega uses its serial ports for 19/18, 17/16 and 15/14, other pins and the
+// other boards use SoftwareSerial.
 // The ESP32 and the ESP8266 also create their own Wi-Fi network "S2A-xxxx" (password
 // "scratch2arduino") and accept the same commands on TCP port 3333 (one computer at a time; it
 // answers "S2A <version>" when it connects). ESP32 only: B and Y, and a Bluetooth serial device
@@ -70,10 +78,14 @@
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
+#elif defined(ARDUINO_ARCH_AVR)
+#define S2A_MODULE 1 // HC-05 / HC-06 Bluetooth module on two pins
+#include <EEPROM.h>
+#include <SoftwareSerial.h>
 #endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 7";
+const char* const kHello = "S2A 8";
 #if defined(S2A_WIFI)
 const int kMaxLine = 120; // room for a Wi-Fi name and password
 #else
@@ -100,6 +112,14 @@ WiFiClient client;
 Input network = {&client, {0}, 0};
 bool clientConnected = false;
 char accessPoint[16] = "S2A"; // also the Bluetooth name
+#endif
+#if defined(S2A_MODULE)
+// The module's serial link: a serial port of the Mega, or SoftwareSerial (created once its pins are known).
+Stream* modulePort = nullptr;
+Input module = {nullptr, {0}, 0};
+long moduleRx = -1;
+long moduleTx = -1;
+long moduleBaud = 0;
 #endif
 #if defined(S2A_BLUETOOTH)
 BluetoothSerial bluetoothPort;
@@ -385,6 +405,11 @@ bool validPin(long pin) {
     return true; // the only analog input, after the digital pins
   }
 #endif
+#if defined(S2A_MODULE)
+  if (pin >= 0 && (pin == moduleRx || pin == moduleTx)) {
+    return false; // the Bluetooth module's link: a block must not take it over
+  }
+#endif
   return pin >= 0 && pin < kMaxPins && pin < NUM_DIGITAL_PINS;
 }
 
@@ -530,6 +555,106 @@ void serveBluetooth() {
 }
 #endif
 
+#if defined(S2A_MODULE)
+const int kModuleSaved = 0x4A; // first EEPROM byte when the settings were written by this firmware
+
+bool moduleBaudOk(long baud) {
+  return baud == 9600 || baud == 19200 || baud == 38400 || baud == 57600 || baud == 115200;
+}
+
+// Pins 0 and 1 are the USB link.
+bool modulePinsOk(long rx, long tx, long baud) {
+  return rx > 1 && tx > 1 && rx != tx && rx < NUM_DIGITAL_PINS && tx < NUM_DIGITAL_PINS && rx < kMaxPins &&
+         tx < kMaxPins && moduleBaudOk(baud);
+}
+
+// Starts the link with the module; false when these pins cannot be used.
+bool startModule(long rx, long tx, long baud) {
+  if (!modulePinsOk(rx, tx, baud) || modulePort != nullptr) {
+    return false; // pins 0 and 1 are the USB link; a running link cannot move (restart the board)
+  }
+#if defined(HAVE_HWSERIAL1)
+  // The Mega's own serial ports, when the module is on them.
+  HardwareSerial* hardware = nullptr;
+  if (rx == 19 && tx == 18) {
+    hardware = &Serial1;
+  }
+#if defined(HAVE_HWSERIAL2)
+  if (rx == 17 && tx == 16) {
+    hardware = &Serial2;
+  }
+#endif
+#if defined(HAVE_HWSERIAL3)
+  if (rx == 15 && tx == 14) {
+    hardware = &Serial3;
+  }
+#endif
+  if (hardware != nullptr) {
+    hardware->begin(baud);
+    modulePort = hardware;
+  }
+#endif
+  if (modulePort == nullptr) {
+    if (digitalPinToPCICR((uint8_t)rx) == nullptr) {
+      return false; // SoftwareSerial needs a pin with a "pin change" interrupt to receive
+    }
+    SoftwareSerial* software = new SoftwareSerial(rx, tx);
+    software->begin(baud);
+    software->listen();
+    modulePort = software;
+  }
+  module.stream = modulePort;
+  module.length = 0;
+  output[rx] = false;
+  output[tx] = false;
+  moduleRx = rx;
+  moduleTx = tx;
+  moduleBaud = baud;
+  return true;
+}
+
+// Settings kept in the EEPROM: marker, rx, tx, baud / 100 (two bytes).
+void saveModule(long rx, long tx, long baud) {
+  EEPROM.update(0, rx < 0 ? 0xFF : kModuleSaved);
+  EEPROM.update(1, (byte)rx);
+  EEPROM.update(2, (byte)tx);
+  EEPROM.update(3, (byte)((baud / 100) >> 8));
+  EEPROM.update(4, (byte)((baud / 100) & 0xFF));
+}
+
+void loadModule() {
+  if (EEPROM.read(0) == kModuleSaved) {
+    startModule(EEPROM.read(1), EEPROM.read(2), ((long)EEPROM.read(3) << 8 | EEPROM.read(4)) * 100L);
+  }
+}
+
+// "J <rx> <tx> <baud>": saved and started; "J" alone forgets it (the link stops at the next start).
+bool setupModule(const char* command, int position) {
+  long rx = 0;
+  long tx = 0;
+  long baud = 0;
+  if (!readNumber(command, &position, &rx)) {
+    saveModule(-1, -1, 0);
+    return true;
+  }
+  if (!readNumber(command, &position, &tx) || !readNumber(command, &position, &baud)) {
+    return false;
+  }
+  if (rx == moduleRx && tx == moduleTx && baud == moduleBaud) {
+    saveModule(rx, tx, baud);
+    return true;
+  }
+  if (!modulePinsOk(rx, tx, baud)) {
+    return false;
+  }
+  saveModule(rx, tx, baud);
+  if (modulePort == nullptr) {
+    startModule(rx, tx, baud);
+  }
+  return true; // other pins than the running ones: used from the next start
+}
+#endif
+
 // Every output LOW, no sound, servos released, strip, matrix and screens cleared.
 void resetAll() {
   stopTone();
@@ -578,6 +703,26 @@ void execute(const char* command) {
     return;
   case 'I':
     networkState();
+    return;
+#endif
+#if defined(S2A_MODULE)
+  case 'J':
+    if (setupModule(command, position)) {
+      reply("ok");
+      return;
+    }
+    break;
+  case 'K':
+    if (moduleRx < 0) {
+      reply("k -");
+    } else {
+      out->print("k ");
+      out->print(moduleRx);
+      out->print(' ');
+      out->print(moduleTx);
+      out->print(' ');
+      out->println(moduleBaud);
+    }
     return;
 #endif
 #if defined(S2A_BLUETOOTH)
@@ -770,6 +915,9 @@ void setup() {
 #if defined(S2A_BLUETOOTH)
   startBluetooth();
 #endif
+#if defined(S2A_MODULE)
+  loadModule();
+#endif
   reply(kHello);
 }
 
@@ -825,6 +973,11 @@ void loop() {
   serveBluetooth();
   if (bluetoothConnected) {
     readFrom(bluetooth);
+  }
+#endif
+#if defined(S2A_MODULE)
+  if (modulePort != nullptr) {
+    readFrom(module);
   }
 #endif
 }

@@ -173,7 +173,8 @@
     "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi or Bluetooth, what the blocks write is shown in the Live panel.",
     "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
     "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again.",
-    "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi."
+    "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi.",
+    "module_pins": "Pins {rx} and {tx} are used by the Bluetooth module (HC-05 / HC-06): the highlighted blocks must use other pins, or the module must be wired to other pins (Bluetooth button)."
   },
   "wiring": {
     "pin_twice": "Pin {pin} is used by both \"{first}\" and \"{second}\": each component needs its own pin.",
@@ -211,5 +212,17 @@
     "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
     "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}",
     "in_user_code": "In \"My code\":"
+  },
+  "module": {
+    "usb": "The module's pins are saved on the board with the USB cable: plug the board in and choose its USB port.",
+    "no_module": "This board does not take an HC-05 / HC-06 module: its Bluetooth is built in.",
+    "pins_usb": "Pins 0 and 1 carry the USB link: wire the module to other pins (10 and 11 for example).",
+    "pins_same": "The module needs two different pins: one that receives (wired to TXD) and one that sends (wired to RXD).",
+    "pin_missing": "This board has no such digital pin: choose pins written on the board.",
+    "pin_receive": "On a Mega, the pin that receives must be 10, 11, 12, 13, 50, 51, 52, 53 or A8 to A15, or use a serial port of the board: 19 and 18, 17 and 16, or 15 and 14.",
+    "speed": "This speed is not one of the module's: use 9600 (the speed of a new module), 19200, 38400, 57600 or 115200.",
+    "saved": "Saved on the board: the module is on pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Now pair the module with the computer, then search for it.",
+    "saved_restart": "Saved on the board: pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Press the board's reset button (or unplug it and plug it in again) so that it uses them.",
+    "forgotten": "The board forgot the module: its pins are free again after the next start of the board."
   }
 }

@@ -59,6 +59,8 @@ export interface Board {
 	wifi: boolean;
 	/** Live mode over Bluetooth and the Phone blocks (ESP32). */
 	bluetooth: boolean;
+	/** Live mode over an HC-05 / HC-06 Bluetooth module wired to it (Arduino boards). */
+	bluetoothModule: boolean;
 }
 
 export interface BoardFile {
@@ -78,6 +80,7 @@ export interface BoardFile {
 	interruptPins: string[];
 	wifi?: boolean;
 	bluetooth?: boolean;
+	bluetoothModule?: boolean;
 }
 
 export type CatalogBlock = BlockDefinition & { category: string };
@@ -129,6 +132,7 @@ export function buildBoard(file: BoardFile): Board {
 		pins: numbered.map(({ pin }) => pin),
 		wifi: file.wifi ?? false,
 		bluetooth: file.bluetooth ?? false,
+		bluetoothModule: file.bluetoothModule ?? false,
 	};
 }
 

@@ -15,10 +15,23 @@ export interface BluetoothBoard {
 
 /** Boards whose Live firmware has Bluetooth ("bluetooth" in resources/boards/<id>.json). */
 export const hasBluetooth = (boardId: string): boolean => findBoard(boardId)?.bluetooth ?? false;
+/** Boards that take an HC-05 / HC-06 module for the Live mode ("bluetoothModule"). */
+export const hasBluetoothModule = (boardId: string): boolean => findBoard(boardId)?.bluetoothModule ?? false;
+/** Live mode over Bluetooth: built in, or with a module. */
+export const reachableByBluetooth = (boardId: string): boolean => hasBluetooth(boardId) || hasBluetoothModule(boardId);
+
+/** Names of the HC-05 / HC-06 modules (same list as isModuleName in core/src/network.cpp). */
+const MODULE_NAMES = ["HC-05", "HC-06", "HC05", "HC06", "H-C-2010", "LINVOR", "BT05", "JDY-3"];
+export const isModuleName = (name: string): boolean => {
+	const upper = name.toUpperCase();
+	return MODULE_NAMES.some((known) => upper.includes(known));
+};
 export const bluetoothPort = (address: string): string => `${BLUETOOTH_PREFIX}${address}`;
-/** A "bt:" port, or the serial port of a board paired on macOS (/dev/cu.S2A-1A2B). */
+/** A "bt:" port, or the serial port of a board or module paired on macOS (/dev/cu.S2A-1A2B, /dev/cu.HC-05). */
 export const isBluetoothPort = (port: string | null): boolean =>
-	(port?.startsWith(BLUETOOTH_PREFIX) ?? false) || (port?.includes("S2A-") ?? false);
+	(port?.startsWith(BLUETOOTH_PREFIX) ?? false) ||
+	(port?.includes("S2A-") ?? false) ||
+	isModuleName(port?.slice(port.lastIndexOf("/") + 1) ?? "");
 
 const isBoard = (item: unknown): item is BluetoothBoard =>
 	typeof item === "object" &&
@@ -48,6 +61,6 @@ export function rememberBoard(board: BluetoothBoard): BluetoothBoard[] {
 
 /** The Bluetooth entries of the port list, after the USB and Wi-Fi ones. */
 export function bluetoothPorts(boardId: string, boards: BluetoothBoard[], label: string): Port[] {
-	if (!hasBluetooth(boardId)) return [];
+	if (!reachableByBluetooth(boardId)) return [];
 	return boards.map((board) => ({ address: bluetoothPort(board.address), label: label.replace("{name}", board.name) }));
 }

@@ -64,7 +64,14 @@ import { Gallery } from "@/Gallery";
 import { Library } from "@/Library";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
-import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberBoard, rememberedBoards } from "@/bluetooth";
+import {
+	bluetoothPort,
+	bluetoothPorts,
+	isBluetoothPort,
+	reachableByBluetooth,
+	rememberBoard,
+	rememberedBoards,
+} from "@/bluetooth";
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
@@ -282,7 +289,7 @@ export function App() {
 	// A board without Wi-Fi cannot use a Wi-Fi port: back to the first USB port.
 	useEffect(() => {
 		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? null);
-		if (!hasBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
+		if (!reachableByBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
 	}, [boardId, port, ports]);
 
 	const refreshPorts = useCallback(async () => {
@@ -983,7 +990,7 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						{hasBluetooth(boardId) && (
+						{reachableByBluetooth(boardId) && (
 							<Tooltip label={t("bluetooth.title")}>
 								<ActionIcon
 									variant="default"
@@ -1311,6 +1318,8 @@ export function App() {
 			<BluetoothDialog
 				opened={bluetoothShown}
 				language={language}
+				boardId={boardId}
+				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
 				t={t}
 				onChosen={(board) => {
 					setBluetoothBoards(rememberBoard(board));
