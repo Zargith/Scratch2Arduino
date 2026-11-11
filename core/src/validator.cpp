@@ -41,6 +41,7 @@ public:
 
     std::vector<Issue> run() {
         collectFunctions();
+        collectModules();
         bool hasStart = false;
         for (const project::Script& script : project_.scripts) {
             if (script.blocks.empty()) {
@@ -83,6 +84,7 @@ public:
 private:
     static constexpr std::string_view kDefine = "functions_define";
     static constexpr std::string_view kCall = "functions_call";
+    static constexpr std::string_view kModule = "phone_module";
 
     std::string functionOf(const Block& block) const {
         const auto field = block.fields.find("FUNCTION");
@@ -97,6 +99,60 @@ private:
             }
         }
         return id;
+    }
+
+    /// The "Bluetooth module" blocks of the scripts that run.
+    void collectModules() {
+        for (const project::Script& script : project_.scripts) {
+            const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog_.find(script.blocks.front().type);
+            if (first == nullptr || first->shape != BlockShape::Hat) {
+                continue;
+            }
+            project::forEachBlock(script.blocks, [&](const Block& block) {
+                if (block.type == kModule) {
+                    modules_.push_back(&block);
+                }
+            });
+        }
+    }
+
+    /// The pin of a pin argument of `block` (its default when empty), -1 when the board has none.
+    int pinOf(const Block& block, const std::string& name) const {
+        const BlockDefinition* definition = catalog_.find(block.type);
+        const BlockArg* arg = definition != nullptr ? definition->findArg(name) : nullptr;
+        const auto field = block.fields.find(name);
+        const std::string label =
+            field != block.fields.end() && !field->second.empty() ? field->second : (arg != nullptr ? arg->defaultValue : "");
+        const Pin* pin = board_ != nullptr ? board_->findPin(label) : nullptr;
+        return pin != nullptr ? pin->number : -1;
+    }
+
+    /// Phone blocks: built-in Bluetooth (ESP32), or an HC-05 / HC-06 module on an Arduino board.
+    void checkPhone(const Block& block) {
+        if (block.type == kModule) {
+            if (!board_->bluetoothModule) {
+                add(board_->bluetooth ? Rule::ModuleNotNeeded : Rule::NoBluetooth, Severity::Error, block,
+                    {{"board", board_->name}});
+                return;
+            }
+            const int rx = pinOf(block, "RX_PIN");
+            const int tx = pinOf(block, "TX_PIN");
+            if (rx < 0 || tx < 0) {
+                return; // reported as an invalid pin
+            }
+            if (const std::string problem = bluetoothModuleProblem(*board_, rx, tx); !problem.empty()) {
+                add(Rule::ModulePins, Severity::Error, block, {{"problem", tr("module." + problem, language_)}});
+            } else if (!modules_.empty() && modules_.front() != &block &&
+                       (pinOf(*modules_.front(), "RX_PIN") != rx || pinOf(*modules_.front(), "TX_PIN") != tx)) {
+                add(Rule::ModuleTwice, Severity::Error, block, {});
+            }
+            return;
+        }
+        if (!board_->bluetooth && !board_->bluetoothModule) {
+            add(Rule::NoBluetooth, Severity::Error, block, {{"board", board_->name}});
+        } else if (!board_->bluetooth && modules_.empty()) {
+            add(Rule::ModuleMissing, Severity::Error, block, {{"board", board_->name}});
+        }
     }
 
     /// "define" scripts by function, and the functions each function calls.
@@ -244,8 +300,8 @@ private:
             issues_.push_back(std::move(issue));
             return;
         }
-        if (board_ != nullptr && !board_->bluetooth && block.type.rfind("phone_", 0) == 0) {
-            add(Rule::NoBluetooth, Severity::Error, block, {{"board", board_->name}});
+        if (board_ != nullptr && block.type.rfind("phone_", 0) == 0) {
+            checkPhone(block);
         }
         for (const BlockArg& arg : definition->args) {
             switch (arg.kind) {
@@ -344,6 +400,7 @@ private:
     Language language_;
     std::vector<Issue> issues_;
     std::map<std::string, std::vector<const Block*>> definitions_; ///< Function id -> its "define" hats.
+    std::vector<const Block*> modules_; ///< "Bluetooth module" blocks that run, in the order of the scripts.
     std::map<std::string, std::set<std::string>> calls_;          ///< Function id -> functions it calls.
     std::string currentFunction_;                                 ///< Function whose body is checked.
 };
@@ -395,6 +452,14 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.recursive_function";
     case Rule::NoBluetooth:
         return "validation.no_bluetooth";
+    case Rule::ModuleMissing:
+        return "validation.module_missing";
+    case Rule::ModuleNotNeeded:
+        return "validation.module_not_needed";
+    case Rule::ModulePins:
+        return "validation.module_pins";
+    case Rule::ModuleTwice:
+        return "validation.module_twice";
     case Rule::UserCodeMissing:
         return "validation.usercode_missing";
     case Rule::UserCodeNoValue:

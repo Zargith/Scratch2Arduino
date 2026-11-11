@@ -3,6 +3,8 @@
 #include "s2a/resources.hpp"
 
 #include <algorithm>
+#include <array>
+#include <utility>
 #include <cctype>
 #include <charconv>
 #include <nlohmann/json.hpp>
@@ -313,6 +315,48 @@ std::vector<const Board*> BoardDatabase::matchUsb(UsbId id) const {
         }
     }
     return matches;
+}
+
+std::string bluetoothModuleProblem(const Board& board, int rx, int tx, int baud) {
+    if (!board.bluetoothModule) {
+        return "no_module";
+    }
+    if (rx <= 1 || tx <= 1) {
+        return "pins_usb";
+    }
+    if (rx == tx) {
+        return "pins_same";
+    }
+    for (const int pin : {rx, tx}) {
+        const Pin* found = board.findPin(pin);
+        if (found == nullptr || !found->has(PinCapability::Digital)) {
+            return "pin_missing";
+        }
+    }
+    if (baud != 9600 && baud != 19200 && baud != 38400 && baud != 57600 && baud != 115200) {
+        return "speed";
+    }
+    if (board.mcu == "ATmega2560" && moduleSerialPort(board, rx, tx) == 0) {
+        // Otherwise SoftwareSerial, which receives only on some pins of the Mega.
+        constexpr std::array<int, 18> kReceive{10, 11, 12, 13, 14, 15, 50, 51, 52, 53, 62, 63, 64, 65, 66, 67, 68, 69};
+        if (std::find(kReceive.begin(), kReceive.end(), rx) == kReceive.end()) {
+            return "pin_receive";
+        }
+    }
+    return {};
+}
+
+int moduleSerialPort(const Board& board, int rx, int tx) {
+    if (board.mcu != "ATmega2560") {
+        return 0;
+    }
+    constexpr std::array<std::pair<int, int>, 3> kSerialPorts{{{19, 18}, {17, 16}, {15, 14}}};
+    for (std::size_t i = 0; i < kSerialPorts.size(); ++i) {
+        if (kSerialPorts[i] == std::pair{rx, tx}) {
+            return static_cast<int>(i) + 1;
+        }
+    }
+    return 0;
 }
 
 } // namespace s2a

@@ -254,13 +254,65 @@ TEST(Validator, PhoneBlocksNeedBluetooth) {
     Block send = block("send", "phone_send");
     send.inputs["VALUE"].value = "Bonjour";
     Project project = program({hat(), send});
-    const auto issues = check(project);
+    project.boardId = "esp8266";
+    auto issues = check(project);
     ASSERT_EQ(issues.size(), 1U);
     EXPECT_EQ(issues[0].rule, Rule::NoBluetooth);
     EXPECT_EQ(issues[0].blockId, "send");
     EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("no Bluetooth"), std::string::npos);
     project.boardId = "esp32";
     EXPECT_TRUE(check(project).empty());
+    // An Arduino board talks to the phone through an HC-05 / HC-06 module.
+    project.boardId = "uno";
+    issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::ModuleMissing);
+    EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("Bluetooth module"), std::string::npos);
+}
+
+Block module(std::string id, const char* rx, const char* tx) {
+    Block result = block(std::move(id), "phone_module");
+    result.fields["RX_PIN"] = rx;
+    result.fields["TX_PIN"] = tx;
+    return result;
+}
+
+TEST(Validator, ChecksTheBluetoothModule) {
+    Block send = block("send", "phone_send");
+    send.inputs["VALUE"].value = "Bonjour";
+    Project project = program({hat(), module("module", "10", "11"), send});
+    project.boardId = "uno";
+    EXPECT_TRUE(check(project).empty());
+    // Not on the USB pins.
+    project.scripts[0].blocks[1] = module("module", "0", "1");
+    auto issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::ModulePins);
+    EXPECT_NE(s2a::validation::describe(issues[0], Language::English).find("USB"), std::string::npos);
+    // A Mega receives with SoftwareSerial on some pins only, or uses its serial ports.
+    project.boardId = "mega";
+    project.scripts[0].blocks[1] = module("module", "2", "3");
+    issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::ModulePins);
+    project.scripts[0].blocks[1] = module("module", "19", "18");
+    EXPECT_TRUE(check(project).empty());
+    // Two modules on different pins.
+    project.scripts[0].blocks.insert(project.scripts[0].blocks.begin() + 2, module("again", "10", "11"));
+    issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::ModuleTwice);
+    EXPECT_EQ(issues[0].blockId, "again");
+    // The ESP32 has Bluetooth built in; the ESP8266 has none.
+    project.scripts[0].blocks.erase(project.scripts[0].blocks.begin() + 2);
+    project.boardId = "esp32";
+    issues = check(project);
+    ASSERT_EQ(issues.size(), 1U);
+    EXPECT_EQ(issues[0].rule, Rule::ModuleNotNeeded);
+    project.boardId = "esp8266";
+    issues = check(project);
+    ASSERT_FALSE(issues.empty());
+    EXPECT_EQ(issues[0].rule, Rule::NoBluetooth);
 }
 
 } // namespace

@@ -70,6 +70,7 @@ struct FakePins final : s2a::live::Pins {
         return message;
     }
     void phoneSend(const std::string& text) override { log.push_back("Y=" + text); }
+    void phoneModule(int rx, int tx) override { log.push_back("J" + std::to_string(rx) + "," + std::to_string(tx)); }
     std::deque<std::string> phone; ///< Messages the phone will send, oldest first.
     double distanceCm = 400;
     std::optional<std::pair<double, double>> dhtValues;
@@ -951,6 +952,42 @@ TEST(Phone, BlocksReactOnceToEachMessage) {
     interpreter.step(milliseconds(2001));
     interpreter.step(milliseconds(2002));
     EXPECT_EQ(pins.take(), std::vector<std::string>{"P26=120"}); // a number is not "allume", and only once
+}
+
+TEST(Phone, MovesTheLinkToTheBluetoothModuleOfTheBlock) {
+    Block module = block("module", "phone_module");
+    module.fields = {{"RX_PIN", "A0"}, {"TX_PIN", "12"}};
+    Block answer = block("answer", "phone_send");
+    answer.inputs["VALUE"].value = "Bonjour";
+    FakePins pins;
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), module, answer}), BlockCatalog::builtin(),
+                            uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"J14,12", "Y=Bonjour"}));
+
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    link.phoneModule(14, 12);
+    EXPECT_EQ(firmware.received.back(), "J 14 12 9600");
+}
+
+TEST(Session, LetsTheBluetoothModuleBlockUseItsPins) {
+    // The board kept the module on 10/11, the block moves it to 2/3: the LED of 10 is free.
+    auto firmware = std::make_shared<FakeFirmware>();
+    firmware->module = "10 11 9600";
+    Block module = block("module", "phone_module");
+    module.fields = {{"RX_PIN", "2"}, {"TX_PIN", "3"}};
+    Block on = block("on", "pins_digital_write");
+    on.fields = {{"PIN", "10"}, {"STATE", "HIGH"}};
+    {
+        Session session(withScript({block("hat", "events_when_program_starts"), module, on}), uno(), "COM1",
+                        s2a::Language::English, sharedOpener(firmware), [](std::string&) { return s2a::success(); });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Finished; }));
+    }
+    const auto& received = firmware->received;
+    EXPECT_NE(std::find(received.begin(), received.end(), "J 2 3 9600"), received.end());
+    EXPECT_NE(std::find(received.begin(), received.end(), "D 10 1"), received.end());
 }
 
 TEST(LiveLink, PassesThePhoneMessages) {
