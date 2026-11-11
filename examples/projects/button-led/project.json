@@ -1,0 +1,64 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Bouton et LED",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pressed",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
