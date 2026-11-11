@@ -86,6 +86,25 @@ Or open the complete example: **New -> Remote robot** (its functions have French
 > connection, taken by the phone. Test in Live mode over the USB cable instead (typing the words on the
 > phone), or upload.
 
+## With an Arduino Uno board and an HC-05 module
+
+No ESP32? An **Arduino Uno** board works too, with an **HC-05 Bluetooth module** (or HC-06): it is the
+"Uno + HC-05 module" version of the example in the gallery.
+
+![Wiring of the robot with a Uno and an HC-05](../../../examples/projects/remote-robot-uno/wiring.png)
+
+| Wiring | Uno pin |
+|---|---|
+| L298N ENA, IN1, IN2 (left motor) | **9**, **8**, **7** |
+| L298N IN3, IN4, ENB (right motor) | **5**, **4**, **3** |
+| HC-05 VCC, GND | 5V, GND |
+| HC-05 TXD | **10** |
+| HC-05 RXD | **11**, through a 1 kΩ resistor, and a 2 kΩ one between RXD and GND (RXD only takes 3.3 V) |
+
+The program is the same, with one more block under "when the program starts": **HC-05 / HC-06 Bluetooth
+module: TXD to pin 10, RXD to pin 11**. On the phone, the app connects to "HC-05" (code **1234** or 0000)
+instead of "S2A-...".
+
 ## Advanced version: with code
 
 Choose **Advanced: C++** in the gallery: one function, `rouler(gauche, droite)`, sets the speed of each wheel from -100 (backward) to 100 (forward). It replaces the five functions: `rouler(80, 80)` goes forward, `rouler(-60, 60)` turns left. Invent gentler turns, like `rouler(80, 40)`.

@@ -281,6 +281,27 @@ is joined to the GND of the ESP32, otherwise the orders do not get through.
 | ENB / IN3 / IN4 (moteur droit / right motor) | 33 / 18 / 19 |
 | GND | GND (et − des piles / and battery −) |
 
+### Variante Uno + module HC-05 / Uno + HC-05 module variant
+
+![Robot télécommandé, Uno + HC-05](projects/remote-robot-uno/wiring.png)
+
+Le même robot avec une Arduino Uno : un module Bluetooth HC-05 (ou HC-06) lui donne le Bluetooth, déclaré
+par le bloc *module Bluetooth HC-05 / HC-06* sous "quand le programme démarre". Le téléphone se connecte à
+"HC-05" (code 1234 ou 0000). RXD du module n'accepte que 3,3 V : 1 kΩ entre la broche 11 et RXD, 2 kΩ
+entre RXD et GND.
+The same robot with an Arduino Uno: an HC-05 (or HC-06) Bluetooth module gives it Bluetooth, declared by
+the *HC-05 / HC-06 Bluetooth module* block under "when the program starts". The phone connects to "HC-05"
+(code 1234 or 0000). RXD of the module only takes 3.3 V: 1 kΩ between pin 11 and RXD, 2 kΩ between RXD
+and GND.
+
+| Uno | L298N / HC-05 |
+|---|---|
+| 9 / 8 / 7 | ENA / IN1 / IN2 (moteur gauche / left motor) |
+| 5 / 4 / 3 | IN3 / IN4 / ENB (moteur droit / right motor) |
+| 10 | HC-05 TXD |
+| 11 | HC-05 RXD (pont diviseur / voltage divider) |
+| 5V / GND | HC-05 VCC / GND, GND du L298N / L298N GND |
+
 ---
 
 Les schémas sont dessinés par [`tools/wiring/wiring.py`](../tools/wiring/wiring.py) (Python + Pillow) :
