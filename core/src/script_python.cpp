@@ -189,6 +189,16 @@ bool servoWriteFn(int count, py_StackRef argv) {
     });
 }
 
+/// The native half of printError(): one line, already joined by the Python half (see prepare()).
+bool errorLineFn(int count, py_StackRef argv) {
+    return guarded([&] {
+        argc(count, 1, 1);
+        running->api->printError(py_tostr(py_arg(0)));
+        py_newnone(py_retval());
+        return true;
+    });
+}
+
 /// print() of pocketpy writes pieces of text: complete lines go to the Live panel.
 void printCallback(const char* text) {
     if (running == nullptr) {
@@ -217,6 +227,7 @@ void bindApi(py_Ref module, const Api& api) {
     py_bindfunc(module, "tone", toneFn);
     py_bindfunc(module, "noTone", noToneFn);
     py_bindfunc(module, "servoWrite", servoWriteFn);
+    py_bindfunc(module, "_s2a_error_line", errorLineFn);
     for (const auto& [name, value] : api.constants()) {
         py_Ref slot = py_pushtmp();
         py_newint(slot, value);
@@ -302,6 +313,11 @@ py_GlobalRef prepare(Running& state, Api& api) {
     py_GlobalRef main = py_getmodule("__main__");
     bindApi(main, api);
     bindApi(py_newmodule("arduino"), api);
+    // printError(a, b): like print, on the error output of the Live panel.
+    if (!py_exec("def printError(*values):\n    _s2a_error_line(' '.join([str(v) for v in values]))\n", "<s2a>",
+                 EXEC_MODE, nullptr)) {
+        py_clearexc(nullptr);
+    }
     // time.sleep() waits like delay(): Stop must not wait for it to end.
     if (!py_exec("import time\ntime.sleep = lambda seconds: delay(seconds * 1000)\ndel time\n", "<s2a>", EXEC_MODE,
                  nullptr)) {

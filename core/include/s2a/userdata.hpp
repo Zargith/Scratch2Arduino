@@ -48,10 +48,12 @@ struct Settings {
     std::string language;
     /// Look for a newer release of Scratch2Arduino in the background at start-up.
     bool checkUpdates = true;
+    /// "light" or "dark"; empty: the one of the system.
+    std::string theme;
 };
 
 inline bool operator==(const Settings& a, const Settings& b) {
-    return a.language == b.language && a.checkUpdates == b.checkUpdates;
+    return a.language == b.language && a.checkUpdates == b.checkUpdates && a.theme == b.theme;
 }
 
 /// The user's data in one folder. Every reader tolerates missing or damaged files (it

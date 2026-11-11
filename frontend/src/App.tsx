@@ -18,6 +18,7 @@ import {
 	Text,
 	TextInput,
 	Tooltip,
+	useMantineColorScheme,
 } from "@mantine/core";
 import {
 	IconBluetooth,
@@ -175,6 +176,8 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** The output panel opened by itself once in this Live session (at the first printed line). */
+	const outputShown = useRef(false);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
@@ -182,7 +185,9 @@ export function App() {
 	const [monitorShown, setMonitorShown] = useState(false);
 	const [galleryShown, setGalleryShown] = useState(false);
 	const [settingsShown, setSettingsShown] = useState(false);
-	const [settings, setSettings] = useState<SavedSettings>({ language: "", checkUpdates: true });
+	const [settings, setSettings] = useState<SavedSettings>({ language: "", checkUpdates: true, theme: "" });
+	const { setColorScheme } = useMantineColorScheme();
+	useEffect(() => setColorScheme(settings.theme === "" ? "auto" : settings.theme), [settings.theme, setColorScheme]);
 	/** Installed version, told by the host ("" outside the application). */
 	const [version, setVersion] = useState("");
 	/** A newer release, offered until the user says "Later" (never forced). */
@@ -777,6 +782,7 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			outputShown.current = false;
 			history.current = new Map();
 			setLive(true);
 		} catch (error) {
@@ -800,6 +806,11 @@ export function App() {
 					for (const [id, value] of Object.entries(snapshot.variables ?? {})) record(`var:${id}`, value);
 					for (const [pin, value] of Object.entries(snapshot.readings ?? {})) record(`pin:${pin}`, value);
 					setLiveSnapshot(snapshot);
+					// The program printed something (print, printError, an error): show it, once.
+					if ((snapshot.outputCount ?? 0) > 0 && !outputShown.current) {
+						outputShown.current = true;
+						setMonitorShown(true);
+					}
 					setVariableNames(
 						new Map((editor.current?.save().variables ?? []).map((variable) => [variable.id, variable.name] as const))
 					);

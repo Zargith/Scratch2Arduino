@@ -373,6 +373,10 @@ bool knownLanguage(const std::string& code) {
     return code == "fr" || code == "en";
 }
 
+bool knownTheme(const std::string& theme) {
+    return theme == "light" || theme == "dark";
+}
+
 } // namespace
 
 Settings Store::settings() const {
@@ -388,12 +392,17 @@ Settings Store::settings() const {
     if (const auto check = json->find("checkUpdates"); check != json->end() && check->is_boolean()) {
         settings.checkUpdates = check->get<bool>();
     }
+    if (const auto theme = json->find("theme"); theme != json->end() && theme->is_string() &&
+                                                knownTheme(theme->get<std::string>())) {
+        settings.theme = theme->get<std::string>();
+    }
     return settings;
 }
 
 Status Store::saveSettings(const Settings& settings) const {
     const Json json{{"language", knownLanguage(settings.language) ? settings.language : std::string{}},
-                    {"checkUpdates", settings.checkUpdates}};
+                    {"checkUpdates", settings.checkUpdates},
+                    {"theme", knownTheme(settings.theme) ? settings.theme : std::string{}}};
     return writeFileAtomically(directory_ / kSettingsFile, json.dump(2) + "\n");
 }
 

@@ -42,7 +42,7 @@ export function Gallery({ opened, language, t, onBlank, onExample, onTutorial, o
 			<SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
 				<Card withBorder padding="sm">
 					<Card.Section>
-						<Stack h={imageHeight} align="center" justify="center" bg="var(--mantine-color-gray-0)">
+						<Stack h={imageHeight} align="center" justify="center" bg="var(--mantine-color-default-hover)">
 							<ThemeIcon size={64} radius="xl" variant="light">
 								<IconFilePlus size={36} />
 							</ThemeIcon>

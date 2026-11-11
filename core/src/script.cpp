@@ -181,6 +181,14 @@ void Api::print(const std::string& text) {
     }
 }
 
+void Api::printError(const std::string& text) {
+    if (host_.printError) {
+        host_.printError(text);
+    } else {
+        print(text);
+    }
+}
+
 std::vector<std::pair<std::string, int>> Api::constants() const {
     std::vector<std::pair<std::string, int>> result{
         {"HIGH", 1}, {"LOW", 0}, {"INPUT", kInput}, {"OUTPUT", kOutput}, {"INPUT_PULLUP", kInputPullup}};

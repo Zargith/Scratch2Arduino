@@ -243,6 +243,12 @@ public:
 
     enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed };
 
+    /// A line of the program's output: printed (standard output) or an error (error output).
+    struct OutputLine {
+        std::string text;
+        bool error = false;
+    };
+
     struct Snapshot {
         State state = State::Connecting;
         std::string message;                    ///< For the status bar, in the user's language.
@@ -251,7 +257,7 @@ public:
         std::vector<std::string> problemBlocks; ///< Validation errors that prevent starting.
         std::map<std::string, double> variables;
         std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
-        std::vector<std::string> output;        ///< Last lines written to the serial monitor (at most kOutputLines)...
+        std::vector<OutputLine> output;         ///< Last lines written by the program (at most kOutputLines)...
         std::size_t outputCount = 0;            ///< ...out of this many since the start.
         int errorLine = 0;                      ///< Python/JavaScript: line of the error that stopped the program...
         std::string errorFile;                  ///< ...in the program ("") or in "My code" ("user").
@@ -288,6 +294,8 @@ private:
     /// Failed with the error of a program ("") or of "My code" ("user").
     void failScript(const script::ScriptError& error, const std::string& file);
     void set(State state, std::string message, std::string details = {});
+    /// Adds a line to the output (mutex_ held), keeping the last kOutputLines.
+    void addOutput(std::string text, bool error);
 
     const Board& board_;
     std::string port_;

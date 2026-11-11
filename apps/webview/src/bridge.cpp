@@ -148,6 +148,15 @@ bool openProjectPage(const std::string& url) {
 #endif
 }
 
+/// Live output for the editor: [{text, error}] (error: printError, console.error, the error that stopped it).
+Json outputLines(const std::vector<live::Session::OutputLine>& lines) {
+    Json list = Json::array();
+    for (const auto& line : lines) {
+        list.push_back({{"text", line.text}, {"error", line.error}});
+    }
+    return list;
+}
+
 toolchain::ArduinoCli arduinoCli(Language language) {
     const fs::path executable = toolchain::locateArduinoCli();
     if (executable.empty()) {
@@ -468,7 +477,8 @@ void Bridge::bind() {
             const std::lock_guard<std::mutex> lock(userMutex_);
             settings = user_.settings();
         }
-        return Json{{"language", settings.language}, {"checkUpdates", settings.checkUpdates}}.dump();
+        return Json{{"language", settings.language}, {"checkUpdates", settings.checkUpdates}, {"theme", settings.theme}}
+            .dump();
     });
     window_.bind("s2a_save_settings", [this](const std::string& request) {
         const Json args = Json::parse(request);
@@ -476,6 +486,7 @@ void Bridge::bind() {
         userdata::Settings settings;
         settings.language = given.value("language", std::string{});
         settings.checkUpdates = given.value("checkUpdates", true);
+        settings.theme = given.value("theme", std::string{});
         const std::lock_guard<std::mutex> lock(userMutex_);
         return Json(user_.saveSettings(settings).ok()).dump();
     });
@@ -797,7 +808,7 @@ void Bridge::bind() {
                     {"problems", snapshot.problemBlocks},
                     {"variables", snapshot.variables},
                     {"readings", snapshot.readings},
-                    {"output", snapshot.output},
+                    {"output", outputLines(snapshot.output)},
                     {"outputCount", snapshot.outputCount},
                     {"line", snapshot.errorLine},
                     {"file", snapshot.errorFile}}

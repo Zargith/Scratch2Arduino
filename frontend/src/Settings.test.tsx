@@ -35,7 +35,7 @@ describe("settings window", () => {
 						language="fr"
 						t={t}
 						version="0.9.0"
-						settings={{ language: "", checkUpdates: true }}
+						settings={{ language: "", checkUpdates: true, theme: "" }}
 						onLanguage={onLanguage}
 						onSettings={onSettings}
 						onUpdate={() => undefined}
@@ -52,7 +52,7 @@ describe("settings window", () => {
 		const checkbox = document.querySelector<HTMLInputElement>('input[type="checkbox"]');
 		expect(checkbox?.checked).toBe(true);
 		await act(async () => checkbox?.click());
-		expect(onSettings).toHaveBeenCalledWith({ language: "", checkUpdates: false });
+		expect(onSettings).toHaveBeenCalledWith({ language: "", checkUpdates: false, theme: "" });
 		await act(async () => root.unmount());
 	});
 });
