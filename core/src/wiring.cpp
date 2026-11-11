@@ -2,6 +2,7 @@
 
 #include "s2a/resources.hpp"
 
+#include <algorithm>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <set>
@@ -127,6 +128,7 @@ private:
             component.note += (component.note.empty() || extra.empty() ? "" : " ") + extra;
         }
         std::string key = component.kind;
+        std::vector<std::pair<std::string, std::string>> signalLegs; ///< Board pin, leg of the component.
         for (const Json& connection : description.value("connections", Json::array())) {
             const std::string to = connection.value("to", std::string{});
             Connection wire{localized(connection, "pin", language_), target(to, block, definition),
@@ -136,11 +138,15 @@ private:
             }
             if (!isPower(to)) {
                 key += "|" + wire.boardPin;
-                signals_[wire.boardPin].insert(key);
+                signalLegs.emplace_back(wire.boardPin, wire.componentPin);
             } else if (to == "SDA" || to == "SCL") {
                 i2c_[wire.boardPin] = key;
             }
             component.connections.push_back(std::move(wire));
+        }
+        // Recorded with the complete key (the same component used by several blocks is one user).
+        for (const auto& [pin, leg] : signalLegs) {
+            signals_[pin].insert({key, leg});
         }
         if (const auto found = index_.find(key); found != index_.end()) {
             plan_.components[found->second].blockIds.push_back(block.id);
@@ -154,8 +160,13 @@ private:
     const Component& byKey(const std::string& key) const { return plan_.components.at(index_.at(key)); }
 
     void warnPins() {
-        for (const auto& [pin, keys] : signals_) {
-            std::vector<std::string> users(keys.begin(), keys.end());
+        for (const auto& [pin, legs] : signals_) {
+            std::vector<std::string> users;
+            for (const auto& [key, leg] : legs) {
+                if (std::find(users.begin(), users.end(), key) == users.end()) {
+                    users.push_back(key);
+                }
+            }
             if (const auto bus = i2c_.find(pin); bus != i2c_.end()) {
                 for (const std::string& other : users) {
                     const Component& screen = byKey(bus->second);
@@ -166,12 +177,22 @@ private:
                     plan_.warnings.push_back(std::move(warning));
                 }
             }
-            if (users.size() < 2) {
+            if (legs.size() < 2) {
                 continue;
             }
+            // Two components on the pin, or two legs of one component (16-pin LCD with D6 and D7 on 7).
+            const auto first = legs.begin();
+            const auto second = std::next(first);
+            const auto describe = [&](const std::pair<std::string, std::string>& user) {
+                const std::string& name = byKey(user.first).name;
+                return users.size() < 2 ? name + " (" + user.second + ")" : name;
+            };
+            const auto other = users.size() < 2 ? second : std::find_if(second, legs.end(), [&](const auto& user) {
+                return user.first != first->first;
+            });
             Warning warning{WarningKind::PinUsedTwice,
                             tr("wiring.pin_twice", language_,
-                               {{"pin", pin}, {"first", byKey(users[0]).name}, {"second", byKey(users[1]).name}}),
+                               {{"pin", pin}, {"first", describe(*first)}, {"second", describe(*other)}}),
                             {}};
             for (const std::string& user : users) {
                 const auto& ids = byKey(user).blockIds;
@@ -197,7 +218,8 @@ private:
     Language language_;
     Plan plan_;
     std::map<std::string, std::size_t> index_;               ///< Component key -> index in plan_.
-    std::map<std::string, std::set<std::string>> signals_;   ///< Board pin -> keys of the components on it.
+    /// Board pin -> (key of the component, its leg) on it.
+    std::map<std::string, std::set<std::pair<std::string, std::string>>> signals_;
     std::map<std::string, std::string> i2c_;                 ///< SDA/SCL pin -> key of a component using I2C.
 };
 

@@ -100,6 +100,33 @@ TEST(Wiring, WarnsAboutAPinUsedTwice) {
     EXPECT_EQ(plan.warnings[0].blockIds.size(), 2U);
 }
 
+// Regression: a 16-pin LCD with D6 moved from 8 to 7 (its D7 pin) stopped the wiring window with
+// "invalid map<K, T> key" (pins were recorded under an unfinished component key).
+TEST(Wiring, WarnsWhenTwoLegsOfOneComponentShareAPin) {
+    const std::map<std::string, std::string> pins{{"LINE", "1"}, {"RS_PIN", "12"}, {"E_PIN", "11"}, {"D4_PIN", "10"},
+                                                  {"D5_PIN", "9"},  {"D6_PIN", "7"},  {"D7_PIN", "7"}};
+    const Project project = program({block("print", "display_lcd16_print", pins)});
+    const Plan plan = s2a::wiring::plan(project, Language::English);
+    ASSERT_EQ(plan.warnings.size(), 1U);
+    EXPECT_EQ(plan.warnings[0].kind, WarningKind::PinUsedTwice);
+    EXPECT_NE(plan.warnings[0].message.find("Pin 7"), std::string::npos) << plan.warnings[0].message;
+    EXPECT_NE(plan.warnings[0].message.find("D6"), std::string::npos) << plan.warnings[0].message;
+    EXPECT_EQ(plan.warnings[0].blockIds, std::vector<std::string>{"print"});
+    EXPECT_FALSE(s2a::wiring::svg(plan, *s2a::BoardDatabase::builtin().find("uno"), "Test").empty());
+}
+
+TEST(Wiring, WarnsWhenAMultiPinComponentSharesAPinWithAnother) {
+    const std::map<std::string, std::string> pins{{"LINE", "1"}, {"RS_PIN", "12"}, {"E_PIN", "11"}, {"D4_PIN", "10"},
+                                                  {"D5_PIN", "9"},  {"D6_PIN", "8"},  {"D7_PIN", "7"}};
+    const Project project = program({block("print", "display_lcd16_print", pins),
+                                     block("led", "pins_digital_write", {{"PIN", "7"}, {"STATE", "HIGH"}})});
+    const Plan plan = s2a::wiring::plan(project, Language::English);
+    ASSERT_EQ(plan.warnings.size(), 1U);
+    EXPECT_EQ(plan.warnings[0].kind, WarningKind::PinUsedTwice);
+    EXPECT_EQ(plan.warnings[0].blockIds.size(), 2U);
+    EXPECT_FALSE(s2a::wiring::svg(plan, *s2a::BoardDatabase::builtin().find("uno"), "Test").empty());
+}
+
 TEST(Wiring, WarnsWhenAScreenSharesItsI2cPins) {
     Block print = block("print", "display_lcd_print", {{"LINE", "1"}});
     const Plan plan = s2a::wiring::plan(program({print, block("led", "pins_digital_write", {{"PIN", "A4"}})}),
