@@ -33,6 +33,10 @@ inline constexpr std::string_view kBoardNamePrefix = "S2A-";
 /// port is not one or its address is malformed.
 [[nodiscard]] std::optional<std::string> bluetoothAddress(std::string_view port);
 
+/// Whether `name` is the Bluetooth name of an HC-05 / HC-06 module ("HC-05", "linvor"...), which an
+/// Arduino board running the Live firmware can use (see live::BluetoothModule).
+[[nodiscard]] bool isModuleName(std::string_view name);
+
 /// A Wi-Fi or Bluetooth port ("wifi:", "bt:", or the serial port of a paired board such as
 /// /dev/cu.S2A-1A2B on macOS): programs cannot be uploaded through it.
 [[nodiscard]] bool isWireless(std::string_view port);
@@ -50,7 +54,7 @@ struct BluetoothDevice {
 /// board is paired in the system settings and then appears as a serial port (/dev/cu.S2A-xxxx).
 [[nodiscard]] bool bluetoothByAddress() noexcept;
 
-/// The boards ("S2A-..." names) of the output of `bluetoothctl devices`.
+/// The boards ("S2A-..." names) and HC-05 / HC-06 modules of the output of `bluetoothctl devices`.
 [[nodiscard]] std::vector<BluetoothDevice> parseBluetoothctlDevices(std::string_view output);
 
 /// Looks for the boards around the computer for about `duration` (and the ones already paired).

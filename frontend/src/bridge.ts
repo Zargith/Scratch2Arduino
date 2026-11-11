@@ -44,6 +44,21 @@ export interface Port {
 	bluetooth?: boolean;
 }
 
+/** How an HC-05 / HC-06 module is wired to an Arduino board (see core live::BluetoothModule). */
+export interface BluetoothModule {
+	/** Board pin that receives (label printed on the board): wired to TXD of the module. */
+	rx: string;
+	/** Board pin that sends (label printed on the board): wired to RXD of the module. */
+	tx: string;
+	baud: number;
+}
+
+/** Result of s2a_bluetooth_module. */
+export interface ModuleSetup {
+	ok: boolean;
+	message: string;
+}
+
 /** Result of s2a_bluetooth_search. */
 export interface BluetoothSearch {
 	ok: boolean;
@@ -170,6 +185,12 @@ interface HostFunctions {
 	s2a_ports(): Promise<Port[]>;
 	s2a_wifi_setup(port: string, name: string, password: string, boardId: string, language: Language): Promise<WifiSetup>;
 	s2a_bluetooth_search(language: Language): Promise<BluetoothSearch>;
+	s2a_bluetooth_module(
+		port: string,
+		boardId: string,
+		module: BluetoothModule | null,
+		language: Language,
+	): Promise<ModuleSetup>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
@@ -242,6 +263,9 @@ export const bridge = {
 		host("s2a_wifi_setup")(port, name, password, boardId, language),
 	/** Bluetooth boards around the computer (about 8 seconds). */
 	bluetoothSearch: (language: Language) => host("s2a_bluetooth_search")(language),
+	/** Saves the pins of an HC-05 / HC-06 module on the board over its USB port (null: forget it). */
+	bluetoothModule: (port: string, boardId: string, module: BluetoothModule | null, language: Language) =>
+		host("s2a_bluetooth_module")(port, boardId, module, language),
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
 	setTitle: (title: string) => host("s2a_set_title")(title),

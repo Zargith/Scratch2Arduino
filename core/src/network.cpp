@@ -158,7 +158,9 @@ std::array<std::uint8_t, 6> addressBytes(const std::string& address) {
     return bytes;
 }
 
-bool isBoardName(std::string_view name) { return name.substr(0, kBoardNamePrefix.size()) == kBoardNamePrefix; }
+bool isBoardName(std::string_view name) {
+    return name.substr(0, kBoardNamePrefix.size()) == kBoardNamePrefix || isModuleName(name);
+}
 
 #ifdef _WIN32
 std::string toUtf8(const wchar_t* text) {
@@ -218,10 +220,23 @@ std::optional<std::string> bluetoothAddress(std::string_view port) {
     return address;
 }
 
+bool isModuleName(std::string_view name) {
+    std::string upper(name);
+    for (char& c : upper) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    // Names given by the makers ("H-C-2010-06-01" and "linvor" on older HC-06, "BT05", "JDY-31-SPP"...).
+    constexpr std::array<std::string_view, 8> kNames{"HC-05", "HC-06", "HC05", "HC06", "H-C-2010", "LINVOR", "BT05", "JDY-3"};
+    return std::any_of(kNames.begin(), kNames.end(),
+                       [&upper](std::string_view known) { return upper.find(known) != std::string::npos; });
+}
+
 bool isWireless(std::string_view port) {
-    // A board paired on macOS is a serial port named after it: /dev/cu.S2A-1A2B.
+    // A board or module paired on macOS is a serial port named after it: /dev/cu.S2A-1A2B, /dev/cu.HC-05.
+    const auto slash = port.rfind('/');
     return wifiAddress(port).has_value() || bluetoothAddress(port).has_value() ||
-           port.find(kBoardNamePrefix) != std::string_view::npos;
+           port.find(kBoardNamePrefix) != std::string_view::npos ||
+           (slash != std::string_view::npos && isModuleName(port.substr(slash + 1)));
 }
 
 bool bluetoothByAddress() noexcept {

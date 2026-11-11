@@ -59,8 +59,8 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 ## 3. La fenêtre
 
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
-  *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
-  une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
+  *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
+  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
   **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
@@ -257,6 +257,22 @@ Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
 - **Bluetooth** (ESP32) : lance une fois le mode Live par le câble USB, puis bouton **Bluetooth** ->
   **Chercher les cartes** -> choisis ta carte "S2A-...". Sur Mac, connecte d'abord "S2A-..." dans
   *Réglages Système > Bluetooth*.
+- **Module Bluetooth HC-05 / HC-06** (Uno, Nano, Mega) : une carte Arduino n'a pas de Bluetooth, mais
+  un module HC-05 ou HC-06 lui en donne un pour le mode Live. Bouton **Bluetooth** :
+  1. Branche le module : VCC sur 5V, GND sur GND, **TXD** du module sur la broche qui reçoit (10 par
+     défaut), **RXD** du module sur la broche qui envoie (11 par défaut) à travers un pont diviseur
+     (1 kΩ entre la broche et RXD, 2 kΩ entre RXD et GND), car RXD n'accepte que 3,3 V.
+  2. Carte branchée en USB, choisis les broches et clique sur **Enregistrer sur la carte** : le
+     programme Live s'installe si besoin et la carte retient les broches.
+  3. Dans les réglages Bluetooth de l'ordinateur, appaire "HC-05" (ou "HC-06") avec le code **1234**
+     (ou 0000), puis **Chercher les cartes** -> choisis ton module. Sur Mac, choisis ensuite le port
+     "Bluetooth - HC-05" dans la liste des ports.
+
+  Les blocs ne peuvent pas utiliser les deux broches du module : le mode Live le signale et montre les
+  blocs à changer. Les broches 0 et 1 restent pour le câble USB. Sur une Mega, la broche qui reçoit doit
+  être 10 à 13, 50 à 53 ou A8 à A15, ou alors utilise un de ses ports série (19 et 18, 17 et 16, 15 et 14).
+  Le module est une simple liaison série : si l'ordinateur s'éloigne, la carte ne le sait pas et garde
+  ses sorties ; le bouton **Arrêter** les éteint.
 - **Téléphone** (ESP32) : les blocs *Téléphone* échangent des messages avec une appli de terminal
   Bluetooth sur le téléphone (par exemple "Serial Bluetooth Terminal" sur Android). Voir le
   [Robot télécommandé](tutorials/08-remote-robot.md).

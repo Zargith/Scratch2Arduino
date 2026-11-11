@@ -111,6 +111,7 @@ Board parseBoard(const Json& json) {
     board.ramBytes = json.at("ramBytes").get<std::uint32_t>();
     board.bluetooth = json.value("bluetooth", false);
     board.wifi = json.value("wifi", false);
+    board.bluetoothModule = json.value("bluetoothModule", false);
     board.builtinLedActiveLow = json.value("builtinLedActiveLow", false);
 
     // Either a count (pins 0..n-1, as on Arduino boards), the list of usable GPIO numbers

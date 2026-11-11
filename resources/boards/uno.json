@@ -7,6 +7,7 @@
   "voltage": 5,
   "flashBytes": 32256,
   "ramBytes": 2048,
+  "bluetoothModule": true,
   "builtinLed": "13",
   "digitalPins": 14,
   "analogPins": { "count": 6, "firstNumber": 14, "inputOnly": [] },

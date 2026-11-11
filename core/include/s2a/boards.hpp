@@ -77,6 +77,8 @@ struct Board {
     int builtinLed = -1;
     bool bluetooth = false; ///< Classic Bluetooth (ESP32): the phone blocks work.
     bool wifi = false;      ///< Wi-Fi (ESP32, ESP8266): Live mode over Wi-Fi.
+    /// An HC-05 / HC-06 Bluetooth module can be wired to it for the Live mode (Arduino boards).
+    bool bluetoothModule = false;
     bool builtinLedActiveLow = false; ///< The on-board LED lights when its pin is LOW (ESP8266).
     BoardDrawing drawing;
     std::vector<Pin> pins; ///< Sorted by number.
