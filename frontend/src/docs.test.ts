@@ -59,10 +59,10 @@ describe("bundled documentation", () => {
 			path: "tutorials/02-traffic-light.md",
 			anchor: "",
 		});
-		expect(resolveLink("fr", "tutorials/01-blink.md", "../guide.md#14-en-cas-de-problème")).toMatchObject({
+		expect(resolveLink("fr", "tutorials/01-blink.md", "../guide.md#15-en-cas-de-problème")).toMatchObject({
 			kind: "page",
 			path: "guide.md",
-			anchor: "14-en-cas-de-problème",
+			anchor: "15-en-cas-de-problème",
 		});
 		expect(resolveLink("fr", "guide.md", "../en/guide.md")).toMatchObject({ kind: "page", language: "en", path: "guide.md" });
 		expect(resolveLink("en", "guide.md", "#7-live-mode")).toEqual({ kind: "anchor", anchor: "7-live-mode" });

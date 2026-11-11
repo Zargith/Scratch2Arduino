@@ -151,6 +151,91 @@ TEST(ProjectJson, IsReadableAndVersioned) {
     EXPECT_EQ(json.back(), '\n');
 }
 
+TEST(ProjectJson, BlockProjectsStayInVersion1) {
+    const std::string json = toJson(blink());
+    EXPECT_EQ(json.find("\"language\""), std::string::npos) << "older versions open block projects";
+    EXPECT_EQ(json.find("\"code\""), std::string::npos);
+    EXPECT_EQ(fromJson(json).value().language, ProgramLanguage::Blocks);
+}
+
+TEST(ProjectJson, RoundTripsTextProgramsInVersion2) {
+    for (const ProgramLanguage language : {ProgramLanguage::Cpp, ProgramLanguage::Python, ProgramLanguage::JavaScript}) {
+        Project project = blink(); // the blocks are kept beside the text
+        project.language = language;
+        project.code = "void setup() {\n\tpinMode(13, OUTPUT); // « été »\n}\n";
+        const std::string json = toJson(project);
+        EXPECT_NE(json.find("\"formatVersion\": 2"), std::string::npos);
+        EXPECT_NE(json.find("\"language\": \"" + std::string(programLanguageId(language)) + "\""), std::string::npos);
+        const auto parsed = fromJson(json);
+        ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+        EXPECT_EQ(parsed.value().language, language);
+        EXPECT_EQ(parsed.value().code, project.code);
+        EXPECT_EQ(parsed.value().scripts.size(), 1U);
+        EXPECT_EQ(toJson(parsed.value()), json);
+    }
+}
+
+TEST(ProjectJson, BlockProjectsDropTheCode) {
+    Project project = blink();
+    project.code = "leftover";
+    EXPECT_EQ(toJson(project).find("leftover"), std::string::npos);
+}
+
+TEST(ProjectJson, MigratesVersion1ToBlocks) {
+    // A version 1 file cannot hold a text program, even if a tool added the keys.
+    const auto parsed = fromJson(R"json({"format": "scratch2arduino-project", "formatVersion": 1, "board": "uno",
+        "language": "python", "code": "print(1)"})json");
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    EXPECT_EQ(parsed.value().language, ProgramLanguage::Blocks);
+    EXPECT_EQ(parsed.value().code, "");
+}
+
+TEST(ProjectJson, RejectsUnknownLanguages) {
+    const auto parsed = fromJson(R"({"format": "scratch2arduino-project", "formatVersion": 2, "board": "uno",
+        "language": "cobol", "code": ""})");
+    ASSERT_FALSE(parsed.ok());
+    EXPECT_EQ(parsed.error().code, ErrorCode::InvalidFormat);
+    EXPECT_EQ(programLanguageFromId("cpp"), ProgramLanguage::Cpp);
+    EXPECT_FALSE(programLanguageFromId("C++"));
+}
+
+TEST(ProjectJson, KeepsTheUserCodeBesideTheBlocks) {
+    Project project = blink();
+    project.userCode = UserCode{ProgramLanguage::Python, "def clignoter(fois):\n    pass\n"};
+    const std::string json = toJson(project);
+    EXPECT_NE(json.find("\"formatVersion\": 2"), std::string::npos) << "older versions would lose the code";
+    const auto parsed = fromJson(json);
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    EXPECT_EQ(parsed.value().language, ProgramLanguage::Blocks);
+    ASSERT_TRUE(parsed.value().userCode.has_value());
+    EXPECT_EQ(parsed.value().userCode->language, ProgramLanguage::Python);
+    EXPECT_EQ(parsed.value().userCode->code, project.userCode->code);
+    EXPECT_EQ(toJson(parsed.value()), json);
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok());
+    EXPECT_EQ(fromArchive(bytes.value()).value().userCode->code, project.userCode->code);
+}
+
+TEST(ProjectJson, RejectsUserCodeInBlocks) {
+    const auto parsed = fromJson(R"json({"format": "scratch2arduino-project", "formatVersion": 2, "board": "uno",
+        "userCode": {"language": "blocks", "code": ""}})json");
+    ASSERT_FALSE(parsed.ok());
+    EXPECT_EQ(parsed.error().code, ErrorCode::InvalidFormat);
+}
+
+TEST(Archive, KeepsTheTextProgram) {
+    Project project = blink();
+    project.language = ProgramLanguage::Python;
+    project.code = "while True:\n    digitalWrite(13, HIGH)\n";
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok());
+    const auto reopened = fromArchive(bytes.value());
+    ASSERT_TRUE(reopened.ok()) << reopened.error().detail;
+    EXPECT_EQ(reopened.value().language, ProgramLanguage::Python);
+    EXPECT_EQ(reopened.value().code, project.code);
+    EXPECT_EQ(toArchive(reopened.value()).value(), bytes.value());
+}
+
 // Editing must never be blocked: incomplete projects and unknown blocks load fine.
 TEST(ProjectJson, AcceptsIncompleteProjects) {
     const auto parsed = fromJson(R"({

@@ -16,7 +16,7 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 6 — Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
 | 7 — Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
 | 8 — Wireless | In progress: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth); Phone blocks (Bluetooth terminal app) and the phone-lamp example mixing Wi-Fi and Bluetooth; ESP8266 (NodeMCU) board with Live mode over Wi-Fi. Next: hardware checks, HC-05/HC-06 on Arduino boards |
-| 9 — Text programming languages | In progress on `feature/text-languages` (draft PR #76, kept apart until the user decides) |
+| 9 — Text programming languages | Done — official feature since 2026-11-11 (validated by the user; requested on 2026-11-10 with a C/C++ mode): project format 2 (`language`, `code`); C++ projects compiled and uploaded as typed, compiler errors on their lines with friendly fr/en explanations; Python (pocketpy) and JavaScript (QuickJS-ng) run in Live mode with an Arduino API, Stop interrupts endless loops; CodeMirror 6 code editor with errors shown after Check/Upload/Live only. Blink works in blocks, C++, Python and JavaScript (core tests with a fake board). Main way in: a **"My code" file beside the blocks** (C++, Python or JavaScript) whose functions and variables get their own block category, with Blocks / Code views and light autocompletion; the whole-program text modes stay as an expert mode. To check on real boards |
 | 10 — Documentation and education | In progress: examples for every step of the learner progression (Button and LED, Remote robot added); user guide and 8 step-by-step tutorials in French and English (`docs/fr`, `docs/en`); teacher / workshop kit (room preparation, parts list, formats, one plan per session, assessment) in both languages; developer guide (architecture and recipes, in English like all developer docs). tutorials and guide inside the editor ("Tutorials and help" panel beside the blocks, opened at the first start, "Open the example" button, "Step-by-step tutorial" in the gallery). Done once a newcomer completes the first tutorial without outside help (to check in a workshop) |
 | 11 — Packaging and release | Dropped for now (maybe later) |
 | 12 — Variant comparison | Dropped (only the webview application is kept) |
@@ -40,7 +40,7 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - live protocol talking to the *S2A live* firmware (`firmware/`, Firmata-like) for real-time control and debugging;
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
-- **Text languages**: read-only view of generated C++ first, then Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS`) driving the board through the live protocol.
+- **Text languages**: read-only view of generated C++ first, then a C++ mode (sketch typed by the user, same toolchain as the blocks), Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS-ng`) driving the board through the live protocol. A project stores its language and code (format version 2, written only for text projects so that block projects stay readable by older versions).
 - **Install**: Windows `Scratch2Arduino_installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
@@ -100,8 +100,9 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 - **Done when**: live mode works over Bluetooth and Wi-Fi with the same blocks as over USB.
 
 ### Phase 9 — Text programming languages
+- **Requested again on 2026-11-10** by the user, with a C/C++ mode for those who already know it (developed on its own branch for now).
 - **Goal**: a path from blocks to text code.
-- **Deliverables**: read-only Arduino C++ view synced with blocks; Python mode (embedded `pocketpy`) and JavaScript mode (embedded `QuickJS`) with an `arduino` API over the live protocol; editor with syntax highlighting.
+- **Deliverables**: read-only Arduino C++ view synced with blocks; C++ mode (a sketch typed by the user, compiled and uploaded with `arduino-cli`, starting from the code of the blocks); Python mode (embedded `pocketpy`) and JavaScript mode (embedded `QuickJS-ng`) with an `arduino` API over the live protocol; editor with syntax highlighting, errors shown on their line after Check/Upload/Live; language and code stored in the project (format version 2).
 - **Done when**: the same Blink program can be written in blocks, Python and JavaScript.
 
 ### Phase 10 — Documentation and education
@@ -144,6 +145,6 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 - [arduino-cli](https://github.com/arduino/arduino-cli) — compile, upload, board and library management.
 - [Firmata](https://github.com/firmata/protocol) — inspiration for the live protocol.
 - [webview/webview](https://github.com/webview/webview) — native webview for the application; [CEF](https://bitbucket.org/chromiumembedded/cef) as fallback.
-- [pocketpy](https://github.com/pocketpy/pocketpy), [QuickJS](https://bellard.org/quickjs/) — embedded Python and JavaScript.
+- [pocketpy](https://github.com/pocketpy/pocketpy), [QuickJS-ng](https://github.com/quickjs-ng/quickjs) — embedded Python and JavaScript.
 - [GoogleTest](https://github.com/google/googletest) — C++ unit tests.
 - [Inno Setup](https://jrsoftware.org/isinfo.php) / [NSIS](https://nsis.sourceforge.io/) — Windows installer.

@@ -28,7 +28,9 @@ add_executable(s2a_core_tests
     test_project.cpp
     test_resources.cpp
     test_result.cpp
+    test_script.cpp
     test_serial.cpp
+    test_usercode.cpp
     test_userdata.cpp
     test_validator.cpp
     test_version.cpp

@@ -39,6 +39,7 @@ enum class ArgKind {
     Variable,  ///< Variable menu.
     Function,  ///< Function menu (functions of the project).
     Statement, ///< Stack of blocks inside a C-block.
+    UserCode,  ///< Name of a function or variable of the project's "My code" file.
 };
 
 struct DropdownOption {

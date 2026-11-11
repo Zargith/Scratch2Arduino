@@ -184,3 +184,50 @@ describe("project conversion", () => {
 		expect(isProject({ format: "other" })).toBe(false);
 	});
 });
+
+describe("program language", () => {
+	it("writes text projects in format 2 and block projects in format 1", async () => {
+		const { emptyProject, withProgram } = await import("@/project/convert");
+		const blocks = emptyProject("p", "uno");
+		const python = withProgram(blocks, "python", "print(1)\n");
+		expect(python).toMatchObject({ formatVersion: 2, language: "python", code: "print(1)\n" });
+		const back = withProgram(python, "blocks", "ignored");
+		expect(back.formatVersion).toBe(1);
+		expect(back).not.toHaveProperty("language");
+		expect(back).not.toHaveProperty("code");
+		expect(withProgram(python, "cpp", "void setup() {}")).toMatchObject({ language: "cpp", code: "void setup() {}" });
+	});
+});
+
+describe("My code", () => {
+	it("keeps the user code in format 2 and drops it with its file", async () => {
+		const { emptyProject, withUserCode } = await import("@/project/convert");
+		const project = withUserCode(emptyProject("p", "uno"), { language: "python", code: "x = 1\n" });
+		expect(project).toMatchObject({ formatVersion: 2, userCode: { language: "python", code: "x = 1\n" } });
+		expect(withUserCode(project, null)).not.toHaveProperty("userCode");
+		expect(withUserCode(project, null).formatVersion).toBe(1);
+	});
+
+	it("gives call blocks as many slots as they have parameters", async () => {
+		const { emptyProject, projectToWorkspace, workspaceToProject } = await import("@/project/convert");
+		const project = {
+			...emptyProject("p", "uno"),
+			scripts: [
+				{
+					x: 0,
+					y: 0,
+					blocks: [
+						{ id: "start", type: "events_when_program_starts" },
+						{ id: "call", type: "mycode_call", fields: { NAME: "blink" }, inputs: { ARG1: { value: "3" }, ARG2: { value: "200" } } },
+					],
+				},
+			],
+		};
+		const state = projectToWorkspace(project);
+		const call = state.blocks?.blocks[0].next?.block;
+		expect(call?.extraState).toEqual({ name: "blink", params: 2 });
+		expect(Object.keys(call?.inputs ?? {}).sort()).toEqual(["ARG1", "ARG2"]);
+		const back = workspaceToProject(state, { name: "p", board: "uno" });
+		expect(back.scripts[0].blocks[1].inputs).toEqual({ ARG1: { value: "3" }, ARG2: { value: "200" } });
+	});
+});

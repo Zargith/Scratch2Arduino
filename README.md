@@ -27,7 +27,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 
 | Area | What you get |
 |---|---|
-| Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; Python and JavaScript modes (later) |
+| Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; programs typed in Arduino C++, Python or JavaScript for those who move on to text |
 | Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers… |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
@@ -162,6 +162,9 @@ s2a-cli compile examples/projects/blink/project.json  # .s2a projects too; the b
 s2a-cli live examples/projects/blink/project.json --port /dev/ttyACM0   # Live mode (Ctrl+C stops)
 ```
 
+The same commands take projects written as text: `compile` and `upload` a C++ project, `generate` prints its
+code, and `live` runs a Python or JavaScript project.
+
 **Live mode** runs the blocks on the computer and drives the board through the small *S2A live*
 firmware (`firmware/s2a_live`, sent automatically the first time): a change in the blocks takes effect
 without uploading again. Variables are printed when they change, and what the blocks write to the serial
@@ -211,6 +214,38 @@ Click **Live**: the blocks run on the computer and drive the board through the
 the sensors read by the blocks are shown on the right with a graph of their last 30 seconds, and any change
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
+
+### Writing the program as text: C++, Python, JavaScript
+
+The **language** list of the top bar (next to the project name) switches a project from blocks to text:
+
+| Language | How it runs | Buttons |
+|---|---|---|
+| **C++** | A real Arduino sketch (`setup()` and `loop()`), compiled and uploaded like the blocks. It starts with the code of the current blocks. Libraries included with `#include` (Servo, DHT, LiquidCrystal, U8g2, Adafruit NeoPixel) are installed automatically. | Check, Upload |
+| **Python** (pocketpy) | Runs on the computer and drives the board through the Live mode, like the blocks in Live mode. | Check (reads the program), Live |
+| **JavaScript** (QuickJS-ng) | Same as Python. | Check (reads the program), Live |
+
+The code editor colours the code and numbers its lines. Mistakes are shown only after **Check**, **Upload** or
+**Live**: the faulty line is underlined, with a friendly explanation in French or English ("`led` is unknown: check
+the spelling…"). **Stop** stops a Python or JavaScript program at once, even an endless loop.
+
+Python and JavaScript have the Arduino functions of the blocks, with pins given as numbers (`13`) or names
+(`A0`, `"A0"`, `LED_BUILTIN`): `pinMode`, `digitalWrite`, `digitalRead`, `analogRead`, `analogWrite`, `delay`,
+`millis`, `tone`, `noTone`, `servoWrite`, `print` (`console.log` in JavaScript), and the constants `HIGH`, `LOW`,
+`INPUT`, `OUTPUT`, `INPUT_PULLUP`. A program may also define `setup()` and `loop()` as on an Arduino. Blink:
+
+```python
+pinMode(LED_BUILTIN, OUTPUT)
+while True:
+    digitalWrite(LED_BUILTIN, HIGH)
+    delay(1000)
+    digitalWrite(LED_BUILTIN, LOW)
+    delay(1000)
+```
+
+A project written as text keeps its blocks: going back to the blocks finds them as they were (the typed code is
+deleted, after a confirmation). Such projects are saved in format version 2, which older versions of
+Scratch2Arduino refuse with a message asking to update instead of opening them empty.
 
 #### Live mode over Wi-Fi (ESP32, ESP8266)
 

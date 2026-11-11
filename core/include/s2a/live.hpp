@@ -24,6 +24,11 @@
 
 /// Live mode: the computer runs the blocks and drives the board through the S2A live firmware
 /// (firmware/s2a_live), so that a change in the blocks takes effect without uploading.
+namespace s2a::script {
+struct Host;
+struct ScriptError;
+} // namespace s2a::script
+
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
@@ -70,6 +75,24 @@ public:
     [[nodiscard]] virtual std::optional<std::string> phoneMessage() { return std::nullopt; }
     /// Sends a line to the phone connected to the board over Bluetooth.
     virtual void phoneSend(const std::string& text) { (void)text; }
+};
+
+/// The user's own code ("My code", Python or JavaScript) as the blocks use it in Live mode.
+class UserCode {
+public:
+    UserCode() = default;
+    UserCode(const UserCode&) = delete;
+    UserCode& operator=(const UserCode&) = delete;
+    UserCode(UserCode&&) = delete;
+    UserCode& operator=(UserCode&&) = delete;
+    virtual ~UserCode() = default;
+
+    /// Runs a function with number arguments; its result as a number (0 when it gives none).
+    virtual double call(const std::string& name, const std::vector<double>& arguments) = 0;
+    [[nodiscard]] virtual double get(const std::string& name) = 0;
+    virtual void set(const std::string& name, double value) = 0;
+    /// True once the code failed (the Live mode stops and shows why).
+    [[nodiscard]] virtual bool failed() const = 0;
 };
 
 /// `text` in lower case, without the accents of Latin letters nor spaces around: " Éteins" is
@@ -132,7 +155,9 @@ class Interpreter {
 public:
     using Clock = std::chrono::milliseconds; ///< Time since the start of the Live mode.
 
-    Interpreter(project::Project project, const BlockCatalog& catalog, const Board& board, Pins& pins);
+    /// `userCode`: the project's Python or JavaScript code, used by the "My code" blocks (may be null).
+    Interpreter(project::Project project, const BlockCatalog& catalog, const Board& board, Pins& pins,
+                UserCode* userCode = nullptr);
 
     /// Runs every script until it waits; call it often (every 10 ms or so).
     void step(Clock now);
@@ -196,14 +221,20 @@ private:
     std::map<int, int> stripLengths_;                     ///< NeoPixel pin -> number of LEDs.
     std::map<std::string, std::array<int, 8>> matrices_;  ///< "din clk cs" -> rows shown.
     std::vector<std::string> output_;
+    UserCode* userCode_ = nullptr;
+    /// Number of parameters of each function of the user code (the "My code" blocks).
+    std::map<std::string, std::size_t> userParameters_;
+    void readUserDeclarations();
+    std::vector<double> userArguments(const project::Block& block);
     std::string phoneLine_;   ///< Last message of the phone, until a block recognises it.
     double phoneNumber_ = 0;  ///< Last number sent by the phone.
     std::mt19937 random_{std::random_device{}()};
 };
 
 /// Live mode as the editors use it: connects to the board (uploading the firmware when it does
-/// not answer), then runs the interpreter on a background thread. The editor sends new versions
-/// of the blocks and reads snapshots to show the running blocks and the variables.
+/// not answer), then runs the interpreter (or the Python/JavaScript program of a text project,
+/// see script.hpp) on a background thread. The editor sends new versions of the blocks and
+/// reads snapshots to show the running blocks and the variables.
 class Session {
 public:
     using Opener = std::function<Result<std::unique_ptr<serial::LineTransport>>(const std::string& port)>;
@@ -222,6 +253,8 @@ public:
         std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
         std::vector<std::string> output;        ///< Last lines written to the serial monitor (at most kOutputLines)...
         std::size_t outputCount = 0;            ///< ...out of this many since the start.
+        int errorLine = 0;                      ///< Python/JavaScript: line of the error that stopped the program...
+        std::string errorFile;                  ///< ...in the program ("") or in "My code" ("user").
     };
     static constexpr std::size_t kOutputLines = 200;
 
@@ -248,6 +281,12 @@ public:
 
 private:
     void run(project::Project project);
+    /// Python and JavaScript projects: runs the program on this thread until it ends or Stop.
+    void runScript(const project::Project& project, LiveLink& link);
+    /// What a Python/JavaScript program uses: the board's pins, the Live panel, Stop.
+    script::Host scriptHost(LiveLink& link, std::optional<Error>& linkError);
+    /// Failed with the error of a program ("") or of "My code" ("user").
+    void failScript(const script::ScriptError& error, const std::string& file);
     void set(State state, std::string message, std::string details = {});
 
     const Board& board_;

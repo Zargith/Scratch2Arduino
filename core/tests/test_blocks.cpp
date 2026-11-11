@@ -29,7 +29,7 @@ TEST(BuiltinCatalog, CategoriesAreSortedByToolboxOrder) {
         ids.push_back(category.id);
     }
     EXPECT_EQ(ids, (std::vector<std::string>{"events", "control", "pins", "sensors", "lights", "sound", "motors", "serial",
-                                        "display", "phone", "operators", "variables", "functions"}));
+                                        "display", "phone", "operators", "variables", "functions", "mycode"}));
 }
 
 TEST(BuiltinCatalog, ContainsTheBlinkBlocks) {

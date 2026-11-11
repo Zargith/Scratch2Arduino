@@ -209,6 +209,30 @@ std::string_view problemMessageKey(Problem problem) noexcept {
     return "toolchain.unknown";
 }
 
+std::string explainCompilerMessage(const CompilerMessage& message, Language language) {
+    // GCC quotes names with ' (or with ‘ ’ when the system locale allows it).
+    static const std::regex undeclared(R"(^(?:'|‘)(.+?)(?:'|’) was not declared in this scope.*$)");
+    static const std::regex expected(R"(^expected (?:'|‘)(.)(?:'|’) (?:before|at end of input).*$)");
+    static const std::regex noMember(R"(^(?:'|‘)class (\w+)(?:'|’) has no member named (?:'|‘)(\w+)(?:'|’).*$)");
+    std::smatch match;
+    if (std::regex_match(message.text, match, undeclared)) {
+        return tr("text.unknown_name", language, {{"name", match[1].str()}});
+    }
+    if (std::regex_match(message.text, match, expected)) {
+        const std::string symbol = match[1].str();
+        if (symbol == ";") {
+            return tr("text.missing_semicolon", language);
+        }
+        if (symbol == "}" || symbol == ")" || symbol == "]") {
+            return tr("text.missing_closing", language, {{"symbol", symbol}});
+        }
+    }
+    if (std::regex_match(message.text, match, noMember)) {
+        return tr("text.unknown_member", language, {{"name", match[2].str()}, {"object", match[1].str()}});
+    }
+    return message.text;
+}
+
 std::string describe(const Diagnosis& diagnosis, Language language) {
     return tr(problemMessageKey(diagnosis.problem), language, diagnosis.params);
 }

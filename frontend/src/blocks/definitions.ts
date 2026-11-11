@@ -7,6 +7,8 @@ import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, ty
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
 export const CREATE_FUNCTION_CALLBACK = "S2A_CREATE_FUNCTION";
 export const MANAGE_LIBRARY_CALLBACK = "S2A_MANAGE_LIBRARY";
+/** The button of an empty "My code" category: opens the code view. */
+export const OPEN_CODE_CALLBACK = "S2A_OPEN_CODE";
 /** Followed by the group id: the button that adds a "My blocks" group to the workspace. */
 export const INSERT_GROUP_CALLBACK_PREFIX = "S2A_INSERT_GROUP:";
 const LIBRARY_COLOUR = "#8D6E63";
@@ -14,6 +16,29 @@ const LIBRARY_COLOUR = "#8D6E63";
 export const FUNCTION_TYPE = "function";
 
 let currentBoard: Board | undefined;
+
+/** A function or global variable of the user's "My code" file (core usercode::Declaration). */
+export interface UserDeclaration {
+	kind: "function" | "variable";
+	name: string;
+	parameters: string[];
+	returnsValue: boolean;
+	readOnly: boolean;
+	line: number;
+}
+
+let userDeclarations: UserDeclaration[] = [];
+
+/** The "My code" blocks show the parameter names of these functions. */
+export function setUserDeclarations(declarations: UserDeclaration[]): void {
+	userDeclarations = declarations;
+}
+
+/** Number slots of a "My code" block: ARG1..ARGn (core usercode::kMaxParameters). */
+export const MAX_PARAMETERS = 4;
+export const MY_CODE_CALL = "mycode_call";
+export const MY_CODE_VALUE = "mycode_value";
+
 
 /** Pin menus list the pins of this board. */
 export function setCurrentBoard(board: Board | undefined): void {
@@ -143,6 +168,8 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 		case "variable":
 			// Only plain variables: functions are variables of another type and must not be listed.
 			return { type: "field_variable", name: arg.name, variable: null, variableTypes: [""], defaultType: "" };
+		case "usercode":
+			return { type: "field_label_serializable", name: arg.name, text: "" };
 		case "function":
 			return {
 				type: "field_s2a_function",
@@ -151,6 +178,9 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 				variableTypes: [FUNCTION_TYPE],
 				defaultType: FUNCTION_TYPE,
 			};
+		default:
+			// A kind this editor does not know (catalog newer than the editor): an empty slot, never a crash.
+			return { type: "input_dummy" };
 	}
 }
 
@@ -203,12 +233,60 @@ export function blockJson(block: CatalogBlock, language: Language): Record<strin
 	return json;
 }
 
+interface MyCodeBlock extends Blockly.Block {
+	params_?: number;
+}
+
+/** Gives a "call" / "result" block of "My code" its number slots, named after the parameters. */
+function setParameters(block: MyCodeBlock, name: string, count: number): void {
+	const names = userDeclarations.find((declaration) => declaration.kind === "function" && declaration.name === name)?.parameters;
+	for (let i = count; i < (block.params_ ?? 0); i++) block.removeInput(`ARG${i + 1}`, true);
+	for (let i = block.params_ ?? 0; i < Math.min(count, MAX_PARAMETERS); i++) {
+		const input = block.appendValueInput(`ARG${i + 1}`);
+		if (names?.[i]) input.appendField(names[i]);
+	}
+	block.params_ = Math.min(count, MAX_PARAMETERS);
+}
+
+/**
+ * "My code" call and result blocks: as many slots as the function has parameters. The name and
+ * the count are kept in the block's extra state (loaded before its fields).
+ */
+function defineMyCodeCalls(language: Language): void {
+	for (const block of catalog.flatMap((entry) => entry.blocks)) {
+		if (block.type !== MY_CODE_CALL && block.type !== MY_CODE_VALUE) continue;
+		const statement = block.type === MY_CODE_CALL;
+		Blockly.Blocks[block.type] = {
+			init(this: MyCodeBlock) {
+				this.jsonInit({
+					type: block.type,
+					message0: "%1",
+					args0: [{ type: "field_label_serializable", name: "NAME", text: "" }],
+					tooltip: block.tooltip?.[language] ?? "",
+					extensions: [statement ? "shape_statement" : "output_number"],
+				});
+				this.setStyle(block.category);
+				this.setInputsInline(true);
+				this.params_ = 0;
+			},
+			saveExtraState(this: MyCodeBlock) {
+				return { name: String(this.getFieldValue("NAME") ?? ""), params: this.params_ ?? 0 };
+			},
+			loadExtraState(this: MyCodeBlock, state: { name?: string; params?: number }) {
+				setParameters(this, state.name ?? "", state.params ?? 0);
+			},
+		};
+	}
+}
+
 export function defineBlocks(language: Language): void {
 	registerPinField();
 	registerFunctionField();
 	functionLanguage = language;
+	defineMyCodeCalls(language);
 	for (const entry of catalog) {
 		for (const block of entry.blocks) {
+			if (block.type === MY_CODE_CALL || block.type === MY_CODE_VALUE) continue;
 			const json = blockJson(block, language);
 			Blockly.Blocks[block.type] = {
 				init(this: Blockly.Block) {
@@ -272,7 +350,8 @@ export function toolbox(
 	variables: { id: string }[],
 	labels: { createVariable: string; createFunction: string },
 	functions: { id: string }[] = [],
-	library?: { title: string; manage: string; groups: { id: string; name: string }[] }
+	library?: { title: string; manage: string; groups: { id: string; name: string }[] },
+	myCode: { declarations: UserDeclaration[]; empty: string } = { declarations: [], empty: "" }
 ): Blockly.utils.toolbox.ToolboxDefinition {
 	// Variables and functions: a "create" button, then the blocks set to the first one.
 	const named = (blocks: CatalogBlock[], field: string, first: { id: string } | undefined, button: object) => [
@@ -316,10 +395,40 @@ export function toolbox(
 					text: labels.createFunction,
 					callbackkey: CREATE_FUNCTION_CALLBACK,
 				});
+			} else if (category.id === "mycode") {
+				contents = myCodeContents(myCode.declarations, myCode.empty);
 			} else {
 				contents = blocks.map((block) => ({ kind: "block", type: block.type, inputs: shadowInputs(block) }));
 			}
 			return { kind: "category", name: category.name[language], categorystyle: category.id, contents };
 		}), ...(libraryCategory ? [libraryCategory] : [])],
 	} as Blockly.utils.toolbox.ToolboxDefinition;
+}
+
+/** Number slots of the "My code" blocks, as the palette shows them. */
+function numberShadows(names: string[]): Record<string, { shadow: Record<string, unknown> }> {
+	return Object.fromEntries(names.map((name) => [name, { shadow: { type: "math_number", fields: { NUM: "0" } } }]));
+}
+
+/** Palette of the "My code" category: blocks for the functions and variables of the user's file. */
+export function myCodeContents(declarations: UserDeclaration[], empty: string): object[] {
+	if (declarations.length === 0) return [{ kind: "button", text: empty, callbackkey: OPEN_CODE_CALLBACK }];
+	const contents: object[] = [];
+	for (const declaration of declarations) {
+		if (declaration.kind === "function") {
+			const params = Math.min(declaration.parameters.length, MAX_PARAMETERS);
+			const slots = numberShadows(Array.from({ length: params }, (_, i) => `ARG${i + 1}`));
+			const extraState = { name: declaration.name, params };
+			contents.push({ kind: "block", type: MY_CODE_CALL, fields: { NAME: declaration.name }, extraState, inputs: slots });
+			if (declaration.returnsValue) {
+				contents.push({ kind: "block", type: MY_CODE_VALUE, fields: { NAME: declaration.name }, extraState, inputs: slots });
+			}
+		} else {
+			contents.push({ kind: "block", type: "mycode_get", fields: { NAME: declaration.name } });
+			if (!declaration.readOnly) {
+				contents.push({ kind: "block", type: "mycode_set", fields: { NAME: declaration.name }, inputs: numberShadows(["VALUE"]) });
+			}
+		}
+	}
+	return contents;
 }

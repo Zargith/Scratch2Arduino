@@ -119,7 +119,13 @@
     "capability_interrupt": "interrupt",
     "blocked": "Problems to fix before your program can be sent: {count}.",
     "no_bluetooth": "The {board} board has no Bluetooth: the \"{block}\" block cannot talk to the phone.",
-    "no_bluetooth_hint": "Choose an ESP32 board, or remove the Phone blocks."
+    "no_bluetooth_hint": "Choose an ESP32 board, or remove the Phone blocks.",
+    "usercode_missing": "\"{name}\" is not (or no longer) in \"My code\".",
+    "usercode_missing_hint": "Check its name in your code (capital letters matter), or remove this block.",
+    "usercode_no_value": "The function \"{name}\" gives no value: it cannot go in a slot.",
+    "usercode_no_value_hint": "Add a \"return\" with a value to your function, or use the block that runs it.",
+    "usercode_read_only": "\"{name}\" is a constant: a block cannot change it.",
+    "usercode_read_only_hint": "Remove \"const\" in your code if it must change."
   },
   "editor": {
     "new": "New",
@@ -169,5 +175,37 @@
     "pin_twice": "Pin {pin} is used by both \"{first}\" and \"{second}\": each component needs its own pin.",
     "i2c_taken": "Pin {pin} carries the I2C of \"{screen}\": \"{other}\" must use another pin.",
     "power": "The components need about {current} mA, more than the 500 mA of a USB port: power the board with a mains adapter, and the motors or the LED strip with their own supply (GNDs joined)."
+  },
+  "text": {
+    "unknown_name": "\"{name}\" is unknown: check the spelling (capital letters matter) and that it is declared before it is used.",
+    "missing_semicolon": "A \";\" is missing at the end of an instruction (often on the line before).",
+    "missing_closing": "A \"{symbol}\" is missing: every opened bracket or brace must be closed.",
+    "unknown_member": "\"{object}\" has no function or field \"{name}\": check the spelling.",
+    "cpp_empty": "The program is empty: write at least the setup() and loop() functions.",
+    "cpp_missing_function": "The {name}() function is missing: an Arduino program always has void setup() { … } and void loop() { … }.",
+    "cpp_errors": "The program has {count} error(s). Line {line}: {message}",
+    "cpp_library_missing": "The program uses the \"{library}\" library, which is not installed. Scratch2Arduino installs Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 and Adafruit NeoPixel by itself; install any other one with arduino-cli lib install.",
+    "script_upload": "A Python or JavaScript program runs on the computer and drives the board: use the Live button instead of Upload.",
+    "script_ok": "Well done, your program can be read! Start it with the Live button.",
+    "pin_unknown": "Pin {pin} does not exist on the {board} board.",
+    "pin_mode_unknown": "pinMode expects OUTPUT, INPUT or INPUT_PULLUP.",
+    "pin_not_analog": "analogRead needs an analog pin (A0, A1…): pin {pin} is not one.",
+    "pin_not_pwm": "analogWrite needs a PWM pin (marked ~ on the board): pin {pin} is not one.",
+    "pin_expected": "A pin is needed: a number (13) or a name (\"A0\").",
+    "number_expected": "A number is needed here.",
+    "argument_count": "This function did not get the right number of values between its brackets.",
+    "not_a_script": "This program is not written in Python or JavaScript.",
+    "at_line": "Line {line}: {message}",
+    "python_indentation": "The indentation is wrong: the lines of a block must start at the same distance from the edge, and the line after a \":\" must be indented.",
+    "python_syntax": "Python does not understand this line: check the brackets, the quotes and the \":\" at the end of if, while, for and def. ({message})",
+    "javascript_syntax": "JavaScript does not understand this line: check the brackets, the braces and the quotes. ({message})",
+    "division_by_zero": "Division by zero: nothing can be divided by 0.",
+    "live_cpp": "A C++ program is sent to the board with Upload. Live mode is for blocks, Python and JavaScript.",
+    "running": "Your program runs on the computer and drives the board. The Stop button stops it.",
+    "finished": "The program has finished.",
+    "usercode_live_only": "Your blocks use \"My code\" written in {language}: it runs on the computer, start the program with the Live button (or write \"My code\" in C++ to upload it).",
+    "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
+    "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}",
+    "in_user_code": "In \"My code\":"
   }
 }
