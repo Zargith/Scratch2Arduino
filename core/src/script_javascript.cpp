@@ -131,6 +131,19 @@ JSValue printFn(JSContext* ctx, Running& s, int argc, JSValueConst* argv) {
     return JS_UNDEFINED;
 }
 
+/// printError(a, b), console.error(a, b), console.warn(a, b): one line on the error output.
+JSValue printErrorFn(JSContext* ctx, Running& s, int argc, JSValueConst* argv) {
+    std::string line;
+    for (int index = 0; index < argc; ++index) {
+        if (index > 0) {
+            line += ' ';
+        }
+        line += toString(ctx, argv[index]);
+    }
+    s.api->printError(line);
+    return JS_UNDEFINED;
+}
+
 struct Function {
     const char* name;
     JSCFunction* function;
@@ -149,6 +162,7 @@ constexpr Function kFunctions[] = {
     {"noTone", guarded<noToneFn>, 1},
     {"servoWrite", guarded<servoWriteFn>, 2},
     {"print", guarded<printFn>, 1},
+    {"printError", guarded<printErrorFn>, 1},
 };
 
 void bindApi(JSContext* ctx, JSValueConst target, const Api& api) {
@@ -253,6 +267,8 @@ void prepare(JSContext* ctx, Api& api) {
     JS_SetPropertyStr(ctx, global, "arduino", arduino);
     JSValue console = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, guarded<printFn>, "log", 1));
+    JS_SetPropertyStr(ctx, console, "error", JS_NewCFunction(ctx, guarded<printErrorFn>, "error", 1));
+    JS_SetPropertyStr(ctx, console, "warn", JS_NewCFunction(ctx, guarded<printErrorFn>, "warn", 1));
     JS_SetPropertyStr(ctx, global, "console", console);
     JS_FreeValue(ctx, global);
 }
@@ -403,6 +419,8 @@ std::optional<ScriptError> runJavaScript(const std::string& code, Api& api, Lang
     JS_SetPropertyStr(ctx, global, "arduino", arduino);
     JSValue console = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, guarded<printFn>, "log", 1));
+    JS_SetPropertyStr(ctx, console, "error", JS_NewCFunction(ctx, guarded<printErrorFn>, "error", 1));
+    JS_SetPropertyStr(ctx, console, "warn", JS_NewCFunction(ctx, guarded<printErrorFn>, "warn", 1));
     JS_SetPropertyStr(ctx, global, "console", console);
 
     JSValue result = JS_Eval(ctx, code.c_str(), code.size(), kFileName, JS_EVAL_TYPE_GLOBAL);

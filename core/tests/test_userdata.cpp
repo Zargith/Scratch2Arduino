@@ -266,12 +266,15 @@ TEST(UserData, SettingsHaveDefaultsAndAreSaved) {
     s2a::userdata::Settings chosen;
     chosen.language = "en";
     chosen.checkUpdates = false;
+    chosen.theme = "dark";
     ASSERT_TRUE(store.saveSettings(chosen).ok());
     EXPECT_EQ(store.settings(), chosen);
 
     chosen.language = "klingon"; // not a language of the application: the system's is used
+    chosen.theme = "pink";       // nor a theme
     ASSERT_TRUE(store.saveSettings(chosen).ok());
     EXPECT_EQ(store.settings().language, "");
+    EXPECT_EQ(store.settings().theme, "");
 }
 
 TEST(UserData, DamagedSettingsGiveTheDefaults) {

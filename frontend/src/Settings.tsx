@@ -62,6 +62,19 @@ export function Settings({ opened, language, t, version, settings, onLanguage, o
 					/>
 				</Stack>
 				<Stack gap={6}>
+					<Title order={6}>{t("settings.theme")}</Title>
+					<SegmentedControl
+						aria-label={t("settings.theme")}
+						data={[
+							{ value: "", label: t("settings.theme_system") },
+							{ value: "light", label: t("settings.theme_light") },
+							{ value: "dark", label: t("settings.theme_dark") },
+						]}
+						value={settings.theme}
+						onChange={(value) => onSettings({ ...settings, theme: value as SavedSettings["theme"] })}
+					/>
+				</Stack>
+				<Stack gap={6}>
 					<Title order={6}>{t("settings.updates")}</Title>
 					{version && <Text size="sm">{t("settings.version", { version })}</Text>}
 					<Group gap="sm">

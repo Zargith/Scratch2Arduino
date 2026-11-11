@@ -61,7 +61,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
   une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
-  **Téléverser** ; les **Paramètres** (l'engrenage : langue, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
   voir ses blocs.
@@ -142,6 +142,11 @@ câble. Tu vois tout de suite l'effet d'un changement, sans téléverser :
 - le panneau de droite montre les **variables** et les **capteurs** lus par les blocs, avec un graphique
   des 30 dernières secondes ;
 - modifie un bloc (un nombre, une broche, un bloc ajouté...) : la carte suit immédiatement.
+
+**Sorties du programme** : ce que ton programme écrit (bloc *écrire ... sur le moniteur série*, `print()`
+en Python ou JavaScript) s'affiche dans le panneau du moniteur série, qui s'ouvre tout seul à la première
+ligne. Pour déboguer, `printError()` (et `console.error()` en JavaScript) écrit en rouge, sur la sortie
+d'erreur ; l'erreur qui arrête un programme y reste aussi, avec sa ligne, après l'arrêt.
 
 La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
 ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les

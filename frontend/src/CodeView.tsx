@@ -142,7 +142,7 @@ export function CodeView({
 
 	return (
 		<Stack gap={0} h="100%">
-			<Group px="md" py={6} justify="space-between" wrap="wrap" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
+			<Group px="md" py={6} justify="space-between" wrap="wrap" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
 				{program === "blocks" ? (
 					<Tabs value={tab} onChange={(value) => onTab((value as CodeTab | null) ?? "blocks")}>
 						<Tabs.List>

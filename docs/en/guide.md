@@ -59,7 +59,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
-  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, looking for a new version). On a small
+  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
@@ -135,6 +135,11 @@ see the effect of a change at once, without uploading:
 - the right panel shows the **variables** and the **sensors** read by the blocks, with a graph of the
   last 30 seconds;
 - change a block (a number, a pin, an added block...): the board follows immediately.
+
+**Program output**: what your program writes (the *write ... to the serial monitor* block, `print()` in
+Python or JavaScript) shows in the serial monitor panel, which opens by itself at the first line. To debug,
+`printError()` (and `console.error()` in JavaScript) writes in red, on the error output; the error that
+stops a program also stays there, with its line, after the stop.
 
 The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
 computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched

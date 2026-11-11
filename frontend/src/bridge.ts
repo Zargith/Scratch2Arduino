@@ -79,8 +79,8 @@ export interface LiveSnapshot {
 	variables?: Record<string, number>;
 	/** Sensor values read by the blocks, by pin label ("A0", "2"). */
 	readings?: Record<string, number>;
-	/** Last lines written by "write to the serial monitor"... */
-	output?: string[];
+	/** Last lines written by the program ("write to the serial monitor", print, printError)... */
+	output?: OutputLine[];
 	/** ...out of this many since Live mode started. */
 	outputCount?: number;
 	/** Python/JavaScript: line of the error that stopped the program (0: none)... */
@@ -120,12 +120,20 @@ export interface AutosavedProject {
 	savedAt: number;
 }
 
+/** A line of the Live output: printed, or on the error output (printError, console.error, the error that stopped it). */
+export interface OutputLine {
+	text: string;
+	error: boolean;
+}
+
 /** Settings of the editor, kept by the host (settings.json in the user's folder). */
 export interface Settings {
 	/** "fr" or "en"; "": the language of the system. */
 	language: Language | "";
 	/** Look for a newer release in the background at start-up. */
 	checkUpdates: boolean;
+	/** "light" or "dark"; "": the one of the system. */
+	theme: "light" | "dark" | "";
 }
 
 /** A program rewritten in another language (core convert::convert). */

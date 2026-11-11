@@ -706,10 +706,40 @@ TEST(Session, RefusesBlocksWithMistakes) {
     EXPECT_FALSE(opened);
 }
 
+std::vector<std::string> texts(const std::vector<Session::OutputLine>& lines) {
+    std::vector<std::string> result;
+    for (const auto& line : lines) {
+        result.push_back((line.error ? "! " : "") + line.text);
+    }
+    return result;
+}
+
 Session::Opener sharedOpener(std::shared_ptr<FakeFirmware> firmware) {
     return [firmware](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
         return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(firmware));
     };
+}
+
+TEST(Session, ShowsTheErrorOutputOfAProgram) {
+    for (const auto& [language, code] :
+         std::vector<std::pair<s2a::project::ProgramLanguage, std::string>>{
+             {s2a::project::ProgramLanguage::Python, "print('a')\nprintError('b', 2)\nundefined_name()\n"},
+             {s2a::project::ProgramLanguage::JavaScript, "print('a');\nconsole.error('b', 2);\nundefinedName();\n"}}) {
+        auto firmware = std::make_shared<FakeFirmware>();
+        s2a::project::Project project = blink();
+        project.language = language;
+        project.code = code;
+        Session session(project, uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                        [](std::string&) { return s2a::success(); });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; })) << code;
+        const auto output = texts(session.snapshot().output);
+        ASSERT_GE(output.size(), 3U) << code;
+        EXPECT_EQ(output[0], "a");
+        EXPECT_EQ(output[1], "! b 2");
+        // The error that stopped the program, with its line, stays on the error output.
+        EXPECT_EQ(output[2].rfind("! ", 0), 0U) << output[2];
+        EXPECT_NE(output[2].find('3'), std::string::npos) << output[2];
+    }
 }
 
 TEST(Session, RunsAPythonProgramUntilStopped) {
@@ -723,7 +753,7 @@ TEST(Session, RunsAPythonProgramUntilStopped) {
         ASSERT_TRUE(waitFor([&] { return session.snapshot().outputCount == 1; }));
         const auto snapshot = session.snapshot();
         EXPECT_EQ(snapshot.state, Session::State::Running);
-        EXPECT_EQ(snapshot.output, std::vector<std::string>{"hello 512"});
+        EXPECT_EQ(texts(snapshot.output), std::vector<std::string>{"hello 512"});
         EXPECT_EQ(snapshot.readings.at("A0"), 512);
         session.stop();
         ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Stopped; }));
@@ -776,7 +806,7 @@ TEST(Session, BlocksCallMyPythonCode) {
                         [](std::string&) { return s2a::success(); });
         ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Finished; }))
             << session.snapshot().message;
-        EXPECT_EQ(session.snapshot().output, std::vector<std::string>{"on 13"});
+        EXPECT_EQ(texts(session.snapshot().output), std::vector<std::string>{"on 13"});
     }
     const auto& received = firmware->received;
     EXPECT_NE(std::find(received.begin(), received.end(), "D 13 1"), received.end());

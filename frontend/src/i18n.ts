@@ -24,7 +24,7 @@ const fr = {
 	"monitor.send": "Envoyer",
 	"monitor.placeholder": "Texte à envoyer à la carte",
 	"monitor.empty": "Rien reçu pour l'instant. Utilise le bloc \"écrire ... sur le moniteur série\" et téléverse ton programme.",
-	"monitor.live": "Mode Live : ce que tes blocs écrivent s'affiche ici.",
+	"monitor.live": "Mode Live : ce que ton programme écrit s'affiche ici, les erreurs en rouge (avec un !).",
 	"monitor.paused": "En pause pendant l'envoi du programme...",
 	"board.label": "Carte",
 	"port.label": "Port",
@@ -56,6 +56,10 @@ const fr = {
 	"language.label": "Langue",
 	"settings.title": "Paramètres",
 	"settings.updates": "Mises à jour",
+	"settings.theme": "Apparence",
+	"settings.theme_system": "Comme l'ordinateur",
+	"settings.theme_light": "Clair",
+	"settings.theme_dark": "Sombre",
 	"settings.version": "Version installée : {version}",
 	"settings.check_now": "Vérifier maintenant",
 	"settings.up_to_date": "Tu as la dernière version.",
@@ -189,7 +193,7 @@ const fr = {
 	"program.help_script":
 		"Ton programme tourne sur l'ordinateur et pilote la carte en direct : branche-la, choisis son port et clique sur \"Live\" (\"Arrêter\" le stoppe, même dans une boucle sans fin). \"Vérifier\" relit le programme sans le lancer. Fonctions disponibles :",
 	"program.help_functions":
-		"pinMode(broche, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(broche, HIGH | LOW)\ndigitalRead(broche) -> HIGH ou LOW\nanalogRead(A0) -> 0 à 1023\nanalogWrite(broche ~, 0 à 255)\ndelay(millisecondes)    millis()\ntone(broche, fréquence[, durée])    noTone(broche)\nservoWrite(broche, angle de 0 à 180)\nprint(...) -> moniteur série et panneau Live",
+		"pinMode(broche, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(broche, HIGH | LOW)\ndigitalRead(broche) -> HIGH ou LOW\nanalogRead(A0) -> 0 à 1023\nanalogWrite(broche ~, 0 à 255)\ndelay(millisecondes)    millis()\ntone(broche, fréquence[, durée])    noTone(broche)\nservoWrite(broche, angle de 0 à 180)\nprint(...) -> moniteur série et panneau Live\nprintError(...) -> la même chose, en rouge (pour déboguer)",
 	"program.help_loop": "Tu peux aussi écrire des fonctions setup() et loop(), comme sur Arduino.",
 	"status.program_cpp_from_blocks":
 		"Mode C++ : ton code commence avec le programme de tes blocs. Modifie-le, puis \"Vérifier\" ou \"Téléverser\".",
@@ -228,7 +232,7 @@ const en: Record<MessageKey, string> = {
 	"monitor.send": "Send",
 	"monitor.placeholder": "Text to send to the board",
 	"monitor.empty": "Nothing received yet. Use the block \"write ... to the serial monitor\" and upload your program.",
-	"monitor.live": "Live mode: what your blocks write shows up here.",
+	"monitor.live": "Live mode: what your program writes shows up here, errors in red (with a !).",
 	"monitor.paused": "Paused while the program is uploaded...",
 	"board.label": "Board",
 	"port.label": "Port",
@@ -260,6 +264,10 @@ const en: Record<MessageKey, string> = {
 	"language.label": "Language",
 	"settings.title": "Settings",
 	"settings.updates": "Updates",
+	"settings.theme": "Appearance",
+	"settings.theme_system": "Like the computer",
+	"settings.theme_light": "Light",
+	"settings.theme_dark": "Dark",
 	"settings.version": "Installed version: {version}",
 	"settings.check_now": "Check now",
 	"settings.up_to_date": "You have the latest version.",
@@ -393,7 +401,7 @@ const en: Record<MessageKey, string> = {
 	"program.help_script":
 		"Your program runs on the computer and drives the board live: plug it in, choose its port and click \"Live\" (\"Stop\" stops it, even in an endless loop). \"Check\" reads the program without running it. Available functions:",
 	"program.help_functions":
-		"pinMode(pin, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(pin, HIGH | LOW)\ndigitalRead(pin) -> HIGH or LOW\nanalogRead(A0) -> 0 to 1023\nanalogWrite(pin ~, 0 to 255)\ndelay(milliseconds)    millis()\ntone(pin, frequency[, duration])    noTone(pin)\nservoWrite(pin, angle from 0 to 180)\nprint(...) -> serial monitor and Live panel",
+		"pinMode(pin, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(pin, HIGH | LOW)\ndigitalRead(pin) -> HIGH or LOW\nanalogRead(A0) -> 0 to 1023\nanalogWrite(pin ~, 0 to 255)\ndelay(milliseconds)    millis()\ntone(pin, frequency[, duration])    noTone(pin)\nservoWrite(pin, angle from 0 to 180)\nprint(...) -> serial monitor and Live panel\nprintError(...) -> the same, in red (to debug)",
 	"program.help_loop": "You can also write setup() and loop() functions, as on an Arduino.",
 	"status.program_cpp_from_blocks":
 		"C++ mode: your code starts with the program of your blocks. Change it, then \"Check\" or \"Upload\".",
