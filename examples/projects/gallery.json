@@ -218,6 +218,18 @@
             "fr": "Avancé : une seule fonction C++, rouler(gauche, droite), règle la vitesse de chaque roue de -100 à 100 et remplace les cinq fonctions.",
             "en": "Advanced: one C++ function, rouler(gauche, droite), sets the speed of each wheel from -100 to 100 and replaces the five functions."
           }
+        },
+        {
+          "id": "remote-robot-uno",
+          "label": {"fr": "Uno + module HC-05", "en": "Uno + HC-05 module"},
+          "description": {
+            "fr": "Le même robot avec une carte Arduino Uno : un module Bluetooth HC-05 (ou HC-06) sur les broches 10 et 11 lui donne le Bluetooth. Sur le téléphone, l'appli se connecte à \"HC-05\" (code 1234 ou 0000).",
+            "en": "The same robot with an Arduino Uno board: an HC-05 (or HC-06) Bluetooth module on pins 10 and 11 gives it Bluetooth. On the phone, the app connects to \"HC-05\" (code 1234 or 0000)."
+          },
+          "parts": {
+            "fr": "carte Arduino Uno, module Bluetooth HC-05 ou HC-06, résistances de 1 kΩ et 2 kΩ, pont en H L298N, 2 moteurs à réducteur, 4 piles AA, batterie USB, téléphone",
+            "en": "Arduino Uno board, HC-05 or HC-06 Bluetooth module, 1 kΩ and 2 kΩ resistors, L298N H-bridge, 2 gear motors, 4 AA batteries, USB power bank, phone"
+          }
         }
       ]
     }
