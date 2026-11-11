@@ -88,6 +88,10 @@ Ou ouvre l'exemple complet : **Nouveau → Robot télécommandé**.
 > connexion Bluetooth, prise par le téléphone. Teste plutôt en Live par le câble USB (en tapant les mots
 > dans le téléphone), ou téléverse.
 
+## Version avancée : avec du code
+
+Choisis **Avancé : C++** dans la galerie : une seule fonction, `rouler(gauche, droite)`, règle la vitesse de chaque roue de -100 (en arrière) à 100 (en avant). Elle remplace les cinq fonctions : `rouler(80, 80)` avance, `rouler(-60, 60)` tourne à gauche. Invente des virages plus doux, comme `rouler(80, 40)`.
+
 ## Défis
 
 - Ajoute un mot `vite` qui passe la vitesse à 100, et `lent` à 50 (une variable `vitesse`).

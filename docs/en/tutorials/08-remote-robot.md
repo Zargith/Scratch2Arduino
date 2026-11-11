@@ -86,6 +86,10 @@ Or open the complete example: **New → Remote robot** (its functions have Frenc
 > connection, taken by the phone. Test in Live mode over the USB cable instead (typing the words on the
 > phone), or upload.
 
+## Advanced version: with code
+
+Choose **Advanced: C++** in the gallery: one function, `rouler(gauche, droite)`, sets the speed of each wheel from -100 (backward) to 100 (forward). It replaces the five functions: `rouler(80, 80)` goes forward, `rouler(-60, 60)` turns left. Invent gentler turns, like `rouler(80, 40)`.
+
 ## Challenges
 
 - Add a word `vite` (fast) that sets the speed to 100, and `lent` (slow) to 50 (a `speed` variable).

@@ -48,7 +48,18 @@
         "fr": "La LED s'allume tant que le bouton est appuyé : un « si … alors … sinon » qui tourne sans fin.",
         "en": "The LED is on while the button is held down: an \"if … then … else\" running forever."
       },
-      "parts": { "fr": "bouton-poussoir, LED, résistance de 220 Ω", "en": "push button, LED, 220 Ω resistor" }
+      "parts": { "fr": "bouton-poussoir, LED, résistance de 220 Ω", "en": "push button, LED, 220 Ω resistor" },
+      "variants": [
+        { "id": "button-led", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "button-led-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ fait du bouton un vrai interrupteur — un appui allume, l'appui suivant éteint — avec un anti-rebond.",
+            "en": "Advanced: \"My code\" in C++ turns the button into a real switch — one press on, the next one off — with debouncing."
+          }
+        }
+      ]
     },
     {
       "id": "servo-potentiometer",
@@ -128,7 +139,18 @@
         "fr": "Attends le cœur sur la matrice, puis appuie le plus vite possible : trop tôt, c'est perdu !",
         "en": "Wait for the heart on the matrix, then press as fast as you can: too early and you lose!"
       },
-      "parts": { "fr": "matrice MAX7219, OLED SSD1306, bouton, buzzer", "en": "MAX7219 matrix, SSD1306 OLED, button, buzzer" }
+      "parts": { "fr": "matrice MAX7219, OLED SSD1306, bouton, buzzer", "en": "MAX7219 matrix, SSD1306 OLED, button, buzzer" },
+      "variants": [
+        { "id": "reaction-game", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "reaction-game-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ garde le record dans la mémoire EEPROM de la carte : il reste même quand on la débranche.",
+            "en": "Advanced: \"My code\" in C++ keeps the record in the board's EEPROM memory: it stays even when the board is unplugged."
+          }
+        }
+      ]
     },
     {
       "id": "light-gauge",
@@ -186,7 +208,18 @@
       "parts": {
         "fr": "carte ESP32, pont en H L298N, 2 moteurs à réducteur, 4 piles AA, batterie USB, téléphone",
         "en": "ESP32 board, L298N H-bridge, 2 gear motors, 4 AA batteries, USB power bank, phone"
-      }
+      },
+      "variants": [
+        { "id": "remote-robot", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "remote-robot-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : une seule fonction C++, rouler(gauche, droite), règle la vitesse de chaque roue de -100 à 100 et remplace les cinq fonctions.",
+            "en": "Advanced: one C++ function, rouler(gauche, droite), sets the speed of each wheel from -100 to 100 and replaces the five functions."
+          }
+        }
+      ]
     }
   ]
 }

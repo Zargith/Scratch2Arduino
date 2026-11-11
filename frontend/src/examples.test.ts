@@ -51,7 +51,7 @@ describe("example gallery", () => {
 	it("offers a novice (blocks) and an advanced (My code) level of some examples", () => {
 		const advanced = examples.filter((example) => example.id.endsWith("-advanced"));
 		expect(advanced.map((example) => example.group).sort()).toEqual(
-			["blink", "distance-alarm", "servo-potentiometer", "thermometer", "traffic-light"].sort()
+			["blink", "button-led", "distance-alarm", "reaction-game", "remote-robot", "servo-potentiometer", "thermometer", "traffic-light"].sort()
 		);
 		for (const example of advanced) {
 			const novice = examples.find((candidate) => candidate.id === example.group);
