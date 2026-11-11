@@ -1,0 +1,177 @@
+{
+  "$comment": "How each component is wired (Phase 13). Blocks name their component in blocks/catalog (\"component\"). In a connection, \"to\" is a pin argument of the block (\"PIN\", \"TRIG_PIN\"...), or VCC (the board voltage: 5V or 3V3), 5V (needs 5 V even on a 3.3 V board), GND, SDA or SCL (the board's I2C pins). \"via\" is a part between the two (resistor). \"current\" is a typical draw in mA, to warn when USB (500 mA) is not enough. \"note3v3\" is shown on 3.3 V boards only. \"short\" is the name written on the drawn part (the leg name when absent).",
+  "components": {
+    "output": {
+      "name": { "fr": "LED (ou autre sortie)", "en": "LED (or other output)" },
+      "current": 20,
+      "connections": [
+        { "pin": { "fr": "patte + (longue)", "en": "+ leg (long)" }, "to": "PIN", "via": { "fr": "résistance 220 Ω", "en": "220 Ω resistor" }, "short": "+" },
+        { "pin": { "fr": "patte − (courte)", "en": "− leg (short)" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "input": {
+      "name": { "fr": "Entrée (bouton, capteur…)", "en": "Input (button, sensor…)" },
+      "current": 0,
+      "connections": [
+        { "pin": { "fr": "signal", "en": "signal" }, "to": "PIN", "short": "S" },
+        { "pin": { "fr": "autre patte d'un bouton", "en": "other leg of a button" }, "to": "GND", "short": "GND" }
+      ],
+      "note": {
+        "fr": "Un bouton entre la broche et GND a besoin du mode « entrée avec pull-up ».",
+        "en": "A button between the pin and GND needs the \"input with pull-up\" mode."
+      }
+    },
+    "analog_input": {
+      "name": { "fr": "Capteur analogique", "en": "Analog sensor" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "signal", "en": "signal" }, "to": "PIN", "short": "S" },
+        { "pin": { "fr": "+", "en": "+" }, "to": "VCC", "short": "+" },
+        { "pin": { "fr": "−", "en": "−" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "button": {
+      "name": { "fr": "Bouton poussoir", "en": "Push button" },
+      "current": 0,
+      "connections": [
+        { "pin": { "fr": "une patte", "en": "one leg" }, "to": "PIN", "short": "1" },
+        { "pin": { "fr": "patte d'en face", "en": "opposite leg" }, "to": "GND", "short": "2" }
+      ],
+      "note": { "fr": "Pas de résistance : la carte utilise sa résistance de pull-up interne.", "en": "No resistor: the board uses its internal pull-up resistor." }
+    },
+    "potentiometer": {
+      "name": { "fr": "Potentiomètre 10 kΩ", "en": "10 kΩ potentiometer" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "patte de gauche", "en": "left leg" }, "to": "GND", "short": "−" },
+        { "pin": { "fr": "patte du milieu", "en": "middle leg" }, "to": "PIN", "short": "S" },
+        { "pin": { "fr": "patte de droite", "en": "right leg" }, "to": "VCC", "short": "+" }
+      ]
+    },
+    "light_sensor": {
+      "name": { "fr": "Capteur de lumière (photorésistance)", "en": "Light sensor (photoresistor)" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "patte 1", "en": "leg 1" }, "to": "VCC", "short": "1" },
+        { "pin": { "fr": "patte 2", "en": "leg 2" }, "to": "PIN", "short": "2" },
+        { "pin": { "fr": "patte 2", "en": "leg 2" }, "to": "GND", "via": { "fr": "résistance 10 kΩ", "en": "10 kΩ resistor" }, "short": "2" }
+      ]
+    },
+    "ultrasonic": {
+      "name": { "fr": "Capteur de distance HC-SR04", "en": "HC-SR04 distance sensor" },
+      "current": 15,
+      "connections": [
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "Trig", "en": "Trig" }, "to": "TRIG_PIN" },
+        { "pin": { "fr": "Echo", "en": "Echo" }, "to": "ECHO_PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ],
+      "note3v3": { "fr": "Sur une carte en 3,3 V, Echo renvoie 5 V : passe par un pont diviseur (1 kΩ et 2 kΩ) ou prends un HC-SR04P.", "en": "On a 3.3 V board, Echo sends back 5 V: use a voltage divider (1 kΩ and 2 kΩ) or an HC-SR04P." }
+    },
+    "dht": {
+      "name": { "fr": "Capteur de température DHT11/DHT22", "en": "DHT11/DHT22 temperature sensor" },
+      "current": 2,
+      "connections": [
+        { "pin": { "fr": "VCC (+)", "en": "VCC (+)" }, "to": "VCC", "short": "+" },
+        { "pin": { "fr": "DATA", "en": "DATA" }, "to": "PIN", "short": "DATA" },
+        { "pin": { "fr": "GND (−)", "en": "GND (−)" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "buzzer": {
+      "name": { "fr": "Buzzer passif", "en": "Passive buzzer" },
+      "current": 30,
+      "connections": [
+        { "pin": { "fr": "+", "en": "+" }, "to": "PIN", "short": "+" },
+        { "pin": { "fr": "−", "en": "−" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "servo": {
+      "name": { "fr": "Servomoteur", "en": "Servo motor" },
+      "current": 250,
+      "connections": [
+        { "pin": { "fr": "fil orange (signal)", "en": "orange wire (signal)" }, "to": "PIN", "short": "S" },
+        { "pin": { "fr": "fil rouge (+)", "en": "red wire (+)" }, "to": "5V", "short": "+" },
+        { "pin": { "fr": "fil marron (−)", "en": "brown wire (−)" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "dc_motor": {
+      "name": { "fr": "Moteur à courant continu (pont en H L298N)", "en": "DC motor (L298N H-bridge)" },
+      "current": 0,
+      "connections": [
+        { "pin": { "fr": "ENA", "en": "ENA" }, "to": "EN_PIN" },
+        { "pin": { "fr": "IN1", "en": "IN1" }, "to": "IN1_PIN" },
+        { "pin": { "fr": "IN2", "en": "IN2" }, "to": "IN2_PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ],
+      "note": { "fr": "Le moteur se branche sur OUT1 et OUT2, et le pont a sa propre pile (bornier +12V et GND).", "en": "The motor goes on OUT1 and OUT2, and the bridge has its own battery (+12V and GND terminal)." }
+    },
+    "rgb_led": {
+      "name": { "fr": "LED RGB (cathode commune)", "en": "RGB LED (common cathode)" },
+      "current": 60,
+      "connections": [
+        { "pin": { "fr": "R (rouge)", "en": "R (red)" }, "to": "RED_PIN", "via": { "fr": "résistance 220 Ω", "en": "220 Ω resistor" }, "short": "R" },
+        { "pin": { "fr": "G (vert)", "en": "G (green)" }, "to": "GREEN_PIN", "via": { "fr": "résistance 220 Ω", "en": "220 Ω resistor" }, "short": "G" },
+        { "pin": { "fr": "B (bleu)", "en": "B (blue)" }, "to": "BLUE_PIN", "via": { "fr": "résistance 220 Ω", "en": "220 Ω resistor" }, "short": "B" },
+        { "pin": { "fr": "− (la plus longue)", "en": "− (the longest)" }, "to": "GND", "short": "−" }
+      ]
+    },
+    "neopixel": {
+      "name": { "fr": "Ruban de LED NeoPixel", "en": "NeoPixel LED strip" },
+      "current": 300,
+      "connections": [
+        { "pin": { "fr": "DIN", "en": "DIN" }, "to": "PIN" },
+        { "pin": { "fr": "5V", "en": "5V" }, "to": "5V" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ]
+    },
+    "matrix": {
+      "name": { "fr": "Matrice de LED MAX7219", "en": "MAX7219 LED matrix" },
+      "current": 150,
+      "connections": [
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "DIN", "en": "DIN" }, "to": "DIN_PIN" },
+        { "pin": { "fr": "CS", "en": "CS" }, "to": "CS_PIN" },
+        { "pin": { "fr": "CLK", "en": "CLK" }, "to": "CLK_PIN" }
+      ]
+    },
+    "lcd_i2c": {
+      "name": { "fr": "Écran LCD 16×2 I2C", "en": "16×2 I2C LCD screen" },
+      "current": 30,
+      "connections": [
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "SDA", "en": "SDA" }, "to": "SDA" },
+        { "pin": { "fr": "SCL", "en": "SCL" }, "to": "SCL" }
+      ]
+    },
+    "oled": {
+      "name": { "fr": "Écran OLED SSD1306 I2C", "en": "SSD1306 I2C OLED screen" },
+      "current": 20,
+      "connections": [
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "VCC" },
+        { "pin": { "fr": "SCL", "en": "SCL" }, "to": "SCL" },
+        { "pin": { "fr": "SDA", "en": "SDA" }, "to": "SDA" }
+      ]
+    },
+    "lcd16": {
+      "name": { "fr": "Écran LCD 16×2 à 16 broches", "en": "16×2 LCD screen with 16 pins" },
+      "current": 30,
+      "connections": [
+        { "pin": { "fr": "VSS (1)", "en": "VSS (1)" }, "to": "GND", "short": "VSS" },
+        { "pin": { "fr": "VDD (2)", "en": "VDD (2)" }, "to": "5V", "short": "VDD" },
+        { "pin": { "fr": "V0 (3)", "en": "V0 (3)" }, "to": "GND", "via": { "fr": "potentiomètre 10 kΩ (patte du milieu ; les autres sur 5V et GND)", "en": "10 kΩ potentiometer (middle leg; the others on 5V and GND)" }, "short": "V0" },
+        { "pin": { "fr": "RS (4)", "en": "RS (4)" }, "to": "RS_PIN", "short": "RS" },
+        { "pin": { "fr": "RW (5)", "en": "RW (5)" }, "to": "GND", "short": "RW" },
+        { "pin": { "fr": "E (6)", "en": "E (6)" }, "to": "E_PIN", "short": "E" },
+        { "pin": { "fr": "D4 (11)", "en": "D4 (11)" }, "to": "D4_PIN", "short": "D4" },
+        { "pin": { "fr": "D5 (12)", "en": "D5 (12)" }, "to": "D5_PIN", "short": "D5" },
+        { "pin": { "fr": "D6 (13)", "en": "D6 (13)" }, "to": "D6_PIN", "short": "D6" },
+        { "pin": { "fr": "D7 (14)", "en": "D7 (14)" }, "to": "D7_PIN", "short": "D7" },
+        { "pin": { "fr": "A (15, rétroéclairage +)", "en": "A (15, backlight +)" }, "to": "5V", "via": { "fr": "résistance 220 Ω", "en": "220 Ω resistor" }, "short": "A" },
+        { "pin": { "fr": "K (16, rétroéclairage −)", "en": "K (16, backlight −)" }, "to": "GND", "short": "K" }
+      ]
+    }
+  }
+}

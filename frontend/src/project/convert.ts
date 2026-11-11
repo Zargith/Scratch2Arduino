@@ -4,7 +4,13 @@
 import { findBlock, shadowInputs, type CatalogBlock } from "@/catalog";
 
 export const FORMAT_NAME = "scratch2arduino-project";
+/** Version of block projects (read by every Scratch2Arduino version). */
 export const FORMAT_VERSION = 1;
+/** Version of projects written as text (see core/include/s2a/project.hpp, kFormatVersion). */
+export const TEXT_FORMAT_VERSION = 2;
+
+/** How the program of a project is written (core project::ProgramLanguage). */
+export type ProgramLanguage = "blocks" | "cpp" | "python" | "javascript";
 
 export interface ProjectInput {
 	value?: string;
@@ -45,6 +51,32 @@ export interface Project {
 	/** Left out when the project has none (as the C++ core writes it). */
 	functions?: ProjectFunction[];
 	scripts: ProjectScript[];
+	/** Left out for blocks. A text project keeps its blocks beside the code. */
+	language?: ProgramLanguage;
+	/** The program of a text project. */
+	code?: string;
+	/** The user's own code file ("My code"), used with the blocks. */
+	userCode?: UserCode;
+}
+
+/** The "My code" file of a block project (core project::UserCode). */
+export interface UserCode {
+	language: Exclude<ProgramLanguage, "blocks">;
+	code: string;
+}
+
+/** The project with (or without) a "My code" file: format 2 when it has one. */
+export function withUserCode(project: Project, userCode: UserCode | null): Project {
+	const { userCode: _userCode, ...rest } = project;
+	if (!userCode) return rest.language && rest.language !== "blocks" ? rest : { ...rest, formatVersion: FORMAT_VERSION };
+	return { ...rest, formatVersion: TEXT_FORMAT_VERSION, userCode };
+}
+
+/** The project with its program written as `language` (a block project when "blocks"). */
+export function withProgram(project: Project, language: ProgramLanguage, code: string): Project {
+	const { language: _language, code: _code, ...rest } = project;
+	if (language === "blocks") return { ...rest, formatVersion: rest.userCode ? TEXT_FORMAT_VERSION : FORMAT_VERSION };
+	return { ...rest, formatVersion: TEXT_FORMAT_VERSION, language, code };
 }
 
 /** Type of the Blockly variables that stand for functions (see blocks/definitions.ts). */
@@ -62,6 +94,8 @@ export interface BlockState {
 	fields?: Record<string, FieldState>;
 	inputs?: Record<string, { shadow?: BlockState; block?: BlockState }>;
 	next?: { block?: BlockState };
+	/** "My code" call and result blocks: the function and its number of slots. */
+	extraState?: unknown;
 }
 
 export interface WorkspaceState {
@@ -150,12 +184,18 @@ function toBlockState(block: ProjectBlock): BlockState {
 		const kind = definition?.args?.find((arg) => arg.name === name)?.kind;
 		fields[name] = kind === "variable" || kind === "function" ? { id: value } : value;
 	}
+	// "My code" calls have only the slots of their function's parameters (ARG1..ARGn).
+	const myCodeCall = block.type === "mycode_call" || block.type === "mycode_value";
+	const params = myCodeCall ? Object.keys(block.inputs ?? {}).filter((name) => /^ARG\d+$/.test(name)).length : 0;
+	if (myCodeCall) state.extraState = { name: block.fields?.NAME ?? "", params };
 	if (definition) {
 		for (const [name, { shadow }] of Object.entries(shadowInputs(definition))) {
+			if (myCodeCall && /^ARG\d+$/.test(name) && Number(name.slice(3)) > params) continue;
 			inputs[name] = { shadow: structuredClone(shadow) as unknown as BlockState };
 		}
 	}
 	for (const [name, input] of Object.entries(block.inputs ?? {})) {
+		if (!definition?.args?.some((arg) => arg.name === name)) continue; // a slot this version does not have
 		const target = (inputs[name] ??= {});
 		const shadowFields = target.shadow?.fields;
 		if (input.value !== undefined && shadowFields) {

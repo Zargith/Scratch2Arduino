@@ -13,6 +13,7 @@
     {
       "type": "sound_play_tone",
       "shape": "statement",
+      "component": "buzzer",
       "message": {
         "fr": "jouer %2 Hz pendant %3 secondes sur le buzzer de la broche %1",
         "en": "play %2 Hz for %3 seconds on the buzzer of pin %1"
@@ -46,6 +47,7 @@
     {
       "type": "sound_start_tone",
       "shape": "statement",
+      "component": "buzzer",
       "message": {
         "fr": "faire sonner le buzzer de la broche %1 à %2 Hz",
         "en": "start the buzzer of pin %1 at %2 Hz"
@@ -73,6 +75,7 @@
     {
       "type": "sound_stop",
       "shape": "statement",
+      "component": "buzzer",
       "message": {
         "fr": "arrêter le buzzer de la broche %1",
         "en": "stop the buzzer of pin %1"

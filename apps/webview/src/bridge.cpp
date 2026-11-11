@@ -1,19 +1,24 @@
 // Core headers first: webview.h (via bridge.hpp) brings X11 macros on Linux.
 #include "s2a/arduino_cli.hpp"
+#include "s2a/boards.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
+#include "s2a/usercode.hpp"
 #include "s2a/version.hpp"
+#include "s2a/wiring.hpp"
 
 #include "bridge.hpp"
 
 #include <cctype>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <optional>
+#include <string_view>
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
@@ -48,6 +53,30 @@ project::Project projectArg(const Json& args, std::size_t index, Language langua
         throw UserError{tr(errorMessageKey(parsed.error().code), language) + " (" + parsed.error().detail + ")"};
     }
     return std::move(parsed).value();
+}
+
+/// Bytes of a base64 text (a "data:...;base64," prefix is skipped); invalid characters are ignored.
+std::string base64Decode(std::string_view text) {
+    if (const auto comma = text.find(','); text.substr(0, 5) == "data:" && comma != std::string_view::npos) {
+        text.remove_prefix(comma + 1);
+    }
+    static constexpr std::string_view kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string bytes;
+    unsigned int buffer = 0;
+    int bits = 0;
+    for (const char c : text) {
+        const auto value = kAlphabet.find(c);
+        if (value == std::string_view::npos) {
+            continue; // padding, line breaks
+        }
+        buffer = (buffer << 6) | static_cast<unsigned int>(value);
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            bytes.push_back(static_cast<char>((buffer >> bits) & 0xFF));
+        }
+    }
+    return bytes;
 }
 
 std::string stringArg(const Json& args, std::size_t index) {
@@ -85,7 +114,13 @@ toolchain::ArduinoCli arduinoCli(Language language) {
 }
 
 std::string outcomeJson(const toolchain::BuildResult& result) {
+    Json problems = Json::array();
+    for (const toolchain::CodeProblem& problem : result.problems) {
+        problems.push_back(
+            {{"line", problem.line}, {"column", problem.column}, {"message", problem.message}, {"file", problem.file}});
+    }
     return Json{{"ok", result.ok},
+                {"problems", std::move(problems)},
                 {"message", result.message},
                 {"details", result.details},
                 {"blockIds", result.blockIds},
@@ -202,6 +237,95 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
                 return Json(codegen::generate(project).source).dump();
+            });
+        },
+        nullptr);
+
+    // Functions and variables of a "My code" file, for its palette category: (language, code).
+    // Quick and never failing: called each time the user goes back to the blocks.
+    window_.bind("s2a_code_declarations", [](const std::string& request) {
+        const Json args = Json::parse(request);
+        const auto language = project::programLanguageFromId(stringArg(args, 0));
+        Json list = Json::array();
+        if (!language) {
+            return list.dump();
+        }
+        for (const auto& declaration : usercode::declarations(*language, stringArg(args, 1))) {
+            list.push_back({{"kind", declaration.kind == usercode::Declaration::Kind::Function ? "function" : "variable"},
+                            {"name", declaration.name},
+                            {"parameters", declaration.parameters},
+                            {"returnsValue", declaration.returnsValue},
+                            {"readOnly", declaration.readOnly},
+                            {"line", declaration.line}});
+        }
+        return list.dump();
+    });
+
+    // Wiring of the project (components, connections, warnings), from its blocks.
+    window_.bind(
+        "s2a_wiring",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 1, language_);
+                const project::Project project = projectArg(args, 0, language);
+                const wiring::Plan plan = wiring::plan(project, language);
+                const Board* board = BoardDatabase::builtin().find(project.boardId);
+                Json components = Json::array();
+                for (const auto& component : plan.components) {
+                    Json connections = Json::array();
+                    for (const auto& connection : component.connections) {
+                        connections.push_back({{"componentPin", connection.componentPin},
+                                               {"boardPin", connection.boardPin},
+                                               {"via", connection.via}});
+                    }
+                    components.push_back({{"kind", component.kind},
+                                          {"name", component.name},
+                                          {"connections", connections},
+                                          {"note", component.note},
+                                          {"blockIds", component.blockIds}});
+                }
+                Json warnings = Json::array();
+                for (const auto& warning : plan.warnings) {
+                    warnings.push_back({{"message", warning.message}, {"blockIds", warning.blockIds}});
+                }
+                Json result{{"components", components}, {"warnings", warnings}};
+                if (board != nullptr) {
+                    result["svg"] = wiring::svg(plan, *board, project.name + " — " + board->name);
+                }
+                return result.dump();
+            });
+        },
+        nullptr);
+
+    // A picture made by the editor (the wiring diagram as PNG), saved where the user chooses.
+    window_.bind(
+        "s2a_save_image",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() -> std::string {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 2, language_);
+                const std::string name = stringArg(args, 0);
+                const std::string data = base64Decode(stringArg(args, 1));
+                const fs::path suggestion =
+                    projectsDirectory() / (codegen::identifier(name.empty() ? "schema" : name) + ".png");
+                const std::string chosen = pfd::save_file(tr("webview.image_title", language), suggestion.u8string(),
+                                                          {tr("webview.image_filter", language), "*.png"},
+                                                          pfd::opt::force_overwrite)
+                                               .result();
+                if (chosen.empty()) {
+                    return "null";
+                }
+                fs::path file = fs::u8path(chosen);
+                if (file.extension() != ".png") {
+                    file += ".png";
+                }
+                std::ofstream out(file, std::ios::binary);
+                out << data;
+                if (!out) {
+                    throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
+                }
+                return Json(file.u8string()).dump();
             });
         },
         nullptr);
@@ -583,7 +707,9 @@ void Bridge::bind() {
                     {"variables", snapshot.variables},
                     {"readings", snapshot.readings},
                     {"output", snapshot.output},
-                    {"outputCount", snapshot.outputCount}}
+                    {"outputCount", snapshot.outputCount},
+                    {"line", snapshot.errorLine},
+                    {"file", snapshot.errorFile}}
             .dump();
     });
 

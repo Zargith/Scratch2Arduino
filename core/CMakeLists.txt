@@ -16,9 +16,15 @@ add_library(s2a_core STATIC
     src/i18n.cpp
     src/process.cpp
     src/project.cpp
+    src/script.cpp
+    src/usercode.cpp
+    src/script_javascript.cpp
+    src/script_python.cpp
     src/resources.cpp
     src/result.cpp
     src/network.cpp
+    src/wiring.cpp
+    src/wiring_svg.cpp
     src/serial.cpp
     src/userdata.cpp
 )
@@ -29,7 +35,7 @@ target_include_directories(s2a_core PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
 )
 target_compile_features(s2a_core PUBLIC cxx_std_17)
-target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++)
+target_link_libraries(s2a_core PRIVATE nlohmann_json::nlohmann_json s2a_miniz reproc++ s2a_pocketpy qjs)
 if(WIN32)
     target_link_libraries(s2a_core PRIVATE ws2_32 Bthprops) # Wi-Fi and Bluetooth connections to the boards (network.cpp)
 endif()
@@ -39,6 +45,7 @@ s2a_set_warnings(s2a_core)
 file(GLOB S2A_CORE_RESOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/resources/i18n/*.json"
     "${PROJECT_SOURCE_DIR}/resources/boards/*.json"
+    "${PROJECT_SOURCE_DIR}/resources/components.json"
     "${PROJECT_SOURCE_DIR}/blocks/catalog/*.json"
     "${PROJECT_SOURCE_DIR}/firmware/s2a_live/s2a_live.ino"
 )

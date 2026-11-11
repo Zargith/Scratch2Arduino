@@ -7,6 +7,7 @@ import {
 	Code,
 	Group,
 	Loader,
+	LoadingOverlay,
 	Menu,
 	Modal,
 	ScrollArea,
@@ -16,7 +17,6 @@ import {
 	Stack,
 	Text,
 	TextInput,
-	Title,
 	Tooltip,
 } from "@mantine/core";
 import {
@@ -26,15 +26,18 @@ import {
 	IconDeviceFloppy,
 	IconFilePlus,
 	IconFolderOpen,
+	IconHelp,
 	IconHistory,
 	IconPlayerPlay,
 	IconPlayerStop,
 	IconPlugConnected,
 	IconRefresh,
+	IconSchool,
 	IconTerminal2,
 	IconUpload,
 	IconWifi,
 } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -49,25 +52,43 @@ import {
 	type RecentProject,
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
+import type { UserDeclaration } from "@/blocks/definitions";
+import { CodeView, type CodeTab } from "@/CodeView";
 import { Editor, type EditorHandle } from "@/Editor";
-import { exampleProject, type Example } from "@/examples";
-import { Gallery, Wiring } from "@/Gallery";
+import { type DocPath, docsHome, tutorialFor } from "@/docs";
+import { exampleProject, examples, type Example } from "@/examples";
+import { Gallery } from "@/Gallery";
 import { Library } from "@/Library";
+import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
 import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberBoard, rememberedBoards } from "@/bluetooth";
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
+import { Tutorials } from "@/Tutorials";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
+import {
+	isScript,
+	isStarterCode,
+	isStarterUserCode,
+	programNames,
+	starterCode,
+	starterUserCode,
+	type CodeProblem,
+} from "@/program";
 import { detectLanguage, translate, type MessageKey } from "@/i18n";
 import {
 	emptyProject,
 	projectToWorkspace,
 	unknownBlockTypes,
+	withProgram,
+	withUserCode,
 	workspaceToProject,
+	type ProgramLanguage,
 	type Project,
+	type UserCode,
 	type WorkspaceState,
 } from "@/project/convert";
 
@@ -82,6 +103,10 @@ interface Status {
 	message: string;
 	details?: string;
 }
+
+/** Name of a text language in messages ("C++", "Python"...). */
+const programName = (program: ProgramLanguage, blocks: string): string =>
+	program === "blocks" ? blocks : programNames[program];
 
 const starterProject = (name: string): Project => ({
 	...emptyProject(name, defaultBoardId),
@@ -105,8 +130,33 @@ export function App() {
 	const initialState = useRef<WorkspaceState>(projectToWorkspace(starterProject("")));
 	const initialValues = useRef<Record<string, number>>({});
 
+	/** Blocks view, or code view (the code of the blocks and "My code"). */
+	const [view, setView] = useState<"blocks" | "code">("blocks");
+	const [codeTab, setCodeTab] = useState<CodeTab>("blocks");
+	/** Shown over the window while a view is prepared ("Converting the blocks to code…"). */
+	const [loading, setLoading] = useState<string | null>(null);
+	/** The code of the blocks, for the code view. */
+	const [blocksCode, setBlocksCode] = useState("");
+	/** "My code": a state for its language, a ref for its text (the editor reports every key). */
+	const [userCode, setUserCode] = useState<UserCode | null>(null);
+	const userCodeRef = useRef<UserCode | null>(null);
+	/** Its functions and variables, as blocks of the "My code" category. */
+	const [declarations, setDeclarations] = useState<UserDeclaration[]>([]);
+	/** Mistakes of the last Check, Upload or Live: in "My code", and in an expert program. */
+	const [userProblems, setUserProblems] = useState<CodeProblem[]>([]);
+	const [programProblems, setProgramProblems] = useState<CodeProblem[]>([]);
+	/** Language of the program: blocks, or code typed in the code editor (expert mode). */
+	const [program, setProgram] = useState<ProgramLanguage>("blocks");
+	/** The code of a text program: a ref, not a state, as the code editor reports every key. */
+	const codeRef = useRef("");
+	/** True once the user typed in the code: switching language then asks before replacing it. */
+	const codeEdited = useRef(false);
+	const [helpShown, setHelpShown] = useState(false);
+
 	const [name, setName] = useState(() => translate(detectLanguage(), "project.untitled"));
 	const [boardId, setBoardId] = useState(defaultBoardId);
+	/** Narrow window: the Live, Check and Upload buttons show only their icon so that nothing overflows. */
+	const compact = useMediaQuery("(max-width: 1600px)") ?? false;
 	const [path, setPath] = useState("");
 	const [dirty, setDirty] = useState(false);
 	const [ports, setPorts] = useState<Port[]>([]);
@@ -119,7 +169,6 @@ export function App() {
 	const [bluetoothShown, setBluetoothShown] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<Status | null>(null);
-	const [code, setCode] = useState<string | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
@@ -128,6 +177,8 @@ export function App() {
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
 	const [galleryShown, setGalleryShown] = useState(false);
+	/** Page of the Tutorials panel, null when it is closed. */
+	const [tutorialPage, setTutorialPage] = useState<DocPath | null>(null);
 	/** The example being edited: its wiring diagram stays one click away. */
 	const [example, setExample] = useState<Example | null>(null);
 	const [wiringShown, setWiringShown] = useState(false);
@@ -154,7 +205,8 @@ export function App() {
 		autosaving.current = autosaving.current.then(() => bridge.autosaveClear()).catch(() => undefined);
 	}, []);
 
-	const currentProject = useCallback(
+	/** The blocks of the project (still kept while the program is written as text). */
+	const currentBlocks = useCallback(
 		(): Project =>
 			workspaceToProject(editor.current?.save() ?? initialState.current, {
 				name,
@@ -163,6 +215,33 @@ export function App() {
 			}),
 		[name, boardId]
 	);
+
+	const currentProject = useCallback(
+		(): Project => withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current),
+		[currentBlocks, program]
+	);
+
+	/** Shows the program of an opened project: its blocks, and its code when written as text. */
+	const loadProgram = useCallback((project: Project) => {
+		const language = project.language ?? "blocks";
+		setProgram(language);
+		codeRef.current = language === "blocks" ? "" : (project.code ?? "");
+		codeEdited.current = language !== "blocks";
+		userCodeRef.current = project.userCode ? { ...project.userCode } : null;
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		setProgramProblems([]);
+		setView(language === "blocks" ? "blocks" : "code");
+		setCodeTab("blocks");
+		setDeclarations([]);
+		const found = project.userCode;
+		if (found && hasHost()) {
+			bridge
+				.codeDeclarations(found.language, found.code)
+				.then(setDeclarations)
+				.catch(() => setDeclarations([]));
+		}
+	}, []);
 
 	const fail = useCallback(
 		(error: unknown) => {
@@ -246,6 +325,7 @@ export function App() {
 		setStatus(null);
 		setExample(null);
 		forgetAutosave();
+		loadProgram(starterProject(untitled));
 		reload(projectToWorkspace(starterProject(untitled)));
 	};
 
@@ -267,6 +347,7 @@ export function App() {
 			setPath(opened.path);
 			setDirty(false);
 			setExample(null);
+			loadProgram(opened.project);
 			reload(projectToWorkspace(opened.project));
 			const unknown = unknownBlockTypes(opened.project);
 			forgetAutosave();
@@ -297,11 +378,17 @@ export function App() {
 			.then(() => bridge.startupProject(language))
 			.then((opened) => {
 				if (opened) showOpenedRef.current(opened);
+				return Boolean(opened);
 			})
-			.catch(fail)
-			.then(() => found)
-			.then((saved) => {
+			.catch((error: unknown) => {
+				fail(error);
+				return true;
+			})
+			.then(async (projectGiven) => {
+				const saved = await found;
 				if (saved) setRestore(saved);
+				// First start (no project given, nothing to recover, no recent project): the tutorials.
+				else if (!projectGiven && (await bridge.recent().catch(() => null))?.length === 0) setTutorialPage(docsHome);
 			});
 		// Once, when the editor starts.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -439,6 +526,7 @@ export function App() {
 		setPath(restore.path);
 		setExample(null);
 		markDirty(); // still to be saved: the copy stays until then
+		loadProgram(project);
 		reload(projectToWorkspace(project));
 		setStatus({ kind: "success", message: t("status.restored", { name: project.name }) });
 	};
@@ -448,15 +536,133 @@ export function App() {
 		if (!dirty) forgetAutosave();
 	};
 
-	const showCode = async () => {
+	/** Lets the overlay be painted before a long synchronous step (Blockly building the blocks). */
+	const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+	/** Code view: the code of the blocks is made again, the blocks are kept aside. */
+	const showCodeView = async (tab?: CodeTab) => {
+		if (tab) setCodeTab(tab);
+		if (view === "code") return;
+		setLoading(t("view.loading_code"));
 		try {
-			setCode(await bridge.generate(currentProject()));
-		} catch (error) {
-			fail(error);
+			await nextFrame();
+			initialState.current = editor.current?.save() ?? initialState.current;
+			let made = "";
+			if (hasHost()) {
+				try {
+					made = await bridge.generate(currentBlocks());
+				} catch (error) {
+					fail(error);
+				}
+			}
+			setBlocksCode(made);
+			setView("code");
+		} finally {
+			setLoading(null);
 		}
 	};
 
+	/** Blocks view: "My code" is read again for its palette category, then the blocks are built. */
+	const showBlocksView = async () => {
+		if (view === "blocks" || program !== "blocks") return;
+		setLoading(t("view.loading_blocks"));
+		try {
+			const mine = userCodeRef.current;
+			if (mine && hasHost()) {
+				setDeclarations(await bridge.codeDeclarations(mine.language, mine.code).catch(() => []));
+			} else {
+				setDeclarations([]);
+			}
+			await nextFrame();
+			setView("blocks");
+			await nextFrame(); // the blocks are built while the overlay is shown
+		} finally {
+			setLoading(null);
+		}
+	};
+
+	/** Creates, switches or deletes "My code"; typed code is only lost after a confirmation. */
+	const changeUserLanguage = (next: Exclude<ProgramLanguage, "blocks"> | null) => {
+		const current = userCodeRef.current;
+		if (current && next === current.language) return;
+		const typed = current !== null && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		if (next === null) {
+			if (!window.confirm(t("code.confirm_remove"))) return;
+		} else if (
+			current &&
+			typed &&
+			!window.confirm(t("code.confirm_language", { from: programNames[current.language], to: programNames[next] }))
+		) {
+			return;
+		}
+		userCodeRef.current = next === null ? null : { language: next, code: starterUserCode(next, language) };
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		markDirty();
+	};
+
+	/**
+	 * Writes the program in another language. The blocks are always kept; typed code is only
+	 * replaced or deleted after the user said yes.
+	 */
+	const switchProgram = async (next: ProgramLanguage) => {
+		if (next === program || live) return;
+		setProgramProblems([]);
+		const typed = codeEdited.current && !isStarterCode(codeRef.current);
+		const blocksName = t("program.blocks");
+		if (next === "blocks") {
+			if (typed && !window.confirm(t("program.confirm_blocks", { language: programName(program, blocksName) }))) return;
+			codeRef.current = "";
+			setProgram("blocks");
+			markDirty();
+			setStatus({ kind: "info", message: t("status.program_blocks") });
+			return;
+		}
+		if (
+			program !== "blocks" &&
+			typed &&
+			!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))
+		)
+			return;
+		if (program === "blocks") initialState.current = editor.current?.save() ?? initialState.current;
+		setView("code");
+		let start = starterCode(next, language);
+		let fromBlocks = false;
+		// C++: the blocks already are a program; their code is the best starting point.
+		if (next === "cpp" && hasHost()) {
+			try {
+				start = await bridge.generate(currentBlocks());
+				fromBlocks = true;
+			} catch {
+				// keep the example
+			}
+		}
+		codeRef.current = start;
+		codeEdited.current = false;
+		setProgram(next);
+		markDirty();
+		setStatus({
+			kind: "info",
+			message:
+				next === "cpp"
+					? t(fromBlocks ? "status.program_cpp_from_blocks" : "status.program_cpp")
+					: t("status.program_script", { language: programNames[next] }),
+		});
+	};
+
+	/** Marks the faulty lines (after Check, Upload or Live): in "My code" or in the expert program. */
+	const showProblems = (problems: CodeProblem[] | undefined) => {
+		const all = problems ?? [];
+		setUserProblems(all.filter((problem) => problem.file === "user"));
+		setProgramProblems(all.filter((problem) => problem.file !== "user"));
+		if (all.some((problem) => problem.file === "user") && view === "code") setCodeTab("mine");
+	};
+
 	const run = async (kind: "build" | "upload") => {
+		if (kind === "upload" && isScript(program)) {
+			setStatus({ kind: "info", message: t("status.upload_script", { language: programName(program, "") }) });
+			return;
+		}
 		if (kind === "upload" && !port) {
 			setStatus({ kind: "info", message: t("status.no_port") });
 			return;
@@ -473,7 +679,8 @@ export function App() {
 				message: warning ? `${outcome.message} ⚠ ${warning}` : outcome.message,
 				details: outcome.details,
 			});
-			editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
+			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
+			showProblems(outcome.problems);
 		} catch (error) {
 			fail(error);
 		} finally {
@@ -488,10 +695,15 @@ export function App() {
 			editor.current?.showRunning([]);
 			return;
 		}
+		if (program === "cpp") {
+			setStatus({ kind: "info", message: t("status.live_cpp") });
+			return;
+		}
 		if (!port) {
 			setStatus({ kind: "info", message: t("status.no_port") });
 			return;
 		}
+		showProblems([]);
 		try {
 			const started = await bridge.liveStart(currentProject(), port, language);
 			if (!started.ok) {
@@ -529,6 +741,7 @@ export function App() {
 					if (snapshot.state === "failed") {
 						setStatus({ kind: "error", message: snapshot.message ?? "", details: snapshot.details });
 						editor.current?.highlight(snapshot.problems ?? []);
+						if (snapshot.line) showProblems([{ line: snapshot.line, message: snapshot.message ?? "", file: snapshot.file }]);
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
@@ -540,6 +753,9 @@ export function App() {
 		}, 200);
 		return () => clearInterval(timer);
 	}, [live, fail]);
+
+	/** The language the help window explains: the expert program, or "My code". */
+	const helpLanguage: ProgramLanguage = program !== "blocks" ? program : (userCode?.language ?? "cpp");
 
 	const liveRows = [
 		...Object.entries(liveSnapshot?.variables ?? {}).map(([id, value]) => ({
@@ -558,10 +774,8 @@ export function App() {
 		<AppShell header={{ height: 64 }} padding={0}>
 			<AppShell.Header px="md">
 				<Group h="100%" gap="sm" wrap="nowrap">
-					<img src={logo} alt="" width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
-					<Title order={4} visibleFrom="xl" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "nowrap" }}>
-						{t("app.title")}
-					</Title>
+					{/* The name of the tool is in the window title: the logo is enough here. */}
+					<img src={logo} alt={t("app.title")} width={36} height={36} style={{ borderRadius: 6, flexShrink: 0 }} />
 					<TextInput
 						aria-label={t("project.name")}
 						value={name}
@@ -569,11 +783,11 @@ export function App() {
 							setName(event.currentTarget.value);
 							markDirty();
 						}}
-						miw={120}
+						miw={80}
 						maw={200}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 80 }}
 					/>
-					<ActionIcon.Group>
+					<ActionIcon.Group style={{ flexShrink: 0 }}>
 						<Tooltip label={t("toolbar.new")}>
 							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.new")} onClick={() => setGalleryShown(true)}>
 								<IconFilePlus size={18} />
@@ -613,6 +827,15 @@ export function App() {
 							</ActionIcon>
 						</Tooltip>
 					</ActionIcon.Group>
+					<SegmentedControl
+						aria-label={t("view.label")}
+						data={[
+							{ value: "blocks", label: t("view.blocks"), disabled: program !== "blocks" || live },
+							{ value: "code", label: t("view.code"), disabled: live },
+						]}
+						value={view}
+						onChange={(value) => void (value === "code" ? showCodeView() : showBlocksView())}
+					/>
 					<Select
 						aria-label={t("board.label")}
 						data={boards.map((board) => ({ value: board.id, label: board.name }))}
@@ -624,9 +847,9 @@ export function App() {
 							}
 						}}
 						allowDeselect={false}
-						miw={130}
+						miw={100}
 						maw={190}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 100 }}
 					/>
 					<Select
 						aria-label={t("port.label")}
@@ -641,9 +864,9 @@ export function App() {
 						].map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
-						miw={130}
+						miw={100}
 						maw={240}
-						style={{ flex: 1 }}
+						style={{ flex: 1, minWidth: 100 }}
 					/>
 					<Tooltip label={t("port.refresh")}>
 						<ActionIcon variant="default" size="lg" aria-label={t("port.refresh")} onClick={() => void refreshPorts()}>
@@ -651,6 +874,17 @@ export function App() {
 						</ActionIcon>
 					</Tooltip>
 					<Group gap="xs" ml="auto" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<Tooltip label={t("toolbar.tutorials")}>
+							<ActionIcon
+								variant={tutorialPage !== null ? "filled" : "default"}
+								size="lg"
+								aria-label={t("toolbar.tutorials")}
+								aria-pressed={tutorialPage !== null}
+								onClick={() => setTutorialPage((page) => (page === null ? docsHome : null))}
+							>
+								<IconSchool size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("monitor.toggle")}>
 							<ActionIcon
 								variant={monitorShown ? "filled" : "default"}
@@ -681,32 +915,70 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						{example && (
-							<Tooltip label={t("toolbar.wiring")}>
-								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
-									<IconPlugConnected size={18} />
+						{view === "blocks" ? (
+							<>
+								<Tooltip label={t("toolbar.wiring")}>
+									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
+										<IconPlugConnected size={18} />
+									</ActionIcon>
+								</Tooltip>
+								<Tooltip label={t("toolbar.code")}>
+									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCodeView("blocks")}>
+										<IconCode size={18} />
+									</ActionIcon>
+								</Tooltip>
+							</>
+						) : (
+							<Tooltip label={t("program.help")}>
+								<ActionIcon variant="default" size="lg" aria-label={t("program.help")} onClick={() => setHelpShown(true)}>
+									<IconHelp size={18} />
 								</ActionIcon>
 							</Tooltip>
 						)}
-						<Tooltip label={t("toolbar.code")}>
-							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCode()}>
-								<IconCode size={18} />
-							</ActionIcon>
+						{/* On a narrow window these three buttons keep only their icon (the name in a tooltip). */}
+						<Tooltip label={t(live ? "toolbar.stop_live" : "toolbar.live")} disabled={!compact}>
+							<Button
+								color={live ? "pink" : "blue"}
+								variant={live ? "filled" : "light"}
+								leftSection={compact ? undefined : live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />}
+								aria-label={t(live ? "toolbar.stop_live" : "toolbar.live")}
+								px={compact ? "xs" : undefined}
+								disabled={program === "cpp"}
+								onClick={() => void toggleLive()}
+							>
+								{compact ? (
+									live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />
+								) : (
+									t(live ? "toolbar.stop_live" : "toolbar.live")
+								)}
+							</Button>
 						</Tooltip>
-						<Button
-							color={live ? "pink" : "blue"}
-							variant={live ? "filled" : "light"}
-							leftSection={live ? <IconPlayerStop size={18} /> : <IconPlayerPlay size={18} />}
-							onClick={() => void toggleLive()}
-						>
-							{t(live ? "toolbar.stop_live" : "toolbar.live")}
-						</Button>
-						<Button color="green" leftSection={<IconCheck size={18} />} loading={busy} disabled={live} onClick={() => void run("build")}>
-							{t("toolbar.build")}
-						</Button>
-						<Button color="orange" leftSection={<IconUpload size={18} />} loading={busy} disabled={live} onClick={() => void run("upload")}>
-							{t("toolbar.upload")}
-						</Button>
+						<Tooltip label={t("toolbar.build")} disabled={!compact}>
+							<Button
+								color="green"
+								leftSection={compact ? undefined : <IconCheck size={18} />}
+								aria-label={t("toolbar.build")}
+								px={compact ? "xs" : undefined}
+								loading={busy}
+								disabled={live}
+								onClick={() => void run("build")}
+							>
+								{compact ? <IconCheck size={18} /> : t("toolbar.build")}
+							</Button>
+						</Tooltip>
+						<Tooltip label={t("toolbar.upload")} disabled={!compact}>
+							<Button
+								color="orange"
+								leftSection={compact ? undefined : <IconUpload size={18} />}
+								aria-label={t("toolbar.upload")}
+								px={compact ? "xs" : undefined}
+								loading={busy}
+								disabled={live || isScript(program)}
+								onClick={() => void run("upload")}
+							>
+								{compact ? <IconUpload size={18} /> : t("toolbar.upload")}
+							</Button>
+						</Tooltip>
 						<SegmentedControl
 							aria-label={t("language.label")}
 							data={[
@@ -721,32 +993,93 @@ export function App() {
 			</AppShell.Header>
 
 			<AppShell.Main style={{ position: "relative", height: "100dvh" }}>
+				<LoadingOverlay
+					visible={loading !== null}
+					zIndex={300}
+					overlayProps={{ blur: 1 }}
+					loaderProps={{
+						children: (
+							<Stack align="center" gap="sm">
+								<Loader />
+								<Text fw={600}>{loading}</Text>
+							</Stack>
+						),
+					}}
+				/>
 				<div style={{ position: "absolute", inset: "64px 0 0 0" }}>
-					<Editor
-						key={editorKey}
-						ref={editor}
-						language={language}
-						board={findBoard(boardId)}
-						initialState={initialState.current}
-						library={library}
-						onSaveGroup={(blocks, groupName) => void saveGroup(blocks, groupName)}
-						onManageLibrary={() => setLibraryShown(true)}
-						onLoadError={(lost) =>
-							setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
-						}
-						onChange={() => {
-							markDirty();
-							if (!live) return;
-							// Live mode: send the new blocks once the child stops dragging for a moment.
-							if (liveUpdate.current) clearTimeout(liveUpdate.current);
-							liveUpdate.current = setTimeout(() => void bridge.liveUpdate(currentProject()).catch(fail), 300);
-						}}
-					/>
+					{view === "code" ? (
+						<CodeView
+							t={t}
+							language={language}
+							editorKey={editorKey}
+							tab={codeTab}
+							onTab={setCodeTab}
+							program={program}
+							onProgram={(next) => void switchProgram(next)}
+							programCode={codeRef.current}
+							onProgramCode={(typed) => {
+								codeRef.current = typed;
+								codeEdited.current = true;
+								markDirty();
+							}}
+							programProblems={programProblems}
+							generated={blocksCode}
+							// The ref, not the state: it holds what was typed since (the editor remounts on each tab or view switch).
+							userCode={userCodeRef.current}
+							onUserCode={(typed) => {
+								if (userCodeRef.current) userCodeRef.current = { ...userCodeRef.current, code: typed };
+								markDirty();
+							}}
+							onUserLanguage={changeUserLanguage}
+							userProblems={userProblems}
+							disabled={live}
+						/>
+					) : (
+						<Editor
+							key={editorKey}
+							ref={editor}
+							language={language}
+							board={findBoard(boardId)}
+							initialState={initialState.current}
+							library={library}
+							onSaveGroup={(blocks, groupName) => void saveGroup(blocks, groupName)}
+							onManageLibrary={() => setLibraryShown(true)}
+							userDeclarations={declarations}
+							onOpenCode={() => void showCodeView("mine")}
+							onLoadError={(lost) =>
+								setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
+							}
+							onChange={() => {
+								markDirty();
+								if (!live) return;
+								// Live mode: send the new blocks once the child stops dragging for a moment.
+								if (liveUpdate.current) clearTimeout(liveUpdate.current);
+								liveUpdate.current = setTimeout(() => void bridge.liveUpdate(currentProject()).catch(fail), 300);
+							}}
+						/>
+					)}
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || monitorShown) && (
+			{((live && liveRows.length > 0) || monitorShown || tutorialPage !== null) && (
 				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
+					{tutorialPage !== null && (
+						<Tutorials
+							language={language}
+							t={t}
+							page={tutorialPage}
+							height={(live && liveRows.length > 0) || monitorShown ? "45dvh" : "calc(100dvh - 104px)"}
+							onNavigate={(page, pageLanguage) => {
+								if (pageLanguage !== language) switchLanguage(pageLanguage);
+								setTutorialPage(page);
+							}}
+							onOpenExample={(exampleId) => {
+								const chosen = examples.find((candidate) => candidate.group === exampleId);
+								if (chosen) openExample(chosen);
+							}}
+							onClose={() => setTutorialPage(null)}
+						/>
+					)}
 					{live && liveRows.length > 0 && (
 						<Card withBorder shadow="sm" w={360}>
 							<Text fw={700} size="sm" mb={4}>
@@ -785,7 +1118,7 @@ export function App() {
 				<div
 					style={{
 						position: "fixed",
-						left: 330,
+						left: view === "blocks" ? 330 : 64,
 						right: 110,
 						bottom: 16,
 						zIndex: 150,
@@ -821,6 +1154,12 @@ export function App() {
 				t={t}
 				onBlank={newProject}
 				onExample={openExample}
+				onTutorial={(group) => {
+					const tutorial = tutorialFor(group);
+					if (!tutorial) return;
+					setGalleryShown(false);
+					setTutorialPage(tutorial.path);
+				}}
 				onClose={() => setGalleryShown(false)}
 			/>
 			<Modal opened={restore !== null} onClose={discardRestore} title={t("restore.title")} centered>
@@ -876,15 +1215,34 @@ export function App() {
 				onImport={() => void importLibrary()}
 				onClose={() => setLibraryShown(false)}
 			/>
-			<Wiring example={example} opened={wiringShown} language={language} t={t} onClose={() => setWiringShown(false)} />
+			<ProjectWiring
+				opened={wiringShown}
+				example={example}
+				language={language}
+				project={currentProject}
+				t={t}
+				onShowBlocks={(blockIds) => {
+					setWiringShown(false);
+					editor.current?.highlight(blockIds);
+				}}
+				onClose={() => setWiringShown(false)}
+			/>
 
-			<Modal opened={code !== null} onClose={() => setCode(null)} title={t("code.title")} size="xl">
-				<Text size="sm" c="dimmed" mb="sm">
-					{t("code.readonly")}
-				</Text>
-				<ScrollArea.Autosize mah="70vh">
-					<Code block>{code}</Code>
-				</ScrollArea.Autosize>
+			<Modal
+				opened={helpShown}
+				onClose={() => setHelpShown(false)}
+				title={`${t("program.help")} — ${programName(helpLanguage, t("program.blocks"))}`}
+				size="lg"
+			>
+				{helpLanguage === "cpp" ? (
+					<Text size="sm">{t("program.help_cpp")}</Text>
+				) : (
+					<Stack gap="sm">
+						<Text size="sm">{t("program.help_script")}</Text>
+						<Code block>{t("program.help_functions")}</Code>
+						<Text size="sm">{t("program.help_loop")}</Text>
+					</Stack>
+				)}
 			</Modal>
 		</AppShell>
 	);

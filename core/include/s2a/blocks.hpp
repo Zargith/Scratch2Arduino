@@ -39,6 +39,7 @@ enum class ArgKind {
     Variable,  ///< Variable menu.
     Function,  ///< Function menu (functions of the project).
     Statement, ///< Stack of blocks inside a C-block.
+    UserCode,  ///< Name of a function or variable of the project's "My code" file.
 };
 
 struct DropdownOption {
@@ -62,6 +63,7 @@ struct BlockDefinition {
     std::string category;
     BlockShape shape = BlockShape::Statement;
     bool terminal = false; ///< Nothing attaches below (forever).
+    std::string component; ///< Part wired to the board (resources/components.json), "" for none.
     LocalizedText message; ///< With %1..%n placeholders, one per argument.
     LocalizedText tooltip;
     std::vector<BlockArg> args;

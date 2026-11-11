@@ -3,6 +3,8 @@
 // plain browser (pnpm dev) the host is missing and calls report it instead of throwing.
 import type { Language } from "@/catalog";
 import type { SavedGroup } from "@/myBlocks";
+import type { UserDeclaration } from "@/blocks/definitions";
+import type { CodeProblem } from "@/program";
 import type { Project } from "@/project/convert";
 
 export interface HostInfo {
@@ -18,6 +20,20 @@ export interface WifiSetup {
 	accessPointAddress: string;
 	/** On the home network, "" when not joined. */
 	address: string;
+}
+
+/** Wiring of a project (s2a_wiring), already in the user's language. */
+export interface WiringPlan {
+	components: {
+		kind: string;
+		name: string;
+		connections: { componentPin: string; boardPin: string; via: string }[];
+		note: string;
+		blockIds: string[];
+	}[];
+	warnings: { message: string; blockIds: string[] }[];
+	/** The diagram drawn by the core (SVG), absent for an unknown board. */
+	svg?: string;
 }
 
 export interface Port {
@@ -48,6 +64,8 @@ export interface Outcome {
 	/** Validation warnings: the program was built anyway. */
 	warnings?: string[];
 	warningBlockIds?: string[];
+	/** Text programs: the faulty lines (C++ compiler errors, Python/JavaScript syntax). */
+	problems?: CodeProblem[];
 }
 
 export type LiveState = "connecting" | "flashing" | "running" | "finished" | "stopped" | "failed";
@@ -65,6 +83,10 @@ export interface LiveSnapshot {
 	output?: string[];
 	/** ...out of this many since Live mode started. */
 	outputCount?: number;
+	/** Python/JavaScript: line of the error that stopped the program (0: none)... */
+	line?: number;
+	/** ...in the program ("") or in "My code" ("user"). */
+	file?: string;
 }
 
 export interface MonitorState {
@@ -101,6 +123,9 @@ export interface AutosavedProject {
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
+	s2a_code_declarations(language: string, code: string): Promise<UserDeclaration[]>;
+	s2a_wiring(project: Project, language: Language): Promise<WiringPlan>;
+	s2a_save_image(name: string, png: string, language: Language): Promise<string | null>;
 	s2a_open(language: Language): Promise<OpenedProject | null>;
 	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
 	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
@@ -152,6 +177,12 @@ export const hasHost = (): boolean => typeof window.s2a_hello === "function";
 export const bridge = {
 	hello: () => host("s2a_hello")(),
 	generate: (project: Project) => host("s2a_generate")(project),
+	/** Functions and variables of a "My code" file, found by the core (never fails). */
+	codeDeclarations: (language: string, code: string) => host("s2a_code_declarations")(language, code),
+	/** Components to wire, computed by the core from the blocks (core/include/s2a/wiring.hpp). */
+	wiring: (project: Project, language: Language) => host("s2a_wiring")(project, language),
+	/** Saves a PNG (base64 or data URL) where the user chooses; resolves to the file, or null when cancelled. */
+	saveImage: (name: string, png: string, language: Language) => host("s2a_save_image")(name, png, language),
 	open: (language: Language) => host("s2a_open")(language),
 	/** Project given to the program (dropped on its icon); null when none or an older host. */
 	startupProject: async (language: Language): Promise<OpenedProject | null> =>

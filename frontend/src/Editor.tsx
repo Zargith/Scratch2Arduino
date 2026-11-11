@@ -10,13 +10,18 @@ import {
 	FUNCTION_TYPE,
 	INSERT_GROUP_CALLBACK_PREFIX,
 	MANAGE_LIBRARY_CALLBACK,
+	OPEN_CODE_CALLBACK,
 	setCurrentBoard,
+	setUserDeclarations,
 	toolbox,
+	type UserDeclaration,
 } from "@/blocks/definitions";
 import type { Board, Language } from "@/catalog";
 import { translate } from "@/i18n";
 import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
 import type { BlockState, Project, WorkspaceState } from "@/project/convert";
+
+const noDeclarations: UserDeclaration[] = [];
 
 type WorkspaceLoadState = Parameters<typeof Blockly.serialization.workspaces.load>[0];
 
@@ -43,6 +48,10 @@ interface EditorProps {
 	/** The user saved a stack to "My blocks" under this name. */
 	onSaveGroup(blocks: Project, name: string): void;
 	onManageLibrary(): void;
+	/** Functions and variables of "My code", listed in their palette category. */
+	userDeclarations?: UserDeclaration[];
+	/** The button of an empty "My code" category: go to the code view. */
+	onOpenCode?(): void;
 }
 
 interface PromptRequest {
@@ -141,7 +150,7 @@ function markLooseBlocks(workspace: Blockly.WorkspaceSvg) {
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-	{ language, board, initialState, onChange, onLoadError, library, onSaveGroup, onManageLibrary },
+	{ language, board, initialState, onChange, onLoadError, library, onSaveGroup, onManageLibrary, userDeclarations = noDeclarations, onOpenCode },
 	ref
 ) {
 	const container = useRef<HTMLDivElement>(null);
@@ -155,6 +164,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	const onManageLibraryRef = useRef(onManageLibrary);
 	onManageLibraryRef.current = onManageLibrary;
 	const libraryRef = useRef(library);
+	const declarationsRef = useRef(userDeclarations);
+	const onOpenCodeRef = useRef(onOpenCode);
+	onOpenCodeRef.current = onOpenCode;
 	const refreshToolbox = useRef<(() => void) | null>(null);
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
 	const glowing = useRef<Set<string>>(new Set());
@@ -190,11 +202,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		const element = container.current;
 		if (!element) return;
 		Blockly.ScratchMsgs.setLocale(language);
+		setUserDeclarations(declarationsRef.current);
 		defineBlocks(language);
 		const labels = {
 			createVariable: translate(language, "variables.create"),
 			createFunction: translate(language, "functions.create"),
 		};
+		const myCode = () => ({ declarations: declarationsRef.current, empty: translate(language, "mycode.empty") });
 		const libraryToolbox = () => ({
 			title: translate(language, "library.title"),
 			manage: translate(language, "library.manage"),
@@ -204,7 +218,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		// before, they point at variables the workspace does not have yet, and Blockly invents
 		// names for them that can clash with the project's own ("Variable "i" is already in use").
 		const created = Blockly.inject(element, {
-			toolbox: toolbox(language, [], labels, [], libraryToolbox()),
+			toolbox: toolbox(language, [], labels, [], libraryToolbox(), myCode()),
 			theme: blocksTheme(),
 			media: "./media/",
 			trashcan: true,
@@ -219,6 +233,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 			Blockly.ScratchVariables.createVariable(created, undefined, FUNCTION_TYPE);
 		});
 		created.registerButtonCallback(MANAGE_LIBRARY_CALLBACK, () => onManageLibraryRef.current());
+		created.registerButtonCallback(OPEN_CODE_CALLBACK, () => onOpenCodeRef.current?.());
 		const registerGroupButtons = () => {
 			for (const group of libraryRef.current) {
 				created.registerButtonCallback(`${INSERT_GROUP_CALLBACK_PREFIX}${group.id}`, () => {
@@ -297,7 +312,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 					.getVariablesOfType(type)
 					.map((variable) => ({ id: variable.getId() }));
 			registerGroupButtons();
-			created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE), libraryToolbox()));
+			created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE), libraryToolbox(), myCode()));
 			// ScratchContinuousToolbox only redraws its flyout on request.
 			(created.getToolbox() as { forceRerender?: () => void } | null)?.forceRerender?.();
 		};
@@ -351,6 +366,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	useEffect(() => {
 		setCurrentBoard(board);
 	}, [board]);
+
+	useEffect(() => {
+		if (declarationsRef.current === userDeclarations) return;
+		declarationsRef.current = userDeclarations;
+		setUserDeclarations(userDeclarations);
+		refreshToolbox.current?.();
+	}, [userDeclarations]);
 
 	useEffect(() => {
 		if (libraryRef.current === library) return;

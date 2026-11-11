@@ -3,11 +3,14 @@
 #include "s2a/blocks.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
+#include "s2a/script.hpp"
+#include "s2a/usercode.hpp"
 #include "s2a/validator.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <regex>
 
 namespace s2a::toolchain {
 
@@ -59,6 +62,42 @@ std::vector<std::string> blocksAt(const std::vector<CompilerMessage>& messages,
     return ids;
 }
 
+/// The errors of the compiler in the user's sketch, by line, explained when possible.
+std::vector<CodeProblem> problemsAt(const std::vector<CompilerMessage>& messages, const std::string& fileName,
+                                    const std::string& file, Language language) {
+    std::vector<CodeProblem> problems;
+    for (const CompilerMessage& message : messages) {
+        // Errors inside a library are reported in the status bar only (no line of the user's code).
+        if (fs::u8path(message.file).filename().u8string() != fileName) {
+            continue;
+        }
+        problems.push_back({message.line, message.column, explainCompilerMessage(message, language), file});
+    }
+    return problems;
+}
+
+/// True when `code` defines function `name` ("void setup(" with any spacing).
+bool definesFunction(const std::string& code, const std::string& name) {
+    const std::regex pattern("\\bvoid\\s+" + name + "\\s*\\(");
+    return std::regex_search(code, pattern);
+}
+
+/// Python and JavaScript run on the computer (Live mode): Check only reads them.
+BuildResult checkScript(const project::Project& project, Language language, bool upload) {
+    if (upload) {
+        return failure(tr("text.script_upload", language));
+    }
+    if (const auto error = script::check(project.language, project.code, language)) {
+        BuildResult result = failure(script::describe(*error, language), error->details);
+        result.problems.push_back({error->line, 0, error->message, ""});
+        return result;
+    }
+    BuildResult result;
+    result.ok = true;
+    result.message = tr("text.script_ok", language);
+    return result;
+}
+
 } // namespace
 
 BuildResult buildProject(const ArduinoCli& cli, const project::Project& project, Language language,
@@ -68,50 +107,95 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         return failure(tr("build.unknown_board", language, {{"board", project.boardId}}));
     }
 
-    // Mistakes in the blocks are reported here, never while the user edits.
-    const auto issues = validation::validate(project, BlockCatalog::builtin(), board, language);
     std::vector<std::string> warnings;
     std::vector<std::string> warningBlockIds;
-    for (const validation::Issue& issue : issues) {
-        if (issue.severity == validation::Severity::Warning) {
-            warnings.push_back(validation::describe(issue, language));
-            warningBlockIds.push_back(issue.blockId);
-        }
+    std::string source;
+    std::string userSource; ///< "My code" in C++, compiled with the blocks.
+    std::map<std::string, int> blockLines;
+    const bool text = project.language != project::ProgramLanguage::Blocks;
+    if (project.language == project::ProgramLanguage::Python ||
+        project.language == project::ProgramLanguage::JavaScript) {
+        return checkScript(project, language, !options.port.empty());
     }
-    if (validation::hasErrors(issues)) {
-        BuildResult result;
-        std::size_t errors = 0;
-        for (const validation::Issue& issue : issues) {
-            if (issue.severity == validation::Severity::Error) {
-                if (errors++ == 0) {
-                    result.message = validation::describe(issue, language);
-                }
-                if (!issue.blockId.empty()) {
-                    result.blockIds.push_back(issue.blockId);
-                }
+    if (project.language == project::ProgramLanguage::Cpp) {
+        // The sketch is compiled as typed; only what the compiler would say badly is checked first.
+        if (project.code.find_first_not_of(" \t\r\n") == std::string::npos) {
+            return failure(tr("text.cpp_empty", language));
+        }
+        for (const char* function : {"setup", "loop"}) {
+            if (!definesFunction(project.code, function)) {
+                return failure(tr("text.cpp_missing_function", language, {{"name", function}}));
             }
         }
-        result.details = tr("validation.blocked", language, {{"count", std::to_string(errors)}});
-        for (const validation::Issue& issue : issues) {
-            result.details += "\n- " + validation::describe(issue, language);
+        source = project.code;
+    } else {
+        // Python and JavaScript code runs on the computer: blocks using it need the Live mode.
+        if (project.userCode && script::isScript(project.userCode->language) && usercode::usesUserCode(project)) {
+            return failure(tr("text.usercode_live_only", language,
+                              {{"language", project.userCode->language == project::ProgramLanguage::Python ? "Python"
+                                                                                                          : "JavaScript"}}));
         }
-        result.warnings = std::move(warnings);
-        result.warningBlockIds = std::move(warningBlockIds);
-        return result;
+        if (project.userCode && project.userCode->language == project::ProgramLanguage::Cpp) {
+            userSource = project.userCode->code;
+        }
+        // Mistakes in the blocks are reported here, never while the user edits.
+        const auto issues = validation::validate(project, BlockCatalog::builtin(), board, language);
+        for (const validation::Issue& issue : issues) {
+            if (issue.severity == validation::Severity::Warning) {
+                warnings.push_back(validation::describe(issue, language));
+                warningBlockIds.push_back(issue.blockId);
+            }
+        }
+        if (validation::hasErrors(issues)) {
+            BuildResult result;
+            std::size_t errors = 0;
+            for (const validation::Issue& issue : issues) {
+                if (issue.severity == validation::Severity::Error) {
+                    if (errors++ == 0) {
+                        result.message = validation::describe(issue, language);
+                    }
+                    if (!issue.blockId.empty()) {
+                        result.blockIds.push_back(issue.blockId);
+                    }
+                }
+            }
+            result.details = tr("validation.blocked", language, {{"count", std::to_string(errors)}});
+            for (const validation::Issue& issue : issues) {
+                result.details += "\n- " + validation::describe(issue, language);
+            }
+            result.warnings = std::move(warnings);
+            result.warningBlockIds = std::move(warningBlockIds);
+            return result;
+        }
+        auto generated = codegen::generate(project, BlockCatalog::builtin(), board);
+        source = std::move(generated.source);
+        blockLines = std::move(generated.blockLines);
     }
 
-    // Generate the sketch. The folder and the .ino must have the same name.
+    // Write the sketch. The folder and the .ino must have the same name.
     const std::string name = codegen::identifier(project.name.empty() ? "projet" : project.name);
     const fs::path sketch = options.workDirectory / "sketches" / name;
-    const auto generated = codegen::generate(project, BlockCatalog::builtin(), board);
     std::error_code error;
     fs::create_directories(sketch, error);
     {
         std::ofstream file(sketch / (name + ".ino"), std::ios::binary | std::ios::trunc);
-        file << generated.source;
+        file << source;
         if (!file) {
             return failure(tr(errorMessageKey(ErrorCode::WriteFailed), language), sketch.u8string());
         }
+    }
+    const fs::path userFile = sketch / std::string(codegen::kUserCodeFile);
+    if (project.userCode && project.userCode->language == project::ProgramLanguage::Cpp && !text) {
+        std::ofstream file(userFile, std::ios::binary | std::ios::trunc);
+        file << userSource;
+        if (!userSource.empty() && userSource.back() != '\n') {
+            file << '\n';
+        }
+        if (!file) {
+            return failure(tr(errorMessageKey(ErrorCode::WriteFailed), language), userFile.u8string());
+        }
+    } else {
+        fs::remove(userFile, error); // left by an earlier build of the same project
     }
 
     // Board tools, downloaded once per board family.
@@ -131,7 +215,7 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
     }
 
     // Component libraries (Servo...), downloaded the first time a block needs them.
-    const auto missing = missingLibraries(cli, requiredLibraries(generated.source));
+    const auto missing = missingLibraries(cli, requiredLibraries(source + "\n" + userSource));
     if (!missing.ok()) {
         return failure(tr(errorMessageKey(missing.error().code), language), missing.error().detail);
     }
@@ -154,8 +238,34 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
     }
     if (const Diagnosis diagnosis = diagnoseCompile(compiled.value()); diagnosis.problem != Problem::None) {
         BuildResult result = explain(diagnosis, language);
-        result.blockIds = blocksAt(diagnosis.messages, generated.blockLines, name + ".ino");
         result.sketch = sketch;
+        if (text && diagnosis.problem == Problem::LibraryMissing) {
+            // Typed code can include any library: say which ones are installed by themselves.
+            result.message = tr("text.cpp_library_missing", language, diagnosis.params);
+        }
+        if (!text) {
+            result.blockIds = blocksAt(diagnosis.messages, blockLines, name + ".ino");
+            result.problems = problemsAt(diagnosis.messages, std::string(codegen::kUserCodeFile), "user", language);
+            if (diagnosis.problem == Problem::LibraryMissing && !userSource.empty()) {
+                result.message = tr("text.cpp_library_missing", language, diagnosis.params);
+            }
+            if (diagnosis.problem == Problem::CompilerError && !result.problems.empty()) {
+                const CodeProblem& first = result.problems.front();
+                result.message = tr("text.usercode_errors", language,
+                                    {{"count", std::to_string(result.problems.size())},
+                                     {"line", std::to_string(first.line)},
+                                     {"message", first.message}});
+            }
+            return result;
+        }
+        result.problems = problemsAt(diagnosis.messages, name + ".ino", "", language);
+        if (diagnosis.problem == Problem::CompilerError && !result.problems.empty()) {
+            const CodeProblem& first = result.problems.front();
+            result.message = tr("text.cpp_errors", language,
+                                {{"count", std::to_string(result.problems.size())},
+                                 {"line", std::to_string(first.line)},
+                                 {"message", first.message}});
+        }
         return result;
     }
 

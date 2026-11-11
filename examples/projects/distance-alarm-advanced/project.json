@@ -1,0 +1,169 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Alarme de distance",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "distance",
+      "name": "distance",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "distance"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "block": {
+                      "id": "average",
+                      "type": "mycode_value",
+                      "fields": {
+                        "NAME": "moyenne"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "block": {
+                            "id": "measure",
+                            "type": "sensors_distance",
+                            "fields": {
+                              "TRIG_PIN": "12",
+                              "ECHO_PIN": "11"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "near",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "lt",
+                      "type": "operators_lt",
+                      "inputs": {
+                        "NUM1": {
+                          "block": {
+                            "id": "d1",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "distance"
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "20"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "red",
+                      "type": "lights_rgb_color",
+                      "fields": {
+                        "RED_PIN": "9",
+                        "GREEN_PIN": "10",
+                        "BLUE_PIN": "6",
+                        "COLOR": "RED"
+                      }
+                    },
+                    {
+                      "id": "beep",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "880"
+                        },
+                        "SECONDS": {
+                          "value": "0.05"
+                        }
+                      }
+                    },
+                    {
+                      "id": "rhythm",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "block": {
+                            "id": "pause",
+                            "type": "mycode_value",
+                            "fields": {
+                              "NAME": "pauseEntreBips"
+                            },
+                            "inputs": {
+                              "ARG1": {
+                                "block": {
+                                  "id": "d2",
+                                  "type": "variables_get",
+                                  "fields": {
+                                    "VARIABLE": "distance"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "green",
+                      "type": "lights_rgb_color",
+                      "fields": {
+                        "RED_PIN": "9",
+                        "GREEN_PIN": "10",
+                        "BLUE_PIN": "6",
+                        "COLOR": "GREEN"
+                      }
+                    },
+                    {
+                      "id": "idle",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : le capteur se trompe parfois ; on fait la moyenne des dernières mesures.\nfloat memoire = 100;  // la distance moyenne, en cm\n\n// Reçoit une mesure, donne la moyenne (les mesures impossibles sont ignorées).\nfloat moyenne(float mesure) {\n  if (mesure > 2 && mesure < 400) {\n    memoire = memoire * 0.7 + mesure * 0.3;\n  }\n  return memoire;\n}\n\n// Plus l'obstacle est proche, plus la pause entre deux bips est courte (en secondes).\nfloat pauseEntreBips(float distance) {\n  return constrain(distance / 100, 0.03, 0.2);\n}\n"
+  }
+}

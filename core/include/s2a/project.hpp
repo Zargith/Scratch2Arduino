@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -16,7 +17,11 @@ namespace s2a::project {
 
 /// Identifies project.json files and their format version.
 inline constexpr std::string_view kFormatName = "scratch2arduino-project";
-inline constexpr int kFormatVersion = 1;
+/// Newest format this version reads. A project is written with the oldest version able to hold
+/// it: block projects stay at 1 (older Scratch2Arduino versions open them), projects written as
+/// text (version 2) are refused by those versions with a clear "update" message instead of
+/// being opened as an empty block project.
+inline constexpr int kFormatVersion = 2;
 /// Name of the JSON document inside a .s2a archive.
 inline constexpr std::string_view kProjectEntry = "project.json";
 /// Prefix of the asset entries inside a .s2a archive (images, sounds, saved blocks...).
@@ -89,12 +94,40 @@ struct Function {
     std::string name;
 };
 
+/// How the program of a project is written.
+enum class ProgramLanguage {
+    Blocks,     ///< Scratch-style blocks (the scripts).
+    Cpp,        ///< Arduino C++ sketch typed by the user (compiled and uploaded like the blocks).
+    Python,     ///< Python run on the computer, driving the board through the Live mode.
+    JavaScript, ///< JavaScript run on the computer, driving the board through the Live mode.
+};
+
+/// "blocks", "cpp", "python", "javascript" (the value stored in project.json).
+[[nodiscard]] std::string_view programLanguageId(ProgramLanguage language) noexcept;
+/// The language of an id of programLanguageId(); nullopt when unknown.
+[[nodiscard]] std::optional<ProgramLanguage> programLanguageFromId(std::string_view id) noexcept;
+
+/// Code written by the user beside the blocks (the "My code" file): its functions and global
+/// variables become blocks of the "My code" category. C++ is compiled with the blocks (Upload);
+/// Python and JavaScript run on the computer with the blocks (Live mode).
+struct UserCode {
+    ProgramLanguage language = ProgramLanguage::Cpp; ///< Cpp, Python or JavaScript.
+    std::string code;
+};
+
 struct Project {
     std::string name;
     std::string boardId{BoardDatabase::kDefaultBoardId};
     std::vector<Variable> variables;
     std::vector<Function> functions;
     std::vector<Script> scripts;
+    /// Language the program is written in. A text project keeps its blocks (scripts): going back
+    /// to the blocks finds them as they were.
+    ProgramLanguage language = ProgramLanguage::Blocks;
+    /// The program of a text project (C++, Python or JavaScript source), empty for blocks.
+    std::string code;
+    /// The user's own code file, used with the blocks (block projects only).
+    std::optional<UserCode> userCode;
     /// Extra files stored in the archive under assets/ (path without the prefix -> bytes).
     std::map<std::string, std::string> assets;
 };

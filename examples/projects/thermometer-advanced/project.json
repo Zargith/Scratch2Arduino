@@ -1,0 +1,188 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Thermomètre",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "t-title",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "1"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "value": "Temperature (F)"
+                  }
+                }
+              },
+              {
+                "id": "t-value",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "2"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "block": {
+                      "id": "f",
+                      "type": "mycode_value",
+                      "fields": {
+                        "NAME": "fahrenheit"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "block": {
+                            "id": "t1",
+                            "type": "sensors_temperature",
+                            "fields": {
+                              "MODEL": "DHT11",
+                              "PIN": "3"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "w1",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "2"
+                  }
+                }
+              },
+              {
+                "id": "comfort",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "eq",
+                      "type": "operators_equals",
+                      "inputs": {
+                        "NUM1": {
+                          "block": {
+                            "id": "c",
+                            "type": "mycode_value",
+                            "fields": {
+                              "NAME": "confort"
+                            },
+                            "inputs": {
+                              "ARG1": {
+                                "block": {
+                                  "id": "t2",
+                                  "type": "sensors_temperature",
+                                  "fields": {
+                                    "MODEL": "DHT11",
+                                    "PIN": "3"
+                                  }
+                                }
+                              },
+                              "ARG2": {
+                                "block": {
+                                  "id": "h1",
+                                  "type": "sensors_humidity",
+                                  "fields": {
+                                    "MODEL": "DHT11",
+                                    "PIN": "3"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "NUM2": {
+                          "value": "1"
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "ok",
+                      "type": "display_lcd_print",
+                      "fields": {
+                        "LINE": "1"
+                      },
+                      "inputs": {
+                        "TEXT": {
+                          "value": "Air agreable"
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "ko",
+                      "type": "display_lcd_print",
+                      "fields": {
+                        "LINE": "1"
+                      },
+                      "inputs": {
+                        "TEXT": {
+                          "value": "Air a surveiller"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "h-value",
+                "type": "display_lcd_print",
+                "fields": {
+                  "LINE": "2"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "block": {
+                      "id": "h2",
+                      "type": "sensors_humidity",
+                      "fields": {
+                        "MODEL": "DHT11",
+                        "PIN": "3"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "w2",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "2"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : des calculs sur la température et l'humidité.\n\n// Degrés Celsius → degrés Fahrenheit (l'unité des États-Unis).\nfloat fahrenheit(float celsius) {\n  return celsius * 9 / 5 + 32;\n}\n\n// 1 quand l'air est agréable (19 à 24 °C, 40 à 60 % d'humidité), sinon 0.\nint confort(float celsius, float humidite) {\n  if (celsius >= 19 && celsius <= 24 && humidite >= 40 && humidite <= 60) {\n    return 1;\n  }\n  return 0;\n}\n"
+  }
+}

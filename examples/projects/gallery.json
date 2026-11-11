@@ -1,5 +1,5 @@
 {
-  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, same program) is one card with a choice: each variant id is a folder, its parts replace those of the example.",
+  "$comment": "Example gallery of the editor (frontend/src/gallery.ts), in the learner progression order. Each id is a folder holding project.json and wiring.png. An example with \"variants\" (other parts, or another level of the same project such as \"advanced\" with My code) is one card with a choice: each variant id is a folder, its parts and description replace those of the example, and a variant without wiring.png shows the example's.",
   "examples": [
     {
       "id": "blink",
@@ -8,7 +8,18 @@
         "fr": "La LED « L » soudée sur la carte clignote : rien à brancher.",
         "en": "The on-board \"L\" LED blinks: nothing to wire."
       },
-      "parts": { "fr": "aucun composant", "en": "no parts" }
+      "parts": { "fr": "aucun composant", "en": "no parts" },
+      "variants": [
+        { "id": "blink", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "blink-advanced",
+          "label": {"fr": "Avancé : Python (Live)", "en": "Advanced: Python (Live)"},
+          "description": {
+            "fr": "Avancé : la fonction sos(), écrite en Python dans « Mon code », fait clignoter SOS en morse. Elle tourne sur l'ordinateur : lance-la avec le bouton Live.",
+            "en": "Advanced: the sos() function, written in Python in \"My code\", blinks SOS in Morse code. It runs on the computer: start it with the Live button."
+          }
+        }
+      ]
     },
     {
       "id": "traffic-light",
@@ -17,7 +28,38 @@
         "fr": "Vert 3 s, orange 1 s, rouge 3 s, sans fin. Chaque couleur est une fonction.",
         "en": "Green 3 s, orange 1 s, red 3 s, forever. Each colour is a function."
       },
-      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" }
+      "parts": { "fr": "3 LED, 3 résistances de 220 Ω", "en": "3 LEDs, 3 × 220 Ω resistors" },
+      "variants": [
+        { "id": "traffic-light", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "traffic-light-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : une fonction C++ feux(rouge, orange, vert) dans « Mon code » allume les feux demandés, et l'orange clignote avant le rouge.",
+            "en": "Advanced: a C++ function feux(rouge, orange, vert) in \"My code\" switches the lights given, and the orange blinks before the red."
+          }
+        }
+      ]
+    },
+    {
+      "id": "button-led",
+      "title": { "fr": "Bouton et LED", "en": "Button and LED" },
+      "description": {
+        "fr": "La LED s'allume tant que le bouton est appuyé : un « si … alors … sinon » qui tourne sans fin.",
+        "en": "The LED is on while the button is held down: an \"if … then … else\" running forever."
+      },
+      "parts": { "fr": "bouton-poussoir, LED, résistance de 220 Ω", "en": "push button, LED, 220 Ω resistor" },
+      "variants": [
+        { "id": "button-led", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "button-led-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ fait du bouton un vrai interrupteur — un appui allume, l'appui suivant éteint — avec un anti-rebond.",
+            "en": "Advanced: \"My code\" in C++ turns the button into a real switch — one press on, the next one off — with debouncing."
+          }
+        }
+      ]
     },
     {
       "id": "servo-potentiometer",
@@ -26,7 +68,18 @@
         "fr": "Tourner le potentiomètre fait tourner le bras du servomoteur de 0 à 180°.",
         "en": "Turning the knob moves the servo arm from 0 to 180°."
       },
-      "parts": { "fr": "potentiomètre, servomoteur SG90", "en": "potentiometer, SG90 servo" }
+      "parts": { "fr": "potentiomètre, servomoteur SG90", "en": "potentiometer, SG90 servo" },
+      "variants": [
+        { "id": "servo-potentiometer", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "servo-potentiometer-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : la fonction C++ angleLisse() de « Mon code » lisse la mesure du potentiomètre : le bras ne tremble plus.",
+            "en": "Advanced: the C++ function angleLisse() of \"My code\" smooths the knob reading: the arm no longer jitters."
+          }
+        }
+      ]
     },
     {
       "id": "distance-alarm",
@@ -35,7 +88,18 @@
         "fr": "LED verte quand rien n'est proche ; à moins de 20 cm elle devient rouge et le buzzer bipe de plus en plus vite.",
         "en": "Green LED when nothing is near; under 20 cm it turns red and the buzzer beeps faster and faster."
       },
-      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" }
+      "parts": { "fr": "HC-SR04, LED RGB, 3 × 220 Ω, buzzer", "en": "HC-SR04, RGB LED, 3 × 220 Ω, buzzer" },
+      "variants": [
+        { "id": "distance-alarm", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "distance-alarm-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ fait la moyenne des mesures (le capteur se trompe parfois) et calcule le rythme des bips.",
+            "en": "Advanced: \"My code\" in C++ averages the readings (the sensor is sometimes wrong) and computes the beep rhythm."
+          }
+        }
+      ]
     },
     {
       "id": "thermometer",
@@ -57,6 +121,14 @@
             "fr": "DHT11, écran LCD 16×2 à 16 broches, potentiomètre 10 kΩ, résistance 220 Ω",
             "en": "DHT11, 16×2 LCD screen with 16 pins, 10 kΩ potentiometer, 220 Ω resistor"
           }
+        },
+        {
+          "id": "thermometer-advanced",
+          "label": {"fr": "Avancé : C++ (écran I2C)", "en": "Advanced: C++ (I2C screen)"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ convertit la température en degrés Fahrenheit et dit si l’air est agréable (température et humidité).",
+            "en": "Advanced: \"My code\" in C++ converts the temperature to degrees Fahrenheit and tells whether the air is pleasant (temperature and humidity)."
+          }
         }
       ]
     },
@@ -67,7 +139,18 @@
         "fr": "Attends le cœur sur la matrice, puis appuie le plus vite possible : trop tôt, c'est perdu !",
         "en": "Wait for the heart on the matrix, then press as fast as you can: too early and you lose!"
       },
-      "parts": { "fr": "matrice MAX7219, OLED SSD1306, bouton, buzzer", "en": "MAX7219 matrix, SSD1306 OLED, button, buzzer" }
+      "parts": { "fr": "matrice MAX7219, OLED SSD1306, bouton, buzzer", "en": "MAX7219 matrix, SSD1306 OLED, button, buzzer" },
+      "variants": [
+        { "id": "reaction-game", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "reaction-game-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : « Mon code » en C++ garde le record dans la mémoire EEPROM de la carte : il reste même quand on la débranche.",
+            "en": "Advanced: \"My code\" in C++ keeps the record in the board's EEPROM memory: it stays even when the board is unplugged."
+          }
+        }
+      ]
     },
     {
       "id": "light-gauge",
@@ -114,6 +197,29 @@
         "en": "Wi-Fi and Bluetooth together: the phone switches the lamp on or off and asks for the temperature over Bluetooth, while the computer follows everything in Live mode over Wi-Fi. Uploaded, the program also works with the phone alone."
       },
       "parts": { "fr": "carte ESP32, DHT11, LED, résistance de 220 Ω, téléphone avec une appli de terminal Bluetooth", "en": "ESP32 board, DHT11, LED, 220 Ω resistor, phone with a Bluetooth terminal app" }
+    },
+    {
+      "id": "remote-robot",
+      "title": { "fr": "Robot télécommandé", "en": "Remote robot" },
+      "description": {
+        "fr": "Deux moteurs pilotés depuis un téléphone par Bluetooth : avance, recule, gauche, droite, stop. Chaque mouvement est une fonction.",
+        "en": "Two motors driven from a phone over Bluetooth: avance, recule, gauche, droite, stop (forward, back, left, right, stop). Each move is a function."
+      },
+      "parts": {
+        "fr": "carte ESP32, pont en H L298N, 2 moteurs à réducteur, 4 piles AA, batterie USB, téléphone",
+        "en": "ESP32 board, L298N H-bridge, 2 gear motors, 4 AA batteries, USB power bank, phone"
+      },
+      "variants": [
+        { "id": "remote-robot", "label": {"fr": "Novice : blocs", "en": "Beginner: blocks"} },
+        {
+          "id": "remote-robot-advanced",
+          "label": {"fr": "Avancé : C++", "en": "Advanced: C++"},
+          "description": {
+            "fr": "Avancé : une seule fonction C++, rouler(gauche, droite), règle la vitesse de chaque roue de -100 à 100 et remplace les cinq fonctions.",
+            "en": "Advanced: one C++ function, rouler(gauche, droite), sets the speed of each wheel from -100 to 100 and replaces the five functions."
+          }
+        }
+      ]
     }
   ]
 }

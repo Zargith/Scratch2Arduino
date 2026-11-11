@@ -10,7 +10,8 @@
 #include <vector>
 
 /// Build and Upload buttons of the applications: block project -> sketch -> arduino-cli,
-/// with every outcome explained in the user's language.
+/// with every outcome explained in the user's language. A C++ project is compiled as typed; a
+/// Python or JavaScript project is only checked (it runs on the computer, in Live mode).
 namespace s2a::toolchain {
 
 enum class BuildStep {
@@ -26,6 +27,14 @@ struct BuildOptions {
     std::function<void(BuildStep)> progress;                   ///< Optional, called from the calling thread.
 };
 
+/// A mistake at a line of a program typed as text (C++, Python, JavaScript).
+struct CodeProblem {
+    int line = 0;   ///< 1-based; 0 when the place is unknown.
+    int column = 0; ///< 1-based; 0 when unknown.
+    std::string message; ///< In the user's language when it could be explained.
+    std::string file;    ///< "" for the program itself, "user" for the "My code" file.
+};
+
 struct BuildResult {
     bool ok = false;
     std::string message;               ///< One friendly sentence for the status bar.
@@ -34,6 +43,7 @@ struct BuildResult {
     std::vector<std::string> warnings; ///< Validation warnings (the program was built anyway).
     std::vector<std::string> warningBlockIds;
     std::filesystem::path sketch;      ///< Generated sketch folder.
+    std::vector<CodeProblem> problems; ///< Text programs: the faulty lines, shown in the code editor.
 };
 
 [[nodiscard]] BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,

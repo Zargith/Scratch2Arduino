@@ -10,6 +10,7 @@
     {
       "type": "motors_servo_write",
       "shape": "statement",
+      "component": "servo",
       "message": { "fr": "tourner le servomoteur de la broche %1 à %2 degrés", "en": "turn the servo of pin %1 to %2 degrees" },
       "tooltip": {
         "fr": "Place le bras d'un servomoteur à un angle entre 0 et 180 degrés. Fil orange (ou jaune) sur la broche, rouge sur 5V, marron (ou noir) sur GND. Sur Uno et Nano, un servomoteur empêche le PWM des broches 9 et 10.",
@@ -23,6 +24,7 @@
     {
       "type": "motors_dc_run",
       "shape": "statement",
+      "component": "dc_motor",
       "message": { "fr": "faire tourner le moteur (EN %1, IN1 %2, IN2 %3) %4 à la vitesse %5", "en": "run the motor (EN %1, IN1 %2, IN2 %3) %4 at speed %5" },
       "tooltip": {
         "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D…). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
@@ -47,6 +49,7 @@
     {
       "type": "motors_dc_stop",
       "shape": "statement",
+      "component": "dc_motor",
       "message": { "fr": "arrêter le moteur (EN %1, IN1 %2, IN2 %3)", "en": "stop the motor (EN %1, IN1 %2, IN2 %3)" },
       "tooltip": { "fr": "Arrête le moteur branché sur le pont en H.", "en": "Stops the motor wired to the H-bridge." },
       "args": [

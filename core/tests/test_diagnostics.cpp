@@ -177,4 +177,20 @@ TEST(Diagnostics, MissingUploadFilesAreNotMissingPorts) {
     EXPECT_EQ(s2a::toolchain::diagnoseUpload(outcome, "/dev/ttyACM0").problem, Problem::PortNotFound);
 }
 
+TEST(ExplainCompilerMessage, ExplainsCommonMistakesOfTypedCode) {
+    using s2a::toolchain::CompilerMessage;
+    using s2a::toolchain::explainCompilerMessage;
+    const auto explain = [](std::string text, s2a::Language language) {
+        return explainCompilerMessage(CompilerMessage{"a.ino", 1, 1, "error", std::move(text)}, language);
+    };
+    EXPECT_EQ(explain("'led' was not declared in this scope", s2a::Language::French).find("« led » est inconnu"), 0U);
+    EXPECT_NE(explain("\xe2\x80\x98led\xe2\x80\x99 was not declared in this scope", s2a::Language::English).find("\"led\""),
+              std::string::npos);
+    EXPECT_NE(explain("expected ';' before '}' token", s2a::Language::English).find("\";\" is missing"), std::string::npos);
+    EXPECT_NE(explain("expected '}' at end of input", s2a::Language::English).find("\"}\" is missing"), std::string::npos);
+    EXPECT_NE(explain("'class Servo' has no member named 'writ'", s2a::Language::English).find("\"writ\""), std::string::npos);
+    EXPECT_EQ(explain("invalid conversion from 'int' to 'char*'", s2a::Language::English),
+              "invalid conversion from 'int' to 'char*'");
+}
+
 } // namespace

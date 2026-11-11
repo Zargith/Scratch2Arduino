@@ -119,7 +119,7 @@ std::optional<ArgKind> parseKind(std::string_view text) {
     static const std::map<std::string_view, ArgKind> kinds{
         {"number", ArgKind::Number},     {"text", ArgKind::Text},         {"boolean", ArgKind::Boolean},
         {"pin", ArgKind::Pin},           {"dropdown", ArgKind::Dropdown}, {"variable", ArgKind::Variable}, {"function", ArgKind::Function},
-        {"statement", ArgKind::Statement}};
+        {"statement", ArgKind::Statement}, {"usercode", ArgKind::UserCode}};
     const auto it = kinds.find(text);
     return it != kinds.end() ? std::optional(it->second) : std::nullopt;
 }
@@ -201,7 +201,7 @@ BlockArg parseArg(const Json& node, const std::string& where, Issues& issues) {
         issues.add(at, "'options' is only allowed on dropdown arguments");
     }
     if ((arg.kind == ArgKind::Statement || arg.kind == ArgKind::Boolean || arg.kind == ArgKind::Variable ||
-         arg.kind == ArgKind::Function) &&
+         arg.kind == ArgKind::Function || arg.kind == ArgKind::UserCode) &&
         !arg.defaultValue.empty()) {
         issues.add(at, "this argument kind cannot have a default value");
     }
@@ -239,6 +239,13 @@ BlockDefinition parseBlock(const Json& node, const std::string& category, const 
         issues.add(where, "unknown shape (hat, statement, c, reporter, boolean)");
     }
     block.shape = shape.value_or(BlockShape::Statement);
+    if (node.contains("component")) {
+        if (!node.at("component").is_string()) {
+            issues.add(where, "'component' must be a text");
+        } else {
+            block.component = node.at("component").get<std::string>();
+        }
+    }
     if (node.contains("terminal")) {
         if (!node.at("terminal").is_boolean()) {
             issues.add(where, "'terminal' must be true or false");

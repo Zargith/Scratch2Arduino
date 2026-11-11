@@ -1,0 +1,93 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Potentiomètre et servomoteur",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "angle",
+      "name": "angle",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "angle"
+                },
+                "inputs": {
+                  "TEXT": {
+                    "block": {
+                      "id": "smooth",
+                      "type": "mycode_value",
+                      "fields": {
+                        "NAME": "angleLisse"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "block": {
+                            "id": "pot",
+                            "type": "sensors_potentiometer",
+                            "fields": {
+                              "PIN": "A0"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "servo",
+                "type": "motors_servo_write",
+                "fields": {
+                  "PIN": "9"
+                },
+                "inputs": {
+                  "ANGLE": {
+                    "block": {
+                      "id": "angle-value",
+                      "type": "variables_get",
+                      "fields": {
+                        "VARIABLE": "angle"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "wait",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0.02"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : la mesure est « lissée » pour que le bras ne tremble pas.\nfloat lisse = 0;  // la mesure lissée, de 0 à 100\n\n// Reçoit la position du potentiomètre (0 à 100), donne l'angle du servomoteur (0 à 180).\nint angleLisse(float mesure) {\n  // On ne fait qu'un cinquième du chemin vers la nouvelle mesure : les petits sauts disparaissent.\n  lisse = lisse + (mesure - lisse) / 5;\n  return (int)(lisse * 180 / 100);\n}\n"
+  }
+}

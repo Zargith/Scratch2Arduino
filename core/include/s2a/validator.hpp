@@ -34,6 +34,9 @@ enum class Rule {
     FunctionDefinedTwice, ///< Two "define" scripts for the same function.
     RecursiveFunction,  ///< A function that calls itself (directly or through others): it would never end.
     NoBluetooth,        ///< A phone block on a board without Bluetooth.
+    UserCodeMissing,    ///< A "My code" block whose function or variable is not in the code (any more).
+    UserCodeNoValue,    ///< The result of a "My code" function that gives no value.
+    UserCodeReadOnly,   ///< Setting a constant of "My code".
 };
 
 struct Issue {

@@ -13,6 +13,7 @@
     {
       "type": "lights_rgb_color",
       "shape": "statement",
+      "component": "rgb_led",
       "message": {
         "fr": "mettre la LED RGB (R %1, V %2, B %3) en %4",
         "en": "set the RGB LED (R %1, G %2, B %3) to %4"
@@ -108,6 +109,7 @@
     {
       "type": "lights_rgb_mix",
       "shape": "statement",
+      "component": "rgb_led",
       "message": {
         "fr": "mettre la LED RGB (R %1, V %2, B %3) à rouge %4 vert %5 bleu %6",
         "en": "set the RGB LED (R %1, G %2, B %3) to red %4 green %5 blue %6"
@@ -161,6 +163,7 @@
     {
       "type": "lights_neopixel_fill",
       "shape": "statement",
+      "component": "neopixel",
       "message": {
         "fr": "mettre tout le ruban NeoPixel de la broche %1 (%2 LED) en %3",
         "en": "set the whole NeoPixel strip of pin %1 (%2 LEDs) to %3"
@@ -251,6 +254,7 @@
     {
       "type": "lights_neopixel_set",
       "shape": "statement",
+      "component": "neopixel",
       "message": {
         "fr": "mettre la LED n° %3 du ruban NeoPixel de la broche %1 (%2 LED) en %4",
         "en": "set LED number %3 of the NeoPixel strip of pin %1 (%2 LEDs) to %4"
@@ -348,6 +352,7 @@
     {
       "type": "lights_matrix_show",
       "shape": "statement",
+      "component": "matrix",
       "message": {
         "fr": "afficher %4 sur la matrice de LED (DIN %1, CLK %2, CS %3)",
         "en": "show %4 on the LED matrix (DIN %1, CLK %2, CS %3)"
@@ -464,6 +469,7 @@
     {
       "type": "lights_matrix_dot",
       "shape": "statement",
+      "component": "matrix",
       "message": {
         "fr": "%6 le point x %4 y %5 de la matrice de LED (DIN %1, CLK %2, CS %3)",
         "en": "turn %6 the dot x %4 y %5 of the LED matrix (DIN %1, CLK %2, CS %3)"

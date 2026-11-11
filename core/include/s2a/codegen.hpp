@@ -33,6 +33,9 @@ struct Sketch {
 /// Same, with the built-in catalog and the project's board from the built-in database.
 [[nodiscard]] Sketch generate(const project::Project& project);
 
+/// File of the sketch folder holding the user's C++ code ("My code"), included by the sketch.
+inline constexpr std::string_view kUserCodeFile = "my_code.h";
+
 /// Speed of the serial monitor used by the "write to the serial monitor" block.
 inline constexpr int kSerialBaud = 9600;
 

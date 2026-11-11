@@ -5,6 +5,7 @@
 //   s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports
 //   s2a-cli setup [--board <id>]                   install the tools for a board (all by default)
 //   s2a-cli generate <project>                     print the Arduino code of a project
+//   s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)
 //   s2a-cli compile <sketch|project> [--board <id>] compile a sketch folder or a project
 //   s2a-cli upload <sketch|project> --port <port> [--board <id>]
 //   s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)
@@ -18,8 +19,10 @@
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/project.hpp"
+#include "s2a/script.hpp"
 #include "s2a/serial.hpp"
 #include "s2a/validator.hpp"
+#include "s2a/wiring.hpp"
 #include "s2a/version.hpp"
 
 #include <atomic>
@@ -66,6 +69,7 @@ struct Options {
     bool verbose = false;
     bool boardGiven = false;
     double seconds = 0; ///< live: stop after this many seconds (0 = until Ctrl+C).
+    std::string svg;    ///< wiring: also write the diagram to this SVG file.
 };
 
 std::atomic<bool> stopRequested{false};
@@ -134,9 +138,12 @@ private:
     int bluetooth() const;
     int setup() const;
     int generateCommand() const;
+    int wiringCommand() const;
     int compileCommand() const;
     int uploadCommand() const;
     int liveCommand() const;
+    /// Python and JavaScript projects in Live mode.
+    int runScript(const s2a::project::Project& project, const s2a::Board& selected, s2a::live::LiveLink& link) const;
     int version() const;
 
     Options options_;
@@ -345,16 +352,31 @@ std::optional<fs::path> Cli::sketchFor(const fs::path& path, const s2a::Board*& 
             return std::nullopt;
         }
     }
+    if (s2a::script::isScript(project->language)) {
+        fail("text.script_upload"); // Python and JavaScript run with "live"
+        return std::nullopt;
+    }
     // "blink/project.json" is named after its folder, "blink.s2a" after the file.
     const fs::path named = path.extension() == ".json" ? path.parent_path() : path;
     const std::string name = s2a::codegen::identifier(named.stem().u8string());
     const fs::path folder = s2a::toolchain::userDataDirectory() / "sketches" / name;
     fs::create_directories(folder, error);
     std::ofstream file(folder / (name + ".ino"), std::ios::binary | std::ios::trunc);
-    file << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), board).source;
+    file << (project->language == s2a::project::ProgramLanguage::Cpp
+                 ? project->code
+                 : s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), board).source);
     if (!file) {
         fail("cli.sketch_missing", {{"sketch", folder.u8string()}});
         return std::nullopt;
+    }
+    // "My code" in C++ is a file of the sketch, included by the code of the blocks.
+    const fs::path userFile = folder / std::string(s2a::codegen::kUserCodeFile);
+    if (project->language == s2a::project::ProgramLanguage::Blocks && project->userCode &&
+        project->userCode->language == s2a::project::ProgramLanguage::Cpp) {
+        std::ofstream user(userFile, std::ios::binary | std::ios::trunc);
+        user << project->userCode->code << '\n';
+    } else {
+        fs::remove(userFile, error);
     }
     return folder;
 }
@@ -369,7 +391,53 @@ int Cli::generateCommand() const {
         return kFailure;
     }
     const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    if (project->language != s2a::project::ProgramLanguage::Blocks) {
+        std::cout << project->code; // a program typed as text is its own code
+        return kSuccess;
+    }
     std::cout << s2a::codegen::generate(*project, s2a::BlockCatalog::builtin(), selected).source;
+    return kSuccess;
+}
+
+int Cli::wiringCommand() const {
+    if (options_.positional.size() != 1) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto project = loadProject(fs::absolute(fs::u8path(options_.positional[0])));
+    if (!project) {
+        return kFailure;
+    }
+    const s2a::Board* selected = options_.boardGiven ? board() : s2a::BoardDatabase::builtin().find(project->boardId);
+    if (selected == nullptr) {
+        return kUsage;
+    }
+    const auto plan = s2a::wiring::plan(*project, s2a::BlockCatalog::builtin(), *selected, options_.language);
+    for (const auto& warning : plan.warnings) {
+        std::cout << "⚠ " << warning.message << '\n';
+    }
+    int number = 0;
+    for (const auto& component : plan.components) {
+        std::cout << ++number << ". " << component.name << '\n';
+        for (const auto& connection : component.connections) {
+            std::cout << "   " << connection.componentPin << " -> " << connection.boardPin
+                      << (connection.via.empty() ? "" : " (" + connection.via + ")") << '\n';
+        }
+        if (!component.note.empty()) {
+            std::cout << "   " << component.note << '\n';
+        }
+    }
+    if (plan.components.empty()) {
+        print("cli.wiring_nothing");
+    }
+    if (!options_.svg.empty()) {
+        std::ofstream file(fs::u8path(options_.svg), std::ios::binary);
+        file << s2a::wiring::svg(plan, *selected, project->name + " — " + selected->name);
+        if (!file) {
+            std::cerr << tr(s2a::errorMessageKey(s2a::ErrorCode::WriteFailed)) << '\n';
+            return kFailure;
+        }
+    }
     return kSuccess;
 }
 
@@ -469,7 +537,14 @@ int Cli::liveCommand() const {
         fail("cli.unknown_board_short");
         return kFailure;
     }
-    const auto issues = s2a::validation::validate(*project, s2a::BlockCatalog::builtin(), selected, options_.language);
+    if (project->language == s2a::project::ProgramLanguage::Cpp) {
+        fail("text.live_cpp");
+        return kFailure;
+    }
+    const bool scripted = s2a::script::isScript(project->language);
+    const auto issues = scripted ? std::vector<s2a::validation::Issue>{}
+                                 : s2a::validation::validate(*project, s2a::BlockCatalog::builtin(), selected,
+                                                             options_.language);
     for (const auto& issue : issues) {
         std::cerr << (issue.severity == s2a::validation::Severity::Error ? "✗ " : "⚠ ")
                   << s2a::validation::describe(issue, options_.language) << '\n';
@@ -518,6 +593,9 @@ int Cli::liveCommand() const {
 
     print("cli.live_running");
     std::signal(SIGINT, onInterrupt);
+    if (scripted) {
+        return runScript(*project, *selected, link);
+    }
     s2a::live::Interpreter interpreter(*project, s2a::BlockCatalog::builtin(), *selected, link);
     const auto start = steady_clock::now();
     std::map<std::string, double> shown;
@@ -545,6 +623,40 @@ int Cli::liveCommand() const {
     }
     link.reset();
     print(interpreter.finished() ? "cli.live_finished" : "cli.live_stopped");
+    return kSuccess;
+}
+
+int Cli::runScript(const s2a::project::Project& project, const s2a::Board& selected, s2a::live::LiveLink& link) const {
+    using namespace std::chrono;
+    s2a::script::Host host;
+    host.pins = &link;
+    host.board = &selected;
+    host.stop = &stopRequested; // Ctrl+C stops even a loop without delay()
+    host.print = [](const std::string& line) { std::cout << "> " << line << '\n'; };
+    const auto start = steady_clock::now();
+    host.sleep = [&](milliseconds wait) {
+        const auto end = steady_clock::now() + wait;
+        do {
+            if (options_.seconds > 0 && steady_clock::now() - start > duration<double>(options_.seconds)) {
+                stopRequested = true;
+            }
+            if (stopRequested) {
+                return false;
+            }
+            std::this_thread::sleep_for(std::min(milliseconds(10), wait));
+        } while (steady_clock::now() < end);
+        return true;
+    };
+    const auto error = s2a::script::run(project.language, project.code, host, options_.language);
+    link.reset();
+    if (error) {
+        std::cerr << s2a::script::describe(*error, options_.language) << '\n';
+        if (options_.verbose) {
+            std::cerr << error->details << '\n';
+        }
+        return kFailure;
+    }
+    print(stopRequested ? "cli.live_stopped" : "cli.live_finished");
     return kSuccess;
 }
 
@@ -576,6 +688,9 @@ int Cli::run() {
     }
     if (options_.command == "generate") {
         return generateCommand();
+    }
+    if (options_.command == "wiring") {
+        return wiringCommand();
     }
     if (options_.command == "compile") {
         return compileCommand();
@@ -619,6 +734,12 @@ std::optional<Options> parse(const std::vector<std::string>& args) {
                 return std::nullopt;
             }
             options.language = s2a::languageFromLocale(*language);
+        } else if (arg == "--svg") {
+            const auto file = value();
+            if (!file) {
+                return std::nullopt;
+            }
+            options.svg = *file;
         } else if (arg == "--seconds") {
             const auto seconds = value();
             if (!seconds) {

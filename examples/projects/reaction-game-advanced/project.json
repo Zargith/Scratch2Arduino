@@ -1,0 +1,345 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 2,
+  "name": "Jeu de réaction",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "score",
+      "name": "score",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "zero",
+          "type": "variables_set",
+          "fields": {
+            "VARIABLE": "score"
+          },
+          "inputs": {
+            "VALUE": {
+              "value": "0"
+            }
+          }
+        },
+        {
+          "id": "hello",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "1"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "Jeu de réaction"
+            }
+          }
+        },
+        {
+          "id": "score0",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "3"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "",
+              "block": {
+                "id": "score0v",
+                "type": "variables_get",
+                "fields": {
+                  "VARIABLE": "score"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "best-title",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "4"
+          },
+          "inputs": {
+            "TEXT": {
+              "value": "Record"
+            }
+          }
+        },
+        {
+          "id": "best",
+          "type": "display_oled_print",
+          "fields": {
+            "LINE": "5"
+          },
+          "inputs": {
+            "TEXT": {
+              "block": {
+                "id": "record",
+                "type": "mycode_value",
+                "fields": {
+                  "NAME": "record"
+                },
+                "inputs": {}
+              }
+            }
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "wait",
+                "type": "control_wait_until",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "not",
+                      "type": "operators_not",
+                      "inputs": {
+                        "OPERAND": {
+                          "block": {
+                            "id": "b0",
+                            "type": "sensors_button_pressed",
+                            "fields": {
+                              "PIN": "2"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "blank",
+                "type": "lights_matrix_show",
+                "fields": {
+                  "DIN_PIN": "12",
+                  "CLK_PIN": "11",
+                  "CS_PIN": "10",
+                  "IMAGE": "OFF"
+                }
+              },
+              {
+                "id": "delay",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "0",
+                    "block": {
+                      "id": "rnd",
+                      "type": "operators_random",
+                      "inputs": {
+                        "FROM": {
+                          "value": "1"
+                        },
+                        "TO": {
+                          "value": "4"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "early",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "b1",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "lose",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "SAD"
+                      }
+                    },
+                    {
+                      "id": "boo",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "150"
+                        },
+                        "SECONDS": {
+                          "value": "0.5"
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "go",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "HEART"
+                      }
+                    },
+                    {
+                      "id": "beep",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "8"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "440",
+                          "block": {
+                            "id": "note",
+                            "type": "sound_note",
+                            "fields": {
+                              "NOTE": "523"
+                            }
+                          }
+                        },
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "press",
+                      "type": "control_wait_until",
+                      "inputs": {
+                        "CONDITION": {
+                          "block": {
+                            "id": "b2",
+                            "type": "sensors_button_pressed",
+                            "fields": {
+                              "PIN": "2"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "win",
+                      "type": "lights_matrix_show",
+                      "fields": {
+                        "DIN_PIN": "12",
+                        "CLK_PIN": "11",
+                        "CS_PIN": "10",
+                        "IMAGE": "CHECK"
+                      }
+                    },
+                    {
+                      "id": "plus",
+                      "type": "variables_change",
+                      "fields": {
+                        "VARIABLE": "score"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "save",
+                      "type": "mycode_call",
+                      "fields": {
+                        "NAME": "nouveauRecord"
+                      },
+                      "inputs": {
+                        "ARG1": {
+                          "block": {
+                            "id": "score-now",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "score"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "best-now",
+                      "type": "display_oled_print",
+                      "fields": {
+                        "LINE": "5"
+                      },
+                      "inputs": {
+                        "TEXT": {
+                          "block": {
+                            "id": "record-now",
+                            "type": "mycode_value",
+                            "fields": {
+                              "NAME": "record"
+                            },
+                            "inputs": {}
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "show",
+                      "type": "display_oled_print",
+                      "fields": {
+                        "LINE": "3"
+                      },
+                      "inputs": {
+                        "TEXT": {
+                          "value": "",
+                          "block": {
+                            "id": "g",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "score"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "pause",
+                "type": "control_wait",
+                "inputs": {
+                  "SECONDS": {
+                    "value": "1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "userCode": {
+    "language": "cpp",
+    "code": "// Mon code (C++) : le record est gardé dans la mémoire EEPROM de la carte, même débranchée.\n#include <EEPROM.h>\n\n// Le meilleur score enregistré (0 la première fois : une EEPROM neuve contient 255).\nint record() {\n  int meilleur = EEPROM.read(0);\n  if (meilleur == 255) {\n    return 0;\n  }\n  return meilleur;\n}\n\n// Garde le score s'il bat le record.\nvoid nouveauRecord(int score) {\n  if (score > record() && score < 255) {\n    EEPROM.update(0, score);\n  }\n}\n"
+  }
+}
