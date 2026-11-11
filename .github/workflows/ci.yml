@@ -14,6 +14,8 @@ jobs:
   build:
     name: Build & test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Usually 10 to 20 minutes: a stuck download fails the job instead of blocking it for hours.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -21,8 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup-apt
+        if: runner.os == 'Linux'
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
+        timeout-minutes: 15
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build pkg-config libwebkit2gtk-4.1-dev
@@ -130,8 +136,12 @@ jobs:
   install-scripts:
     name: Scratch2Arduino_installer.sh and Makefile (Linux)
     runs-on: ubuntu-24.04
+    # Usually about 5 minutes.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-apt
 
       - uses: actions/setup-node@v7
         with:
