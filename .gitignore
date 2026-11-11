@@ -18,3 +18,7 @@ compile_commands.json
 *.user
 .DS_Store
 Thumbs.db
+
+# Python bytecode (tools/wiring)
+__pycache__/
+*.pyc
