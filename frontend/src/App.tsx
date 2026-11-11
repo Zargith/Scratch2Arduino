@@ -33,6 +33,7 @@ import {
 	IconPlugConnected,
 	IconRefresh,
 	IconSchool,
+	IconSettings,
 	IconTerminal2,
 	IconUpload,
 	IconWifi,
@@ -50,6 +51,7 @@ import {
 	type Outcome,
 	type Port,
 	type RecentProject,
+	type Settings as SavedSettings,
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import type { UserDeclaration } from "@/blocks/definitions";
@@ -65,6 +67,8 @@ import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberB
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
+import { Settings } from "@/Settings";
+import { findUpdate, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
@@ -177,6 +181,12 @@ export function App() {
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
 	const [galleryShown, setGalleryShown] = useState(false);
+	const [settingsShown, setSettingsShown] = useState(false);
+	const [settings, setSettings] = useState<SavedSettings>({ language: "", checkUpdates: true });
+	/** Installed version, told by the host ("" outside the application). */
+	const [version, setVersion] = useState("");
+	/** A newer release, offered until the user says "Later" (never forced). */
+	const [update, setUpdate] = useState<Release | null>(null);
 	/** Page of the Tutorials panel, null when it is closed. */
 	const [tutorialPage, setTutorialPage] = useState<DocPath | null>(null);
 	/** The example being edited: its wiring diagram stays one click away. */
@@ -302,6 +312,12 @@ export function App() {
 	const switchLanguageRef = useRef(switchLanguage);
 	switchLanguageRef.current = switchLanguage;
 
+	/** Applies and saves the settings (outside the application they only last until it closes). */
+	const changeSettings = (next: SavedSettings) => {
+		setSettings(next);
+		if (hasHost()) void bridge.saveSettings(next).catch(() => undefined);
+	};
+
 	// Once, at start-up: the host tells the system language. Later language changes are the
 	// user's (the FR/EN switch) and must not be overridden.
 	const startup = useRef({ fail, refreshPorts });
@@ -309,7 +325,21 @@ export function App() {
 		if (!hasHost()) return;
 		void bridge
 			.hello()
-			.then((info) => switchLanguageRef.current(info.language))
+			.then(async (info) => {
+				switchLanguageRef.current(info.language);
+				setVersion(info.version);
+				const saved = await bridge.settings().catch(() => null);
+				if (!saved) return;
+				setSettings(saved);
+				// In the background: the editor is usable at once, and no network is no problem.
+				if (saved.checkUpdates) {
+					void findUpdate(info.version)
+						.then((release) => {
+							if (release) setUpdate(release);
+						})
+						.catch(() => undefined);
+				}
+			})
 			.catch(startup.current.fail);
 		void startup.current.refreshPorts();
 	}, []);
@@ -979,15 +1009,11 @@ export function App() {
 								{compact ? <IconUpload size={18} /> : t("toolbar.upload")}
 							</Button>
 						</Tooltip>
-						<SegmentedControl
-							aria-label={t("language.label")}
-							data={[
-								{ value: "fr", label: "FR" },
-								{ value: "en", label: "EN" },
-							]}
-							value={language}
-							onChange={(value) => switchLanguage(value as Language)}
-						/>
+						<Tooltip label={t("settings.title")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("settings.title")} onClick={() => setSettingsShown(true)}>
+								<IconSettings size={18} />
+							</ActionIcon>
+						</Tooltip>
 					</Group>
 				</Group>
 			</AppShell.Header>
@@ -1148,6 +1174,47 @@ export function App() {
 				</div>
 			)}
 
+			<Settings
+				opened={settingsShown}
+				language={language}
+				t={t}
+				version={version}
+				settings={settings}
+				onLanguage={(next) => {
+					switchLanguage(next);
+					changeSettings({ ...settings, language: next });
+				}}
+				onSettings={changeSettings}
+				onUpdate={setUpdate}
+				onClose={() => setSettingsShown(false)}
+			/>
+			{update && (
+				<Card
+					withBorder
+					shadow="md"
+					padding="sm"
+					w={460}
+					style={{ position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)", zIndex: 200 }}
+				>
+					<Text size="sm" fw={600}>
+						{t("update.available", { version: update.version, current: version })}
+					</Text>
+					<Text size="xs" c="dimmed" mt={4}>
+						{t("update.help")}
+					</Text>
+					<Group gap="xs" mt="sm" justify="flex-end">
+						<Button size="xs" variant="subtle" color="gray" onClick={() => setUpdate(null)}>
+							{t("update.later")}
+						</Button>
+						<Button size="xs" variant="light" onClick={() => void bridge.openUrl(update.page).catch(fail)}>
+							{t("update.notes")}
+						</Button>
+						<Button size="xs" onClick={() => void bridge.openUrl(update.download).catch(fail)}>
+							{t("update.download")}
+						</Button>
+					</Group>
+				</Card>
+			)}
 			<Gallery
 				opened={galleryShown}
 				language={language}

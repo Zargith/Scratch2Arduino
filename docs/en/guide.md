@@ -37,6 +37,10 @@ the application: the **Tutorials and help** button (the graduation cap), next to
   On Linux, to be allowed to send programs to the board, type once
   `sudo usermod -aG dialout $USER`, then log out and back in.
 
+**Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
+(*Download*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or
+switch this check off.
+
 The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
 (Internet is needed that time, then never again for that board). It keeps its own copy of those tools:
 it does not change an Arduino IDE installed on the same computer.
@@ -55,7 +59,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
-  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the language (FR / EN). On a small
+  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and

@@ -120,6 +120,14 @@ export interface AutosavedProject {
 	savedAt: number;
 }
 
+/** Settings of the editor, kept by the host (settings.json in the user's folder). */
+export interface Settings {
+	/** "fr" or "en"; "": the language of the system. */
+	language: Language | "";
+	/** Look for a newer release in the background at start-up. */
+	checkUpdates: boolean;
+}
+
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
@@ -130,6 +138,9 @@ interface HostFunctions {
 	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
 	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
 	s2a_recent(): Promise<RecentProject[]>;
+	s2a_settings(): Promise<Settings>;
+	s2a_save_settings(settings: Settings): Promise<boolean>;
+	s2a_open_url(url: string): Promise<boolean>;
 	s2a_open_recent(path: string, language: Language): Promise<OpenedProject>;
 	s2a_autosave(project: Project, path: string): Promise<null>;
 	s2a_autosaved(): Promise<AutosavedProject | null>;
@@ -176,6 +187,10 @@ export const hasHost = (): boolean => typeof window.s2a_hello === "function";
 
 export const bridge = {
 	hello: () => host("s2a_hello")(),
+	settings: () => host("s2a_settings")(),
+	saveSettings: (settings: Settings) => host("s2a_save_settings")(settings),
+	/** Opens a page of the project's GitHub repository in the browser (the host refuses any other). */
+	openUrl: (url: string) => host("s2a_open_url")(url),
 	generate: (project: Project) => host("s2a_generate")(project),
 	/** Functions and variables of a "My code" file, found by the core (never fails). */
 	codeDeclarations: (language: string, code: string) => host("s2a_code_declarations")(language, code),
