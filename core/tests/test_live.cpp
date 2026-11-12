@@ -30,7 +30,14 @@ struct FakePins final : s2a::live::Pins {
     void digitalWrite(int pin, bool high) override { log.push_back("D" + std::to_string(pin) + (high ? "=1" : "=0")); }
     void analogWrite(int pin, int value) override { log.push_back("P" + std::to_string(pin) + "=" + std::to_string(value)); }
     bool digitalRead(int pin) override { return digitalInputs[pin]; }
-    int analogRead(int pin) override { return analogInputs[pin]; }
+    int analogRead(int pin) override {
+        if (!analogNoise.empty()) { // a floating input: values jumping around
+            return analogNoise[noiseIndex++ % analogNoise.size()];
+        }
+        return analogInputs[pin];
+    }
+    std::vector<int> analogNoise;
+    std::size_t noiseIndex = 0;
     void tone(int pin, int frequency, int ms) override {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
@@ -184,6 +191,67 @@ TEST(Interpreter, StepsTheScriptsInTurn) {
     interpreter.stepOnce();
     interpreter.step(milliseconds(30));
     EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(WiringCheck, FindsInputsThatLookBadlyWired) {
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block light = block("light", "sensors_light");
+    light.fields["PIN"] = "A0";
+    Block distance = block("distance", "sensors_distance");
+    distance.fields["TRIG_PIN"] = "7";
+    distance.fields["ECHO_PIN"] = "8";
+    Block temperature = block("temperature", "sensors_temperature");
+    temperature.fields["PIN"] = "4";
+    Block show = block("show", "serial_print");
+    show.inputs["VALUE"].block = button;
+    Block a = block("a", "serial_print");
+    a.inputs["VALUE"].block = light;
+    Block b = block("b", "serial_print");
+    b.inputs["VALUE"].block = distance;
+    Block c = block("c", "serial_print");
+    c.inputs["VALUE"].block = temperature;
+    Project project = withScript({block("hat", "events_when_program_starts"), show, a, b, c});
+    Block loose = block("loose", "pins_digital_read"); // not attached: never checked
+    loose.fields["PIN"] = "9";
+    project.scripts.push_back({0, 0, {loose}});
+
+    FakePins pins; // button input LOW (pressed), no echo, no DHT answer
+    pins.analogNoise = {0, 900, 100, 1000, 50, 800};
+    const auto hints = s2a::live::checkWiring(project, BlockCatalog::builtin(), uno(), pins, s2a::Language::English,
+                                              milliseconds(0));
+    ASSERT_EQ(hints.size(), 4U);
+    EXPECT_NE(hints[0].message.find("pin 2 seems always pressed"), std::string::npos) << hints[0].message;
+    EXPECT_EQ(hints[0].blockIds, std::vector<std::string>{"button"});
+    EXPECT_NE(hints[1].message.find("pin A0 jump"), std::string::npos) << hints[1].message;
+    EXPECT_NE(hints[2].message.find("Trig 7, Echo 8"), std::string::npos) << hints[2].message;
+    EXPECT_NE(hints[3].message.find("DHT11 sensor on pin 4"), std::string::npos) << hints[3].message;
+    const auto log = pins.take();
+    EXPECT_NE(std::find(log.begin(), log.end(), "M2U"), log.end()) << "the button is read with its pull-up";
+    EXPECT_EQ(std::find(log.begin(), log.end(), "M9I"), log.end()) << "loose blocks are not read";
+}
+
+TEST(WiringCheck, StaysQuietWhenTheValuesLookRight) {
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block pot = block("pot", "sensors_potentiometer");
+    pot.fields["PIN"] = "A1";
+    Block distance = block("distance", "sensors_distance");
+    distance.fields["TRIG_PIN"] = "7";
+    distance.fields["ECHO_PIN"] = "8";
+    Block a = block("a", "serial_print");
+    a.inputs["VALUE"].block = button;
+    Block b = block("b", "serial_print");
+    b.inputs["VALUE"].block = pot;
+    Block c = block("c", "serial_print");
+    c.inputs["VALUE"].block = distance;
+    FakePins pins;
+    pins.digitalInputs[2] = true; // released: HIGH through the pull-up
+    pins.analogInputs[15] = 512;  // A1 on the Uno
+    pins.distanceCm = 35;
+    const auto hints = s2a::live::checkWiring(withScript({block("hat", "events_when_program_starts"), a, b, c}),
+                                              BlockCatalog::builtin(), uno(), pins, s2a::Language::English, milliseconds(0));
+    EXPECT_TRUE(hints.empty()) << hints.front().message;
 }
 
 TEST(Interpreter, PlaysATuneAndWaitsForTheEnd) {

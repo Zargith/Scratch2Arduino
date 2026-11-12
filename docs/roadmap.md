@@ -54,7 +54,7 @@ Goals of the project not yet covered, in the suggested order:
 
 1. **Step-by-step mode in Live mode** ("real-time debugging"): done on 2026-11-12 (chosen by the user), for 0.12.0. Pause (F9) and "Next block" (F10) buttons in Live mode: the block that runs next is lit, each click runs one block (scripts take turns, waits are skipped), the variables and pins panel follows; block programs, with or without "My code". To check on a real board.
 2. **Arduino library manager** ("extensive library support"): done on 2026-11-12 (chosen by the user), for 0.11.0. "Arduino libraries" window (search the registry, install a chosen version, update, uninstall), libraries saved in the project (`libraries` in `project.json`) and installed by Check on any computer, missing headers explained with suggested libraries, `s2a-cli lib`. To check with a real C++ project on a board.
-3. **Wiring check in Live mode**: before starting, read the inputs (buttons, sensors) and warn when a value looks wrong (for example a button always pressed).
+3. **Wiring check in Live mode**: done on 2026-11-12 (chosen by the user), for 0.12.0. When Live mode starts, the inputs of the blocks are read for about a second (core `live::checkWiring`): a button always pressed, a floating digital or analog input, a distance sensor without echo or a DHT that does not answer give a "Check the wiring" card with what to check and the blocks concerned (hints only, the program runs). To check on real boards.
 
 Phase 11 (packaging and release) stays dropped for now and may come back later.
 

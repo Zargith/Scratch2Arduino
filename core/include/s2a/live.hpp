@@ -178,6 +178,21 @@ private:
     std::optional<Error> error_;
 };
 
+/// A wiring mistake suspected from the values the board reads: a hint, never certain.
+struct WiringHint {
+    std::string message;               ///< In the user's language, with what to check.
+    std::vector<std::string> blockIds; ///< The blocks reading that input.
+};
+
+/// Wiring check of the Live mode: before the blocks start, reads the inputs they use (buttons,
+/// pins, potentiometers and light sensors, distance and DHT sensors) for about `duration`, and
+/// tells which ones look badly wired: a button always pressed, an input that floats (values
+/// jumping with nothing touching it), a distance sensor without echo, a DHT that does not answer.
+/// Loose blocks are not checked. Reads only: no output pin is changed.
+[[nodiscard]] std::vector<WiringHint> checkWiring(const project::Project& project, const BlockCatalog& catalog,
+                                                  const Board& board, Pins& pins, Language language,
+                                                  std::chrono::milliseconds duration = std::chrono::milliseconds(800));
+
 /// Runs the scripts of a project, Scratch style: every script started by a hat runs in turn,
 /// a script gives way at each wait and at the end of each loop turn.
 class Interpreter {
@@ -301,6 +316,7 @@ public:
         std::vector<OutputLine> output;         ///< Last lines written by the program (at most kOutputLines)...
         std::size_t outputCount = 0;            ///< ...out of this many since the start.
         bool paused = false;                    ///< Step-by-step mode: blocks wait for "Next block".
+        std::vector<WiringHint> wiring;         ///< Wiring check made when the Live mode started.
         int errorLine = 0;                      ///< Python/JavaScript: line of the error that stopped the program...
         std::string errorFile;                  ///< ...in the program ("") or in "My code" ("user").
     };

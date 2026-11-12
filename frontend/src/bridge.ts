@@ -92,6 +92,8 @@ export interface LiveSnapshot {
 	running?: string[];
 	/** Step-by-step mode: the running blocks are the ones that run at the next "Next block". */
 	paused?: boolean;
+	/** Wiring check made when the Live mode started: inputs that look badly wired. */
+	wiring?: { message: string; blockIds: string[] }[];
 	problems?: string[];
 	variables?: Record<string, number>;
 	/** Sensor values read by the blocks, by pin label ("A0", "2"). */
