@@ -156,7 +156,8 @@ panel shows what the blocks write.
 
 ## 9. Wiring diagram
 
-The **Wiring diagram** button shows how to wire the parts **used by your blocks**:
+The **Wiring diagram** button (in the Blocks view as in the Code view) shows how to wire the parts **used
+by your blocks**:
 
 - **Wiring diagram**: the board, a breadboard and the parts, with one coloured wire per connection
   (wheel or double-click to zoom, drag to move around, *Save the image* to print it);

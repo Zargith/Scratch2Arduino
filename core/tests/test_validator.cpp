@@ -338,6 +338,39 @@ TEST(Validator, RefusesToSetAVariableThatMyCodeChangesItself) {
 }
 
 // No example offers or uses a block that would disturb its own code, and every example is valid.
+TEST(Validator, EveryExampleNamesTheArgumentsOfItsBlocksAsTheCatalog) {
+    // A misnamed slot ("TEXT" for "VALUE") is silently empty: the block shows and runs 0.
+    const auto& catalog = s2a::BlockCatalog::builtin();
+    for (const auto& entry : std::filesystem::directory_iterator(S2A_EXAMPLES_DIR)) {
+        const auto file = entry.path() / "project.json";
+        if (!std::filesystem::exists(file)) {
+            continue;
+        }
+        const auto project = load(file);
+        ASSERT_TRUE(project.ok()) << file;
+        forEachBlock(project.value(), [&](const Block& block) {
+            const auto* definition = catalog.find(block.type);
+            if (definition == nullptr || block.type.rfind("mycode_", 0) == 0) {
+                return; // "My code" blocks have the slots of the user's functions
+            }
+            const auto check = [&](const std::string& name) {
+                EXPECT_NE(definition->findArg(name), nullptr)
+                    << entry.path().filename() << ": block " << block.id << " (" << block.type << ") has no \"" << name
+                    << "\"";
+            };
+            for (const auto& [name, value] : block.fields) {
+                check(name);
+            }
+            for (const auto& [name, input] : block.inputs) {
+                check(name);
+            }
+            for (const auto& [name, stack] : block.statements) {
+                check(name);
+            }
+        });
+    }
+}
+
 TEST(Validator, EveryExampleIsValidAndOnlySetsFreeVariables) {
     for (const auto& entry : std::filesystem::directory_iterator(S2A_EXAMPLES_DIR)) {
         const auto file = entry.path() / "project.json";

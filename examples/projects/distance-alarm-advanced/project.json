@@ -31,7 +31,7 @@
                   "VARIABLE": "distance"
                 },
                 "inputs": {
-                  "TEXT": {
+                  "VALUE": {
                     "block": {
                       "id": "average",
                       "type": "mycode_value",
