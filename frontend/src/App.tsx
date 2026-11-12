@@ -1031,19 +1031,18 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
+						{/* The wiring diagram in both views: it is computed from the blocks, kept in the code view too. */}
+						<Tooltip label={t("toolbar.wiring")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
+								<IconPlugConnected size={18} />
+							</ActionIcon>
+						</Tooltip>
 						{view === "blocks" ? (
-							<>
-								<Tooltip label={t("toolbar.wiring")}>
-									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.wiring")} onClick={() => setWiringShown(true)}>
-										<IconPlugConnected size={18} />
-									</ActionIcon>
-								</Tooltip>
-								<Tooltip label={t("toolbar.code")}>
-									<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCodeView("blocks")}>
-										<IconCode size={18} />
-									</ActionIcon>
-								</Tooltip>
-							</>
+							<Tooltip label={t("toolbar.code")}>
+								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCodeView("blocks")}>
+									<IconCode size={18} />
+								</ActionIcon>
+							</Tooltip>
 						) : (
 							<Tooltip label={t("program.help")}>
 								<ActionIcon variant="default" size="lg" aria-label={t("program.help")} onClick={() => setHelpShown(true)}>
@@ -1398,7 +1397,8 @@ export function App() {
 				t={t}
 				onShowBlocks={(blockIds) => {
 					setWiringShown(false);
-					editor.current?.highlight(blockIds);
+					// From the code view, back to the blocks first (they are built again).
+					void (view === "blocks" ? Promise.resolve() : showBlocksView()).then(() => editor.current?.highlight(blockIds));
 				}}
 				onClose={() => setWiringShown(false)}
 			/>
