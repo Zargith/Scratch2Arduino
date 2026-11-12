@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isScript, isStarterCode, problemRange, programLanguages, starterCode } from "@/program";
+import { isScript, isStarterCode, problemRange, programLanguages, programSwitch, starterCode } from "@/program";
 
 describe("program languages", () => {
 	it("lists the blocks first, then the text languages", () => {
@@ -46,5 +46,16 @@ describe("problemRange", () => {
 		const last = problemRange(code, { line: 99, message: "" });
 		expect(last.from).toBeLessThanOrEqual(code.length);
 		expect(problemRange(code, { line: 0, message: "" }).from).toBe(0);
+	});
+
+	it("converts a program into the new language, typed or not", () => {
+		const sketch = "void setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n}\n";
+		// C++ made from the blocks (not typed): converted without asking.
+		expect(programSwitch("cpp", sketch, false)).toEqual({ action: "convert", confirm: false });
+		// Typed code: converted after a yes.
+		expect(programSwitch("python", "led = 13\n", true)).toEqual({ action: "convert", confirm: true });
+		// An untouched example, or the blocks: the example of the new language.
+		expect(programSwitch("cpp", starterCode("cpp", "fr"), true)).toEqual({ action: "start" });
+		expect(programSwitch("blocks", "", false)).toEqual({ action: "start" });
 	});
 });
