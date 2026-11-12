@@ -29,7 +29,9 @@ import {
 	IconFolderOpen,
 	IconHelp,
 	IconHistory,
+	IconPlayerPause,
 	IconPlayerPlay,
+	IconPlayerTrackNext,
 	IconPlayerStop,
 	IconPlugConnected,
 	IconRefresh,
@@ -189,6 +191,8 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** Step-by-step mode of the Live mode (block programs). */
+	const [livePaused, setLivePaused] = useState(false);
 	/** The output panel opened by itself once in this Live session (at the first printed line). */
 	const outputShown = useRef(false);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
@@ -801,6 +805,7 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			setLivePaused(false);
 			outputShown.current = false;
 			history.current = new Map();
 			setLive(true);
@@ -841,6 +846,8 @@ export function App() {
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
+					} else if (snapshot.paused && snapshot.state === "running") {
+						setStatus({ kind: "info", message: t("live.paused") });
 					} else if (snapshot.message) {
 						setStatus({ kind: "info", message: snapshot.message });
 					}
@@ -848,7 +855,36 @@ export function App() {
 				.catch(fail);
 		}, 200);
 		return () => clearInterval(timer);
+		// t: the status follows the language at the next poll anyway.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [live, fail]);
+
+	/** Step-by-step mode: pause or let the blocks run again. */
+	const toggleLivePause = useCallback(() => {
+		const next = !livePaused;
+		setLivePaused(next);
+		void bridge.livePause(next).catch(fail);
+	}, [livePaused, fail]);
+	const liveStep = useCallback(() => {
+		if (livePaused) void bridge.liveStep().catch(fail);
+	}, [livePaused, fail]);
+	/** Shows the step-by-step buttons: a block program (or blocks with "My code") in Live mode. */
+	const canStep = live && program === "blocks";
+	// F9 pauses or resumes, F10 runs the next block (as in many debuggers).
+	useEffect(() => {
+		if (!canStep) return;
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === "F9") {
+				event.preventDefault();
+				toggleLivePause();
+			} else if (event.key === "F10") {
+				event.preventDefault();
+				liveStep();
+			}
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, [canStep, toggleLivePause, liveStep]);
 
 	/** The language the help window explains: the expert program, or "My code". */
 	const helpLanguage: ProgramLanguage = program !== "blocks" ? program : (userCode?.language ?? "cpp");
@@ -1054,6 +1090,33 @@ export function App() {
 								)}
 							</Button>
 						</Tooltip>
+						{canStep && (
+							<ActionIcon.Group>
+								<Tooltip label={`${t(livePaused ? "live.resume" : "live.pause")} (F9)`}>
+									<ActionIcon
+										variant={livePaused ? "filled" : "default"}
+										color="pink"
+										size="lg"
+										aria-label={t(livePaused ? "live.resume" : "live.pause")}
+										aria-pressed={livePaused}
+										onClick={toggleLivePause}
+									>
+										{livePaused ? <IconPlayerPlay size={18} /> : <IconPlayerPause size={18} />}
+									</ActionIcon>
+								</Tooltip>
+								<Tooltip label={`${t("live.next_block")} (F10)`}>
+									<ActionIcon
+										variant="default"
+										size="lg"
+										aria-label={t("live.next_block")}
+										disabled={!livePaused}
+										onClick={liveStep}
+									>
+										<IconPlayerTrackNext size={18} />
+									</ActionIcon>
+								</Tooltip>
+							</ActionIcon.Group>
+						)}
 						<Tooltip label={t("toolbar.build")} disabled={!compact}>
 							<Button
 								color="green"

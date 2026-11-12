@@ -134,6 +134,58 @@ TEST(Interpreter, BlinksWithoutBlockingBetweenSteps) {
     EXPECT_FALSE(interpreter.finished());
 }
 
+TEST(Interpreter, RunsOneBlockPerStepWhenPaused) {
+    FakePins pins;
+    Interpreter interpreter(blink(), BlockCatalog::builtin(), uno(), pins);
+    interpreter.setPaused(true);
+    interpreter.step(milliseconds(0));
+    EXPECT_TRUE(pins.take().empty()) << "paused: nothing runs";
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"loop"}) << "the block that runs next";
+    interpreter.step(milliseconds(5000));
+    EXPECT_TRUE(pins.take().empty());
+
+    interpreter.stepOnce(); // forever: enters the loop
+    interpreter.step(milliseconds(5010));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"on"});
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(5020));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w1"});
+    interpreter.stepOnce(); // the wait of 1 s...
+    interpreter.step(milliseconds(5030));
+    interpreter.stepOnce(); // ...does not hold the next click
+    interpreter.step(milliseconds(5040));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=0"});
+    interpreter.stepOnce();
+    interpreter.stepOnce(); // two clicks: second wait, then back to the top of the loop
+    interpreter.step(milliseconds(5050));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"on"});
+    EXPECT_TRUE(pins.take().empty());
+
+    interpreter.setPaused(false); // runs freely again
+    interpreter.step(milliseconds(5060));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
+}
+
+TEST(Interpreter, StepsTheScriptsInTurn) {
+    Project project = withScript({block("hat", "events_when_program_starts"), led("a1", "ON"), led("a2", "OFF")});
+    project.scripts.push_back({0, 0, {block("hat2", "events_when_program_starts"), led("b1", "ON")}});
+    FakePins pins;
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.setPaused(true);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(interpreter.runningBlocks(), (std::vector<std::string>{"a1", "b1"}));
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(10));
+    EXPECT_EQ(interpreter.runningBlocks(), (std::vector<std::string>{"a2", "b1"}));
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(20));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"a2"});
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(30));
+    EXPECT_TRUE(interpreter.finished());
+}
+
 TEST(Interpreter, PlaysATuneAndWaitsForTheEnd) {
     FakePins pins;
     Block note = block("note", "sound_note");
@@ -710,6 +762,25 @@ TEST(Session, RunsUpdatesAndStops) {
     const auto& received = firmware->received;
     EXPECT_NE(std::find(received.begin(), received.end(), "D 13 0"), received.end());
     EXPECT_EQ(received.back(), "X"); // outputs switched off when Live mode ends
+}
+
+TEST(Session, PausesAndRunsOneBlockAtATime) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    Session session(
+        blink(), uno(), "COM1", s2a::Language::English,
+        [firmware](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(firmware));
+        },
+        [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().runningBlocks == std::vector<std::string>{"w1"}; }));
+    session.pause(true);
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().paused; }));
+    // Paused during the wait: the wait is over, the next block is shown.
+    EXPECT_EQ(session.snapshot().runningBlocks, std::vector<std::string>{"off"});
+    session.stepOnce();
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().runningBlocks == std::vector<std::string>{"w2"}; }));
+    session.pause(false);
+    ASSERT_TRUE(waitFor([&] { return !session.snapshot().paused; }));
 }
 
 TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {

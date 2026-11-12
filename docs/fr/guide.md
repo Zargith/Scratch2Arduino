@@ -148,6 +148,13 @@ en Python ou JavaScript) s'affiche dans le panneau du moniteur série, qui s'ouv
 ligne. Pour déboguer, `printError()` (et `console.error()` en JavaScript) écrit en rouge, sur la sortie
 d'erreur ; l'erreur qui arrête un programme y reste aussi, avec sa ligne, après l'arrêt.
 
+**Pas à pas** : pour comprendre ce que fait ton programme, clique sur **Pause** (à côté d'*Arrêter*,
+touche F9). Les blocs s'arrêtent et le bloc qui va s'exécuter est éclairé. Chaque clic sur **Bloc
+suivant** (F10) exécute ce bloc seulement : regarde la carte et les variables changer, un bloc à la fois.
+Les blocs *attendre* ne font plus attendre en pas à pas. Avec plusieurs scripts, ils avancent chacun leur
+tour. **Reprendre** (F9) relance le programme à vitesse normale. Le pas à pas marche pour les blocs (même
+avec "Mon code"), pas pour un programme entier écrit en Python ou en JavaScript.
+
 La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
 ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les
 sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
@@ -313,6 +320,7 @@ Les programmes s'envoient toujours avec le câble USB.
 | Ctrl+Z | Annuler |
 | Ctrl+Y ou Ctrl+Maj+Z | Rétablir |
 | Suppr ou Retour arrière | Supprimer le bloc sélectionné |
+| F9 / F10 | Mode Live : pause ou reprendre / exécuter le bloc suivant |
 
 Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touches agissent sur le texte.
 
