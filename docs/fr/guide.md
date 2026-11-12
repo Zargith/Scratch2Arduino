@@ -179,7 +179,8 @@ se reconnecte. En mode Live, le panneau montre ce que les blocs écrivent.
 
 ## 9. Le schéma de câblage
 
-Le bouton **Schéma de câblage** montre comment brancher les composants **utilisés par tes blocs** :
+Le bouton **Schéma de câblage** (dans la vue Blocs comme dans la vue Code) montre comment brancher les
+composants **utilisés par tes blocs** :
 
 - **Schéma de câblage** : la carte, une platine d'essai et les composants, avec un fil de couleur par
   branchement (molette ou double-clic pour zoomer, glisser pour se déplacer, *Enregistrer l'image* pour
