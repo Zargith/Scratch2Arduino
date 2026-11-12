@@ -76,6 +76,7 @@
     "compiled_no_size": "Bravo, ton programme est correct ! Il est prêt pour la carte {board}."
   },
   "webview": {
+    "update_failed": "Impossible de télécharger ou de lancer la mise à jour. Télécharge-la depuis la page de la version.",
     "open_title": "Ouvrir un projet",
     "save_title": "Enregistrer le projet",
     "file_filter": "Projets Scratch2Arduino",
@@ -218,7 +219,8 @@
     "live_cpp": "Un programme C++ est envoyé à la carte avec Téléverser. Le mode Live est pour les blocs, Python et JavaScript.",
     "running": "Ton programme tourne sur l'ordinateur et pilote la carte. Le bouton Stop l'arrête.",
     "finished": "Le programme est terminé.",
-    "usercode_live_only": "Tes blocs utilisent \"Mon code\" écrit en {language} : il tourne sur l'ordinateur, lance le programme avec le bouton Live (ou écris \"Mon code\" en C++ pour le téléverser).",
+    "usercode_convert_lines": "\"Mon code\" est écrit en {language} : pour le téléverser, il est traduit en C++, mais ces lignes n'ont pas pu l'être : {lines}. Simplifie-les, écris \"Mon code\" en C++, ou utilise le bouton Live.",
+    "usercode_convert_line": "Cette ligne n'a pas pu être traduite en C++ pour la carte.",
     "usercode_upload_only": "Tes blocs utilisent \"Mon code\" écrit en C++ : il est compilé pour la carte, envoie le programme avec Téléverser (ou écris \"Mon code\" en Python ou JavaScript pour le mode Live).",
     "usercode_errors": "\"Mon code\" a {count} erreur(s). Ligne {line} : {message}",
     "in_user_code": "Dans \"Mon code\" :"

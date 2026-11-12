@@ -76,6 +76,7 @@
     "compiled_no_size": "Well done, your program is correct! It is ready for the {board} board."
   },
   "webview": {
+    "update_failed": "Could not download or start the update. Download it from the release page.",
     "open_title": "Open a project",
     "save_title": "Save the project",
     "file_filter": "Scratch2Arduino projects",
@@ -218,7 +219,8 @@
     "live_cpp": "A C++ program is sent to the board with Upload. Live mode is for blocks, Python and JavaScript.",
     "running": "Your program runs on the computer and drives the board. The Stop button stops it.",
     "finished": "The program has finished.",
-    "usercode_live_only": "Your blocks use \"My code\" written in {language}: it runs on the computer, start the program with the Live button (or write \"My code\" in C++ to upload it).",
+    "usercode_convert_lines": "\"My code\" is written in {language}: to upload it, it is translated to C++, but these lines could not be: {lines}. Simplify them, write \"My code\" in C++, or use the Live button.",
+    "usercode_convert_line": "This line could not be translated to C++ for the board.",
     "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
     "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}",
     "in_user_code": "In \"My code\":"

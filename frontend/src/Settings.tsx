@@ -1,11 +1,11 @@
 // Settings window (gear button): language, updates. Kept by the host in settings.json.
-import { Button, Checkbox, Group, Modal, SegmentedControl, Stack, Text, Title } from "@mantine/core";
+import { Button, Checkbox, Code, Group, Modal, SegmentedControl, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
 
-import type { Settings as SavedSettings } from "@/bridge";
+import { bridge, type Settings as SavedSettings } from "@/bridge";
 import type { Language } from "@/catalog";
 import type { MessageKey } from "@/i18n";
-import { findUpdate, type Release } from "@/updates";
+import { findUpdate, platform, type Release } from "@/updates";
 
 interface SettingsProps {
 	opened: boolean;
@@ -30,6 +30,23 @@ type Check =
 
 export function Settings({ opened, language, t, version, settings, onLanguage, onSettings, onUpdate, onClose }: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
+	/** Downloading the installer (Windows), or why it failed. */
+	const [installing, setInstalling] = useState(false);
+	const [installError, setInstallError] = useState("");
+	const windows = platform(navigator.userAgent) === "windows";
+
+	const install = async (release: Release) => {
+		setInstalling(true);
+		setInstallError("");
+		try {
+			// The program closes once the installer starts.
+			if (!(await bridge.installUpdate(release.download, language))) await bridge.openUrl(release.page);
+		} catch (error) {
+			setInstallError(error instanceof Error ? error.message : String(error));
+		} finally {
+			setInstalling(false);
+		}
+	};
 
 	const checkNow = async () => {
 		setCheck({ kind: "checking" });
@@ -97,6 +114,30 @@ export function Settings({ opened, language, t, version, settings, onLanguage, o
 							</Text>
 						)}
 					</Group>
+					{check.kind === "found" && (
+						<Stack gap={6}>
+							<Group gap="sm">
+								{windows && check.release.download.endsWith(".exe") && (
+									<Button loading={installing} onClick={() => void install(check.release)}>
+										{t("settings.install_update")}
+									</Button>
+								)}
+								<Button variant="default" onClick={() => void bridge.openUrl(check.release.page).catch(() => undefined)}>
+									{t("update.notes")}
+								</Button>
+							</Group>
+							<Text size="xs" c="dimmed">
+								{t(windows ? "settings.install_help" : "settings.install_help_source")}
+							</Text>
+							{!windows && <Code block>{"git pull\n./Scratch2Arduino_installer.sh"}</Code>}
+							{installing && <Text size="sm">{t("settings.downloading")}</Text>}
+							{installError && (
+								<Text size="sm" c="red">
+									{installError}
+								</Text>
+							)}
+						</Stack>
+					)}
 					<Checkbox
 						label={t("settings.check_at_start")}
 						checked={settings.checkUpdates}

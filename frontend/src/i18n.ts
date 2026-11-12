@@ -103,6 +103,10 @@ const fr = {
 	"libraries.updated": "{name} est à jour.",
 	"libraries.uninstalled": "{name} est désinstallée.",
 	"libraries.failed": "Impossible pour {name} : {message}",
+	"settings.install_update": "Télécharger et installer",
+	"settings.downloading": "Téléchargement de la nouvelle version... Scratch2Arduino se fermera pour la laisser s'installer.",
+	"settings.install_help": "L'installeur se lance tout seul et Scratch2Arduino se ferme : enregistre ton projet avant.",
+	"settings.install_help_source": "Sur Linux et macOS, Scratch2Arduino s'installe depuis ses sources : dans le dossier où tu l'as téléchargé, lance ces commandes.",
 	"settings.title": "Paramètres",
 	"settings.updates": "Mises à jour",
 	"settings.theme": "Apparence",
@@ -233,6 +237,8 @@ const fr = {
 	"program.blocks": "Blocs",
 	"program.confirm_blocks":
 		"Revenir aux blocs efface ton code {language}. Tes blocs reviennent comme tu les avais laissés. Continuer ?",
+	"program.confirm_restore": "Reprendre le code {language} que tu avais écrit ? (Annuler : repartir de tes blocs et de Mon code)",
+	"status.program_restored": "Ton code d'avant est revenu. Tes blocs et Mon code n'ont pas changé.",
 	"program.confirm_replace": "Convertir ton programme {from} en {to} ? Ce que la conversion ne sait pas traduire reste en commentaires, à reprendre à la main.",
 	"status.converted": "Code converti en {language}. Relis-le avant de le lancer.",
 	"status.converted_check": "Code converti en {language}. À reprendre à la main (gardé en commentaires) : ligne(s) {lines} du code d'origine.",
@@ -245,7 +251,7 @@ const fr = {
 		"pinMode(broche, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(broche, HIGH | LOW)\ndigitalRead(broche) -> HIGH ou LOW\nanalogRead(A0) -> 0 à 1023\nanalogWrite(broche ~, 0 à 255)\ndelay(millisecondes)    millis()\ntone(broche, fréquence[, durée])    noTone(broche)\nservoWrite(broche, angle de 0 à 180)\nprint(...) -> moniteur série et panneau Live\nprintError(...) -> la même chose, en rouge (pour déboguer)",
 	"program.help_loop": "Tu peux aussi écrire des fonctions setup() et loop(), comme sur Arduino.",
 	"status.program_cpp_from_blocks":
-		"Mode C++ : ton code commence avec le programme de tes blocs. Modifie-le, puis \"Vérifier\" ou \"Téléverser\".",
+		"Mode C++ : ton code commence avec Mon code puis le programme de tes blocs. Modifie-le, puis \"Vérifier\" ou \"Téléverser\".",
 	"status.program_cpp": "Mode C++ : écris ton programme Arduino, puis \"Vérifier\" ou \"Téléverser\".",
 	"status.program_script":
 		"Mode {language} : ton programme tourne sur l'ordinateur et pilote la carte avec le bouton \"Live\".",
@@ -360,6 +366,10 @@ const en: Record<MessageKey, string> = {
 	"libraries.updated": "{name} is up to date.",
 	"libraries.uninstalled": "{name} is uninstalled.",
 	"libraries.failed": "Could not do it for {name}: {message}",
+	"settings.install_update": "Download and install",
+	"settings.downloading": "Downloading the new version... Scratch2Arduino closes to let it install.",
+	"settings.install_help": "The installer starts by itself and Scratch2Arduino closes: save your project first.",
+	"settings.install_help_source": "On Linux and macOS, Scratch2Arduino is installed from its sources: in the folder where you downloaded it, run these commands.",
 	"settings.title": "Settings",
 	"settings.updates": "Updates",
 	"settings.theme": "Appearance",
@@ -490,6 +500,8 @@ const en: Record<MessageKey, string> = {
 	"program.blocks": "Blocks",
 	"program.confirm_blocks":
 		"Going back to the blocks deletes your {language} code. Your blocks come back as you left them. Continue?",
+	"program.confirm_restore": "Take back the {language} code you had written? (Cancel: start again from your blocks and My code)",
+	"status.program_restored": "Your previous code is back. Your blocks and My code did not change.",
 	"program.confirm_replace": "Convert your {from} program to {to}? What the conversion cannot translate stays as comments, to finish by hand.",
 	"status.converted": "Code converted to {language}. Read it again before running it.",
 	"status.converted_check": "Code converted to {language}. To finish by hand (kept as comments): line(s) {lines} of the original code.",
@@ -502,7 +514,7 @@ const en: Record<MessageKey, string> = {
 		"pinMode(pin, OUTPUT | INPUT | INPUT_PULLUP)\ndigitalWrite(pin, HIGH | LOW)\ndigitalRead(pin) -> HIGH or LOW\nanalogRead(A0) -> 0 to 1023\nanalogWrite(pin ~, 0 to 255)\ndelay(milliseconds)    millis()\ntone(pin, frequency[, duration])    noTone(pin)\nservoWrite(pin, angle from 0 to 180)\nprint(...) -> serial monitor and Live panel\nprintError(...) -> the same, in red (to debug)",
 	"program.help_loop": "You can also write setup() and loop() functions, as on an Arduino.",
 	"status.program_cpp_from_blocks":
-		"C++ mode: your code starts with the program of your blocks. Change it, then \"Check\" or \"Upload\".",
+		"C++ mode: your code starts with My code, then the program of your blocks. Change it, then \"Check\" or \"Upload\".",
 	"status.program_cpp": "C++ mode: write your Arduino program, then \"Check\" or \"Upload\".",
 	"status.program_script": "{language} mode: your program runs on the computer and drives the board with the \"Live\" button.",
 	"status.program_blocks": "Back to the blocks: they are as you left them.",
