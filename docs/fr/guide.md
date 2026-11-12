@@ -63,7 +63,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
-  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
+  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; **Live**, **Vérifier**,
   **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
@@ -124,8 +124,8 @@ composant**. La liste complète est dans le [catalogue des blocs](../block-catal
   sans rien envoyer. C'est utile même sans carte branchée.
 - **Téléverser** fait la même chose puis envoie le programme dans la carte. Il y reste, même débranchée :
   il redémarre chaque fois que la carte est alimentée (par USB, une pile ou un chargeur).
-- **Voir le code** montre le code Arduino fabriqué à partir de tes blocs : une bonne façon de découvrir
-  le "vrai" langage de l'Arduino.
+- La vue **Code** (en haut, à côté de *Blocs*) montre le code Arduino fabriqué à partir de tes blocs :
+  une bonne façon de découvrir le "vrai" langage de l'Arduino.
 
 Quand il y a un problème, la barre d'état explique **ce qui ne va pas** et **comment le corriger**, et
 le bloc concerné est mis en évidence dans la zone de travail. Exemples :

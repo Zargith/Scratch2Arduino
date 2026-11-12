@@ -61,7 +61,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
-  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
+  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
@@ -117,8 +117,8 @@ list is in the [block catalog](../block-catalog.md).
   without sending anything. Useful even without a board plugged in.
 - **Upload** does the same, then sends the program to the board. It stays there, even unplugged: it
   starts again every time the board is powered (USB, battery or charger).
-- **Show code** shows the Arduino code made from your blocks: a good way to discover the "real" Arduino
-  language.
+- The **Code** view (at the top, next to *Blocks*) shows the Arduino code made from your blocks: a good
+  way to discover the "real" Arduino language.
 
 When something is wrong, the status bar explains **what is wrong** and **how to fix it**, and the block
 concerned is highlighted in the workspace. For example:
