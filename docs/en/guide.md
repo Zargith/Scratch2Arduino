@@ -241,7 +241,8 @@ blocks: they become new blocks.
 - Errors in your code show on their line, only when you click *Check*, *Upload* or *Live*. *Delete my
   code* (in the tab) removes it from the project.
 - **Change language**: choose another language for "My code" (or for the program in expert mode) and
-  your code is **converted**: C++, Python and JavaScript in every direction. Variables, functions,
+  your code is **converted**: C++, Python and JavaScript in every direction, even the C++ made from the
+  blocks that you did not change (only an empty example is replaced by the one of the new language). Variables, functions,
   if / else, loops and the Arduino functions are translated; what the conversion cannot translate stays as
   comments, and the message tells which lines to finish by hand.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or

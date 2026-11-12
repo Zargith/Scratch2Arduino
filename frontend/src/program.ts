@@ -88,6 +88,21 @@ export function isStarterCode(code: string): boolean {
 	);
 }
 
+/**
+ * What changing the language of a whole program does to its code: "convert" it into the new
+ * language (asking first when the user typed it, "confirm" true), or "start" from the example of
+ * the new language (blocks, or code that is still an untouched example). Code made from the
+ * blocks or opened from a project is converted too, without asking: nothing typed is replaced.
+ */
+export function programSwitch(
+	from: ProgramLanguage,
+	code: string,
+	typed: boolean
+): { action: "convert"; confirm: boolean } | { action: "start" } {
+	if (from === "blocks" || isStarterCode(code)) return { action: "start" };
+	return { action: "convert", confirm: typed };
+}
+
 /** A mistake at a line of the code, shown in the code editor after Check, Upload or Live. */
 export interface CodeProblem {
 	/** 1-based; 0 when unknown. */
