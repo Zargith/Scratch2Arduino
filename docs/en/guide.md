@@ -38,8 +38,10 @@ the application: the **Tutorials and help** button (the graduation cap), next to
   `sudo usermod -aG dialout $USER`, then log out and back in.
 
 **Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
-(*Download*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or
-switch this check off.
+(*Download and install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings*
+(gear), or switch this check off. On Windows, *Download and install* starts the installer of the new
+version and closes Scratch2Arduino (save your project first). On Linux and macOS, Scratch2Arduino is
+installed from its sources: the *Settings* give the commands to run.
 
 The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
 (Internet is needed that time, then never again for that board). It keeps its own copy of those tools:
@@ -216,7 +218,9 @@ blocks: they become new blocks.
 
 - In **C++**, your code is compiled with the blocks: *Check* and *Upload* work as usual.
 - In **Python** or **JavaScript**, your code runs on the computer, with the **Live** button (with the
-  Arduino functions `digitalWrite`, `analogRead`, `delay`...).
+  Arduino functions `digitalWrite`, `analogRead`, `delay`...). *Upload* works too: your code is then
+  translated to C++ and compiled with the blocks. If a line cannot be translated, the message gives its
+  number.
 - Errors in your code show on their line, only when you click *Check*, *Upload* or *Live*. *Delete my
   code* (in the tab) removes it from the project.
 - **Change language**: choose another language for "My code" (or for the program in expert mode) and
@@ -224,7 +228,9 @@ blocks: they become new blocks.
   if / else, loops and the Arduino functions are translated; what the conversion cannot translate stays as
   comments, and the message tells which lines to finish by hand.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
-  JavaScript*); *Language help* lists the available functions.
+  JavaScript*); *Language help* lists the available functions. In C++, the program starts with "My code",
+  then the code of your blocks. Your blocks and "My code" are kept: going back to the blocks finds them,
+  and going to expert mode again offers to take back the code you had written.
 
 ### Arduino libraries
 

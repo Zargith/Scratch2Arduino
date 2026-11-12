@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 /// Turns a block project into an Arduino sketch (.ino).
 ///
@@ -32,6 +33,16 @@ struct Sketch {
 
 /// Same, with the built-in catalog and the project's board from the built-in database.
 [[nodiscard]] Sketch generate(const project::Project& project);
+
+/// The project with its "My code" file in C++: Python and JavaScript are converted (see
+/// convert.hpp), so that blocks using them can be uploaded. The lines that could not be
+/// converted (kept as comments) go to `toCheck` when given.
+[[nodiscard]] project::Project withCppUserCode(const project::Project& project, std::vector<int>* toCheck = nullptr);
+
+/// One C++ sketch holding "My code" first (converted to C++ when needed), then the code of the
+/// blocks: where the expert C++ mode starts from, so that nothing is lost and the blocks find
+/// the functions of "My code" above them.
+[[nodiscard]] std::string singleFileSketch(const project::Project& project);
 
 /// File of the sketch folder holding the user's C++ code ("My code"), included by the sketch.
 inline constexpr std::string_view kUserCodeFile = "my_code.h";

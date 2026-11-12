@@ -563,3 +563,33 @@ TEST(Codegen, MyCodeStringVariablesWorkInNumberAndTextSlots) {
     EXPECT_NE(code.find("s2a_wait(str.toFloat());"), std::string::npos) << code;
     EXPECT_NE(code.find("_f = 1.5;"), std::string::npos) << code;
 }
+
+namespace {
+
+TEST(Codegen, PutsMyCodeBeforeTheBlocksInOneFile) {
+    Project project;
+    project.name = "p";
+    project.boardId = "uno";
+    Block hat;
+    hat.id = "hat";
+    hat.type = "events_when_program_starts";
+    Block call;
+    call.id = "call";
+    call.type = "mycode_call";
+    call.fields["NAME"] = "flash";
+    project.scripts.push_back({0, 0, {hat, call}});
+    project.userCode = UserCode{ProgramLanguage::Python, "def flash():\n    delay(10)\n"};
+    const std::string single = s2a::codegen::singleFileSketch(project);
+    EXPECT_EQ(single.find("my_code.h"), std::string::npos) << single;
+    const auto mine = single.find("void flash(");
+    ASSERT_NE(mine, std::string::npos) << single;
+    EXPECT_NE(single.find("flash();", mine + 1), std::string::npos) << single;
+    EXPECT_LT(single.find("// ----- My code -----"), mine);
+    EXPECT_LT(mine, single.find("// ----- Blocks -----"));
+    EXPECT_NE(single.find("void setup()"), std::string::npos);
+
+    project.userCode.reset(); // no "My code": the code of the blocks only
+    EXPECT_EQ(s2a::codegen::singleFileSketch(project), generate(project).source);
+}
+
+} // namespace
