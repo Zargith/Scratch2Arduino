@@ -138,11 +138,14 @@ const look = EditorView.theme({
 		color: "var(--mantine-color-dimmed)",
 		borderRight: "1px solid var(--mantine-color-default-border)",
 	},
-	".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "var(--mantine-color-default-hover)" },
+	// See-through: the selection is drawn below the lines, an opaque active line would hide it.
+	".cm-activeLine": { backgroundColor: "rgba(128, 128, 128, 0.08)" },
+	".cm-activeLineGutter": { backgroundColor: "var(--mantine-color-default-hover)" },
 	".cm-cursor": { borderLeftColor: "var(--mantine-color-text)" },
-	"&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-		backgroundColor: "var(--mantine-primary-color-light) !important",
-	},
+	// Selected text, as in a word processor (CodeMirror draws it: the browser's own is hidden).
+	".cm-selectionBackground": { backgroundColor: "rgba(34, 139, 230, 0.25) !important" },
+	"&.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(34, 139, 230, 0.4) !important" },
+	".cm-selectionMatch": { backgroundColor: "rgba(250, 176, 5, 0.25)" },
 	".cm-tooltip": {
 		backgroundColor: "var(--mantine-color-body)",
 		color: "var(--mantine-color-text)",

@@ -38,8 +38,11 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
   `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
 
 **Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
-la propose (*Télécharger*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut aussi vérifier
-dans les *Paramètres* (engrenage), ou désactiver cette recherche.
+la propose (*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut
+aussi vérifier dans les *Paramètres* (engrenage), ou désactiver cette recherche. Sous Windows, *Télécharger
+et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino (enregistre ton projet
+avant). Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
+commandes à lancer.
 
 Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
 cette fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne
@@ -221,7 +224,9 @@ côté des blocs : elles deviennent de nouveaux blocs.
 
 - En **C++**, ton code est compilé avec les blocs : *Vérifier* et *Téléverser* marchent comme d'habitude.
 - En **Python** ou **JavaScript**, ton code tourne sur l'ordinateur, avec le bouton **Live** (avec les
-  fonctions `digitalWrite`, `analogRead`, `delay`... de l'Arduino).
+  fonctions `digitalWrite`, `analogRead`, `delay`... de l'Arduino). *Téléverser* marche aussi : ton code
+  est alors traduit en C++ et compilé avec les blocs. Si une ligne ne peut pas être traduite, le message
+  donne son numéro.
 - Les erreurs de ton code s'affichent sur leur ligne, seulement quand tu cliques sur *Vérifier*,
   *Téléverser* ou *Live*. *Supprimer mon code* (dans l'onglet) l'enlève du projet.
 - **Changer de langage** : choisis un autre langage pour "Mon code" (ou pour le programme en mode
@@ -229,7 +234,10 @@ côté des blocs : elles deviennent de nouveaux blocs.
   fonctions, les si / sinon, les boucles et les fonctions Arduino sont traduits ; ce que la conversion ne
   sait pas traduire reste en commentaires, et le message dit quelles lignes reprendre à la main.
 - **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
-  ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles.
+  ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles. En C++, le programme commence
+  avec "Mon code", puis le code de tes blocs. Tes blocs et "Mon code" restent gardés : en revenant aux
+  blocs, tu les retrouves, et en repassant en mode expert, Scratch2Arduino propose de reprendre le code
+  que tu avais écrit.
 
 ### Bibliothèques Arduino
 

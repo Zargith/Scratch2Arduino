@@ -169,6 +169,8 @@ export function App() {
 	const codeRef = useRef("");
 	/** True once the user typed in the code: switching language then asks before replacing it. */
 	const codeEdited = useRef(false);
+	/** The expert program typed before going back to the blocks: offered again when coming back. */
+	const lastExpert = useRef<{ language: ProgramLanguage; code: string } | null>(null);
 	const [helpShown, setHelpShown] = useState(false);
 
 	const [name, setName] = useState(() => translate(detectLanguage(), "project.untitled"));
@@ -687,6 +689,8 @@ export function App() {
 		const blocksName = t("program.blocks");
 		if (next === "blocks") {
 			if (typed && !window.confirm(t("program.confirm_blocks", { language: programName(program, blocksName) }))) return;
+			// Kept for this session: going back to the expert mode offers it again.
+			lastExpert.current = typed ? { language: program, code: codeRef.current } : null;
 			codeRef.current = "";
 			setProgram("blocks");
 			markDirty();
@@ -715,13 +719,24 @@ export function App() {
 			return;
 		}
 		if (program === "blocks") initialState.current = editor.current?.save() ?? initialState.current;
+		const previous = lastExpert.current;
+		if (previous && previous.language === next && window.confirm(t("program.confirm_restore", { language: programNames[next] }))) {
+			setView("code");
+			codeRef.current = previous.code;
+			codeEdited.current = true;
+			setProgram(next);
+			markDirty();
+			setStatus({ kind: "info", message: t("status.program_restored") });
+			return;
+		}
 		setView("code");
 		let start = starterCode(next, language);
 		let fromBlocks = false;
-		// C++: the blocks already are a program; their code is the best starting point.
+		// C++: the blocks already are a program; with "My code" first (its functions are used by
+		// the blocks), it is the best starting point.
 		if (next === "cpp" && hasHost()) {
 			try {
-				start = await bridge.generate(currentBlocks());
+				start = await bridge.expertSketch(withUserCode(currentBlocks(), userCodeRef.current));
 				fromBlocks = true;
 			} catch {
 				// keep the example
@@ -1280,8 +1295,16 @@ export function App() {
 						<Button size="xs" variant="light" onClick={() => void bridge.openUrl(update.page).catch(fail)}>
 							{t("update.notes")}
 						</Button>
-						<Button size="xs" onClick={() => void bridge.openUrl(update.download).catch(fail)}>
-							{t("update.download")}
+						<Button
+							size="xs"
+							onClick={() =>
+								void bridge
+									.installUpdate(update.download, language)
+									.then((started) => (started ? undefined : bridge.openUrl(update.download)))
+									.catch(fail)
+							}
+						>
+							{t(update.download.endsWith(".exe") ? "settings.install_update" : "update.download")}
 						</Button>
 					</Group>
 				</Card>

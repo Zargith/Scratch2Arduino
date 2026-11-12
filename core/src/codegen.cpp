@@ -1,4 +1,5 @@
 #include "s2a/codegen.hpp"
+#include "s2a/convert.hpp"
 
 #include "s2a/usercode.hpp"
 
@@ -1284,6 +1285,38 @@ Sketch generate(const project::Project& project, const BlockCatalog& catalog, co
 
 Sketch generate(const project::Project& project) {
     return generate(project, BlockCatalog::builtin(), BoardDatabase::builtin().find(project.boardId));
+}
+
+project::Project withCppUserCode(const project::Project& project, std::vector<int>* toCheck) {
+    project::Project result = project;
+    if (result.userCode && result.userCode->language != project::ProgramLanguage::Cpp &&
+        result.userCode->language != project::ProgramLanguage::Blocks) {
+        auto converted = convert::convert(result.userCode->code, result.userCode->language, project::ProgramLanguage::Cpp);
+        result.userCode = project::UserCode{project::ProgramLanguage::Cpp, std::move(converted.code)};
+        if (toCheck != nullptr) {
+            *toCheck = std::move(converted.toCheck);
+        }
+    }
+    return result;
+}
+
+std::string singleFileSketch(const project::Project& project) {
+    const project::Project cpp = withCppUserCode(project);
+    std::string source = generate(cpp).source;
+    if (!cpp.userCode) {
+        return source;
+    }
+    const std::string include = "#include \"" + std::string(kUserCodeFile) + "\" // My code";
+    const auto at = source.find(include);
+    if (at == std::string::npos) {
+        return source;
+    }
+    std::string code = cpp.userCode->code;
+    while (!code.empty() && (code.back() == '\n' || code.back() == ' ' || code.back() == '\r')) {
+        code.pop_back();
+    }
+    source.replace(at, include.size(), "// ----- My code -----\n" + code + "\n\n// ----- Blocks -----");
+    return source;
 }
 
 } // namespace s2a::codegen

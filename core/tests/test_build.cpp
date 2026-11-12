@@ -340,11 +340,28 @@ TEST_F(Build, ReportsMissingFunctionsOfMyCode) {
     EXPECT_TRUE(fake.commands.empty());
 }
 
-TEST_F(Build, SendsBlocksUsingPythonCodeToLive) {
-    const auto result = s2a::toolchain::buildProject(cli(), withMyCode(ProgramLanguage::Python, "def flash(n):\n    pass\n"),
-                                                     Language::English, options);
+TEST_F(Build, TranslatesPythonCodeToUploadTheBlocks) {
+    fake.replies = {reply(kInstalled), reply(kCompileSuccess)};
+    const auto result = s2a::toolchain::buildProject(
+        cli(), withMyCode(ProgramLanguage::Python, "def flash(n):\n    for i in range(n):\n        delay(100)\n"),
+        Language::English, options);
+    ASSERT_TRUE(result.ok) << result.message << "\n" << result.details;
+    std::ifstream header(options.workDirectory / "sketches" / "Clignotant_ete" / "my_code.h");
+    std::stringstream user;
+    user << header.rdbuf();
+    EXPECT_NE(user.str().find("void flash("), std::string::npos) << user.str();
+    EXPECT_NE(user.str().find("delay(100);"), std::string::npos) << user.str();
+}
+
+TEST_F(Build, SaysWhichLinesOfMyCodeCannotBeTranslated) {
+    const auto result = s2a::toolchain::buildProject(
+        cli(), withMyCode(ProgramLanguage::JavaScript, "function flash(n) {\n  const x = {a: [1, 2]}.a.map(v => v * 2);\n}\n"),
+        Language::English, options);
     EXPECT_FALSE(result.ok);
-    EXPECT_NE(result.message.find("Live"), std::string::npos) << result.message;
+    EXPECT_NE(result.message.find("translated to C++"), std::string::npos) << result.message;
+    ASSERT_FALSE(result.problems.empty());
+    EXPECT_EQ(result.problems[0].file, "user");
+    EXPECT_EQ(result.problems[0].line, 2);
     EXPECT_TRUE(fake.commands.empty());
 }
 

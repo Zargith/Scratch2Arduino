@@ -118,8 +118,14 @@ BuildResult checkScript(const project::Project& project, Language language, bool
 
 } // namespace
 
-BuildResult buildProject(const ArduinoCli& cli, const project::Project& project, Language language,
+BuildResult buildProject(const ArduinoCli& cli, const project::Project& input, Language language,
                          const BuildOptions& options) {
+    // "My code" in Python or JavaScript runs on the computer in Live mode; to build and upload
+    // the blocks using it, it is converted to C++ and compiled with them.
+    std::vector<int> toCheck;
+    const bool convertUserCode = input.language == project::ProgramLanguage::Blocks && input.userCode &&
+                                 script::isScript(input.userCode->language) && usercode::usesUserCode(input);
+    const project::Project project = convertUserCode ? codegen::withCppUserCode(input, &toCheck) : input;
     const Board* board = BoardDatabase::builtin().find(project.boardId);
     if (board == nullptr) {
         return failure(tr("build.unknown_board", language, {{"board", project.boardId}}));
@@ -147,11 +153,20 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         }
         source = project.code;
     } else {
-        // Python and JavaScript code runs on the computer: blocks using it need the Live mode.
-        if (project.userCode && script::isScript(project.userCode->language) && usercode::usesUserCode(project)) {
-            return failure(tr("text.usercode_live_only", language,
-                              {{"language", project.userCode->language == project::ProgramLanguage::Python ? "Python"
-                                                                                                          : "JavaScript"}}));
+        if (!toCheck.empty()) {
+            std::string lines;
+            for (const int line : toCheck) {
+                lines += (lines.empty() ? "" : ", ") + std::to_string(line);
+            }
+            BuildResult result = failure(tr("text.usercode_convert_lines", language,
+                                            {{"language", input.userCode->language == project::ProgramLanguage::Python
+                                                              ? "Python"
+                                                              : "JavaScript"},
+                                             {"lines", lines}}));
+            for (const int line : toCheck) {
+                result.problems.push_back({line, 0, tr("text.usercode_convert_line", language), "user"});
+            }
+            return result;
         }
         if (project.userCode && project.userCode->language == project::ProgramLanguage::Cpp) {
             userSource = project.userCode->code;

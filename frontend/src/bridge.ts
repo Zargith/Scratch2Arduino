@@ -194,6 +194,7 @@ export interface LibraryChange {
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
+	s2a_expert_sketch(project: Project): Promise<string>;
 	s2a_code_declarations(language: string, code: string): Promise<UserDeclaration[]>;
 	s2a_wiring(project: Project, language: Language): Promise<WiringPlan>;
 	s2a_save_image(name: string, png: string, language: Language): Promise<string | null>;
@@ -204,6 +205,7 @@ interface HostFunctions {
 	s2a_settings(): Promise<Settings>;
 	s2a_save_settings(settings: Settings): Promise<boolean>;
 	s2a_open_url(url: string): Promise<boolean>;
+	s2a_install_update(url: string, language: Language): Promise<boolean>;
 	s2a_convert(code: string, from: string, to: string): Promise<Converted>;
 	s2a_open_recent(path: string, language: Language): Promise<OpenedProject>;
 	s2a_autosave(project: Project, path: string): Promise<null>;
@@ -265,9 +267,13 @@ export const bridge = {
 	saveSettings: (settings: Settings) => host("s2a_save_settings")(settings),
 	/** Opens a page of the project's GitHub repository in the browser (the host refuses any other). */
 	openUrl: (url: string) => host("s2a_open_url")(url),
+	/** Windows: downloads and starts the installer of a release, then the program closes. False elsewhere. */
+	installUpdate: (url: string, language: Language) => host("s2a_install_update")(url, language),
 	/** Rewrites C++, Python or JavaScript code in another of these languages (never fails). */
 	convert: (code: string, from: string, to: string) => host("s2a_convert")(code, from, to),
 	generate: (project: Project) => host("s2a_generate")(project),
+	/** One C++ sketch: "My code" first, then the code of the blocks (start of the expert C++ mode). */
+	expertSketch: (project: Project) => host("s2a_expert_sketch")(project),
 	/** Functions and variables of a "My code" file, found by the core (never fails). */
 	codeDeclarations: (language: string, code: string) => host("s2a_code_declarations")(language, code),
 	/** Components to wire, computed by the core from the blocks (core/include/s2a/wiring.hpp). */
