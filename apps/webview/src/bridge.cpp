@@ -940,6 +940,23 @@ void Bridge::bind() {
         }
         return std::string{};
     });
+    // Step-by-step mode: pause (true) or run freely (false), and "Next block" while paused.
+    window_.bind("s2a_live_pause", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const bool paused = !args.empty() && args[0].is_boolean() && args[0].get<bool>();
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (live_) {
+            live_->pause(paused);
+        }
+        return std::string{};
+    });
+    window_.bind("s2a_live_step", [this](const std::string& /*request*/) {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (live_) {
+            live_->stepOnce();
+        }
+        return std::string{};
+    });
     window_.bind("s2a_live_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!live_) {
@@ -950,6 +967,7 @@ void Bridge::bind() {
                     {"message", snapshot.message},
                     {"details", snapshot.details},
                     {"running", snapshot.runningBlocks},
+                    {"paused", snapshot.paused},
                     {"problems", snapshot.problemBlocks},
                     {"variables", snapshot.variables},
                     {"readings", snapshot.readings},

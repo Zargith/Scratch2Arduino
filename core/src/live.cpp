@@ -554,9 +554,29 @@ void Interpreter::start() {
 }
 
 void Interpreter::step(Clock now) {
+    if (!paused_) {
+        pendingSteps_ = 0;
+        for (Thread& thread : threads_) {
+            if (!thread.done && thread.wakeAt <= now) {
+                run(thread, now, kStepBudget);
+            }
+        }
+        return;
+    }
+    // Step by step: one block per click, the scripts in turn; a wait never holds a script back.
+    for (; pendingSteps_ > 0; --pendingSteps_) {
+        for (std::size_t tried = 0; tried < threads_.size(); ++tried) {
+            Thread& thread = threads_[stepCursor_++ % threads_.size()];
+            if (!thread.done) {
+                thread.wakeAt = now;
+                run(thread, now, 1);
+                break;
+            }
+        }
+    }
     for (Thread& thread : threads_) {
-        if (!thread.done && thread.wakeAt <= now) {
-            run(thread, now);
+        if (!thread.done) {
+            run(thread, now, 0); // shows the block each script runs next
         }
     }
 }
@@ -795,7 +815,8 @@ double Interpreter::evaluate(const Block& block) {
     return 0;
 }
 
-void Interpreter::run(Thread& thread, Clock now) {
+void Interpreter::run(Thread& thread, Clock now, int limit) {
+    // Each turn runs one block; the turns that only leave a finished stack are not counted.
     for (int budget = kStepBudget; budget > 0; --budget) {
         if (thread.frames.empty()) {
             thread.done = true;
@@ -813,6 +834,9 @@ void Interpreter::run(Thread& thread, Clock now) {
         }
         const Block& block = (*frame.stack)[frame.index];
         thread.current = block.id;
+        if (limit-- <= 0) {
+            return; // step by step: shown, run at the next click
+        }
         ++frame.index; // before pushing frames: `frame` may move
         const std::string& type = block.type;
         const auto enter = [&](const char* name, long turns, bool loop) {
@@ -1119,6 +1143,19 @@ void Session::stop() {
     stopping_ = true;
 }
 
+void Session::pause(bool paused) {
+    paused_ = paused;
+    if (!paused) {
+        steps_ = 0;
+    }
+}
+
+void Session::stepOnce() {
+    if (paused_) {
+        ++steps_;
+    }
+}
+
 Session::Snapshot Session::snapshot() const {
     const std::lock_guard<std::mutex> lock(mutex_);
     return snapshot_;
@@ -1288,6 +1325,10 @@ void Session::run(project::Project project) {
                 interpreter->update(std::move(*next));
             }
         }
+        interpreter->setPaused(paused_);
+        for (int steps = steps_.exchange(0); steps > 0; --steps) {
+            interpreter->stepOnce();
+        }
         interpreter->step(std::chrono::duration_cast<milliseconds>(std::chrono::steady_clock::now() - start));
         if (const auto error = linkError ? linkError : link.takeError()) {
             fail(*error);
@@ -1303,6 +1344,7 @@ void Session::run(project::Project project) {
         {
             const std::lock_guard<std::mutex> lock(mutex_);
             snapshot_.runningBlocks = interpreter->runningBlocks();
+            snapshot_.paused = interpreter->paused();
             snapshot_.variables = interpreter->variables();
             snapshot_.readings = interpreter->readings();
             for (std::string& line : interpreter->takeOutput()) {

@@ -141,6 +141,13 @@ Python or JavaScript) shows in the serial monitor panel, which opens by itself a
 `printError()` (and `console.error()` in JavaScript) writes in red, on the error output; the error that
 stops a program also stays there, with its line, after the stop.
 
+**Step by step**: to understand what your program does, click **Pause** (next to *Stop*, key F9). The
+blocks stop and the block about to run is lit. Each click on **Next block** (F10) runs that block only:
+watch the board and the variables change, one block at a time. *Wait* blocks no longer make you wait in
+step-by-step mode. With several scripts, they take turns. **Resume** (F9) runs the program at normal speed
+again. Step by step works for blocks (also with "My code"), not for a whole program written in Python or
+JavaScript.
+
 The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
 computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
 off. For the board to work on its own, without the computer, use **Upload**.
@@ -296,6 +303,7 @@ Programs are always uploaded with the USB cable.
 | Ctrl+Z | Undo |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 | Delete or Backspace | Delete the selected block |
+| F9 / F10 | Live mode: pause or resume / run the next block |
 
 While typing in a slot (a number, a text, the project name), these keys act on the text instead.
 
