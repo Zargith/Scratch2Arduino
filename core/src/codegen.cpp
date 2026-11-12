@@ -385,12 +385,50 @@ private:
         }
     }
 
-    /// The Bluetooth serial link to the phone (ESP32), set up in setup().
+    /// The Bluetooth serial link to the phone, set up in setup(): the ESP32's own Bluetooth, or an
+    /// HC-05 / HC-06 module on an Arduino board (the pins of its "Bluetooth module" block).
     void phone() {
-        use("BluetoothSerial.h", "BluetoothSerial s2a_phone;", "s2a_phone_begin();");
-        includes_.insert("esp_mac.h"); // esp_read_mac, for the name of the board
         helpers_.insert("phone");
         helpers_.insert("text");
+        if (board_ != nullptr && board_->bluetoothModule) {
+            std::string rx = "10";
+            std::string tx = "11";
+            if (const Block* module = moduleBlock()) {
+                rx = pinLabel(*module, "RX_PIN");
+                tx = pinLabel(*module, "TX_PIN");
+            }
+            const Pin* rxPin = board_->findPin(rx);
+            const Pin* txPin = board_->findPin(tx);
+            const int port = rxPin != nullptr && txPin != nullptr ? moduleSerialPort(*board_, rxPin->number, txPin->number) : 0;
+            if (port > 0) { // a serial port of the Mega
+                use("Arduino.h", "HardwareSerial& s2a_phone = Serial" + std::to_string(port) + ";", "s2a_phone.begin(9600);");
+            } else {
+                use("SoftwareSerial.h", "SoftwareSerial s2a_phone(" + rx + ", " + tx + ");", "s2a_phone.begin(9600);");
+            }
+            ownedPins_.insert(rx);
+            ownedPins_.insert(tx);
+            return;
+        }
+        use("BluetoothSerial.h", "BluetoothSerial s2a_phone;", "s2a_phone_begin();");
+        includes_.insert("esp_mac.h"); // esp_read_mac, for the name of the board
+        helpers_.insert("phone_esp32");
+    }
+
+    /// The first "Bluetooth module" block of the scripts that run (the validator checks the others agree).
+    const Block* moduleBlock() const {
+        const Block* found = nullptr;
+        for (const project::Script& script : project_.scripts) {
+            const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog_.find(script.blocks.front().type);
+            if (first == nullptr || first->shape != BlockShape::Hat) {
+                continue;
+            }
+            project::forEachBlock(script.blocks, [&found](const Block& block) {
+                if (found == nullptr && block.type == "phone_module") {
+                    found = &block;
+                }
+            });
+        }
+        return found;
     }
 
     /// A text slot as a String expression, accents kept (the phone shows them).
@@ -589,6 +627,10 @@ private:
         } else if (type == "phone_send") {
             phone();
             body.add(depth, "s2a_phone.println(" + phoneText(block, "VALUE") + ");");
+        } else if (type == "phone_module") {
+            phone(); // the link starts in setup()
+            body.add(depth, "// Bluetooth module: TXD to pin " + pinLabel(block, "RX_PIN") + ", RXD to pin " +
+                                pinLabel(block, "TX_PIN"));
         } else if (type == "pins_analog_write") {
             const std::string target = pin(block, "PIN", PinMode::Output);
             body.add(depth, "analogWrite(" + target + ", constrain((int)(" + number(block, "VALUE") +
@@ -847,12 +889,8 @@ private:
                 "  if (value == floor(value) && fabs(value) < 2000000000.0) {", "    return String((long)value);",
                 "  }", "  return String(value, 2);", "}", "", "String s2a_text(const String& value) {",
                 "  return value;", "}"});
-        helper(out, "phone",
+        helper(out, "phone_esp32",
                {"// Phone over Bluetooth: named \"S2A-xxxx\" like the Live program, pairing without a code.",
-                "String s2a_phone_line;   // last message, until a block recognises it",
-                "String s2a_phone_buffer; // message being received",
-                "double s2a_phone_value = 0;",
-                "",
                 "void s2a_phone_begin() {",
                 "  uint8_t mac[6];",
                 "  esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);",
@@ -860,7 +898,12 @@ private:
                 "  snprintf(name, sizeof(name), \"S2A-%02X%02X\", mac[4], mac[5]);",
                 "  s2a_phone.enableSSP(false, false);",
                 "  s2a_phone.begin(name);",
-                "}",
+                "}"});
+        helper(out, "phone",
+               {"// Messages of the phone (a Bluetooth terminal app).",
+                "String s2a_phone_line;   // last message, until a block recognises it",
+                "String s2a_phone_buffer; // message being received",
+                "double s2a_phone_value = 0;",
                 "",
                 "// Lower case, accents and spaces around removed: \" Éteins\" is \"eteins\".",
                 "String s2a_simple(const String& text) {",

@@ -50,6 +50,8 @@ cmake --build --preset core-only && ctest --preset core-only
 Every push to `main` whose CI passes publishes the GitHub release `vX.Y.Z`, where `X.Y.Z` is the
 `VERSION` of `CMakeLists.txt`, with `Scratch2Arduino_installer.exe` attached (0.x versions are marked as pre-releases).
 If that tag already exists nothing is published: bump `VERSION` on `dev` before merging into `main`.
+Version numbers follow semantic versioning from 0.10.0 on: a release holding only fixes bumps the patch
+number (0.10.1, 0.10.2... as many as needed), a release with new features bumps the minor number (0.11.0).
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`...).
 
 ## License

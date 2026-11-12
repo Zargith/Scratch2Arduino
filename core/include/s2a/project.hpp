@@ -115,6 +115,14 @@ struct UserCode {
     std::string code;
 };
 
+/// An Arduino library the project needs besides those of its blocks (for code typed in
+/// "My code" or a C++ program). Installed by the Build when missing, so the project builds
+/// on another computer too.
+struct Library {
+    std::string name;    ///< Name in the Arduino registry ("ArduinoJson").
+    std::string version; ///< Empty: any version (the latest is installed when missing).
+};
+
 struct Project {
     std::string name;
     std::string boardId{BoardDatabase::kDefaultBoardId};
@@ -128,6 +136,8 @@ struct Project {
     std::string code;
     /// The user's own code file, used with the blocks (block projects only).
     std::optional<UserCode> userCode;
+    /// Libraries chosen in the library manager.
+    std::vector<Library> libraries;
     /// Extra files stored in the archive under assets/ (path without the prefix -> bytes).
     std::map<std::string, std::string> assets;
 };

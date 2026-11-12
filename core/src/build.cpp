@@ -39,6 +39,24 @@ BuildResult explain(const Diagnosis& diagnosis, Language language) {
     return failure(describe(diagnosis, language), std::move(details));
 }
 
+/// A header of typed code that no installed library provides: the libraries that may provide
+/// it, to add in the library manager.
+std::string libraryMissingMessage(const ArduinoCli& cli, const Diagnosis& diagnosis, Language language) {
+    const auto& params = diagnosis.params;
+    const auto header = std::find_if(params.begin(), params.end(), [](const auto& param) { return param.first == "library"; });
+    std::string message = tr("text.cpp_library_missing", language, params);
+    if (header != params.end()) {
+        if (const auto found = librariesProviding(cli, header->second + ".h"); found.ok() && !found.value().empty()) {
+            std::string names;
+            for (const std::string& name : found.value()) {
+                names += (names.empty() ? "\"" : ", \"") + name + "\"";
+            }
+            message += " " + tr("text.cpp_library_suggestion", language, {{"names", names}});
+        }
+    }
+    return message;
+}
+
 /// Block whose code starts at, or closest before, each compiler error line of the sketch.
 std::vector<std::string> blocksAt(const std::vector<CompilerMessage>& messages,
                                   const std::map<std::string, int>& blockLines, const std::string& inoName) {
@@ -214,14 +232,21 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         }
     }
 
-    // Component libraries (Servo...), downloaded the first time a block needs them.
-    const auto missing = missingLibraries(cli, requiredLibraries(source + "\n" + userSource));
-    if (!missing.ok()) {
-        return failure(tr(errorMessageKey(missing.error().code), language), missing.error().detail);
+    // Component libraries (Servo...), downloaded the first time a block needs them, and the
+    // libraries chosen for the project in the library manager.
+    const std::vector<std::string> required = requiredLibraries(source + "\n" + userSource);
+    std::vector<std::string> missing;
+    if (!required.empty() || !project.libraries.empty()) {
+        const auto installedLibraries = cli.listLibraries();
+        if (!installedLibraries.ok()) {
+            return failure(tr(errorMessageKey(installedLibraries.error().code), language),
+                           installedLibraries.error().detail);
+        }
+        missing = librariesToInstall(required, project.libraries, installedLibraries.value());
     }
-    if (!missing.value().empty()) {
+    if (!missing.empty()) {
         notify(options, BuildStep::InstallingLibraries);
-        const auto outcome = cli.installLibraries(missing.value());
+        const auto outcome = cli.installLibraries(missing);
         if (!outcome.ok()) {
             return failure(tr(errorMessageKey(outcome.error().code), language), outcome.error().detail);
         }
@@ -240,14 +265,14 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& project,
         BuildResult result = explain(diagnosis, language);
         result.sketch = sketch;
         if (text && diagnosis.problem == Problem::LibraryMissing) {
-            // Typed code can include any library: say which ones are installed by themselves.
-            result.message = tr("text.cpp_library_missing", language, diagnosis.params);
+            // Typed code can include any library: point to the library manager.
+            result.message = libraryMissingMessage(cli, diagnosis, language);
         }
         if (!text) {
             result.blockIds = blocksAt(diagnosis.messages, blockLines, name + ".ino");
             result.problems = problemsAt(diagnosis.messages, std::string(codegen::kUserCodeFile), "user", language);
             if (diagnosis.problem == Problem::LibraryMissing && !userSource.empty()) {
-                result.message = tr("text.cpp_library_missing", language, diagnosis.params);
+                result.message = libraryMissingMessage(cli, diagnosis, language);
             }
             if (diagnosis.problem == Problem::CompilerError && !result.problems.empty()) {
                 const CodeProblem& first = result.problems.front();

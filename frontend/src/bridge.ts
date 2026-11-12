@@ -44,6 +44,21 @@ export interface Port {
 	bluetooth?: boolean;
 }
 
+/** How an HC-05 / HC-06 module is wired to an Arduino board (see core live::BluetoothModule). */
+export interface BluetoothModule {
+	/** Board pin that receives (label printed on the board): wired to TXD of the module. */
+	rx: string;
+	/** Board pin that sends (label printed on the board): wired to RXD of the module. */
+	tx: string;
+	baud: number;
+}
+
+/** Result of s2a_bluetooth_module. */
+export interface ModuleSetup {
+	ok: boolean;
+	message: string;
+}
+
 /** Result of s2a_bluetooth_search. */
 export interface BluetoothSearch {
 	ok: boolean;
@@ -143,6 +158,39 @@ export interface Converted {
 	toCheck: number[];
 }
 
+/** A library installed for arduino-cli (core toolchain::InstalledLibrary). */
+export interface InstalledLibrary {
+	name: string;
+	version: string;
+	author: string;
+	sentence: string;
+	website: string;
+	/** Headers to include in the code ("Servo.h"). */
+	includes: string[];
+	/** Comes with a board package (Wire, SoftwareSerial...): it cannot be removed. */
+	builtIn: boolean;
+}
+
+/** A library of the Arduino registry (core toolchain::LibraryInfo). */
+export interface RegistryLibrary {
+	name: string;
+	author: string;
+	sentence: string;
+	category: string;
+	website: string;
+	latestVersion: string;
+	/** Oldest first. */
+	versions: string[];
+	architectures: string[];
+}
+
+/** Result of s2a_library_install and s2a_library_uninstall. */
+export interface LibraryChange {
+	ok: boolean;
+	message: string;
+	details: string;
+}
+
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
@@ -168,8 +216,18 @@ interface HostFunctions {
 	s2a_library_export(language: Language): Promise<string | null>;
 	s2a_library_import(language: Language): Promise<number | null>;
 	s2a_ports(): Promise<Port[]>;
+	s2a_libraries_installed(language: Language): Promise<InstalledLibrary[]>;
+	s2a_libraries_search(query: string, language: Language): Promise<RegistryLibrary[]>;
+	s2a_library_install(name: string, version: string, language: Language): Promise<LibraryChange>;
+	s2a_library_uninstall(name: string, language: Language): Promise<LibraryChange>;
 	s2a_wifi_setup(port: string, name: string, password: string, boardId: string, language: Language): Promise<WifiSetup>;
 	s2a_bluetooth_search(language: Language): Promise<BluetoothSearch>;
+	s2a_bluetooth_module(
+		port: string,
+		boardId: string,
+		module: BluetoothModule | null,
+		language: Language,
+	): Promise<ModuleSetup>;
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
@@ -237,11 +295,21 @@ export const bridge = {
 	/** Resolves to the number of groups added, or null when cancelled. */
 	libraryImport: (language: Language) => host("s2a_library_import")(language),
 	ports: () => host("s2a_ports")(),
+	/** Arduino libraries installed on this computer (library manager). */
+	librariesInstalled: (language: Language) => host("s2a_libraries_installed")(language),
+	/** Libraries of the Arduino registry (downloads the list at the first search). */
+	librariesSearch: (query: string, language: Language) => host("s2a_libraries_search")(query, language),
+	/** Empty version: the latest one. */
+	libraryInstall: (name: string, version: string, language: Language) => host("s2a_library_install")(name, version, language),
+	libraryUninstall: (name: string, language: Language) => host("s2a_library_uninstall")(name, language),
 	/** Saves the home Wi-Fi on the board over its USB port (empty name: forget it). */
 	wifiSetup: (port: string, name: string, password: string, boardId: string, language: Language) =>
 		host("s2a_wifi_setup")(port, name, password, boardId, language),
 	/** Bluetooth boards around the computer (about 8 seconds). */
 	bluetoothSearch: (language: Language) => host("s2a_bluetooth_search")(language),
+	/** Saves the pins of an HC-05 / HC-06 module on the board over its USB port (null: forget it). */
+	bluetoothModule: (port: string, boardId: string, module: BluetoothModule | null, language: Language) =>
+		host("s2a_bluetooth_module")(port, boardId, module, language),
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
 	setTitle: (title: string) => host("s2a_set_title")(title),

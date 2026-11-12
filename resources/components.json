@@ -105,6 +105,17 @@
       ],
       "note": { "fr": "Le moteur se branche sur OUT1 et OUT2, et le pont a sa propre pile (bornier +12V et GND).", "en": "The motor goes on OUT1 and OUT2, and the bridge has its own battery (+12V and GND terminal)." }
     },
+    "bluetooth_module": {
+      "name": { "fr": "Module Bluetooth HC-05 / HC-06", "en": "HC-05 / HC-06 Bluetooth module" },
+      "current": 40,
+      "connections": [
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "TXD", "en": "TXD" }, "to": "RX_PIN" },
+        { "pin": { "fr": "RXD", "en": "RXD" }, "to": "TX_PIN", "via": { "fr": "pont diviseur 1 kΩ / 2 kΩ", "en": "1 kΩ / 2 kΩ voltage divider" } }
+      ],
+      "note": { "fr": "RXD du module n'accepte que 3,3 V : 1 kΩ entre la broche et RXD, 2 kΩ entre RXD et GND. Les broches 0 et 1 restent pour le câble USB.", "en": "RXD of the module only takes 3.3 V: 1 kΩ between the pin and RXD, 2 kΩ between RXD and GND. Pins 0 and 1 stay for the USB cable." }
+    },
     "rgb_led": {
       "name": { "fr": "LED RGB (cathode commune)", "en": "RGB LED (common cathode)" },
       "current": 60,

@@ -33,7 +33,11 @@ enum class Rule {
     FunctionNotDefined, ///< "call" of a function that has no "define" script.
     FunctionDefinedTwice, ///< Two "define" scripts for the same function.
     RecursiveFunction,  ///< A function that calls itself (directly or through others): it would never end.
-    NoBluetooth,        ///< A phone block on a board without Bluetooth.
+    NoBluetooth,        ///< A phone block on a board without Bluetooth (nor a module).
+    ModuleMissing,      ///< Phone blocks on an Arduino board without the "Bluetooth module" block.
+    ModuleNotNeeded,    ///< The "Bluetooth module" block on a board that takes no module (ESP32...).
+    ModulePins,         ///< The "Bluetooth module" block on pins it cannot use.
+    ModuleTwice,        ///< Two "Bluetooth module" blocks on different pins.
     UserCodeMissing,    ///< A "My code" block whose function or variable is not in the code (any more).
     UserCodeNoValue,    ///< The result of a "My code" function that gives no value.
     UserCodeReadOnly,   ///< Setting a constant of "My code".

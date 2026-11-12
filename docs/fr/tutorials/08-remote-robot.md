@@ -88,6 +88,25 @@ Ou ouvre l'exemple complet : **Nouveau -> Robot télécommandé**.
 > connexion Bluetooth, prise par le téléphone. Teste plutôt en Live par le câble USB (en tapant les mots
 > dans le téléphone), ou téléverse.
 
+## Avec une carte Arduino Uno et un module HC-05
+
+Pas d'ESP32 ? Une carte **Arduino Uno** fait aussi l'affaire, avec un **module Bluetooth HC-05** (ou
+HC-06) : c'est la version "Uno + module HC-05" de l'exemple dans la galerie.
+
+![Montage du robot avec une Uno et un HC-05](../../../examples/projects/remote-robot-uno/wiring.png)
+
+| Branchement | Broche de la Uno |
+|---|---|
+| L298N ENA, IN1, IN2 (moteur de gauche) | **9**, **8**, **7** |
+| L298N IN3, IN4, ENB (moteur de droite) | **5**, **4**, **3** |
+| HC-05 VCC, GND | 5V, GND |
+| HC-05 TXD | **10** |
+| HC-05 RXD | **11**, à travers une résistance de 1 kΩ, et une de 2 kΩ entre RXD et GND (RXD n'accepte que 3,3 V) |
+
+Le programme est le même, avec un bloc de plus sous "quand le programme démarre" : **module Bluetooth
+HC-05 / HC-06 : TXD sur la broche 10, RXD sur la broche 11**. Sur le téléphone, l'appli se connecte à
+"HC-05" (code **1234** ou 0000) au lieu de "S2A-...".
+
 ## Version avancée : avec du code
 
 Choisis **Avancé : C++** dans la galerie : une seule fonction, `rouler(gauche, droite)`, règle la vitesse de chaque roue de -100 (en arrière) à 100 (en avant). Elle remplace les cinq fonctions : `rouler(80, 80)` avance, `rouler(-60, 60)` tourne à gauche. Invente des virages plus doux, comme `rouler(80, 40)`.

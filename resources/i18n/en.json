@@ -42,7 +42,8 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "done": "Done.",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli lib list|search <words>|install <name>[@<version>]|remove <name>  Arduino libraries (* = comes with a board)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "convert_source": "The file to convert must end with .ino, .cpp, .h, .py or .js.",
     "convert_check": "Lines to convert by hand (kept as comments): {lines}.",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
@@ -121,7 +122,15 @@
     "capability_interrupt": "interrupt",
     "blocked": "Problems to fix before your program can be sent: {count}.",
     "no_bluetooth": "The {board} board has no Bluetooth: the \"{block}\" block cannot talk to the phone.",
-    "no_bluetooth_hint": "Choose an ESP32 board, or remove the Phone blocks.",
+    "no_bluetooth_hint": "Choose an ESP32 board, or an Arduino board (Uno, Nano, Mega) with an HC-05 / HC-06 module, or remove the Phone blocks.",
+    "module_missing": "The {board} board has no Bluetooth: the \"{block}\" block needs an HC-05 / HC-06 module.",
+    "module_missing_hint": "Wire an HC-05 or HC-06 module and add the \"Bluetooth module\" block (Phone category) under \"when the program starts\".",
+    "module_not_needed": "The {board} board already has Bluetooth: the \"{block}\" block is not needed.",
+    "module_not_needed_hint": "Remove this block: the Phone blocks use the board's own Bluetooth.",
+    "module_pins": "The Bluetooth module cannot be on these pins: {problem}",
+    "module_pins_hint": "Choose other pins in the block, and wire the module the same way.",
+    "module_twice": "There are two \"{block}\" blocks with different pins: the module is wired in one place only.",
+    "module_twice_hint": "Keep a single \"Bluetooth module\" block, or give both the same pins.",
     "usercode_missing": "\"{name}\" is not (or no longer) in \"My code\".",
     "usercode_missing_hint": "Check its name in your code (capital letters matter), or remove this block.",
     "usercode_no_value": "The function \"{name}\" gives no value: it cannot go in a slot.",
@@ -173,7 +182,8 @@
     "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi or Bluetooth, what the blocks write is shown in the Live panel.",
     "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
     "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again.",
-    "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi."
+    "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi.",
+    "module_pins": "Pins {rx} and {tx} are used by the Bluetooth module (HC-05 / HC-06): the highlighted blocks must use other pins, or the module must be wired to other pins (Bluetooth button)."
   },
   "wiring": {
     "pin_twice": "Pin {pin} is used by both \"{first}\" and \"{second}\": each component needs its own pin.",
@@ -188,7 +198,8 @@
     "cpp_empty": "The program is empty: write at least the setup() and loop() functions.",
     "cpp_missing_function": "The {name}() function is missing: an Arduino program always has void setup() { ... } and void loop() { ... }.",
     "cpp_errors": "The program has {count} error(s). Line {line}: {message}",
-    "cpp_library_missing": "The program uses the \"{library}\" library, which is not installed. Scratch2Arduino installs Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 and Adafruit NeoPixel by itself; install any other one with arduino-cli lib install.",
+    "cpp_library_missing": "The program uses the \"{library}\" library, which is not installed. Open the Libraries window to find it and add it to the project.",
+    "cpp_library_suggestion": "It may be in: {names}.",
     "script_upload": "A Python or JavaScript program runs on the computer and drives the board: use the Live button instead of Upload.",
     "script_ok": "Well done, your program can be read! Start it with the Live button.",
     "pin_unknown": "Pin {pin} does not exist on the {board} board.",
@@ -211,5 +222,17 @@
     "usercode_upload_only": "Your blocks use \"My code\" written in C++: it is compiled for the board, send the program with Upload (or write \"My code\" in Python or JavaScript for the Live mode).",
     "usercode_errors": "\"My code\" has {count} error(s). Line {line}: {message}",
     "in_user_code": "In \"My code\":"
+  },
+  "module": {
+    "usb": "The module's pins are saved on the board with the USB cable: plug the board in and choose its USB port.",
+    "no_module": "This board does not take an HC-05 / HC-06 module: its Bluetooth is built in.",
+    "pins_usb": "Pins 0 and 1 carry the USB link: wire the module to other pins (10 and 11 for example).",
+    "pins_same": "The module needs two different pins: one that receives (wired to TXD) and one that sends (wired to RXD).",
+    "pin_missing": "This board has no such digital pin: choose pins written on the board.",
+    "pin_receive": "On a Mega, the pin that receives must be 10, 11, 12, 13, 50, 51, 52, 53 or A8 to A15, or use a serial port of the board: 19 and 18, 17 and 16, or 15 and 14.",
+    "speed": "This speed is not one of the module's: use 9600 (the speed of a new module), 19200, 38400, 57600 or 115200.",
+    "saved": "Saved on the board: the module is on pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Now pair the module with the computer, then search for it.",
+    "saved_restart": "Saved on the board: pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Press the board's reset button (or unplug it and plug it in again) so that it uses them.",
+    "forgotten": "The board forgot the module: its pins are free again after the next start of the board."
   }
 }

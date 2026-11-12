@@ -62,9 +62,17 @@ private:
     std::unique_ptr<serial::Monitor> monitor_; ///< Serial monitor, when open.
     std::mutex userMutex_;
     userdata::Store user_; ///< Recent projects and autosave (guarded by userMutex_).
+    /// Library manager: one arduino-cli library command at a time; the list of the registry is
+    /// downloaded at the first search of the session.
+    std::mutex librariesMutex_;
+    bool libraryIndexReady_ = false; ///< Guarded by librariesMutex_.
 
     /// Frees the board's port for an upload or the Live mode.
     void closeMonitor();
+    /// The board on the USB `port`, running the Live firmware (uploaded first when it does not
+    /// answer): for settings saved on the board. Stops the Live mode and the serial monitor.
+    [[nodiscard]] std::unique_ptr<serial::SerialPort> openLiveOverUsb(const Board& board, const std::string& port,
+                                                                      Language language);
 };
 
 /// Folder holding index.html of the frontend, or empty when it cannot be found.

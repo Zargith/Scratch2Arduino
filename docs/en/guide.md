@@ -58,7 +58,7 @@ it does not change an Arduino IDE installed on the same computer.
 ## 3. The window
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
-  board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* and *Bluetooth* (only for an ESP32 or an ESP8266);
+  board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
   *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
@@ -103,7 +103,7 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |
 | Functions | Reuse a group of blocks | *Make a function*, define ..., call ... |
 | Serial monitor | Write to the computer | write ... to the serial monitor |
-| Phone (ESP32) | Talk to a phone over Bluetooth | the phone sent ..., number received from the phone, send ... to the phone |
+| Phone (ESP32, or Arduino with an HC-05 / HC-06 module) | Talk to a phone over Bluetooth | HC-05 / HC-06 Bluetooth module, the phone sent ..., number received from the phone, send ... to the phone |
 | My blocks | Your saved block groups | see [My blocks](#my-blocks) |
 
 Hover a block of the palette: a tooltip explains what it does and **how to wire the part**. The full
@@ -219,6 +219,24 @@ blocks: they become new blocks.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
   JavaScript*); *Language help* lists the available functions.
 
+### Arduino libraries
+
+A **library** adds ready-made functions to your C++ code (read an unusual sensor, decode JSON...).
+Blocks install their own by themselves; for your own code, use the **Arduino libraries** button (books
+icon, top right):
+
+1. **Search** tab: type a name or a keyword (for example `json`), then *Search*. The first time, the list
+   of libraries is downloaded (Internet needed). Descriptions are in English.
+2. *Add to the project* installs the library (its latest version, or the one chosen in the list) and adds
+   it to the project.
+3. **This project** tab: shows the `#include <...>` line to write at the top of "My code".
+   *Remove from the project* takes it off the list.
+4. **Installed** tab: everything installed on the computer, with *Update* and *Uninstall*.
+
+The libraries of the project are saved in the `.s2a` file: on another computer, *Check* installs them by
+itself. If your code uses a library that is missing, the *Check* message gives its name and suggests
+libraries that may contain it.
+
 ## 12. Projects: save, open, share
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).
@@ -243,6 +261,26 @@ An ESP32 or ESP8266 board can be driven in Live mode **without a cable**:
   (the computer then keeps its Internet).
 - **Bluetooth** (ESP32): start Live mode once over the USB cable, then **Bluetooth** button -> **Look for
   boards** -> choose your "S2A-..." board. On a Mac, first connect "S2A-..." in *System Settings > Bluetooth*.
+- **HC-05 / HC-06 Bluetooth module** (Uno, Nano, Mega): an Arduino board has no Bluetooth, but an HC-05
+  or HC-06 module gives it one for the Live mode. **Bluetooth** button:
+  1. Wire the module: VCC to 5V, GND to GND, **TXD** of the module to the pin that receives (10 by
+     default), **RXD** of the module to the pin that sends (11 by default) through a voltage divider
+     (1 kΩ between the pin and RXD, 2 kΩ between RXD and GND), as RXD only takes 3.3 V.
+  2. With the board plugged in over USB, choose the pins and click **Save on the board**: the Live
+     program is installed if needed and the board remembers the pins.
+  3. In the computer's Bluetooth settings, pair "HC-05" (or "HC-06") with the code **1234** (or 0000),
+     then **Look for boards** -> choose your module. On a Mac, then choose the port "Bluetooth - HC-05"
+     in the port list.
+
+  The blocks cannot use the two pins of the module: the Live mode says so and shows the blocks to
+  change. Pins 0 and 1 stay for the USB cable. On a Mega, the pin that receives must be 10 to 13, 50 to
+  53 or A8 to A15, or use one of its serial ports (19 and 18, 17 and 16, 15 and 14). The module is a
+  plain serial link: if the computer goes away, the board does not know it and keeps its outputs; the
+  **Stop** button switches them off.
+- **Phone with a module** (Uno, Nano, Mega): add the **HC-05 / HC-06 Bluetooth module** block under
+  "when the program starts", with the pins where the module is wired (same wiring as above). The
+  *Phone* blocks then go through the module, when uploaded and in Live mode over the USB cable. On the
+  phone, the app connects to "HC-05" (code 1234 or 0000). Without this block, Check says so.
 - **Phone** (ESP32): the *Phone* blocks exchange messages with a Bluetooth terminal app on the phone
   (for example "Serial Bluetooth Terminal" on Android). See the [remote robot](tutorials/08-remote-robot.md).
 

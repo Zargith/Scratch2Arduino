@@ -443,6 +443,34 @@ TEST(Codegen, TalksToThePhoneOverBluetooth) {
     EXPECT_TRUE(s2a::toolchain::requiredLibraries(source).empty()); // part of the ESP32 tools
 }
 
+TEST(Codegen, TalksToThePhoneThroughAnHc05Module) {
+    Block module = block("module", "phone_module");
+    module.fields = {{"RX_PIN", "10"}, {"TX_PIN", "11"}};
+    Block sent = block("sent", "phone_received");
+    sent.inputs["MESSAGE"].value = "allume";
+    Block when = block("if", "control_if");
+    when.inputs["CONDITION"].block = sent;
+    Block answer = block("answer", "phone_send");
+    answer.inputs["VALUE"].value = "ok";
+    when.statements["SUBSTACK"] = {led("on", "ON"), answer};
+    auto project = withScript({block("hat", "events_when_program_starts"), module, when}, "uno");
+    auto source = generate(project).source;
+    for (const char* expected : {"#include <SoftwareSerial.h>\n", "SoftwareSerial s2a_phone(10, 11);",
+                                 "  s2a_phone.begin(9600);", "if (s2a_phone_received(String(\"allume\"))) {",
+                                 "s2a_phone.println(String(\"ok\"));"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    for (const char* unwanted : {"BluetoothSerial", "esp_read_mac", "pinMode(10", "pinMode(11"}) {
+        EXPECT_EQ(source.find(unwanted), std::string::npos) << unwanted << "\n" << source;
+    }
+    // On a serial port of the Mega.
+    project.boardId = "mega";
+    project.scripts[0].blocks[1].fields = {{"RX_PIN", "19"}, {"TX_PIN", "18"}};
+    source = generate(project).source;
+    EXPECT_NE(source.find("HardwareSerial& s2a_phone = Serial1;"), std::string::npos) << source;
+    EXPECT_EQ(source.find("SoftwareSerial"), std::string::npos) << source;
+}
+
 TEST(Codegen, LightsTheEsp8266LedWithLow) {
     Block level = block("level", "pins_analog_write");
     level.fields["PIN"] = "D5";

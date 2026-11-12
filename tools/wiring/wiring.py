@@ -834,8 +834,8 @@ def dc_motor(c: Canvas, x, y, label):
     return {"+": (x + 140, y + 48), "-": (x + 112, y + 48)}
 
 
-def remote_robot(c: Canvas):
-    esp = Esp32(c, 60, 600)
+def robot_drive(c: Canvas):
+    """L298N, the two motors and their battery pack, as in both remote robots; returns the bridge pins."""
     bridge = l298n(c, 820, 400)
     # Motors: left on OUT1/OUT2 (ENA, IN1, IN2), right on OUT3/OUT4 (ENB, IN3, IN4).
     left = dc_motor(c, 560, 200, "gauche / left")
@@ -844,7 +844,7 @@ def remote_robot(c: Canvas):
     c.wire(path(left["-"], ("y", 315), ("x", 755), ("y", bridge["OUT2"][1]), bridge["OUT2"]), BLACK)
     c.wire(path(right["+"], ("y", 640), ("x", 1210), ("y", bridge["OUT3"][1]), bridge["OUT3"]), RED)
     c.wire(path(right["-"], ("y", 655), ("x", 1195), ("y", bridge["OUT4"][1]), bridge["OUT4"]), BLACK)
-    # Battery pack for the motors (4 or 6 AA), its - joined to the GND of the ESP32.
+    # Battery pack for the motors (4 or 6 AA), its - joined to the GND of the board.
     c.rect(1203, 186, 240, 90, "#B0BEC5", radius=6)
     c.rect(1200, 180, 240, 90, "#263238", radius=6)
     for i in range(4):
@@ -853,6 +853,12 @@ def remote_robot(c: Canvas):
     c.text(1440, 292, "piles des moteurs / motor batteries", 10, "#455A64", anchor="rm")
     c.wire(path((1210, 270), ("y", 330), ("x", bridge["+12V"][0]), bridge["+12V"]), RED)
     c.wire(path((1230, 270), ("y", 345), ("x", bridge["GND"][0]), bridge["GND"]), BLACK)
+    return bridge
+
+
+def remote_robot(c: Canvas):
+    esp = Esp32(c, 60, 600)
+    bridge = robot_drive(c)
     c.wire(path(esp.pin("GND"), ("y", 360), ("x", bridge["GND"][0] + 0), ("y", 380), bridge["GND"]), BLACK)
     # Signals: bottom header (25, 26, 27, 33) from below, top header (18, 19) around the left of the bridge.
     for k, (pin, name, colour) in enumerate((("25", "ENA", ORANGE), ("26", "IN1", YELLOW), ("27", "IN2", GREEN),
@@ -877,6 +883,58 @@ def remote_robot(c: Canvas):
            13, "#607D8B")
 
 
+def hc05(c: Canvas, x, y):
+    """HC-05 Bluetooth module on its carrier, pins on the right (EN, VCC, GND, TXD, RXD, STATE)."""
+    pins = module(c, x, y, 150, 200, "#1565C0", ["EN", "VCC", "GND", "TXD", "RXD", "STATE"], side="right", pitch=26)
+    c.rect(x + 16, y + 30, 70, 140, "#2E7D32", outline="#1B5E20", radius=3)
+    zigzag = [(x + 24 + (i % 2) * 14, y + 40 + i * 12) for i in range(6)]
+    c.line(zigzag, "#FDD835", 3)
+    c.rect(x + 34, y + 120, 36, 36, "#212121", radius=2)
+    c.text(x + 51, y + 186, "HC-05", 12, "#FFFFFF", bold=True, anchor="mm")
+    return pins
+
+
+def remote_robot_uno(c: Canvas):
+    uno = Uno(c, 60, 560)
+    bridge = robot_drive(c)
+    module_pins = hc05(c, 60, 190)
+    # Module: VCC to 5V and GND to GND (around the left of the board), TXD to 10, RXD from 11 through a
+    # 1 kΩ / 2 kΩ divider (RXD takes 3.3 V only).
+    c.wire(path(module_pins["VCC"], ("x", 236), ("y", 170), ("x", 22), ("y", 982), ("x", uno.pin("5V")[0]),
+                uno.pin("5V")), RED)
+    c.wire(path(module_pins["GND"], ("x", 250), ("y", 156), ("x", 10), ("y", 994), ("x", uno.pin("GND_power")[0]),
+                uno.pin("GND_power")), BLACK)
+    c.wire(path(module_pins["TXD"], ("x", uno.pin("10")[0]), uno.pin("10")), GREEN)
+    node = (240, module_pins["RXD"][1])
+    c.wire([module_pins["RXD"], node], BLUE)
+    resistor(c, node, (300, node[1]), "1 kΩ")
+    c.wire(path((300, node[1]), ("x", uno.pin("11")[0]), uno.pin("11")), BLUE)
+    resistor(c, node, (node[0], node[1] + 70), "2 kΩ")
+    c.wire(path((node[0], node[1] + 70), ("y", 470), ("x", uno.pin("GND")[0]), uno.pin("GND")), BLACK)
+    # Motors: ENA 9, IN1 8, IN2 7 (left), IN3 5, IN4 4, ENB 3 (right): in the order of the bridge's pins,
+    # from the top header around the left of the bridge, the wires nest without crossing.
+    for k, (pin, name, colour) in enumerate((("9", "ENA", ORANGE), ("8", "IN1", YELLOW), ("7", "IN2", GREEN),
+                                             ("5", "IN3", BLUE), ("4", "IN4", WHITE), ("3", "ENB", PURPLE))):
+        c.wire(path(uno.pin(pin), ("y", 470 + k * 12), ("x", 790 - k * 10), ("y", 690 + k * 14),
+                    ("x", bridge[name][0]), bridge[name]), colour)
+    # GND of the board joined to the GND of the bridge (and of the batteries).
+    c.wire(path(uno.pin("GND"), ("y", 360), ("x", bridge["GND"][0]), ("y", 380), bridge["GND"]), BLACK)
+    # The Uno runs on a USB power bank.
+    c.rect(1263, 863, 150, 60, "#B0BEC5", radius=8)
+    c.rect(1260, 860, 150, 60, "#455A64", radius=8)
+    c.text(1335, 882, "batterie USB", 10, "#FFFFFF", bold=True, anchor="mm")
+    c.text(1335, 900, "USB power bank", 9, "#CFD8DC", anchor="mm")
+    c.text(1335, 940, "-> prise USB de la Uno / Uno USB plug", 10, "#455A64", anchor="mm")
+    c.text(60, 60, "Le téléphone envoie avance, recule, gauche, droite ou stop par Bluetooth (\"HC-05\", code 1234).",
+           17, "#37474F")
+    c.text(60, 84, "The phone sends avance, recule, gauche, droite or stop over Bluetooth (\"HC-05\", code 1234).", 14,
+           "#607D8B")
+    c.text(60, 110, "Enlève les cavaliers ENA et ENB du L298N. Les GND de la Uno, du module et des piles sont reliés.",
+           15, "#37474F")
+    c.text(60, 130, "Remove the ENA and ENB jumpers of the L298N. The GNDs of the Uno, the module and the batteries "
+           "are joined.", 13, "#607D8B")
+
+
 EXAMPLES = {
     "blink": blink,
     "servo-potentiometer": servo_potentiometer,
@@ -892,6 +950,7 @@ EXAMPLES = {
     "wireless-station-bluetooth": lambda c: wireless_station(c, "bluetooth"),
     "phone-lamp": lambda c: phone_lamp(c),
     "remote-robot": remote_robot,
+    "remote-robot-uno": remote_robot_uno,
 }
 
 

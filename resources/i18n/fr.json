@@ -42,7 +42,8 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "done": "Terminé.",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli lib list|search <mots>|install <nom>[@<version>]|remove <nom>  bibliothèques Arduino (* = fournie avec une carte)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "convert_source": "Le fichier à convertir doit finir par .ino, .cpp, .h, .py ou .js.",
     "convert_check": "Lignes à convertir à la main (gardées en commentaires) : {lines}.",
     "unknown_board": "Carte inconnue \"{board}\". Cartes disponibles : {boards}.",
@@ -121,7 +122,15 @@
     "capability_interrupt": "interruption",
     "blocked": "Problèmes à corriger avant d'envoyer ton programme : {count}.",
     "no_bluetooth": "La carte {board} n'a pas de Bluetooth : le bloc \"{block}\" ne peut pas parler au téléphone.",
-    "no_bluetooth_hint": "Choisis une carte ESP32, ou enlève les blocs Téléphone.",
+    "no_bluetooth_hint": "Choisis une carte ESP32, ou une carte Arduino (Uno, Nano, Mega) avec un module HC-05 / HC-06, ou enlève les blocs Téléphone.",
+    "module_missing": "La carte {board} n'a pas de Bluetooth : le bloc \"{block}\" a besoin d'un module HC-05 / HC-06.",
+    "module_missing_hint": "Branche un module HC-05 ou HC-06 et ajoute le bloc \"module Bluetooth\" (catégorie Téléphone) sous \"quand le programme démarre\".",
+    "module_not_needed": "La carte {board} a déjà le Bluetooth : le bloc \"{block}\" ne sert pas.",
+    "module_not_needed_hint": "Enlève ce bloc : les blocs Téléphone utilisent directement le Bluetooth de la carte.",
+    "module_pins": "Le module Bluetooth ne peut pas être sur ces broches : {problem}",
+    "module_pins_hint": "Choisis d'autres broches dans le bloc, et branche le module pareil.",
+    "module_twice": "Il y a deux blocs \"{block}\" avec des broches différentes : le module n'est branché qu'à un endroit.",
+    "module_twice_hint": "Garde un seul bloc \"module Bluetooth\", ou mets les mêmes broches dans les deux.",
     "usercode_missing": "\"{name}\" n'est pas (ou plus) dans \"Mon code\".",
     "usercode_missing_hint": "Vérifie son nom dans ton code (les majuscules comptent), ou retire ce bloc.",
     "usercode_no_value": "La fonction \"{name}\" ne donne pas de valeur : elle ne peut pas aller dans une case.",
@@ -173,7 +182,8 @@
     "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi ou Bluetooth, ce que les blocs écrivent s'affiche dans le panneau Live.",
     "bluetooth_no_firmware": "La carte ne répond pas par le Bluetooth. Vérifie qu'elle est allumée et près de l'ordinateur. La première fois, branche-la avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Bluetooth.",
     "bluetooth_off": "Impossible de chercher les cartes Bluetooth : le Bluetooth de l'ordinateur est peut-être éteint. Allume-le, puis réessaie.",
-    "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi."
+    "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi.",
+    "module_pins": "Les broches {rx} et {tx} sont prises par le module Bluetooth (HC-05 / HC-06) : les blocs en surbrillance doivent utiliser d'autres broches, ou le module doit être branché sur d'autres broches (bouton Bluetooth)."
   },
   "wiring": {
     "pin_twice": "La broche {pin} est utilisée à la fois par \"{first}\" et par \"{second}\" : chaque composant a besoin de sa propre broche.",
@@ -188,7 +198,8 @@
     "cpp_empty": "Le programme est vide : écris au moins les fonctions setup() et loop().",
     "cpp_missing_function": "Il manque la fonction {name}() : un programme Arduino a toujours void setup() { ... } et void loop() { ... }.",
     "cpp_errors": "Le programme a {count} erreur(s). Ligne {line} : {message}",
-    "cpp_library_missing": "Le programme utilise la bibliothèque \"{library}\", qui n'est pas installée. Scratch2Arduino installe tout seul Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 et Adafruit NeoPixel ; pour une autre, installe-la avec arduino-cli lib install.",
+    "cpp_library_missing": "Le programme utilise la bibliothèque \"{library}\", qui n'est pas installée. Ouvre la fenêtre Bibliothèques pour la chercher et l'ajouter au projet.",
+    "cpp_library_suggestion": "Elle se trouve peut-être dans : {names}.",
     "script_upload": "Un programme Python ou JavaScript tourne sur l'ordinateur et pilote la carte : utilise le bouton Live au lieu de Téléverser.",
     "script_ok": "Bravo, Python ou JavaScript comprend ton programme ! Lance-le avec le bouton Live.",
     "pin_unknown": "La broche {pin} n'existe pas sur la carte {board}.",
@@ -211,5 +222,17 @@
     "usercode_upload_only": "Tes blocs utilisent \"Mon code\" écrit en C++ : il est compilé pour la carte, envoie le programme avec Téléverser (ou écris \"Mon code\" en Python ou JavaScript pour le mode Live).",
     "usercode_errors": "\"Mon code\" a {count} erreur(s). Ligne {line} : {message}",
     "in_user_code": "Dans \"Mon code\" :"
+  },
+  "module": {
+    "usb": "Les broches du module s'enregistrent sur la carte par le câble USB : branche la carte et choisis son port USB.",
+    "no_module": "Cette carte ne prend pas de module HC-05 / HC-06 : elle a déjà le Bluetooth.",
+    "pins_usb": "Les broches 0 et 1 servent au câble USB : branche le module sur d'autres broches (10 et 11 par exemple).",
+    "pins_same": "Le module a besoin de deux broches différentes : une qui reçoit (reliée à TXD) et une qui envoie (reliée à RXD).",
+    "pin_missing": "Cette carte n'a pas cette broche numérique : choisis des broches écrites sur la carte.",
+    "pin_receive": "Sur une Mega, la broche qui reçoit doit être 10, 11, 12, 13, 50, 51, 52, 53 ou A8 à A15, ou alors utilise un port série de la carte : 19 et 18, 17 et 16, ou 15 et 14.",
+    "speed": "Le module ne connaît pas cette vitesse : utilise 9600 (la vitesse d'un module neuf), 19200, 38400, 57600 ou 115200.",
+    "saved": "Enregistré sur la carte : le module est sur les broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appaire maintenant le module avec l'ordinateur, puis cherche-le.",
+    "saved_restart": "Enregistré sur la carte : broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appuie sur le bouton reset de la carte (ou débranche-la et rebranche-la) pour qu'elle les utilise.",
+    "forgotten": "La carte a oublié le module : ses broches seront libres au prochain démarrage de la carte."
   }
 }

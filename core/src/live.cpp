@@ -8,6 +8,7 @@
 #include "s2a/network.hpp"
 #include "s2a/resources.hpp"
 #include "s2a/validator.hpp"
+#include "s2a/wiring.hpp"
 
 #include <algorithm>
 #include <array>
@@ -21,6 +22,93 @@
 namespace s2a::live {
 
 namespace {
+
+/// The pins of the first "Bluetooth module" block of the running scripts, if any.
+std::optional<BluetoothModule> modulePins(const project::Project& project, const Board& board) {
+    const BlockCatalog& catalog = BlockCatalog::builtin();
+    std::optional<BluetoothModule> found;
+    for (const project::Script& script : project.scripts) {
+        const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog.find(script.blocks.front().type);
+        if (first == nullptr || first->shape != BlockShape::Hat) {
+            continue;
+        }
+        project::forEachBlock(script.blocks, [&](const project::Block& block) {
+            if (found || block.type != "phone_module") {
+                return;
+            }
+            const BlockDefinition* definition = catalog.find(block.type);
+            const auto number = [&](const char* name) {
+                const auto field = block.fields.find(name);
+                const BlockArg* arg = definition != nullptr ? definition->findArg(name) : nullptr;
+                const Pin* pin = board.findPin(field != block.fields.end() && !field->second.empty()
+                                                   ? field->second
+                                                   : (arg != nullptr ? arg->defaultValue : std::string()));
+                return pin != nullptr ? pin->number : -1;
+            };
+            if (number("RX_PIN") >= 0 && number("TX_PIN") >= 0) {
+                found = BluetoothModule{number("RX_PIN"), number("TX_PIN"), 9600};
+            }
+        });
+    }
+    return found;
+}
+
+/// The blocks of the running scripts (loose blocks are ignored) that use one of `numbers`: through
+/// a pin argument, the built-in LED, or a part wired to it (an I2C screen on SDA / SCL).
+std::vector<std::string> blocksOnPins(const project::Project& project, const Board& board, Language language,
+                                      std::initializer_list<int> numbers) {
+    const BlockCatalog& catalog = BlockCatalog::builtin();
+    const auto taken = [&](const Pin* pin) {
+        return pin != nullptr && std::find(numbers.begin(), numbers.end(), pin->number) != numbers.end();
+    };
+    std::vector<std::string> blocks;
+    const auto add = [&blocks](const std::string& id) {
+        if (std::find(blocks.begin(), blocks.end(), id) == blocks.end()) {
+            blocks.push_back(id);
+        }
+    };
+    for (const project::Script& script : project.scripts) {
+        const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog.find(script.blocks.front().type);
+        if (first == nullptr || first->shape != BlockShape::Hat) {
+            continue;
+        }
+        project::forEachBlock(script.blocks, [&](const project::Block& block) {
+            if (block.type == "phone_module") {
+                return; // the module's own pins
+            }
+            if (block.type == "pins_builtin_led" && taken(board.findPin(board.builtinLed))) {
+                add(block.id);
+            }
+            const BlockDefinition* definition = catalog.find(block.type);
+            if (definition == nullptr) {
+                return;
+            }
+            for (const BlockArg& arg : definition->args) {
+                if (arg.kind != ArgKind::Pin) {
+                    continue;
+                }
+                const auto field = block.fields.find(arg.name);
+                if (taken(board.findPin(field != block.fields.end() && !field->second.empty() ? field->second
+                                                                                               : arg.defaultValue))) {
+                    add(block.id);
+                }
+            }
+        });
+    }
+    for (const auto& component : wiring::plan(project, catalog, board, language).components) {
+        if (component.kind == "bluetooth_module") {
+            continue;
+        }
+        for (const auto& wire : component.connections) {
+            if (taken(board.findPin(wire.boardPin))) {
+                for (const auto& id : component.blockIds) {
+                    add(id);
+                }
+            }
+        }
+    }
+    return blocks;
+}
 
 using project::Block;
 using project::Stack;
@@ -302,6 +390,11 @@ std::optional<std::string> LiveLink::phoneMessage() {
     return answer->substr(2);
 }
 
+void LiveLink::phoneModule(int rx, int tx) {
+    // Saved on the board too: the same link serves the Live mode over Bluetooth later.
+    (void)request("J " + std::to_string(rx) + " " + std::to_string(tx) + " 9600", milliseconds(1000));
+}
+
 void LiveLink::phoneSend(const std::string& text) {
     std::string line;
     for (const char c : text) {
@@ -355,6 +448,39 @@ Result<LiveLink::NetworkState> LiveLink::networkState() {
         state.address.clear();
     }
     return state;
+}
+
+Result<std::optional<BluetoothModule>> LiveLink::bluetoothModule() {
+    const auto answer = request("K", milliseconds(1000));
+    if (!answer) {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "no answer to K"});
+    }
+    if (answer->rfind("! ", 0) == 0 || *answer == "k -") {
+        return std::optional<BluetoothModule>(); // no module, or a board without one (ESP32)
+    }
+    std::istringstream words(*answer);
+    std::string kind;
+    BluetoothModule module;
+    words >> kind >> module.rx >> module.tx >> module.baud;
+    if (kind != "k" || words.fail()) {
+        return Error{ErrorCode::BoardNotResponding, "unexpected answer to K: " + *answer};
+    }
+    return std::optional<BluetoothModule>(module);
+}
+
+Status LiveLink::setBluetoothModule(const std::optional<BluetoothModule>& module) {
+    const std::string command = module ? "J " + std::to_string(module->rx) + " " + std::to_string(module->tx) + " " +
+                                             std::to_string(module->baud)
+                                       : std::string("J");
+    const auto answer = request(command, milliseconds(1000));
+    if (!answer || *answer != "ok") {
+        return takeError().value_or(Error{ErrorCode::BoardNotResponding, "unexpected answer to J: " + answer.value_or("")});
+    }
+    return success();
+}
+
+std::string bluetoothModuleProblem(const Board& board, const BluetoothModule& module) {
+    return s2a::bluetoothModuleProblem(board, module.rx, module.tx, module.baud);
 }
 
 Status LiveLink::joinNetwork(const std::string& name, const std::string& password) {
@@ -727,6 +853,12 @@ void Interpreter::run(Thread& thread, Clock now) {
             }
         } else if (type == "phone_send") {
             pins_.phoneSend(text(block, "VALUE"));
+        } else if (type == "phone_module") {
+            const int rx = pinNumber(block, "RX_PIN");
+            const int tx = pinNumber(block, "TX_PIN");
+            if (rx >= 0 && tx >= 0) {
+                pins_.phoneModule(rx, tx);
+            }
         } else if (type == "pins_analog_write") {
             const double value = number(block, "VALUE");
             if (const int number = pin(block, "PIN", PinMode::Output); number >= 0) {
@@ -1097,6 +1229,29 @@ void Session::run(project::Project project) {
     if (scripted) {
         runScript(project, link);
         return;
+    }
+    // The pins of an HC-05 / HC-06 module carry the link: the blocks must leave them alone.
+    if (board_.bluetoothModule) {
+        // The "Bluetooth module" block moves the link to its pins; otherwise it stays where it was saved.
+        auto module = link.bluetoothModule();
+        if (const auto wanted = modulePins(project, board_); wanted && module.ok()) {
+            module = std::optional<BluetoothModule>(*wanted);
+        }
+        if (module.ok() && module.value()) {
+            const BluetoothModule& pins = *module.value();
+            std::vector<std::string> blocks = blocksOnPins(project, board_, language_, {pins.rx, pins.tx});
+            if (!blocks.empty()) {
+                const auto label = [this](int number) {
+                    const Pin* pin = board_.findPin(number);
+                    return pin != nullptr ? pin->label : std::to_string(number);
+                };
+                link.reset();
+                set(State::Failed, tr("live.module_pins", language_, {{"rx", label(pins.rx)}, {"tx", label(pins.tx)}}));
+                const std::lock_guard<std::mutex> lock(mutex_);
+                snapshot_.problemBlocks = std::move(blocks);
+                return;
+            }
+        }
     }
     // "My code" in Python or JavaScript: loaded once (its top-level statements run), then the
     // blocks call its functions.

@@ -34,6 +34,7 @@ import {
 	IconPlugConnected,
 	IconRefresh,
 	IconSchool,
+	IconBooks,
 	IconSettings,
 	IconTerminal2,
 	IconUpload,
@@ -61,10 +62,18 @@ import { Editor, type EditorHandle } from "@/Editor";
 import { type DocPath, docsHome, tutorialFor } from "@/docs";
 import { exampleProject, examples, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
+import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
-import { bluetoothPort, bluetoothPorts, hasBluetooth, isBluetoothPort, rememberBoard, rememberedBoards } from "@/bluetooth";
+import {
+	bluetoothPort,
+	bluetoothPorts,
+	isBluetoothPort,
+	reachableByBluetooth,
+	rememberBoard,
+	rememberedBoards,
+} from "@/bluetooth";
 import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
@@ -89,10 +98,12 @@ import {
 	projectToWorkspace,
 	unknownBlockTypes,
 	withProgram,
+	withLibraries,
 	withUserCode,
 	workspaceToProject,
 	type ProgramLanguage,
 	type Project,
+	type ProjectLibrary,
 	type UserCode,
 	type WorkspaceState,
 } from "@/project/convert";
@@ -202,6 +213,9 @@ export function App() {
 	const [recent, setRecent] = useState<RecentProject[]>([]);
 	const [library, setLibrary] = useState<SavedGroup[]>([]);
 	const [libraryShown, setLibraryShown] = useState(false);
+	/** Arduino libraries of the project (library manager), installed by the Build when missing. */
+	const [projectLibraries, setProjectLibraries] = useState<ProjectLibrary[]>([]);
+	const [librariesShown, setLibrariesShown] = useState(false);
 	/** Unsaved work found at start-up, offered back to the user. */
 	const [restore, setRestore] = useState<AutosavedProject | null>(null);
 	/** Edits made so far, and how many the last autosave holds. */
@@ -234,8 +248,9 @@ export function App() {
 	);
 
 	const currentProject = useCallback(
-		(): Project => withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current),
-		[currentBlocks, program]
+		(): Project =>
+			withLibraries(withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current), projectLibraries),
+		[currentBlocks, program, projectLibraries]
 	);
 
 	/** Shows the program of an opened project: its blocks, and its code when written as text. */
@@ -246,6 +261,7 @@ export function App() {
 		codeEdited.current = language !== "blocks";
 		userCodeRef.current = project.userCode ? { ...project.userCode } : null;
 		setUserCode(userCodeRef.current);
+		setProjectLibraries(project.libraries ?? []);
 		setUserProblems([]);
 		setProgramProblems([]);
 		setView(language === "blocks" ? "blocks" : "code");
@@ -282,7 +298,7 @@ export function App() {
 	// A board without Wi-Fi cannot use a Wi-Fi port: back to the first USB port.
 	useEffect(() => {
 		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? null);
-		if (!hasBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
+		if (!reachableByBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
 	}, [boardId, port, ports]);
 
 	const refreshPorts = useCallback(async () => {
@@ -965,6 +981,11 @@ export function App() {
 								<IconSchool size={18} />
 							</ActionIcon>
 						</Tooltip>
+						<Tooltip label={t("libraries.title")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("libraries.title")} onClick={() => setLibrariesShown(true)}>
+								<IconBooks size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("monitor.toggle")}>
 							<ActionIcon
 								variant={monitorShown ? "filled" : "default"}
@@ -983,7 +1004,7 @@ export function App() {
 								</ActionIcon>
 							</Tooltip>
 						)}
-						{hasBluetooth(boardId) && (
+						{reachableByBluetooth(boardId) && (
 							<Tooltip label={t("bluetooth.title")}>
 								<ActionIcon
 									variant="default"
@@ -1311,12 +1332,26 @@ export function App() {
 			<BluetoothDialog
 				opened={bluetoothShown}
 				language={language}
+				boardId={boardId}
+				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
 				t={t}
 				onChosen={(board) => {
 					setBluetoothBoards(rememberBoard(board));
 					setPort(bluetoothPort(board.address));
 				}}
 				onClose={() => setBluetoothShown(false)}
+			/>
+			<ArduinoLibraries
+				opened={librariesShown}
+				language={language}
+				t={t}
+				libraries={projectLibraries}
+				usesCpp={program === "cpp" || userCode?.language === "cpp"}
+				onChange={(next) => {
+					setProjectLibraries(next);
+					markDirty();
+				}}
+				onClose={() => setLibrariesShown(false)}
 			/>
 			<Library
 				opened={libraryShown}

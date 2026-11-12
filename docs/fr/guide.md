@@ -59,8 +59,8 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 ## 3. La fenêtre
 
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
-  *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* et *Bluetooth* (seulement pour
-  une ESP32 ou une ESP8266) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
+  *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
+  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
   **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
@@ -109,7 +109,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Variables | Retenir des valeurs | *Créer une variable*, mettre ... à ..., ajouter ... à ... |
 | Fonctions | Réutiliser un groupe de blocs | *Créer une fonction*, définir ..., appeler ... |
 | Moniteur série | Écrire à l'ordinateur | écrire ... sur le moniteur série |
-| Téléphone (ESP32) | Parler à un téléphone par Bluetooth | le téléphone a envoyé ..., nombre reçu du téléphone, envoyer ... au téléphone |
+| Téléphone (ESP32, ou Arduino avec un module HC-05 / HC-06) | Parler à un téléphone par Bluetooth | module Bluetooth HC-05 / HC-06, le téléphone a envoyé ..., nombre reçu du téléphone, envoyer ... au téléphone |
 | Mes blocs | Tes groupes de blocs enregistrés | voir [Mes blocs](#mes-blocs) |
 
 Passe la souris sur un bloc de la palette : une bulle explique ce qu'il fait et **comment brancher le
@@ -231,6 +231,25 @@ côté des blocs : elles deviennent de nouveaux blocs.
 - **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
   ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles.
 
+### Bibliothèques Arduino
+
+Une **bibliothèque** ajoute des fonctions toutes prêtes à ton code C++ (lire un capteur rare, décoder
+du JSON...). Les blocs installent les leurs tout seuls ; pour ton propre code, utilise le bouton
+**Bibliothèques Arduino** (icône de livres, en haut à droite) :
+
+1. Onglet **Chercher** : tape un nom ou un mot-clé (par exemple `json`), puis *Chercher*. La première
+   fois, la liste des bibliothèques est téléchargée (il faut Internet). Les descriptions sont en anglais.
+2. *Ajouter au projet* installe la bibliothèque (sa dernière version, ou celle choisie dans la liste) et
+   l'ajoute au projet.
+3. Onglet **Ce projet** : la ligne `#include <...>` à écrire en haut de "Mon code" est indiquée.
+   *Retirer du projet* l'enlève de la liste.
+4. Onglet **Installées** : tout ce qui est installé sur l'ordinateur, avec *Mettre à jour* et
+   *Désinstaller*.
+
+Les bibliothèques du projet sont enregistrées dans le fichier `.s2a` : sur un autre ordinateur, *Vérifier*
+les installe toutes seules. Si ton code utilise une bibliothèque absente, le message de *Vérifier* donne
+son nom et propose des bibliothèques qui pourraient la contenir.
+
 ## 12. Projets : enregistrer, ouvrir, partager
 
 - **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).
@@ -257,6 +276,27 @@ Une carte ESP32 ou ESP8266 peut être commandée en mode Live **sans câble** :
 - **Bluetooth** (ESP32) : lance une fois le mode Live par le câble USB, puis bouton **Bluetooth** ->
   **Chercher les cartes** -> choisis ta carte "S2A-...". Sur Mac, connecte d'abord "S2A-..." dans
   *Réglages Système > Bluetooth*.
+- **Module Bluetooth HC-05 / HC-06** (Uno, Nano, Mega) : une carte Arduino n'a pas de Bluetooth, mais
+  un module HC-05 ou HC-06 lui en donne un pour le mode Live. Bouton **Bluetooth** :
+  1. Branche le module : VCC sur 5V, GND sur GND, **TXD** du module sur la broche qui reçoit (10 par
+     défaut), **RXD** du module sur la broche qui envoie (11 par défaut) à travers un pont diviseur
+     (1 kΩ entre la broche et RXD, 2 kΩ entre RXD et GND), car RXD n'accepte que 3,3 V.
+  2. Carte branchée en USB, choisis les broches et clique sur **Enregistrer sur la carte** : le
+     programme Live s'installe si besoin et la carte retient les broches.
+  3. Dans les réglages Bluetooth de l'ordinateur, appaire "HC-05" (ou "HC-06") avec le code **1234**
+     (ou 0000), puis **Chercher les cartes** -> choisis ton module. Sur Mac, choisis ensuite le port
+     "Bluetooth - HC-05" dans la liste des ports.
+
+  Les blocs ne peuvent pas utiliser les deux broches du module : le mode Live le signale et montre les
+  blocs à changer. Les broches 0 et 1 restent pour le câble USB. Sur une Mega, la broche qui reçoit doit
+  être 10 à 13, 50 à 53 ou A8 à A15, ou alors utilise un de ses ports série (19 et 18, 17 et 16, 15 et 14).
+  Le module est une simple liaison série : si l'ordinateur s'éloigne, la carte ne le sait pas et garde
+  ses sorties ; le bouton **Arrêter** les éteint.
+- **Téléphone avec un module** (Uno, Nano, Mega) : ajoute le bloc **module Bluetooth HC-05 / HC-06**
+  sous "quand le programme démarre", avec les broches où le module est branché (même câblage que
+  ci-dessus). Les blocs *Téléphone* passent alors par le module, en téléversement comme en mode Live
+  par le câble USB. Sur le téléphone, l'appli se connecte à "HC-05" (code 1234 ou 0000). Sans ce bloc,
+  la vérification le signale.
 - **Téléphone** (ESP32) : les blocs *Téléphone* échangent des messages avec une appli de terminal
   Bluetooth sur le téléphone (par exemple "Serial Bluetooth Terminal" sur Android). Voir le
   [Robot télécommandé](tutorials/08-remote-robot.md).

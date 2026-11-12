@@ -70,6 +70,7 @@ struct FakePins final : s2a::live::Pins {
         return message;
     }
     void phoneSend(const std::string& text) override { log.push_back("Y=" + text); }
+    void phoneModule(int rx, int tx) override { log.push_back("J" + std::to_string(rx) + "," + std::to_string(tx)); }
     std::deque<std::string> phone; ///< Messages the phone will send, oldest first.
     double distanceCm = 400;
     std::optional<std::pair<double, double>> dhtValues;
@@ -465,6 +466,7 @@ struct FakeFirmware final : s2a::serial::LineTransport {
     bool silent = false;
     std::string joined; ///< Address on the home network ("" while not joined).
     std::string phoneSays; ///< Next message of the phone ("" for none).
+    std::string module = "-"; ///< HC-05 / HC-06 module settings: "<rx> <tx> <baud>", "-" for none.
 
     s2a::Status writeLine(std::string_view line) override {
         received.emplace_back(line);
@@ -488,6 +490,11 @@ struct FakeFirmware final : s2a::serial::LineTransport {
         } else if (command == "B") {
             pending.emplace_back(phoneSays.empty() ? "b" : "b " + phoneSays);
             phoneSays.clear();
+        } else if (command == "K") {
+            pending.push_back("k " + module);
+        } else if (command == "J") {
+            module = line.size() > 2 ? std::string(line.substr(2)) : "-";
+            pending.emplace_back("ok");
         } else if (command == "I") {
             pending.push_back(joined.empty() ? "i S2A-1A2B 192.168.4.1 -" : "i S2A-1A2B 192.168.4.1 " + joined);
         } else {
@@ -520,6 +527,43 @@ TEST(LiveLink, SetsUpTheWifiOfAnEsp32) {
     EXPECT_EQ(firmware.received.back(), "W Box dela maison\tmotde passe");
     firmware.joined = "192.168.1.42";
     EXPECT_EQ(link.networkState().value().address, "192.168.1.42");
+}
+
+TEST(LiveLink, SavesTheBluetoothModuleOnTheBoard) {
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    EXPECT_EQ(link.bluetoothModule().value(), std::nullopt);
+    ASSERT_TRUE(link.setBluetoothModule(s2a::live::BluetoothModule{10, 11, 9600}).ok());
+    EXPECT_EQ(firmware.received.back(), "J 10 11 9600");
+    EXPECT_EQ(link.bluetoothModule().value(), std::optional(s2a::live::BluetoothModule{10, 11, 9600}));
+    ASSERT_TRUE(link.setBluetoothModule(std::nullopt).ok());
+    EXPECT_EQ(firmware.received.back(), "J");
+    EXPECT_EQ(link.bluetoothModule().value(), std::nullopt);
+    // An ESP32 has no module: its firmware does not know the command.
+    firmware.pending.clear();
+    firmware.silent = true;
+    firmware.pending.emplace_back("! K");
+    EXPECT_EQ(link.bluetoothModule().value(), std::nullopt);
+}
+
+TEST(LiveLink, ChecksThePinsOfTheBluetoothModule) {
+    using s2a::live::BluetoothModule;
+    using s2a::live::bluetoothModuleProblem;
+    const auto& boards = s2a::BoardDatabase::builtin();
+    const s2a::Board& nano = *boards.find("nano");
+    const s2a::Board& mega = *boards.find("mega");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{}), "");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{2, 3, 38400}), "");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{0, 1, 9600}), "pins_usb");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{10, 10, 9600}), "pins_same");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{10, 20, 9600}), "pin_missing");
+    EXPECT_EQ(bluetoothModuleProblem(uno(), BluetoothModule{10, 11, 4800}), "speed");
+    EXPECT_EQ(bluetoothModuleProblem(nano, BluetoothModule{10, 21, 9600}), "pin_missing"); // A7: analog only
+    EXPECT_EQ(bluetoothModuleProblem(mega, BluetoothModule{10, 11, 9600}), "");
+    EXPECT_EQ(bluetoothModuleProblem(mega, BluetoothModule{19, 18, 9600}), ""); // its serial port 1
+    EXPECT_EQ(bluetoothModuleProblem(mega, BluetoothModule{2, 3, 9600}), "pin_receive");
+    EXPECT_EQ(bluetoothModuleProblem(*boards.find("esp32"), BluetoothModule{}), "no_module");
 }
 
 TEST(Session, OpensWifiPortsAsNetworkConnections) {
@@ -720,6 +764,25 @@ Session::Opener sharedOpener(std::shared_ptr<FakeFirmware> firmware) {
     };
 }
 
+TEST(Session, KeepsTheBlocksOffThePinsOfTheBluetoothModule) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    firmware->module = "13 12 9600"; // the LED of Blink is on pin 13
+    Session session(blink(), uno(), "COM1", s2a::Language::English, sharedOpener(firmware),
+                    [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }));
+    EXPECT_NE(session.snapshot().message.find("13"), std::string::npos);
+    EXPECT_FALSE(session.snapshot().problemBlocks.empty());
+    const auto& received = firmware->received;
+    EXPECT_EQ(std::find(received.begin(), received.end(), "D 13 1"), received.end());
+
+    // On other pins, the blocks run.
+    auto elsewhere = std::make_shared<FakeFirmware>();
+    elsewhere->module = "10 11 9600";
+    Session running(blink(), uno(), "COM1", s2a::Language::English, sharedOpener(elsewhere),
+                    [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return running.snapshot().state == Session::State::Running; }));
+}
+
 TEST(Session, ShowsTheErrorOutputOfAProgram) {
     for (const auto& [language, code] :
          std::vector<std::pair<s2a::project::ProgramLanguage, std::string>>{
@@ -889,6 +952,42 @@ TEST(Phone, BlocksReactOnceToEachMessage) {
     interpreter.step(milliseconds(2001));
     interpreter.step(milliseconds(2002));
     EXPECT_EQ(pins.take(), std::vector<std::string>{"P26=120"}); // a number is not "allume", and only once
+}
+
+TEST(Phone, MovesTheLinkToTheBluetoothModuleOfTheBlock) {
+    Block module = block("module", "phone_module");
+    module.fields = {{"RX_PIN", "A0"}, {"TX_PIN", "12"}};
+    Block answer = block("answer", "phone_send");
+    answer.inputs["VALUE"].value = "Bonjour";
+    FakePins pins;
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), module, answer}), BlockCatalog::builtin(),
+                            uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"J14,12", "Y=Bonjour"}));
+
+    FakeFirmware firmware;
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake().ok());
+    link.phoneModule(14, 12);
+    EXPECT_EQ(firmware.received.back(), "J 14 12 9600");
+}
+
+TEST(Session, LetsTheBluetoothModuleBlockUseItsPins) {
+    // The board kept the module on 10/11, the block moves it to 2/3: the LED of 10 is free.
+    auto firmware = std::make_shared<FakeFirmware>();
+    firmware->module = "10 11 9600";
+    Block module = block("module", "phone_module");
+    module.fields = {{"RX_PIN", "2"}, {"TX_PIN", "3"}};
+    Block on = block("on", "pins_digital_write");
+    on.fields = {{"PIN", "10"}, {"STATE", "HIGH"}};
+    {
+        Session session(withScript({block("hat", "events_when_program_starts"), module, on}), uno(), "COM1",
+                        s2a::Language::English, sharedOpener(firmware), [](std::string&) { return s2a::success(); });
+        ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Finished; }));
+    }
+    const auto& received = firmware->received;
+    EXPECT_NE(std::find(received.begin(), received.end(), "J 2 3 9600"), received.end());
+    EXPECT_NE(std::find(received.begin(), received.end(), "D 10 1"), received.end());
 }
 
 TEST(LiveLink, PassesThePhoneMessages) {

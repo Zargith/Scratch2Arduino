@@ -144,6 +144,24 @@ TEST(ProjectJson, RoundTripsFunctionsAndLeavesThemOutWhenThereAreNone) {
     EXPECT_EQ(toJson(parsed.value()), json);
 }
 
+TEST(ProjectJson, RoundTripsTheLibrariesAndLeavesThemOutWhenThereAreNone) {
+    Project project = blink();
+    EXPECT_EQ(toJson(project).find("\"libraries\""), std::string::npos) << "older projects keep their bytes";
+    project.libraries = {{"ArduinoJson", "7.2.0"}, {"Bounce2", ""}};
+    const std::string json = toJson(project);
+    EXPECT_EQ(json.find("\"version\": \"\""), std::string::npos) << "no version: left out";
+    const auto parsed = fromJson(json);
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    ASSERT_EQ(parsed.value().libraries.size(), 2U);
+    EXPECT_EQ(parsed.value().libraries[0].name, "ArduinoJson");
+    EXPECT_EQ(parsed.value().libraries[0].version, "7.2.0");
+    EXPECT_EQ(parsed.value().libraries[1].version, "");
+    EXPECT_EQ(toJson(parsed.value()), json);
+    EXPECT_FALSE(fromJson(R"({"format": "scratch2arduino-project", "formatVersion": 1, "board": "uno",
+        "variables": [], "scripts": [], "libraries": [3]})")
+                     .ok());
+}
+
 TEST(ProjectJson, IsReadableAndVersioned) {
     const std::string json = toJson(blink());
     EXPECT_NE(json.find("\"format\": \"scratch2arduino-project\""), std::string::npos);

@@ -57,6 +57,22 @@ export interface Project {
 	code?: string;
 	/** The user's own code file ("My code"), used with the blocks. */
 	userCode?: UserCode;
+	/** Arduino libraries chosen in the library manager; left out when there are none. */
+	libraries?: ProjectLibrary[];
+}
+
+/** An Arduino library the project needs (core project::Library). */
+export interface ProjectLibrary {
+	name: string;
+	/** Left out: any version (the latest is installed when missing). */
+	version?: string;
+}
+
+/** The project with its list of libraries (left out when empty, as the C++ core writes it). */
+export function withLibraries(project: Project, libraries: ProjectLibrary[]): Project {
+	const { libraries: _libraries, ...rest } = project;
+	if (libraries.length === 0) return rest;
+	return { ...rest, libraries: libraries.map((library) => (library.version ? { name: library.name, version: library.version } : { name: library.name })) };
 }
 
 /** The "My code" file of a block project (core project::UserCode). */

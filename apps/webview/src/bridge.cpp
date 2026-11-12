@@ -4,6 +4,7 @@
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/convert.hpp"
+#include "s2a/diagnostics.hpp"
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
@@ -239,6 +240,38 @@ Bridge::~Bridge() {
     for (Worker& worker : workers) {
         worker.thread.join();
     }
+}
+
+std::unique_ptr<serial::SerialPort> Bridge::openLiveOverUsb(const Board& board, const std::string& port,
+                                                            Language language) {
+    closeMonitor();
+    {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        live_.reset(); // the port is needed
+    }
+    const auto failure = [&](const Error& error) { return UserError{tr(errorMessageKey(error.code), language)}; };
+    auto opened = serial::SerialPort::open(port, live::kBaud);
+    if (!opened.ok()) {
+        throw failure(opened.error());
+    }
+    std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
+    if (live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
+        return connection;
+    }
+    connection.reset(); // no Live firmware yet: install it, then connect again
+    std::string details;
+    if (const auto flashed = live::Session::arduinoCliFlasher(board, port)(details); !flashed.ok()) {
+        throw failure(flashed.error());
+    }
+    opened = serial::SerialPort::open(port, live::kBaud);
+    if (!opened.ok()) {
+        throw failure(opened.error());
+    }
+    connection = std::move(opened).value();
+    if (const auto ready = live::LiveLink(*connection).handshake(); !ready.ok()) {
+        throw failure(ready.error());
+    }
+    return connection;
 }
 
 template <typename Work> void Bridge::async(const std::string& id, Work work) {
@@ -716,7 +749,14 @@ void Bridge::bind() {
                     Json entry{{"address", port.address},
                                {"label", board != nullptr ? port.label + " - " + board->name : port.label}};
                     if (network::isWireless(port.address)) { // a board paired over Bluetooth (macOS)
-                        entry["label"] = "Bluetooth - " + port.address.substr(port.address.find(network::kBoardNamePrefix));
+                        // "/dev/cu.S2A-1A2B" -> "S2A-1A2B", "/dev/cu.HC-05" -> "HC-05"
+                        std::string name = port.address.substr(port.address.rfind('/') + 1);
+                        for (const std::string_view prefix : {"cu.", "tty."}) {
+                            if (name.rfind(prefix, 0) == 0) {
+                                name.erase(0, prefix.size());
+                            }
+                        }
+                        entry["label"] = "Bluetooth - " + name;
                         entry["bluetooth"] = true;
                     }
                     if (!port.boardId.empty()) {
@@ -726,6 +766,110 @@ void Bridge::bind() {
                 }
                 return ports.dump();
             });
+        },
+        nullptr);
+
+    // Library manager: the installed libraries, a search in the Arduino registry, install and
+    // remove. The editor keeps the project's own list (Project::libraries).
+    window_.bind(
+        "s2a_libraries_installed",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const auto cli = arduinoCli(language);
+                const std::lock_guard<std::mutex> lock(librariesMutex_);
+                const auto libraries = cli.listLibraries();
+                if (!libraries.ok()) {
+                    throw UserError{tr(errorMessageKey(libraries.error().code), language)};
+                }
+                Json list = Json::array();
+                for (const auto& library : libraries.value()) {
+                    list.push_back({{"name", library.name},
+                                    {"version", library.version},
+                                    {"author", library.author},
+                                    {"sentence", library.sentence},
+                                    {"website", library.website},
+                                    {"includes", library.includes},
+                                    {"builtIn", library.builtIn}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_libraries_search",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 1, language_);
+                const auto cli = arduinoCli(language);
+                const std::lock_guard<std::mutex> lock(librariesMutex_);
+                // Without the internet, the list downloaded earlier still serves.
+                std::string indexError;
+                if (!libraryIndexReady_) {
+                    const auto index = cli.updateLibraryIndex();
+                    if (!index.ok()) {
+                        indexError = tr(errorMessageKey(index.error().code), language);
+                    } else if (const auto diagnosis = toolchain::diagnoseInstall(index.value());
+                               diagnosis.problem != toolchain::Problem::None) {
+                        indexError = toolchain::describe(diagnosis, language);
+                    } else {
+                        libraryIndexReady_ = true;
+                    }
+                }
+                const auto found = cli.searchLibraries(stringArg(args, 0), 50);
+                if (!found.ok()) {
+                    throw UserError{indexError.empty() ? tr(errorMessageKey(found.error().code), language) : indexError};
+                }
+                Json list = Json::array();
+                for (const auto& library : found.value()) {
+                    list.push_back({{"name", library.name},
+                                    {"author", library.author},
+                                    {"sentence", library.sentence},
+                                    {"category", library.category},
+                                    {"website", library.website},
+                                    {"latestVersion", library.latestVersion},
+                                    {"versions", library.versions},
+                                    {"architectures", library.architectures}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    const auto libraryChange = [this](const std::string& id, const std::string& request, bool install) {
+        async(id, [request, install, this]() {
+            const Json args = Json::parse(request);
+            const Language language = languageArg(args, install ? 2 : 1, language_);
+            const std::string name = stringArg(args, 0);
+            const auto cli = arduinoCli(language);
+            const std::lock_guard<std::mutex> lock(librariesMutex_);
+            const auto outcome = install ? cli.installLibrary(name, stringArg(args, 1)) : cli.uninstallLibrary(name);
+            if (!outcome.ok()) {
+                throw UserError{tr(errorMessageKey(outcome.error().code), language)};
+            }
+            if (const auto diagnosis = toolchain::diagnoseInstall(outcome.value());
+                diagnosis.problem != toolchain::Problem::None) {
+                return Json{{"ok", false},
+                            {"message", toolchain::describe(diagnosis, language)},
+                            {"details", diagnosis.technical}}
+                    .dump();
+            }
+            return Json{{"ok", outcome.value().success},
+                        {"message", outcome.value().success ? std::string{} : outcome.value().error},
+                        {"details", outcome.value().out + outcome.value().err}}
+                .dump();
+        });
+    };
+    window_.bind(
+        "s2a_library_install",
+        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            libraryChange(id, request, true);
+        },
+        nullptr);
+    window_.bind(
+        "s2a_library_uninstall",
+        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            libraryChange(id, request, false);
         },
         nullptr);
 
@@ -881,34 +1025,10 @@ void Bridge::bind() {
                 if (board == nullptr || port.empty() || network::isWireless(port)) {
                     throw UserError{tr("live.wifi_upload", language)};
                 }
-                closeMonitor();
-                {
-                    const std::lock_guard<std::mutex> lock(liveMutex_);
-                    live_.reset(); // the port is needed
-                }
                 const auto failure = [&](const Error& error) {
                     return UserError{tr(errorMessageKey(error.code), language)};
                 };
-                auto opened = serial::SerialPort::open(port, live::kBaud);
-                if (!opened.ok()) {
-                    throw failure(opened.error());
-                }
-                std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
-                if (!live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
-                    connection.reset(); // no Live firmware yet: install it (with Wi-Fi), then connect again
-                    std::string details;
-                    if (const auto flashed = live::Session::arduinoCliFlasher(*board, port)(details); !flashed.ok()) {
-                        throw failure(flashed.error());
-                    }
-                    opened = serial::SerialPort::open(port, live::kBaud);
-                    if (!opened.ok()) {
-                        throw failure(opened.error());
-                    }
-                    connection = std::move(opened).value();
-                    if (const auto ready = live::LiveLink(*connection).handshake(); !ready.ok()) {
-                        throw failure(ready.error());
-                    }
-                }
+                const auto connection = openLiveOverUsb(*board, port, language);
                 live::LiveLink link(*connection);
                 if (const auto joined = link.joinNetwork(name, password); !joined.ok()) {
                     throw failure(joined.error());
@@ -937,6 +1057,71 @@ void Bridge::bind() {
                             {"message", tr(key, language, {{"network", name}, {"address", state.address},
                                                            {"access_point", state.accessPoint}})}};
                 return result.dump();
+            });
+        },
+        nullptr);
+
+    // HC-05 / HC-06 module of an Arduino board, over its USB cable: saves its pins and speed on
+    // the board (the Live firmware is uploaded first if needed); null forgets it.
+    window_.bind(
+        "s2a_bluetooth_module",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 3, language_);
+                const std::string port = stringArg(args, 0);
+                const Board* board = BoardDatabase::builtin().find(stringArg(args, 1));
+                if (board == nullptr || port.empty() || network::isWireless(port)) {
+                    throw UserError{tr("module.usb", language)};
+                }
+                std::optional<live::BluetoothModule> wanted;
+                if (args.size() > 2 && args[2].is_object()) {
+                    // Pins by the label printed on the board ("10", "A8"), as the editor shows them.
+                    const auto pinNumber = [&](const char* key, int fallback) {
+                        const Json& value = args[2].contains(key) ? args[2].at(key) : Json();
+                        if (value.is_number_integer()) {
+                            return value.get<int>();
+                        }
+                        const Pin* pin = value.is_string() ? board->findPin(value.get<std::string>()) : nullptr;
+                        return pin != nullptr ? pin->number : (value.is_null() ? fallback : -1);
+                    };
+                    live::BluetoothModule module;
+                    module.rx = pinNumber("rx", module.rx);
+                    module.tx = pinNumber("tx", module.tx);
+                    module.baud = args[2].value("baud", module.baud);
+                    if (module.rx < 0 || module.tx < 0) {
+                        throw UserError{tr("module.pin_missing", language)};
+                    }
+                    if (const std::string problem = live::bluetoothModuleProblem(*board, module); !problem.empty()) {
+                        throw UserError{tr("module." + problem, language)};
+                    }
+                    wanted = module;
+                }
+                const auto connection = openLiveOverUsb(*board, port, language);
+                live::LiveLink link(*connection);
+                const auto failure = [&](const Error& error) {
+                    return UserError{tr(errorMessageKey(error.code), language)};
+                };
+                if (const auto saved = link.setBluetoothModule(wanted); !saved.ok()) {
+                    throw failure(saved.error());
+                }
+                const auto running = link.bluetoothModule();
+                if (!running.ok()) {
+                    throw failure(running.error());
+                }
+                const auto label = [board](int number) {
+                    const Pin* pin = board->findPin(number);
+                    return pin != nullptr ? pin->label : std::to_string(number);
+                };
+                std::string message;
+                if (!wanted) {
+                    message = tr("module.forgotten", language);
+                } else {
+                    const std::string key = running.value() == wanted ? "module.saved" : "module.saved_restart";
+                    message = tr(key, language, {{"rx", label(wanted->rx)}, {"tx", label(wanted->tx)},
+                                                 {"baud", std::to_string(wanted->baud)}});
+                }
+                return Json{{"ok", true}, {"message", message}}.dump();
             });
         },
         nullptr);

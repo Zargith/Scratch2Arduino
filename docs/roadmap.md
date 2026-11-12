@@ -15,12 +15,48 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 | 5 - Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
 | 6 - Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
 | 7 - Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
-| 8 - Wireless | In progress: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth); Phone blocks (Bluetooth terminal app) and the phone-lamp example mixing Wi-Fi and Bluetooth; ESP8266 (NodeMCU) board with Live mode over Wi-Fi. Next: hardware checks, HC-05/HC-06 on Arduino boards |
+| 8 - Wireless | Done, to be checked on real hardware: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth); Phone blocks (Bluetooth terminal app) and the phone-lamp example mixing Wi-Fi and Bluetooth; ESP8266 (NodeMCU) board with Live mode over Wi-Fi; Live mode over an HC-05 / HC-06 module on Uno, Nano and Mega (pins saved on the board from the Bluetooth window, blocks kept off them); Phone blocks through the module ("Bluetooth module" block, upload and Live, wiring diagram), remote robot example in a Uno + HC-05 version |
 | 9 - Text programming languages | Done - official feature since 2026-11-11 (validated by the user; requested on 2026-11-10 with a C/C++ mode): project format 2 (`language`, `code`); C++ projects compiled and uploaded as typed, compiler errors on their lines with friendly fr/en explanations; Python (pocketpy) and JavaScript (QuickJS-ng) run in Live mode with an Arduino API, Stop interrupts endless loops; CodeMirror 6 code editor with errors shown after Check/Upload/Live only. Blink works in blocks, C++, Python and JavaScript (core tests with a fake board). Main way in: a **"My code" file beside the blocks** (C++, Python or JavaScript) whose functions and variables get their own block category, with Blocks / Code views and light autocompletion; the whole-program text modes stay as an expert mode. Code converted between C++, Python and JavaScript when the language changes (core `convert`, `s2a-cli convert`; what it cannot translate is kept as comments with its lines). To check on real boards |
 | 10 - Documentation and education | In progress: examples for every step of the learner progression (Button and LED, Remote robot added); novice / advanced levels of the eight examples of the progression (blocks only, or with "My code" in C++ / Python), shown as variants of one gallery card; user guide and 8 step-by-step tutorials in French and English (`docs/fr`, `docs/en`); teacher / workshop kit (room preparation, parts list, formats, one plan per session, assessment) in both languages; developer guide (architecture and recipes, in English like all developer docs). tutorials and guide inside the editor ("Tutorials and help" panel beside the blocks, opened at the first start, "Open the example" button, "Step-by-step tutorial" in the gallery). Done once a newcomer completes the first tutorial without outside help (to check in a workshop) |
 | 11 - Packaging and release | Dropped for now (maybe later) |
 | 12 - Variant comparison | Dropped (only the webview application is kept) |
 | 13 - Automatic wiring diagram | Done: part 1 - components and pins computed from the blocks (`resources/components.json`, core `wiring::plan`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), "Wiring" window for every project; diagrams can be zoomed. Part 2 - diagram drawn by the core (SVG) for every project and board (Uno, Nano, Mega, ESP32, ESP8266): board headers as printed, numbered component cards, + / GND rails, one routed wire per leg with its resistor, PNG export. Decision (user, 2026-11-10): examples keep their hand-drawn breadboard pictures (shown first), projects made from scratch use the generated diagram. Done |
+
+## Remaining work (2026-11-11)
+
+Everything the phases plan is built. What is left:
+
+### Checks on real hardware
+
+Nothing below has run on a real board yet (only CI, core tests with a fake board and compile checks):
+
+- upload from the editor and from `s2a-cli` on Uno, Nano and Mega, on the three OS (Phases 2 and 3a);
+- Live mode over USB: firmware flashed in one click, blocks changed while running (Phase 5);
+- every component of Phase 6 with its example project, in upload and Live modes (Phase 6 "done when");
+- ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
+- ESP8266 (NodeMCU): Live over Wi-Fi;
+- HC-05 / HC-06 on Uno, Nano and Mega: pins saved from the Bluetooth window, Live mode through the module, "Bluetooth module" block in upload and Live, the Uno + HC-05 remote robot (no module at hand yet);
+- Python and JavaScript in Live mode, and C++ projects, on a real board (Phase 9).
+
+### Phase 10: workshop
+
+- Run a workshop (or a test with a newcomer) on the first tutorial to close the phase.
+- Fix the guide, tutorials and teacher kit from what the workshop shows.
+
+### Known limits
+
+- On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
+- The CI fallback for the apt mirror (`.github/actions/setup-apt`, switch to `archive.ubuntu.com` when the Azure mirror does not answer) has not run for real yet: check it the next time the Azure mirror fails.
+
+### Next features (to choose)
+
+Goals of the project not yet covered, in the suggested order:
+
+1. **Step-by-step mode in Live mode** ("real-time debugging"): Pause and "Next block" buttons, the program advances one block at a time while the variables and pins panel updates.
+2. **Arduino library manager** ("extensive library support"): done on 2026-11-12 (chosen by the user), for 0.11.0. "Arduino libraries" window (search the registry, install a chosen version, update, uninstall), libraries saved in the project (`libraries` in `project.json`) and installed by Check on any computer, missing headers explained with suggested libraries, `s2a-cli lib`. To check with a real C++ project on a board.
+3. **Wiring check in Live mode**: before starting, read the inputs (buttons, sensors) and warn when a value looks wrong (for example a button always pressed).
+
+Phase 11 (packaging and release) stays dropped for now and may come back later.
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/...` (or `fix/...`, `docs/...`) branch merged into `dev` through a pull request once CI is green.
