@@ -15,6 +15,7 @@
 
 #include "bridge.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -147,6 +148,19 @@ bool openProjectPage(const std::string& url) {
     const auto result = process::run(command);
     return result.ok() && result.value().succeeded();
 #endif
+}
+
+/// An installer of a release of the project ("https://github.com/Zargith/Scratch2Arduino/releases/
+/// download/v0.11.1/Scratch2Arduino_installer.exe"): the only files the update downloads.
+bool isReleaseInstaller(const std::string& url) {
+    static const std::string kDownloads = "https://github.com/Zargith/Scratch2Arduino/releases/download/";
+    if (url.rfind(kDownloads, 0) != 0 || url.size() > 300 || url.size() < 5 ||
+        url.compare(url.size() - 4, 4, ".exe") != 0 || url.find("..") != std::string::npos) {
+        return false;
+    }
+    return std::all_of(url.begin(), url.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) != 0 || std::string_view("/:.-_").find(c) != std::string_view::npos;
+    });
 }
 
 /// Live output for the editor: [{text, error}] (error: printError, console.error, the error that stopped it).
@@ -330,6 +344,18 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
                 return Json(codegen::generate(project).source).dump();
+            });
+        },
+        nullptr);
+
+    // Where the expert C++ mode starts from: "My code" (in C++) followed by the code of the blocks.
+    window_.bind(
+        "s2a_expert_sketch",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const project::Project project = projectArg(args, 0, language_);
+                return Json(codegen::singleFileSketch(project)).dump();
             });
         },
         nullptr);
@@ -529,6 +555,47 @@ void Bridge::bind() {
         "s2a_open_url",
         [this](const std::string& id, const std::string& request, void* /*arg*/) {
             async(id, [request]() { return Json(openProjectPage(stringArg(Json::parse(request), 0))).dump(); });
+        },
+        nullptr);
+
+    // Update from the settings (Windows): downloads the installer of a release, starts it and
+    // closes the program so that the installer can replace it. Resolves to false elsewhere.
+    window_.bind(
+        "s2a_install_update",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const std::string url = stringArg(args, 0);
+                const Language language = languageArg(args, 1, language_);
+                if (!isReleaseInstaller(url)) {
+                    throw UserError{tr("webview.update_failed", language)};
+                }
+#ifdef _WIN32
+                std::error_code error;
+                const fs::path folder = fs::temp_directory_path(error) / "Scratch2Arduino-update";
+                fs::create_directories(folder, error);
+                const fs::path installer = folder / "Scratch2Arduino_installer.exe";
+                fs::remove(installer, error);
+                process::Command download;
+                download.program = "curl.exe"; // part of Windows 10 and 11
+                download.args = {"--location", "--fail", "--silent", "--show-error", "--output", installer.u8string(), url};
+                download.timeout = std::chrono::minutes(15);
+                const auto result = process::run(download);
+                if (!result.ok() || !result.value().succeeded() || !fs::is_regular_file(installer, error)) {
+                    throw UserError{tr("webview.update_failed", language)};
+                }
+                const std::wstring file = installer.wstring();
+                if (reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", file.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) <= 32) {
+                    throw UserError{tr("webview.update_failed", language)};
+                }
+                // The installer waits for the program to close (AppMutex): close it.
+                window_.dispatch([this]() { window_.terminate(); });
+                return Json(true).dump();
+#else
+                (void)language;
+                return Json(false).dump();
+#endif
+            });
         },
         nullptr);
 
