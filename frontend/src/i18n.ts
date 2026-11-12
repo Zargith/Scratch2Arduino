@@ -264,6 +264,10 @@ const fr = {
 	"status.program_cpp": "Mode C++ : écris ton programme Arduino, puis \"Vérifier\" ou \"Téléverser\".",
 	"status.program_script":
 		"Mode {language} : ton programme tourne sur l'ordinateur et pilote la carte avec le bouton \"Live\".",
+	"status.program_script_from_blocks":
+		"Mode {language} : ton code a été traduit à partir de tes blocs (et de Mon code). Relis-le, puis lance-le avec le bouton \"Live\".",
+	"status.program_script_from_blocks_check":
+		"Mode {language} : ton code a été traduit à partir de tes blocs (et de Mon code). Certaines lignes sont à reprendre à la main : elles sont gardées en commentaires.",
 	"status.program_blocks": "Retour aux blocs : ils sont comme tu les avais laissés.",
 	"status.upload_script":
 		"Un programme {language} se lance avec le bouton \"Live\" : il tourne sur l'ordinateur et pilote la carte.",
@@ -535,6 +539,10 @@ const en: Record<MessageKey, string> = {
 		"C++ mode: your code starts with My code, then the program of your blocks. Change it, then \"Check\" or \"Upload\".",
 	"status.program_cpp": "C++ mode: write your Arduino program, then \"Check\" or \"Upload\".",
 	"status.program_script": "{language} mode: your program runs on the computer and drives the board with the \"Live\" button.",
+	"status.program_script_from_blocks":
+		"{language} mode: your code was translated from your blocks (and My code). Read it again, then run it with the \"Live\" button.",
+	"status.program_script_from_blocks_check":
+		"{language} mode: your code was translated from your blocks (and My code). Some lines are to finish by hand: they are kept as comments.",
 	"status.program_blocks": "Back to the blocks: they are as you left them.",
 	"status.upload_script":
 		"A {language} program is started with the \"Live\" button: it runs on the computer and drives the board.",
