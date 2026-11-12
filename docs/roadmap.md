@@ -58,6 +58,8 @@ Goals of the project not yet covered, in the suggested order:
 
 4. **Wiring from code** (asked by the user on 2026-11-12): the wiring diagram of a program written as text (expert mode, "My code"): core `wiring::componentsInCode` finds the components from the calls of the code (library objects, `pinMode` / `digitalRead` / `digitalWrite` / `analogRead` / `tone` / `pulseIn`..., simple pin constants; Python and JavaScript converted to C++ first) and gives blocks standing for them to `wiring::plan`; the table tells the line of each. For 0.12.0.
 
+5. **Simulation without a board** (chosen by the user on 2026-11-12), for 0.13.0: a "Virtual board (no hardware)" port, chosen by itself when no board is plugged in. Live mode then runs on core `sim::VirtualBoard`, which answers the commands like the *S2A live* firmware (blocks, step-by-step mode, Python and JavaScript unchanged). The "Virtual board" panel draws the components of the wiring plan (`wiring::Connection::role` tells which board pin is which): LEDs, RGB LED, buzzer with sound, servo, DC motor, LCD / OLED screens, NeoPixel strip, LED matrix, the board's output pins; buttons, potentiometers, light, distance and DHT sensors and the phone are changed with the mouse. Upload and serial monitor refuse the virtual board with a clear message.
+
 Phase 11 (packaging and release) stays dropped for now and may come back later.
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own

@@ -19,6 +19,7 @@ struct Connection {
     std::string boardPin;     ///< Pin label ("13", "A0", "D5") or power: "5V", "3V3", "VIN", "GND".
     std::string via;          ///< Part in between ("220 Ω resistor"), "" for a plain wire.
     std::string shortPin;     ///< Name written on the drawn part ("S", "+", "DATA").
+    std::string role;         ///< What the board pin is for: the block argument ("PIN", "TRIG_PIN") or the power ("GND").
 };
 
 struct Component {

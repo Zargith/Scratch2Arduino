@@ -9,6 +9,7 @@
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
+#include "s2a/simulator.hpp"
 #include "s2a/usercode.hpp"
 #include "s2a/version.hpp"
 #include "s2a/wiring.hpp"
@@ -220,6 +221,33 @@ Bridge::Bridge(::webview::webview& window, Language language)
 
 namespace {
 
+/// What the editor draws of the virtual board (see sim::VirtualBoard::State).
+std::string simulationJson(const sim::VirtualBoard::State& state) {
+    Json outputs = Json::object();
+    for (const auto& [pin, output] : state.outputs) {
+        outputs[pin] = {{"level", output.level}, {"pwm", output.pwm}};
+    }
+    Json climates = Json::object();
+    for (const auto& [pin, climate] : state.climates) {
+        climates[pin] = {climate.first, climate.second};
+    }
+    return Json{{"modes", state.modes},
+                {"outputs", outputs},
+                {"servos", state.servos},
+                {"tones", state.tones},
+                {"lcd", state.lcd},
+                {"lcd16", state.lcd16},
+                {"oled", state.oled},
+                {"pixels", state.pixels},
+                {"matrices", state.matrices},
+                {"phone", state.phone},
+                {"pressed", state.pressed},
+                {"analog", state.analog},
+                {"distances", state.distances},
+                {"climates", climates}}
+        .dump();
+}
+
 const char* stateName(live::Session::State state) {
     switch (state) {
     case live::Session::State::Connecting:
@@ -420,7 +448,8 @@ void Bridge::bind() {
                     for (const auto& connection : component.connections) {
                         connections.push_back({{"componentPin", connection.componentPin},
                                                {"boardPin", connection.boardPin},
-                                               {"via", connection.via}});
+                                               {"via", connection.via},
+                                               {"role", connection.role}});
                     }
                     components.push_back({{"kind", component.kind},
                                           {"name", component.name},
@@ -960,6 +989,9 @@ void Bridge::bind() {
                 if (network::isWireless(options.port)) {
                     throw UserError{tr("live.wifi_upload", language)};
                 }
+                if (sim::isSimulated(options.port)) {
+                    throw UserError{tr("live.sim_upload", language)};
+                }
                 closeMonitor(); // the editor opens it again after the upload
             }
             const auto cli = arduinoCli(language);
@@ -984,6 +1016,18 @@ void Bridge::bind() {
             if (live_) {
                 // Stopping can take a moment (outputs switched off): not on the UI thread.
                 std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+            }
+            if (sim::isSimulated(port)) {
+                // Simulation: a new virtual board, which the editor draws and whose inputs it changes.
+                simBoard_ = std::make_shared<sim::VirtualBoard>(*board);
+                live_ = std::make_unique<live::Session>(
+                    std::move(project), *board, port, language,
+                    [simulated = simBoard_](const std::string& /*port*/)
+                        -> Result<std::unique_ptr<serial::LineTransport>> {
+                        return std::unique_ptr<serial::LineTransport>(std::make_unique<sim::Connection>(simulated));
+                    },
+                    live::Session::Flasher{});
+                return Json{{"ok", true}}.dump();
             }
             // Over Wi-Fi or Bluetooth the firmware cannot be uploaded: the board must already run it.
             live_ = std::make_unique<live::Session>(
@@ -1055,6 +1099,41 @@ void Bridge::bind() {
             .dump();
     });
 
+    // Simulation: what the virtual board shows (polled by the editor), and the inputs the user
+    // changes on it: ["press", pin, true], ["analog", pin, 0-1023], ["distance", trig, cm],
+    // ["climate", pin, celsius, percent], ["phone", text].
+    window_.bind("s2a_sim_state", [this](const std::string& /*request*/) {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (!simBoard_) {
+            return Json(nullptr).dump();
+        }
+        return simulationJson(simBoard_->state());
+    });
+    window_.bind("s2a_sim_input", [this](const std::string& request) {
+        const Json args = Json::parse(request);
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        if (!simBoard_ || args.size() < 2 || !args[0].is_string() || !args[1].is_string()) {
+            return std::string{};
+        }
+        const std::string kind = args[0].get<std::string>();
+        const std::string pin = args[1].get<std::string>();
+        const auto number = [&args](std::size_t index) {
+            return args.size() > index && args[index].is_number() ? args[index].get<double>() : 0.0;
+        };
+        if (kind == "press" && args.size() > 2 && args[2].is_boolean()) {
+            simBoard_->press(pin, args[2].get<bool>());
+        } else if (kind == "analog") {
+            simBoard_->setAnalog(pin, static_cast<int>(number(2)));
+        } else if (kind == "distance") {
+            simBoard_->setDistance(pin, number(2));
+        } else if (kind == "climate") {
+            simBoard_->setClimate(pin, number(2), number(3));
+        } else if (kind == "phone") {
+            simBoard_->phoneSays(pin); // the text of the phone
+        }
+        return std::string{};
+    });
+
     // Serial monitor (outside Live mode): open, send a line, close, and read (polled).
     window_.bind("s2a_monitor_open", [this](const std::string& request) {
         const Json args = Json::parse(request);
@@ -1066,6 +1145,9 @@ void Bridge::bind() {
         }
         if (network::isWireless(port)) {
             return Json{{"ok", false}, {"message", tr("live.wifi_monitor", language)}}.dump();
+        }
+        if (sim::isSimulated(port)) {
+            return Json{{"ok", false}, {"message", tr("live.sim_monitor", language)}}.dump();
         }
         closeMonitor();
         auto opened = serial::Monitor::open(port, baud);

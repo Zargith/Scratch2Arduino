@@ -162,6 +162,21 @@ The first time, Scratch2Arduino installs a small program on the board, *S2A live
 computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
 off. For the board to work on its own, without the computer, use **Upload**.
 
+**Without a board: the virtual board**. No board at hand? Choose the **Virtual board (no hardware)**
+port, then click **Live** (it is chosen by itself when no board is plugged in). Your blocks run on a
+board drawn on the screen, in the *Virtual board* panel:
+
+- the **outputs** follow the blocks: LEDs (brighter or dimmer with PWM), RGB LED, buzzer (with its
+  sound, which the speaker button mutes), servo, motor, LCD and OLED screens, NeoPixel strip, LED matrix,
+  and the small LEDs of the board's pins;
+- the **inputs** change with the mouse: hold **Press** for a button, move the sliders of a potentiometer,
+  a light sensor, a distance sensor or a DHT sensor (temperature and humidity); with the *Phone* blocks,
+  type the phone's message at the bottom of the panel.
+
+The parts shown are the ones of the wiring diagram, computed from your blocks. The rest of the Live mode
+works too: step by step, variables, serial monitor, Python and JavaScript. The virtual board takes no
+program: to **Upload**, plug in a real board and choose its port.
+
 ## 8. Serial monitor
 
 The **Serial monitor** button opens a panel showing what the board writes with the block

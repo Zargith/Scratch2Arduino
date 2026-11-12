@@ -168,6 +168,18 @@ TEST(Wiring, KnowsTheNamesOfTheNodeMcuPins) {
     EXPECT_EQ(plan.components[0].connections[0].boardPin, "D1");
 }
 
+TEST(Wiring, TellsWhatEachBoardPinIsFor) {
+    // The simulation finds the Trig pin of a distance sensor by its role, whatever the language.
+    const Plan plan = s2a::wiring::plan(
+        program({block("distance", "sensors_distance", {{"TRIG_PIN", "7"}, {"ECHO_PIN", "8"}})}, "uno"), Language::French);
+    ASSERT_EQ(plan.components.size(), 1U);
+    std::vector<std::string> roles;
+    for (const auto& connection : plan.components[0].connections) {
+        roles.push_back(connection.role + "=" + connection.boardPin);
+    }
+    EXPECT_EQ(roles, (std::vector<std::string>{"5V=5V", "TRIG_PIN=7", "ECHO_PIN=8", "GND=GND"}));
+}
+
 } // namespace
 
 namespace {

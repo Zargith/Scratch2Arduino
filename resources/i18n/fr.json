@@ -187,6 +187,8 @@
     "wifi_forgotten": "La carte a oublié le réseau de la maison : elle reste joignable sur son propre réseau \"{access_point}\".",
     "wifi_upload": "Un programme s'envoie avec le câble USB : choisis le port USB de la carte (le Wi-Fi et le Bluetooth servent au mode Live).",
     "wifi_monitor": "Le moniteur série passe par le câble USB : choisis le port USB de la carte. En mode Live par Wi-Fi ou Bluetooth, ce que les blocs écrivent s'affiche dans le panneau Live.",
+    "sim_upload": "La carte virtuelle ne reçoit pas de programme : clique sur Live pour faire tourner tes blocs dessus, ou choisis le port USB d'une vraie carte pour l'envoyer.",
+    "sim_monitor": "La carte virtuelle n'a pas de moniteur série : en mode Live, ce que les blocs écrivent s'affiche dans le panneau Live.",
     "bluetooth_no_firmware": "La carte ne répond pas par le Bluetooth. Vérifie qu'elle est allumée et près de l'ordinateur. La première fois, branche-la avec le câble USB et lance le mode Live : le programme Live y sera installé, avec le Bluetooth.",
     "bluetooth_off": "Impossible de chercher les cartes Bluetooth : le Bluetooth de l'ordinateur est peut-être éteint. Allume-le, puis réessaie.",
     "phone_bluetooth": "Les blocs Téléphone ont besoin du Bluetooth de la carte pour le téléphone : lance le mode Live par le câble USB ou par le Wi-Fi.",

@@ -171,6 +171,21 @@ ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter
 sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
 **Téléverser**.
 
+**Sans carte : la carte virtuelle**. Pas de carte sous la main ? Choisis le port **Carte virtuelle
+(sans matériel)**, puis clique sur **Live** (c'est le port choisi tout seul quand aucune carte n'est
+branchée). Tes blocs tournent sur une carte dessinée à l'écran, dans le panneau *Carte virtuelle* :
+
+- les **sorties** suivent les blocs : LED (plus ou moins lumineuses en PWM), LED RGB, buzzer (avec le
+  son, que le bouton haut-parleur coupe), servomoteur, moteur, écrans LCD et OLED, ruban NeoPixel,
+  matrice de LED, et les petites LED des broches de la carte ;
+- les **entrées** se changent à la souris : maintiens **Appuie** pour un bouton, bouge les curseurs d'un
+  potentiomètre, d'un capteur de lumière, d'un capteur de distance ou d'un capteur DHT (température et
+  humidité) ; avec les blocs *Téléphone*, écris le message du téléphone en bas du panneau.
+
+Les composants affichés sont ceux du schéma de câblage, calculés à partir de tes blocs. Tout le reste du
+mode Live marche aussi : pas à pas, variables, moniteur série, Python et JavaScript. La carte virtuelle ne
+reçoit pas de programme : pour **Téléverser**, branche une vraie carte et choisis son port.
+
 ## 8. Le moniteur série
 
 Le bouton **Moniteur série** ouvre un panneau qui affiche ce que la carte écrit avec le bloc
