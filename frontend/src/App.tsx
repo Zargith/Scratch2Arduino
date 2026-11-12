@@ -1470,7 +1470,8 @@ export function App() {
 				t={t}
 				onShowBlocks={(blockIds) => {
 					setWiringShown(false);
-					editor.current?.highlight(blockIds);
+					// From the code view, back to the blocks first (they are built again).
+					void (view === "blocks" ? Promise.resolve() : showBlocksView()).then(() => editor.current?.highlight(blockIds));
 				}}
 				onClose={() => setWiringShown(false)}
 			/>
