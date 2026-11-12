@@ -375,7 +375,7 @@ The interface is available in **French (default)** and **English**. Translations
 
 ## Contributing
 
-Bug reports, feature requests, translations, example projects and code are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the [roadmap](docs/roadmap.md).
+Bug reports, feature requests, translations, example projects and code are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the [developer guide](docs/developer-guide.md) and the [roadmap](docs/roadmap.md).
 
 ## License
 

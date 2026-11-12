@@ -18,6 +18,9 @@
 #include <iomanip>
 #include <locale>
 #include <sstream>
+#include <map>
+#include <thread>
+#include <set>
 
 namespace s2a::live {
 
@@ -504,6 +507,191 @@ std::optional<Error> LiveLink::takeError() {
 
 // --- Interpreter -------------------------------------------------------------------------
 
+// --- Wiring check -------------------------------------------------------------------------
+
+namespace {
+
+/// One input read by the blocks, and the blocks reading it.
+struct CheckedInput {
+    enum class Kind { Button, Digital, Analog, Distance, Dht };
+    Kind kind = Kind::Digital;
+    int pin = -1;     ///< Echo pin for a distance sensor.
+    int trig = -1;    ///< Distance sensor.
+    int model = 11;   ///< DHT11 or DHT22.
+    bool pullUp = false;
+    std::vector<std::string> blockIds;
+};
+
+std::string fieldOr(const Block& block, const BlockCatalog& catalog, const std::string& name) {
+    if (const auto found = block.fields.find(name); found != block.fields.end() && !found->second.empty()) {
+        return found->second;
+    }
+    const BlockDefinition* definition = catalog.find(block.type);
+    const BlockArg* arg = definition != nullptr ? definition->findArg(name) : nullptr;
+    return arg != nullptr ? arg->defaultValue : std::string{};
+}
+
+std::vector<CheckedInput> inputsOf(const project::Project& project, const BlockCatalog& catalog, const Board& board) {
+    std::vector<CheckedInput> inputs;
+    std::set<int> pullUps; // pins set to "input with pull-up" by a block
+    const auto add = [&](CheckedInput::Kind kind, int pin, const Block& block) -> CheckedInput& {
+        for (CheckedInput& input : inputs) {
+            if (input.kind == kind && input.pin == pin) {
+                input.blockIds.push_back(block.id);
+                return input;
+            }
+        }
+        CheckedInput input;
+        input.kind = kind;
+        input.pin = pin;
+        input.blockIds.push_back(block.id);
+        inputs.push_back(std::move(input));
+        return inputs.back();
+    };
+    const auto pinOf = [&](const Block& block, const char* name) {
+        const Pin* found = board.findPin(fieldOr(block, catalog, name));
+        return found != nullptr ? found->number : -1;
+    };
+    for (const project::Script& script : project.scripts) {
+        if (script.blocks.empty()) {
+            continue;
+        }
+        const BlockDefinition* hat = catalog.find(script.blocks.front().type);
+        if (hat == nullptr || hat->shape != BlockShape::Hat) {
+            continue; // loose blocks do not run
+        }
+        project::forEachBlock(script.blocks, [&](const Block& block) {
+            const std::string& type = block.type;
+            if (type == "sensors_button_pressed") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Button, pin, block).pullUp = true;
+                }
+            } else if (type == "pins_digital_read") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Digital, pin, block);
+                }
+            } else if (type == "pins_analog_read" || type == "sensors_potentiometer" || type == "sensors_light") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Analog, pin, block);
+                }
+            } else if (type == "sensors_distance") {
+                const int trig = pinOf(block, "TRIG_PIN");
+                const int echo = pinOf(block, "ECHO_PIN");
+                if (trig >= 0 && echo >= 0) {
+                    add(CheckedInput::Kind::Distance, echo, block).trig = trig;
+                }
+            } else if (type == "sensors_temperature" || type == "sensors_humidity") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Dht, pin, block).model = fieldOr(block, catalog, "MODEL") == "DHT22" ? 22 : 11;
+                }
+            } else if (type == "pins_set_mode" && fieldOr(block, catalog, "MODE") != "INPUT") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    pullUps.insert(pin);
+                }
+            }
+        });
+    }
+    for (CheckedInput& input : inputs) {
+        if (input.kind == CheckedInput::Kind::Digital && pullUps.count(input.pin) != 0) {
+            input.pullUp = true;
+        }
+    }
+    return inputs;
+}
+
+/// Changes of value between samples that are far apart (a floating input jumps around).
+int jumps(const std::vector<int>& samples, int threshold) {
+    int count = 0;
+    for (std::size_t i = 1; i < samples.size(); ++i) {
+        if (std::abs(samples[i] - samples[i - 1]) >= threshold) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+} // namespace
+
+std::vector<WiringHint> checkWiring(const project::Project& project, const BlockCatalog& catalog, const Board& board,
+                                    Pins& pins, Language language, milliseconds duration) {
+    std::vector<CheckedInput> inputs = inputsOf(project, catalog, board);
+    std::vector<WiringHint> hints;
+    if (inputs.empty()) {
+        return hints;
+    }
+    const auto label = [&](int pin) {
+        const Pin* found = board.findPin(pin);
+        return found != nullptr ? found->label : std::to_string(pin);
+    };
+    const auto hint = [&](const CheckedInput& input, const char* key, TranslationParams params) {
+        hints.push_back({tr(key, language, params), input.blockIds});
+    };
+
+    // Digital and analog inputs: sampled together, about every 50 ms.
+    constexpr int kSamples = 16;
+    std::map<std::size_t, std::vector<int>> samples;
+    for (const CheckedInput& input : inputs) {
+        if (input.kind == CheckedInput::Kind::Button || input.kind == CheckedInput::Kind::Digital ||
+            input.kind == CheckedInput::Kind::Analog) {
+            pins.setMode(input.pin, input.pullUp ? PinMode::InputPullup : PinMode::Input);
+        }
+    }
+    const auto pause = duration / kSamples;
+    for (int sample = 0; sample < kSamples; ++sample) {
+        for (std::size_t index = 0; index < inputs.size(); ++index) {
+            const CheckedInput& input = inputs[index];
+            if (input.kind == CheckedInput::Kind::Analog) {
+                samples[index].push_back(pins.analogRead(input.pin));
+            } else if (input.kind == CheckedInput::Kind::Button || input.kind == CheckedInput::Kind::Digital) {
+                samples[index].push_back(pins.digitalRead(input.pin) ? 1 : 0);
+            }
+        }
+        if (pause.count() > 0) {
+            std::this_thread::sleep_for(pause);
+        }
+    }
+
+    for (std::size_t index = 0; index < inputs.size(); ++index) {
+        const CheckedInput& input = inputs[index];
+        const TranslationParams pin{{"pin", label(input.pin)}};
+        const std::vector<int>& values = samples[index];
+        switch (input.kind) {
+        case CheckedInput::Kind::Button:
+            // Wired between the pin and GND: LOW only while pressed.
+            if (!values.empty() && std::all_of(values.begin(), values.end(), [](int v) { return v == 0; })) {
+                hint(input, "live.wiring_button_pressed", pin);
+            }
+            break;
+        case CheckedInput::Kind::Digital:
+            if (!input.pullUp && jumps(values, 1) >= 3) {
+                hint(input, "live.wiring_digital_floating", pin);
+            }
+            break;
+        case CheckedInput::Kind::Analog:
+            if (jumps(values, 150) >= 3) {
+                hint(input, "live.wiring_analog_floating", pin);
+            }
+            break;
+        case CheckedInput::Kind::Distance: {
+            bool echo = false;
+            for (int attempt = 0; attempt < 3 && !echo; ++attempt) {
+                echo = pins.distance(input.trig, input.pin) < 399.5; // 400: no echo came back
+            }
+            if (!echo) {
+                hint(input, "live.wiring_no_echo", {{"trig", label(input.trig)}, {"echo", label(input.pin)}});
+            }
+            break;
+        }
+        case CheckedInput::Kind::Dht:
+            if (!pins.dht(input.pin, input.model)) {
+                hint(input, "live.wiring_dht", {{"pin", label(input.pin)}, {"model", input.model == 22 ? "DHT22" : "DHT11"}});
+            }
+            break;
+        }
+    }
+    return hints;
+}
+
 Interpreter::Interpreter(project::Project project, const BlockCatalog& catalog, const Board& board, Pins& pins,
                          UserCode* userCode)
     : project_(std::move(project)), catalog_(catalog), board_(board), pins_(pins), userCode_(userCode) {
@@ -554,9 +742,29 @@ void Interpreter::start() {
 }
 
 void Interpreter::step(Clock now) {
+    if (!paused_) {
+        pendingSteps_ = 0;
+        for (Thread& thread : threads_) {
+            if (!thread.done && thread.wakeAt <= now) {
+                run(thread, now, kStepBudget);
+            }
+        }
+        return;
+    }
+    // Step by step: one block per click, the scripts in turn; a wait never holds a script back.
+    for (; pendingSteps_ > 0; --pendingSteps_) {
+        for (std::size_t tried = 0; tried < threads_.size(); ++tried) {
+            Thread& thread = threads_[stepCursor_++ % threads_.size()];
+            if (!thread.done) {
+                thread.wakeAt = now;
+                run(thread, now, 1);
+                break;
+            }
+        }
+    }
     for (Thread& thread : threads_) {
-        if (!thread.done && thread.wakeAt <= now) {
-            run(thread, now);
+        if (!thread.done) {
+            run(thread, now, 0); // shows the block each script runs next
         }
     }
 }
@@ -795,7 +1003,8 @@ double Interpreter::evaluate(const Block& block) {
     return 0;
 }
 
-void Interpreter::run(Thread& thread, Clock now) {
+void Interpreter::run(Thread& thread, Clock now, int limit) {
+    // Each turn runs one block; the turns that only leave a finished stack are not counted.
     for (int budget = kStepBudget; budget > 0; --budget) {
         if (thread.frames.empty()) {
             thread.done = true;
@@ -813,6 +1022,9 @@ void Interpreter::run(Thread& thread, Clock now) {
         }
         const Block& block = (*frame.stack)[frame.index];
         thread.current = block.id;
+        if (limit-- <= 0) {
+            return; // step by step: shown, run at the next click
+        }
         ++frame.index; // before pushing frames: `frame` may move
         const std::string& type = block.type;
         const auto enter = [&](const char* name, long turns, bool loop) {
@@ -1119,6 +1331,19 @@ void Session::stop() {
     stopping_ = true;
 }
 
+void Session::pause(bool paused) {
+    paused_ = paused;
+    if (!paused) {
+        steps_ = 0;
+    }
+}
+
+void Session::stepOnce() {
+    if (paused_) {
+        ++steps_;
+    }
+}
+
 Session::Snapshot Session::snapshot() const {
     const std::lock_guard<std::mutex> lock(mutex_);
     return snapshot_;
@@ -1273,6 +1498,17 @@ void Session::run(project::Project project) {
             return;
         }
     }
+    // Wiring check: the inputs of the blocks are read once before they start.
+    {
+        set(State::Connecting, tr("live.wiring_checking", language_));
+        auto hints = checkWiring(project, BlockCatalog::builtin(), board_, link, language_);
+        if (const auto error = link.takeError()) {
+            fail(*error);
+            return;
+        }
+        const std::lock_guard<std::mutex> lock(mutex_);
+        snapshot_.wiring = std::move(hints);
+    }
     auto interpreter =
         std::make_unique<Interpreter>(std::move(project), BlockCatalog::builtin(), board_, link, module.get());
     set(State::Running, tr("live.running", language_));
@@ -1287,6 +1523,10 @@ void Session::run(project::Project project) {
             if (next) {
                 interpreter->update(std::move(*next));
             }
+        }
+        interpreter->setPaused(paused_);
+        for (int steps = steps_.exchange(0); steps > 0; --steps) {
+            interpreter->stepOnce();
         }
         interpreter->step(std::chrono::duration_cast<milliseconds>(std::chrono::steady_clock::now() - start));
         if (const auto error = linkError ? linkError : link.takeError()) {
@@ -1303,6 +1543,7 @@ void Session::run(project::Project project) {
         {
             const std::lock_guard<std::mutex> lock(mutex_);
             snapshot_.runningBlocks = interpreter->runningBlocks();
+            snapshot_.paused = interpreter->paused();
             snapshot_.variables = interpreter->variables();
             snapshot_.readings = interpreter->readings();
             for (std::string& line : interpreter->takeOutput()) {

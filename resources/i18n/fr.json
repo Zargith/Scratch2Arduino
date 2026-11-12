@@ -170,6 +170,12 @@
     "value": "Valeur"
   },
   "live": {
+    "wiring_checking": "Vérification du câblage : lecture des boutons et des capteurs...",
+    "wiring_button_pressed": "Le bouton de la broche {pin} semble toujours appuyé. Il doit être branché entre la broche {pin} et GND, avec ses pattes de chaque côté de la rainure de la plaque.",
+    "wiring_digital_floating": "La broche {pin} change de valeur toute seule : elle semble \"flotter\". Vérifie son fil, ajoute une résistance vers GND, ou utilise le bloc qui met la broche en entrée avec pull-up.",
+    "wiring_analog_floating": "Les valeurs de la broche {pin} sautent dans tous les sens alors que rien ne bouge ? Vérifie le fil du milieu du capteur et ses fils vers 5V et GND.",
+    "wiring_no_echo": "Le capteur de distance (Trig {trig}, Echo {echo}) ne reçoit aucun écho. Vérifie Trig et Echo (pas inversés), VCC sur 5V et GND, et qu'un objet est devant lui à moins de 4 m.",
+    "wiring_dht": "Le capteur {model} de la broche {pin} ne répond pas. Vérifie son fil de données sur la broche {pin}, VCC et GND, et le modèle choisi dans le bloc (DHT11 ou DHT22).",
     "connecting": "Connexion à la carte ({port})...",
     "flashing": "Installation du programme Live sur la carte {board} (une seule fois, quelques secondes)...",
     "running": "Mode Live : tes blocs s'exécutent sur la carte. Modifie-les, la carte suit !",

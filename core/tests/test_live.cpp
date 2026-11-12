@@ -30,7 +30,14 @@ struct FakePins final : s2a::live::Pins {
     void digitalWrite(int pin, bool high) override { log.push_back("D" + std::to_string(pin) + (high ? "=1" : "=0")); }
     void analogWrite(int pin, int value) override { log.push_back("P" + std::to_string(pin) + "=" + std::to_string(value)); }
     bool digitalRead(int pin) override { return digitalInputs[pin]; }
-    int analogRead(int pin) override { return analogInputs[pin]; }
+    int analogRead(int pin) override {
+        if (!analogNoise.empty()) { // a floating input: values jumping around
+            return analogNoise[noiseIndex++ % analogNoise.size()];
+        }
+        return analogInputs[pin];
+    }
+    std::vector<int> analogNoise;
+    std::size_t noiseIndex = 0;
     void tone(int pin, int frequency, int ms) override {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
@@ -132,6 +139,119 @@ TEST(Interpreter, BlinksWithoutBlockingBetweenSteps) {
     interpreter.step(milliseconds(2010));
     EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
     EXPECT_FALSE(interpreter.finished());
+}
+
+TEST(Interpreter, RunsOneBlockPerStepWhenPaused) {
+    FakePins pins;
+    Interpreter interpreter(blink(), BlockCatalog::builtin(), uno(), pins);
+    interpreter.setPaused(true);
+    interpreter.step(milliseconds(0));
+    EXPECT_TRUE(pins.take().empty()) << "paused: nothing runs";
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"loop"}) << "the block that runs next";
+    interpreter.step(milliseconds(5000));
+    EXPECT_TRUE(pins.take().empty());
+
+    interpreter.stepOnce(); // forever: enters the loop
+    interpreter.step(milliseconds(5010));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"on"});
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(5020));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"M13O", "D13=1"}));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"w1"});
+    interpreter.stepOnce(); // the wait of 1 s...
+    interpreter.step(milliseconds(5030));
+    interpreter.stepOnce(); // ...does not hold the next click
+    interpreter.step(milliseconds(5040));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=0"});
+    interpreter.stepOnce();
+    interpreter.stepOnce(); // two clicks: second wait, then back to the top of the loop
+    interpreter.step(milliseconds(5050));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"on"});
+    EXPECT_TRUE(pins.take().empty());
+
+    interpreter.setPaused(false); // runs freely again
+    interpreter.step(milliseconds(5060));
+    EXPECT_EQ(pins.take(), std::vector<std::string>{"D13=1"});
+}
+
+TEST(Interpreter, StepsTheScriptsInTurn) {
+    Project project = withScript({block("hat", "events_when_program_starts"), led("a1", "ON"), led("a2", "OFF")});
+    project.scripts.push_back({0, 0, {block("hat2", "events_when_program_starts"), led("b1", "ON")}});
+    FakePins pins;
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.setPaused(true);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(interpreter.runningBlocks(), (std::vector<std::string>{"a1", "b1"}));
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(10));
+    EXPECT_EQ(interpreter.runningBlocks(), (std::vector<std::string>{"a2", "b1"}));
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(20));
+    EXPECT_EQ(interpreter.runningBlocks(), std::vector<std::string>{"a2"});
+    interpreter.stepOnce();
+    interpreter.step(milliseconds(30));
+    EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(WiringCheck, FindsInputsThatLookBadlyWired) {
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block light = block("light", "sensors_light");
+    light.fields["PIN"] = "A0";
+    Block distance = block("distance", "sensors_distance");
+    distance.fields["TRIG_PIN"] = "7";
+    distance.fields["ECHO_PIN"] = "8";
+    Block temperature = block("temperature", "sensors_temperature");
+    temperature.fields["PIN"] = "4";
+    Block show = block("show", "serial_print");
+    show.inputs["VALUE"].block = button;
+    Block a = block("a", "serial_print");
+    a.inputs["VALUE"].block = light;
+    Block b = block("b", "serial_print");
+    b.inputs["VALUE"].block = distance;
+    Block c = block("c", "serial_print");
+    c.inputs["VALUE"].block = temperature;
+    Project project = withScript({block("hat", "events_when_program_starts"), show, a, b, c});
+    Block loose = block("loose", "pins_digital_read"); // not attached: never checked
+    loose.fields["PIN"] = "9";
+    project.scripts.push_back({0, 0, {loose}});
+
+    FakePins pins; // button input LOW (pressed), no echo, no DHT answer
+    pins.analogNoise = {0, 900, 100, 1000, 50, 800};
+    const auto hints = s2a::live::checkWiring(project, BlockCatalog::builtin(), uno(), pins, s2a::Language::English,
+                                              milliseconds(0));
+    ASSERT_EQ(hints.size(), 4U);
+    EXPECT_NE(hints[0].message.find("pin 2 seems always pressed"), std::string::npos) << hints[0].message;
+    EXPECT_EQ(hints[0].blockIds, std::vector<std::string>{"button"});
+    EXPECT_NE(hints[1].message.find("pin A0 jump"), std::string::npos) << hints[1].message;
+    EXPECT_NE(hints[2].message.find("Trig 7, Echo 8"), std::string::npos) << hints[2].message;
+    EXPECT_NE(hints[3].message.find("DHT11 sensor on pin 4"), std::string::npos) << hints[3].message;
+    const auto log = pins.take();
+    EXPECT_NE(std::find(log.begin(), log.end(), "M2U"), log.end()) << "the button is read with its pull-up";
+    EXPECT_EQ(std::find(log.begin(), log.end(), "M9I"), log.end()) << "loose blocks are not read";
+}
+
+TEST(WiringCheck, StaysQuietWhenTheValuesLookRight) {
+    Block button = block("button", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block pot = block("pot", "sensors_potentiometer");
+    pot.fields["PIN"] = "A1";
+    Block distance = block("distance", "sensors_distance");
+    distance.fields["TRIG_PIN"] = "7";
+    distance.fields["ECHO_PIN"] = "8";
+    Block a = block("a", "serial_print");
+    a.inputs["VALUE"].block = button;
+    Block b = block("b", "serial_print");
+    b.inputs["VALUE"].block = pot;
+    Block c = block("c", "serial_print");
+    c.inputs["VALUE"].block = distance;
+    FakePins pins;
+    pins.digitalInputs[2] = true; // released: HIGH through the pull-up
+    pins.analogInputs[15] = 512;  // A1 on the Uno
+    pins.distanceCm = 35;
+    const auto hints = s2a::live::checkWiring(withScript({block("hat", "events_when_program_starts"), a, b, c}),
+                                              BlockCatalog::builtin(), uno(), pins, s2a::Language::English, milliseconds(0));
+    EXPECT_TRUE(hints.empty()) << hints.front().message;
 }
 
 TEST(Interpreter, PlaysATuneAndWaitsForTheEnd) {
@@ -710,6 +830,25 @@ TEST(Session, RunsUpdatesAndStops) {
     const auto& received = firmware->received;
     EXPECT_NE(std::find(received.begin(), received.end(), "D 13 0"), received.end());
     EXPECT_EQ(received.back(), "X"); // outputs switched off when Live mode ends
+}
+
+TEST(Session, PausesAndRunsOneBlockAtATime) {
+    auto firmware = std::make_shared<FakeFirmware>();
+    Session session(
+        blink(), uno(), "COM1", s2a::Language::English,
+        [firmware](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(firmware));
+        },
+        [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().runningBlocks == std::vector<std::string>{"w1"}; }));
+    session.pause(true);
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().paused; }));
+    // Paused during the wait: the wait is over, the next block is shown.
+    EXPECT_EQ(session.snapshot().runningBlocks, std::vector<std::string>{"off"});
+    session.stepOnce();
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().runningBlocks == std::vector<std::string>{"w2"}; }));
+    session.pause(false);
+    ASSERT_TRUE(waitFor([&] { return !session.snapshot().paused; }));
 }
 
 TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {

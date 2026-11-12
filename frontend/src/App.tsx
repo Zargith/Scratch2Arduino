@@ -23,13 +23,14 @@ import {
 import {
 	IconBluetooth,
 	IconCheck,
-	IconCode,
 	IconDeviceFloppy,
 	IconFilePlus,
 	IconFolderOpen,
 	IconHelp,
 	IconHistory,
+	IconPlayerPause,
 	IconPlayerPlay,
+	IconPlayerTrackNext,
 	IconPlayerStop,
 	IconPlugConnected,
 	IconRefresh,
@@ -64,6 +65,7 @@ import { exampleProject, examples, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
 import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
+import { LiveWiring } from "@/LiveWiring";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
 import {
@@ -78,8 +80,9 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
-import { findUpdate, type Release } from "@/updates";
+import { findUpdate, platform, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
+import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
@@ -191,6 +194,10 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** The wiring hints of this Live session were closed by the user. */
+	const [wiringClosed, setWiringClosed] = useState(false);
+	/** Step-by-step mode of the Live mode (block programs). */
+	const [livePaused, setLivePaused] = useState(false);
 	/** The output panel opened by itself once in this Live session (at the first printed line). */
 	const outputShown = useRef(false);
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
@@ -458,15 +465,38 @@ export function App() {
 			const savedEdits = edits.current;
 			await autosaving.current; // an older autosave must not land after the save
 			const saved = await bridge.save(project, path, language);
-			if (!saved) return;
+			if (!saved) return false;
 			setPath(saved);
 			autosavedEdits.current = savedEdits; // the host dropped the autosave
 			if (edits.current === savedEdits) setDirty(false);
 			setStatus({ kind: "success", message: t("status.saved", { path: saved }) });
+			return true;
 		} catch (error) {
 			fail(error);
+			return false;
 		}
 	};
+
+	/** Asked before the update installer closes Scratch2Arduino: save, ignore or cancel. */
+	const [unsavedAsked, setUnsavedAsked] = useState(false);
+	const unsavedAnswer = useRef<((choice: UnsavedChoice) => void) | null>(null);
+	/** True when Scratch2Arduino may close now (nothing to save, saved, or changes ignored). */
+	const readyToClose = async () => {
+		if (!dirty) return true;
+		const choice = await new Promise<UnsavedChoice>((resolve) => {
+			unsavedAnswer.current = resolve;
+			setUnsavedAsked(true);
+		});
+		if (choice === "cancel") return false;
+		return choice === "discard" || (await saveProject());
+	};
+	const answerUnsaved = (choice: UnsavedChoice) => {
+		setUnsavedAsked(false);
+		unsavedAnswer.current?.(choice);
+		unsavedAnswer.current = null;
+	};
+	/** Only the Windows installer closes the program; elsewhere the link is just opened. */
+	const installCloses = (download: string) => platform(navigator.userAgent) === "windows" && download.endsWith(".exe");
 
 	// Ctrl+S (Cmd+S on a Mac) saves, wherever the focus is.
 	const saveRef = useRef(saveProject);
@@ -816,6 +846,8 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			setLivePaused(false);
+			setWiringClosed(false);
 			outputShown.current = false;
 			history.current = new Map();
 			setLive(true);
@@ -856,6 +888,8 @@ export function App() {
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
+					} else if (snapshot.paused && snapshot.state === "running") {
+						setStatus({ kind: "info", message: t("live.paused") });
 					} else if (snapshot.message) {
 						setStatus({ kind: "info", message: snapshot.message });
 					}
@@ -863,11 +897,41 @@ export function App() {
 				.catch(fail);
 		}, 200);
 		return () => clearInterval(timer);
+		// t: the status follows the language at the next poll anyway.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [live, fail]);
+
+	/** Step-by-step mode: pause or let the blocks run again. */
+	const toggleLivePause = useCallback(() => {
+		const next = !livePaused;
+		setLivePaused(next);
+		void bridge.livePause(next).catch(fail);
+	}, [livePaused, fail]);
+	const liveStep = useCallback(() => {
+		if (livePaused) void bridge.liveStep().catch(fail);
+	}, [livePaused, fail]);
+	/** Shows the step-by-step buttons: a block program (or blocks with "My code") in Live mode. */
+	const canStep = live && program === "blocks";
+	// F9 pauses or resumes, F10 runs the next block (as in many debuggers).
+	useEffect(() => {
+		if (!canStep) return;
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === "F9") {
+				event.preventDefault();
+				toggleLivePause();
+			} else if (event.key === "F10") {
+				event.preventDefault();
+				liveStep();
+			}
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, [canStep, toggleLivePause, liveStep]);
 
 	/** The language the help window explains: the expert program, or "My code". */
 	const helpLanguage: ProgramLanguage = program !== "blocks" ? program : (userCode?.language ?? "cpp");
 
+	const wiringHints = live && !wiringClosed ? (liveSnapshot?.wiring ?? []) : [];
 	const liveRows = [
 		...Object.entries(liveSnapshot?.variables ?? {}).map(([id, value]) => ({
 			key: `var:${id}`,
@@ -1037,13 +1101,8 @@ export function App() {
 								<IconPlugConnected size={18} />
 							</ActionIcon>
 						</Tooltip>
-						{view === "blocks" ? (
-							<Tooltip label={t("toolbar.code")}>
-								<ActionIcon variant="default" size="lg" aria-label={t("toolbar.code")} onClick={() => void showCodeView("blocks")}>
-									<IconCode size={18} />
-								</ActionIcon>
-							</Tooltip>
-						) : (
+						{/* The code of the blocks: the Blocks / Code switch (no button of its own any more). */}
+						{view === "code" && (
 							<Tooltip label={t("program.help")}>
 								<ActionIcon variant="default" size="lg" aria-label={t("program.help")} onClick={() => setHelpShown(true)}>
 									<IconHelp size={18} />
@@ -1068,6 +1127,33 @@ export function App() {
 								)}
 							</Button>
 						</Tooltip>
+						{canStep && (
+							<ActionIcon.Group>
+								<Tooltip label={`${t(livePaused ? "live.resume" : "live.pause")} (F9)`}>
+									<ActionIcon
+										variant={livePaused ? "filled" : "default"}
+										color="pink"
+										size="lg"
+										aria-label={t(livePaused ? "live.resume" : "live.pause")}
+										aria-pressed={livePaused}
+										onClick={toggleLivePause}
+									>
+										{livePaused ? <IconPlayerPlay size={18} /> : <IconPlayerPause size={18} />}
+									</ActionIcon>
+								</Tooltip>
+								<Tooltip label={`${t("live.next_block")} (F10)`}>
+									<ActionIcon
+										variant="default"
+										size="lg"
+										aria-label={t("live.next_block")}
+										disabled={!livePaused}
+										onClick={liveStep}
+									>
+										<IconPlayerTrackNext size={18} />
+									</ActionIcon>
+								</Tooltip>
+							</ActionIcon.Group>
+						)}
 						<Tooltip label={t("toolbar.build")} disabled={!compact}>
 							<Button
 								color="green"
@@ -1172,7 +1258,7 @@ export function App() {
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || monitorShown || tutorialPage !== null) && (
+			{((live && liveRows.length > 0) || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
 				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
 					{tutorialPage !== null && (
 						<Tutorials
@@ -1189,6 +1275,17 @@ export function App() {
 								if (chosen) openExample(chosen);
 							}}
 							onClose={() => setTutorialPage(null)}
+						/>
+					)}
+					{wiringHints.length > 0 && (
+						<LiveWiring
+							hints={wiringHints}
+							t={t}
+							onShowBlocks={(blockIds) => {
+								if (view !== "blocks") void showBlocksView();
+								editor.current?.highlight(blockIds);
+							}}
+							onClose={() => setWiringClosed(true)}
 						/>
 					)}
 					{live && liveRows.length > 0 && (
@@ -1271,8 +1368,10 @@ export function App() {
 				}}
 				onSettings={changeSettings}
 				onUpdate={setUpdate}
+				readyToClose={readyToClose}
 				onClose={() => setSettingsShown(false)}
 			/>
+			<UnsavedChanges opened={unsavedAsked} t={t} onChoice={answerUnsaved} />
 			{update && (
 				<Card
 					withBorder
@@ -1297,10 +1396,11 @@ export function App() {
 						<Button
 							size="xs"
 							onClick={() =>
-								void bridge
-									.installUpdate(update.download, language)
-									.then((started) => (started ? undefined : bridge.openUrl(update.download)))
-									.catch(fail)
+								void (async () => {
+									if (installCloses(update.download) && !(await readyToClose())) return;
+									const started = await bridge.installUpdate(update.download, language);
+									if (!started) await bridge.openUrl(update.download);
+								})().catch(fail)
 							}
 						>
 							{t(update.download.endsWith(".exe") ? "settings.install_update" : "update.download")}

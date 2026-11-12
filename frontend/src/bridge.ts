@@ -90,6 +90,10 @@ export interface LiveSnapshot {
 	message?: string;
 	details?: string;
 	running?: string[];
+	/** Step-by-step mode: the running blocks are the ones that run at the next "Next block". */
+	paused?: boolean;
+	/** Wiring check made when the Live mode started: inputs that look badly wired. */
+	wiring?: { message: string; blockIds: string[] }[];
 	problems?: string[];
 	variables?: Record<string, number>;
 	/** Sensor values read by the blocks, by pin label ("A0", "2"). */
@@ -236,6 +240,8 @@ interface HostFunctions {
 	s2a_live_start(project: Project, port: string, language: Language): Promise<{ ok: boolean; message?: string }>;
 	s2a_live_update(project: Project): Promise<void>;
 	s2a_live_stop(): Promise<void>;
+	s2a_live_pause(paused: boolean): Promise<void>;
+	s2a_live_step(): Promise<void>;
 	s2a_live_state(): Promise<LiveSnapshot>;
 	s2a_monitor_open(port: string, baud: number, language: Language): Promise<{ ok: boolean; message?: string; details?: string }>;
 	s2a_monitor_send(line: string): Promise<void>;
@@ -322,6 +328,10 @@ export const bridge = {
 	liveStart: (project: Project, port: string, language: Language) => host("s2a_live_start")(project, port, language),
 	liveUpdate: (project: Project) => host("s2a_live_update")(project),
 	liveStop: () => host("s2a_live_stop")(),
+	/** Step-by-step mode: pause the blocks (true) or let them run (false). */
+	livePause: (paused: boolean) => host("s2a_live_pause")(paused),
+	/** Paused: runs one more block. */
+	liveStep: () => host("s2a_live_step")(),
 	liveState: () => host("s2a_live_state")(),
 	monitorOpen: (port: string, baud: number, language: Language) => host("s2a_monitor_open")(port, baud, language),
 	monitorSend: (line: string) => host("s2a_monitor_send")(line),

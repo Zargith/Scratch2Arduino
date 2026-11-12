@@ -32,16 +32,17 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
   Il installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le menu Démarrer.
   Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires*
   puis *Exécuter quand même* (le programme n'est pas encore signé).
-- **Linux et macOS** : télécharge `Scratch2Arduino_installer.sh`, puis dans un terminal :
-  `sh Scratch2Arduino_installer.sh` (ou `--user` pour l'installer seulement pour toi).
+- **Linux et macOS** : télécharge les sources (*Source code*, page *Releases* du projet) et décompresse-les,
+  puis dans ce dossier, dans un terminal : `./Scratch2Arduino_installer.sh` (ou `--user` pour l'installer
+  seulement pour toi).
   Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
   `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
 
 **Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
 la propose (*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut
 aussi vérifier dans les *Paramètres* (engrenage), ou désactiver cette recherche. Sous Windows, *Télécharger
-et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino (enregistre ton projet
-avant). Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
+et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino : si ton projet n'est pas
+enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou d'annuler. Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
 commandes à lancer.
 
 Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
@@ -63,7 +64,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
-  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; *Voir le code* ; **Live**, **Vérifier**,
+  une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; **Live**, **Vérifier**,
   **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
@@ -124,8 +125,8 @@ composant**. La liste complète est dans le [catalogue des blocs](../block-catal
   sans rien envoyer. C'est utile même sans carte branchée.
 - **Téléverser** fait la même chose puis envoie le programme dans la carte. Il y reste, même débranchée :
   il redémarre chaque fois que la carte est alimentée (par USB, une pile ou un chargeur).
-- **Voir le code** montre le code Arduino fabriqué à partir de tes blocs : une bonne façon de découvrir
-  le "vrai" langage de l'Arduino.
+- La vue **Code** (en haut, à côté de *Blocs*) montre le code Arduino fabriqué à partir de tes blocs :
+  une bonne façon de découvrir le "vrai" langage de l'Arduino.
 
 Quand il y a un problème, la barre d'état explique **ce qui ne va pas** et **comment le corriger**, et
 le bloc concerné est mis en évidence dans la zone de travail. Exemples :
@@ -151,6 +152,20 @@ en Python ou JavaScript) s'affiche dans le panneau du moniteur série, qui s'ouv
 ligne. Pour déboguer, `printError()` (et `console.error()` en JavaScript) écrit en rouge, sur la sortie
 d'erreur ; l'erreur qui arrête un programme y reste aussi, avec sa ligne, après l'arrêt.
 
+**Vérification du câblage** : au démarrage du mode Live, avant tes blocs, Scratch2Arduino lit une seconde
+les boutons et capteurs qu'ils utilisent. Si une valeur semble fausse, une carte *Vérifie le câblage*
+dit quoi regarder : un bouton toujours appuyé, une broche qui "flotte" (valeurs qui changent toutes
+seules : fil débranché ou résistance manquante), un capteur de distance sans écho, un capteur DHT qui ne
+répond pas. *Voir les blocs* montre les blocs concernés. Ce sont des conseils : le programme tourne quand
+même. Après avoir corrigé, relance Live pour vérifier encore.
+
+**Pas à pas** : pour comprendre ce que fait ton programme, clique sur **Pause** (à côté d'*Arrêter*,
+touche F9). Les blocs s'arrêtent et le bloc qui va s'exécuter est éclairé. Chaque clic sur **Bloc
+suivant** (F10) exécute ce bloc seulement : regarde la carte et les variables changer, un bloc à la fois.
+Les blocs *attendre* ne font plus attendre en pas à pas. Avec plusieurs scripts, ils avancent chacun leur
+tour. **Reprendre** (F9) relance le programme à vitesse normale. Le pas à pas marche pour les blocs (même
+avec "Mon code"), pas pour un programme entier écrit en Python ou en JavaScript.
+
 La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
 ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les
 sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
@@ -175,6 +190,15 @@ composants **utilisés par tes blocs** :
   de la carte où elle va et ce qu'il faut mettre entre les deux (par exemple la résistance de 220 Ω d'une
   LED) ; *Voir les blocs* montre les blocs concernés ;
 - **Montage de l'exemple** (pour un exemple) : le montage dessiné à la main.
+
+**Programme écrit en code** : en mode expert (programme entier en C++, Python ou JavaScript) et pour
+"Mon code", le schéma est calculé à partir de ton code. Scratch2Arduino y cherche les composants :
+`monServo.attach(9)` est un servomoteur sur la broche 9, `DHT capteur(4, DHT22)` un DHT22 sur la broche 4,
+`pinMode(2, INPUT_PULLUP)` avec `digitalRead(2)` un bouton, `analogRead(A0)` un capteur analogique,
+`tone(8, ...)` un buzzer, `pulseIn()` un capteur de distance, `digitalWrite` une LED (ou autre sortie)...
+Les broches écrites en nombres ou en constantes (`const int led = 13;`, `#define BOUTON 2`) sont
+comprises ; une broche rangée dans une variable qui change ne l'est pas. Le tableau dit à quelle ligne du
+code chaque composant a été trouvé.
 
 Le schéma prévient aussi quand une broche sert à deux composants, quand un écran I2C n'a plus ses broches
 SDA/SCL, ou quand les composants demandent plus de courant qu'un port USB n'en donne.
@@ -322,6 +346,7 @@ Les programmes s'envoient toujours avec le câble USB.
 | Ctrl+Z | Annuler |
 | Ctrl+Y ou Ctrl+Maj+Z | Rétablir |
 | Suppr ou Retour arrière | Supprimer le bloc sélectionné |
+| F9 / F10 | Mode Live : pause ou reprendre / exécuter le bloc suivant |
 
 Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touches agissent sur le texte.
 

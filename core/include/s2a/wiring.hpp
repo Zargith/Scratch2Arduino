@@ -6,6 +6,7 @@
 #include "s2a/project.hpp"
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 /// What must be wired to the board for a project, computed from its blocks (Phase 13): the
@@ -49,7 +50,17 @@ struct Plan {
 /// USB power available for the components.
 inline constexpr int kUsbBudget = 500;
 
-/// The wiring of the scripts that run (loose blocks are ignored, like in the program).
+/// Blocks standing for the components that code typed as text uses (C++; Python and JavaScript
+/// are converted to C++ first), found from its calls: "myServo.attach(9)" is a servo on pin 9,
+/// "DHT dht(4, DHT22)" a DHT22 on pin 4, "pinMode(2, INPUT_PULLUP)" with "digitalRead(2)" a
+/// button... Pins written as numbers or as simple constants ("const int led = 13;", "#define")
+/// are understood; a pin held in a variable that changes is left out. Block ids are
+/// "code-<line>". One script, starting with a start hat.
+[[nodiscard]] project::Script componentsInCode(std::string_view code, project::ProgramLanguage language);
+
+/// The wiring of the scripts that run (loose blocks are ignored, like in the program), and of
+/// the code: the whole program of a text project (its blocks are then left aside), or the
+/// "My code" file beside the blocks.
 [[nodiscard]] Plan plan(const project::Project& project, const BlockCatalog& catalog, const Board& board,
                         Language language);
 

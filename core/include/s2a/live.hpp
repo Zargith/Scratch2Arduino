@@ -178,6 +178,21 @@ private:
     std::optional<Error> error_;
 };
 
+/// A wiring mistake suspected from the values the board reads: a hint, never certain.
+struct WiringHint {
+    std::string message;               ///< In the user's language, with what to check.
+    std::vector<std::string> blockIds; ///< The blocks reading that input.
+};
+
+/// Wiring check of the Live mode: before the blocks start, reads the inputs they use (buttons,
+/// pins, potentiometers and light sensors, distance and DHT sensors) for about `duration`, and
+/// tells which ones look badly wired: a button always pressed, an input that floats (values
+/// jumping with nothing touching it), a distance sensor without echo, a DHT that does not answer.
+/// Loose blocks are not checked. Reads only: no output pin is changed.
+[[nodiscard]] std::vector<WiringHint> checkWiring(const project::Project& project, const BlockCatalog& catalog,
+                                                  const Board& board, Pins& pins, Language language,
+                                                  std::chrono::milliseconds duration = std::chrono::milliseconds(800));
+
 /// Runs the scripts of a project, Scratch style: every script started by a hat runs in turn,
 /// a script gives way at each wait and at the end of each loop turn.
 class Interpreter {
@@ -196,7 +211,15 @@ public:
     void update(project::Project project);
 
     [[nodiscard]] bool finished() const;
-    /// Block being run by each running script (to highlight it).
+
+    /// Step-by-step mode. Paused, no block runs: each script shows the block it runs next, and
+    /// stepOnce() runs one block (of the scripts in turn) at the next step(). Waits are skipped
+    /// while paused, so that "Next block" never seems to do nothing.
+    void setPaused(bool paused) noexcept { paused_ = paused; }
+    [[nodiscard]] bool paused() const noexcept { return paused_; }
+    void stepOnce() noexcept { ++pendingSteps_; }
+
+    /// Block being run by each running script (to highlight it); paused: the block it runs next.
     [[nodiscard]] std::vector<std::string> runningBlocks() const;
     /// Variable id -> current value.
     [[nodiscard]] const std::map<std::string, double>& variables() const { return variables_; }
@@ -223,7 +246,8 @@ private:
     };
 
     void start();
-    void run(Thread& thread, Clock now);
+    /// Runs at most `limit` blocks of the thread (0: only shows the block it runs next).
+    void run(Thread& thread, Clock now, int limit);
     double number(const project::Block& block, const std::string& name);
     bool condition(const project::Block& block, const std::string& name);
     double evaluate(const project::Block& block);
@@ -243,6 +267,9 @@ private:
     const Board& board_;
     Pins& pins_;
     std::vector<Thread> threads_;
+    bool paused_ = false;
+    int pendingSteps_ = 0;
+    std::size_t stepCursor_ = 0; ///< Next thread to run one block in step-by-step mode.
     std::map<std::string, double> variables_;
     std::map<int, PinMode> modes_;
     std::map<std::string, double> readings_;
@@ -288,6 +315,8 @@ public:
         std::map<std::string, double> readings; ///< Sensor values read by the blocks, by pin label.
         std::vector<OutputLine> output;         ///< Last lines written by the program (at most kOutputLines)...
         std::size_t outputCount = 0;            ///< ...out of this many since the start.
+        bool paused = false;                    ///< Step-by-step mode: blocks wait for "Next block".
+        std::vector<WiringHint> wiring;         ///< Wiring check made when the Live mode started.
         int errorLine = 0;                      ///< Python/JavaScript: line of the error that stopped the program...
         std::string errorFile;                  ///< ...in the program ("") or in "My code" ("user").
     };
@@ -304,6 +333,10 @@ public:
 
     void update(project::Project project);
     void stop();
+    /// Step-by-step mode (block programs; a Python or JavaScript program ignores it).
+    void pause(bool paused);
+    /// Paused: runs one more block.
+    void stepOnce();
     [[nodiscard]] Snapshot snapshot() const;
     [[nodiscard]] bool active() const;
 
@@ -335,6 +368,8 @@ private:
     Snapshot snapshot_;
     std::optional<project::Project> pending_;
     std::atomic<bool> stopping_{false};
+    std::atomic<bool> paused_{false};
+    std::atomic<int> steps_{0}; ///< "Next block" clicks not yet given to the interpreter.
     std::thread thread_;
 };
 

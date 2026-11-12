@@ -170,6 +170,12 @@
     "value": "Value"
   },
   "live": {
+    "wiring_checking": "Checking the wiring: reading the buttons and sensors...",
+    "wiring_button_pressed": "The button on pin {pin} seems always pressed. It must be wired between pin {pin} and GND, with its legs on each side of the gap of the breadboard.",
+    "wiring_digital_floating": "Pin {pin} changes value by itself: it seems to \"float\". Check its wire, add a resistor to GND, or use the block that sets the pin as an input with pull-up.",
+    "wiring_analog_floating": "The values of pin {pin} jump around while nothing moves? Check the middle wire of the sensor and its wires to 5V and GND.",
+    "wiring_no_echo": "The distance sensor (Trig {trig}, Echo {echo}) gets no echo. Check Trig and Echo (not swapped), VCC on 5V and GND, and that something is in front of it, closer than 4 m.",
+    "wiring_dht": "The {model} sensor on pin {pin} does not answer. Check its data wire on pin {pin}, VCC and GND, and the model chosen in the block (DHT11 or DHT22).",
     "connecting": "Connecting to the board ({port})...",
     "flashing": "Installing the Live program on the {board} board (only once, a few seconds)...",
     "running": "Live mode: your blocks are running on the board. Change them and the board follows!",

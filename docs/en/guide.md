@@ -32,15 +32,17 @@ the application: the **Tutorials and help** button (the graduation cap), next to
   installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the Start menu.
   If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
   signed yet).
-- **Linux and macOS**: download `Scratch2Arduino_installer.sh`, then in a terminal:
-  `sh Scratch2Arduino_installer.sh` (or `--user` to install it for yourself only).
+- **Linux and macOS**: download the sources (*Source code*, the project's *Releases* page) and unpack them,
+  then in that folder, in a terminal: `./Scratch2Arduino_installer.sh` (or `--user` to install it for
+  yourself only).
   On Linux, to be allowed to send programs to the board, type once
   `sudo usermod -aG dialout $USER`, then log out and back in.
 
 **Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
 (*Download and install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings*
 (gear), or switch this check off. On Windows, *Download and install* starts the installer of the new
-version and closes Scratch2Arduino (save your project first). On Linux and macOS, Scratch2Arduino is
+version and closes Scratch2Arduino: if your project is not
+saved, a question first offers to save it, ignore the changes or cancel. On Linux and macOS, Scratch2Arduino is
 installed from its sources: the *Settings* give the commands to run.
 
 The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
@@ -61,7 +63,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
-  *Wiring diagram*; *Show code*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
+  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
@@ -117,8 +119,8 @@ list is in the [block catalog](../block-catalog.md).
   without sending anything. Useful even without a board plugged in.
 - **Upload** does the same, then sends the program to the board. It stays there, even unplugged: it
   starts again every time the board is powered (USB, battery or charger).
-- **Show code** shows the Arduino code made from your blocks: a good way to discover the "real" Arduino
-  language.
+- The **Code** view (at the top, next to *Blocks*) shows the Arduino code made from your blocks: a good
+  way to discover the "real" Arduino language.
 
 When something is wrong, the status bar explains **what is wrong** and **how to fix it**, and the block
 concerned is highlighted in the workspace. For example:
@@ -143,6 +145,19 @@ Python or JavaScript) shows in the serial monitor panel, which opens by itself a
 `printError()` (and `console.error()` in JavaScript) writes in red, on the error output; the error that
 stops a program also stays there, with its line, after the stop.
 
+**Wiring check**: when Live mode starts, before your blocks, Scratch2Arduino reads for a second the
+buttons and sensors they use. When a value looks wrong, a *Check the wiring* card tells what to look at:
+a button always pressed, a pin that "floats" (values changing by themselves: a loose wire or a missing
+resistor), a distance sensor without echo, a DHT sensor that does not answer. *Show the blocks* shows the
+blocks concerned. These are hints: the program runs anyway. Once fixed, start Live again to check again.
+
+**Step by step**: to understand what your program does, click **Pause** (next to *Stop*, key F9). The
+blocks stop and the block about to run is lit. Each click on **Next block** (F10) runs that block only:
+watch the board and the variables change, one block at a time. *Wait* blocks no longer make you wait in
+step-by-step mode. With several scripts, they take turns. **Resume** (F9) runs the program at normal speed
+again. Step by step works for blocks (also with "My code"), not for a whole program written in Python or
+JavaScript.
+
 The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
 computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
 off. For the board to work on its own, without the computer, use **Upload**.
@@ -165,6 +180,14 @@ by your blocks**:
   and what to put in between (for example the 220 Ω resistor of an LED); *Show the blocks* highlights the
   blocks concerned;
 - **Example layout** (for an example): the hand-drawn layout.
+
+**Program written as code**: in expert mode (whole program in C++, Python or JavaScript) and for "My
+code", the diagram is computed from your code. Scratch2Arduino looks for the components in it:
+`myServo.attach(9)` is a servo on pin 9, `DHT sensor(4, DHT22)` a DHT22 on pin 4, `pinMode(2,
+INPUT_PULLUP)` with `digitalRead(2)` a button, `analogRead(A0)` an analog sensor, `tone(8, ...)` a buzzer,
+`pulseIn()` a distance sensor, `digitalWrite` an LED (or other output)... Pins written as numbers or as
+constants (`const int led = 13;`, `#define BUTTON 2`) are understood; a pin kept in a variable that changes
+is not. The table tells on which line of the code each component was found.
 
 The diagram also warns when a pin is used by two parts, when an I2C screen lost its SDA/SCL pins, or
 when the parts need more current than a USB port gives.
@@ -303,6 +326,7 @@ Programs are always uploaded with the USB cable.
 | Ctrl+Z | Undo |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 | Delete or Backspace | Delete the selected block |
+| F9 / F10 | Live mode: pause or resume / run the next block |
 
 While typing in a slot (a number, a text, the project name), these keys act on the text instead.
 
