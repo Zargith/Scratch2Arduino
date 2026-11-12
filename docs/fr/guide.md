@@ -40,8 +40,8 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
 **Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
 la propose (*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut
 aussi vérifier dans les *Paramètres* (engrenage), ou désactiver cette recherche. Sous Windows, *Télécharger
-et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino (enregistre ton projet
-avant). Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
+et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino : si ton projet n'est pas
+enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou d'annuler. Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
 commandes à lancer.
 
 Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
