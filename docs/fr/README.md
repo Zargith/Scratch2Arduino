@@ -5,7 +5,6 @@
 - **[Guide d'utilisation](guide.md)** : installer le logiciel, la fenêtre, les blocs, le mode Live, le
   câblage, les projets, le sans-fil, les raccourcis et que faire en cas de problème.
 - **[Kit enseignant et animateur d'atelier](teachers.md)** : préparer la salle, matériel, formats, plans de séance, évaluation.
-- **[Guide du développeur](../en/developer-guide.md)** (en anglais) : architecture et recettes pour contribuer.
 
 ## Tutoriels
 

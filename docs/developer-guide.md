@@ -1,7 +1,7 @@
 # Developer guide
 
 How Scratch2Arduino is put together, and the recipes for the most common contributions: a block, a
-component, a board, a translation, an example or a tutorial. Read [CONTRIBUTING](../../CONTRIBUTING.md)
+component, a board, a translation, an example or a tutorial. Read [CONTRIBUTING](../CONTRIBUTING.md)
 first for the setup, conventions and branches. Developer documentation is in English (project
 convention); user documentation is in French and English.
 
@@ -75,7 +75,7 @@ builds both installers.
 
 ### Add a block
 
-The catalog format and its rules are described in [docs/block-catalog.md](../block-catalog.md). In short:
+The catalog format and its rules are described in [docs/block-catalog.md](block-catalog.md). In short:
 
 1. Add the block to `blocks/catalog/<category>.json` (French and English `message` and `tooltip`). If it
    uses a component, set its `component` (see below).
