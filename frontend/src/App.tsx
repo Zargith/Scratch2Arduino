@@ -34,6 +34,7 @@ import {
 	IconPlugConnected,
 	IconRefresh,
 	IconSchool,
+	IconBooks,
 	IconSettings,
 	IconTerminal2,
 	IconUpload,
@@ -61,6 +62,7 @@ import { Editor, type EditorHandle } from "@/Editor";
 import { type DocPath, docsHome, tutorialFor } from "@/docs";
 import { exampleProject, examples, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
+import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
@@ -96,10 +98,12 @@ import {
 	projectToWorkspace,
 	unknownBlockTypes,
 	withProgram,
+	withLibraries,
 	withUserCode,
 	workspaceToProject,
 	type ProgramLanguage,
 	type Project,
+	type ProjectLibrary,
 	type UserCode,
 	type WorkspaceState,
 } from "@/project/convert";
@@ -209,6 +213,9 @@ export function App() {
 	const [recent, setRecent] = useState<RecentProject[]>([]);
 	const [library, setLibrary] = useState<SavedGroup[]>([]);
 	const [libraryShown, setLibraryShown] = useState(false);
+	/** Arduino libraries of the project (library manager), installed by the Build when missing. */
+	const [projectLibraries, setProjectLibraries] = useState<ProjectLibrary[]>([]);
+	const [librariesShown, setLibrariesShown] = useState(false);
 	/** Unsaved work found at start-up, offered back to the user. */
 	const [restore, setRestore] = useState<AutosavedProject | null>(null);
 	/** Edits made so far, and how many the last autosave holds. */
@@ -241,8 +248,9 @@ export function App() {
 	);
 
 	const currentProject = useCallback(
-		(): Project => withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current),
-		[currentBlocks, program]
+		(): Project =>
+			withLibraries(withUserCode(withProgram(currentBlocks(), program, codeRef.current), userCodeRef.current), projectLibraries),
+		[currentBlocks, program, projectLibraries]
 	);
 
 	/** Shows the program of an opened project: its blocks, and its code when written as text. */
@@ -253,6 +261,7 @@ export function App() {
 		codeEdited.current = language !== "blocks";
 		userCodeRef.current = project.userCode ? { ...project.userCode } : null;
 		setUserCode(userCodeRef.current);
+		setProjectLibraries(project.libraries ?? []);
 		setUserProblems([]);
 		setProgramProblems([]);
 		setView(language === "blocks" ? "blocks" : "code");
@@ -972,6 +981,11 @@ export function App() {
 								<IconSchool size={18} />
 							</ActionIcon>
 						</Tooltip>
+						<Tooltip label={t("libraries.title")}>
+							<ActionIcon variant="default" size="lg" aria-label={t("libraries.title")} onClick={() => setLibrariesShown(true)}>
+								<IconBooks size={18} />
+							</ActionIcon>
+						</Tooltip>
 						<Tooltip label={t("monitor.toggle")}>
 							<ActionIcon
 								variant={monitorShown ? "filled" : "default"}
@@ -1326,6 +1340,18 @@ export function App() {
 					setPort(bluetoothPort(board.address));
 				}}
 				onClose={() => setBluetoothShown(false)}
+			/>
+			<ArduinoLibraries
+				opened={librariesShown}
+				language={language}
+				t={t}
+				libraries={projectLibraries}
+				usesCpp={program === "cpp" || userCode?.language === "cpp"}
+				onChange={(next) => {
+					setProjectLibraries(next);
+					markDirty();
+				}}
+				onClose={() => setLibrariesShown(false)}
 			/>
 			<Library
 				opened={libraryShown}

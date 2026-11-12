@@ -53,7 +53,7 @@ Nothing below has run on a real board yet (only CI, core tests with a fake board
 Goals of the project not yet covered, in the suggested order:
 
 1. **Step-by-step mode in Live mode** ("real-time debugging"): Pause and "Next block" buttons, the program advances one block at a time while the variables and pins panel updates.
-2. **Arduino library manager** ("extensive library support"): search and install an `arduino-cli` library from the editor, then use it from "My code" in C++.
+2. **Arduino library manager** ("extensive library support"): done on 2026-11-12 (chosen by the user), for 0.11.0. "Arduino libraries" window (search the registry, install a chosen version, update, uninstall), libraries saved in the project (`libraries` in `project.json`) and installed by Check on any computer, missing headers explained with suggested libraries, `s2a-cli lib`. To check with a real C++ project on a board.
 3. **Wiring check in Live mode**: before starting, read the inputs (buttons, sensors) and warn when a value looks wrong (for example a button always pressed).
 
 Phase 11 (packaging and release) stays dropped for now and may come back later.

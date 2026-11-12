@@ -42,7 +42,8 @@
     "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
   },
   "cli": {
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "done": "Terminé.",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli lib list|search <mots>|install <nom>[@<version>]|remove <nom>  bibliothèques Arduino (* = fournie avec une carte)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "convert_source": "Le fichier à convertir doit finir par .ino, .cpp, .h, .py ou .js.",
     "convert_check": "Lignes à convertir à la main (gardées en commentaires) : {lines}.",
     "unknown_board": "Carte inconnue \"{board}\". Cartes disponibles : {boards}.",
@@ -197,7 +198,8 @@
     "cpp_empty": "Le programme est vide : écris au moins les fonctions setup() et loop().",
     "cpp_missing_function": "Il manque la fonction {name}() : un programme Arduino a toujours void setup() { ... } et void loop() { ... }.",
     "cpp_errors": "Le programme a {count} erreur(s). Ligne {line} : {message}",
-    "cpp_library_missing": "Le programme utilise la bibliothèque \"{library}\", qui n'est pas installée. Scratch2Arduino installe tout seul Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 et Adafruit NeoPixel ; pour une autre, installe-la avec arduino-cli lib install.",
+    "cpp_library_missing": "Le programme utilise la bibliothèque \"{library}\", qui n'est pas installée. Ouvre la fenêtre Bibliothèques pour la chercher et l'ajouter au projet.",
+    "cpp_library_suggestion": "Elle se trouve peut-être dans : {names}.",
     "script_upload": "Un programme Python ou JavaScript tourne sur l'ordinateur et pilote la carte : utilise le bouton Live au lieu de Téléverser.",
     "script_ok": "Bravo, Python ou JavaScript comprend ton programme ! Lance-le avec le bouton Live.",
     "pin_unknown": "La broche {pin} n'existe pas sur la carte {board}.",

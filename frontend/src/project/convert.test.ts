@@ -231,3 +231,13 @@ describe("My code", () => {
 		expect(back.scripts[0].blocks[1].inputs).toEqual({ ARG1: { value: "3" }, ARG2: { value: "200" } });
 	});
 });
+
+describe("libraries", () => {
+	it("keeps the libraries of the project and leaves the list out when empty", async () => {
+		const { emptyProject, withLibraries } = await import("@/project/convert");
+		const project = withLibraries(emptyProject("p", "uno"), [{ name: "ArduinoJson", version: "7.2.0" }, { name: "Bounce2", version: "" }]);
+		expect(project.libraries).toEqual([{ name: "ArduinoJson", version: "7.2.0" }, { name: "Bounce2" }]);
+		expect(project.formatVersion).toBe(1);
+		expect(withLibraries(project, [])).not.toHaveProperty("libraries");
+	});
+});
