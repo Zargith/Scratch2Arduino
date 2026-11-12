@@ -247,7 +247,8 @@ blocks: they become new blocks.
   comments, and the message tells which lines to finish by hand.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
   JavaScript*); *Language help* lists the available functions. In C++, the program starts with "My code",
-  then the code of your blocks. Your blocks and "My code" are kept: going back to the blocks finds them,
+  then the code of your blocks; in Python or JavaScript, that same code is translated straight into the
+  chosen language. Your blocks and "My code" are kept: going back to the blocks finds them,
   and going to expert mode again offers to take back the code you had written.
 
 ### Arduino libraries

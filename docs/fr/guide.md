@@ -261,7 +261,8 @@ côté des blocs : elles deviennent de nouveaux blocs.
   sait pas traduire reste en commentaires, et le message dit quelles lignes reprendre à la main.
 - **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
   ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles. En C++, le programme commence
-  avec "Mon code", puis le code de tes blocs. Tes blocs et "Mon code" restent gardés : en revenant aux
+  avec "Mon code", puis le code de tes blocs ; en Python ou en JavaScript, ce même code est traduit
+  directement dans le langage choisi. Tes blocs et "Mon code" restent gardés : en revenant aux
   blocs, tu les retrouves, et en repassant en mode expert, Scratch2Arduino propose de reprendre le code
   que tu avais écrit.
 

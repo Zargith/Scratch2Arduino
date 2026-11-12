@@ -18,7 +18,6 @@ import {
 	Text,
 	TextInput,
 	Tooltip,
-	useMantineColorScheme,
 } from "@mantine/core";
 import {
 	IconBluetooth,
@@ -80,6 +79,7 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
+import { useSavedColorScheme } from "@/theme/colorScheme";
 import { findUpdate, platform, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
@@ -209,8 +209,7 @@ export function App() {
 	const [galleryShown, setGalleryShown] = useState(false);
 	const [settingsShown, setSettingsShown] = useState(false);
 	const [settings, setSettings] = useState<SavedSettings>({ language: "", checkUpdates: true, theme: "" });
-	const { setColorScheme } = useMantineColorScheme();
-	useEffect(() => setColorScheme(settings.theme === "" ? "auto" : settings.theme), [settings.theme, setColorScheme]);
+	useSavedColorScheme(settings.theme);
 	/** Installed version, told by the host ("" outside the application). */
 	const [version, setVersion] = useState("");
 	/** A newer release, offered until the user says "Later" (never forced). */
@@ -768,11 +767,20 @@ export function App() {
 		setView("code");
 		let start = starterCode(next, language);
 		let fromBlocks = false;
-		// C++: the blocks already are a program; with "My code" first (its functions are used by
-		// the blocks), it is the best starting point.
-		if (next === "cpp" && hasHost()) {
+		let toCheck: number[] = [];
+		// The blocks already are a program: with "My code" first (its functions are used by the
+		// blocks), it is the best starting point. In C++ as it is, in Python or JavaScript
+		// converted from that C++ (no need to go through the C++ mode first).
+		if (hasHost()) {
 			try {
-				start = await bridge.expertSketch(withUserCode(currentBlocks(), userCodeRef.current));
+				const sketch = await bridge.expertSketch(withUserCode(currentBlocks(), userCodeRef.current));
+				if (next === "cpp") {
+					start = sketch;
+				} else {
+					const converted = await bridge.convert(sketch, "cpp", next);
+					start = converted.code;
+					toCheck = converted.toCheck;
+				}
 				fromBlocks = true;
 			} catch {
 				// keep the example
@@ -782,12 +790,17 @@ export function App() {
 		codeEdited.current = false;
 		setProgram(next);
 		markDirty();
+		const scriptKey = !fromBlocks
+			? "status.program_script"
+			: toCheck.length > 0
+				? "status.program_script_from_blocks_check"
+				: "status.program_script_from_blocks";
 		setStatus({
 			kind: "info",
 			message:
 				next === "cpp"
 					? t(fromBlocks ? "status.program_cpp_from_blocks" : "status.program_cpp")
-					: t("status.program_script", { language: programNames[next] }),
+					: t(scriptKey, { language: programNames[next] }),
 		});
 	};
 
