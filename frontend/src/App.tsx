@@ -80,8 +80,9 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
-import { findUpdate, type Release } from "@/updates";
+import { findUpdate, platform, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
+import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
@@ -464,15 +465,38 @@ export function App() {
 			const savedEdits = edits.current;
 			await autosaving.current; // an older autosave must not land after the save
 			const saved = await bridge.save(project, path, language);
-			if (!saved) return;
+			if (!saved) return false;
 			setPath(saved);
 			autosavedEdits.current = savedEdits; // the host dropped the autosave
 			if (edits.current === savedEdits) setDirty(false);
 			setStatus({ kind: "success", message: t("status.saved", { path: saved }) });
+			return true;
 		} catch (error) {
 			fail(error);
+			return false;
 		}
 	};
+
+	/** Asked before the update installer closes Scratch2Arduino: save, ignore or cancel. */
+	const [unsavedAsked, setUnsavedAsked] = useState(false);
+	const unsavedAnswer = useRef<((choice: UnsavedChoice) => void) | null>(null);
+	/** True when Scratch2Arduino may close now (nothing to save, saved, or changes ignored). */
+	const readyToClose = async () => {
+		if (!dirty) return true;
+		const choice = await new Promise<UnsavedChoice>((resolve) => {
+			unsavedAnswer.current = resolve;
+			setUnsavedAsked(true);
+		});
+		if (choice === "cancel") return false;
+		return choice === "discard" || (await saveProject());
+	};
+	const answerUnsaved = (choice: UnsavedChoice) => {
+		setUnsavedAsked(false);
+		unsavedAnswer.current?.(choice);
+		unsavedAnswer.current = null;
+	};
+	/** Only the Windows installer closes the program; elsewhere the link is just opened. */
+	const installCloses = (download: string) => platform(navigator.userAgent) === "windows" && download.endsWith(".exe");
 
 	// Ctrl+S (Cmd+S on a Mac) saves, wherever the focus is.
 	const saveRef = useRef(saveProject);
@@ -1344,8 +1368,10 @@ export function App() {
 				}}
 				onSettings={changeSettings}
 				onUpdate={setUpdate}
+				readyToClose={readyToClose}
 				onClose={() => setSettingsShown(false)}
 			/>
+			<UnsavedChanges opened={unsavedAsked} t={t} onChoice={answerUnsaved} />
 			{update && (
 				<Card
 					withBorder
@@ -1370,10 +1396,11 @@ export function App() {
 						<Button
 							size="xs"
 							onClick={() =>
-								void bridge
-									.installUpdate(update.download, language)
-									.then((started) => (started ? undefined : bridge.openUrl(update.download)))
-									.catch(fail)
+								void (async () => {
+									if (installCloses(update.download) && !(await readyToClose())) return;
+									const started = await bridge.installUpdate(update.download, language);
+									if (!started) await bridge.openUrl(update.download);
+								})().catch(fail)
 							}
 						>
 							{t(update.download.endsWith(".exe") ? "settings.install_update" : "update.download")}

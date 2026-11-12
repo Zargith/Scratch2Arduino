@@ -41,7 +41,8 @@ the application: the **Tutorials and help** button (the graduation cap), next to
 **Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
 (*Download and install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings*
 (gear), or switch this check off. On Windows, *Download and install* starts the installer of the new
-version and closes Scratch2Arduino (save your project first). On Linux and macOS, Scratch2Arduino is
+version and closes Scratch2Arduino: if your project is not
+saved, a question first offers to save it, ignore the changes or cancel. On Linux and macOS, Scratch2Arduino is
 installed from its sources: the *Settings* give the commands to run.
 
 The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board

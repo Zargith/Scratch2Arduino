@@ -18,6 +18,8 @@ interface SettingsProps {
 	onSettings(settings: SavedSettings): void;
 	/** A newer release was found by "Check now". */
 	onUpdate(release: Release): void;
+	/** Before the installer closes the program: false when the user cancels (unsaved project). */
+	readyToClose(): Promise<boolean>;
 	onClose(): void;
 }
 
@@ -28,7 +30,7 @@ type Check =
 	| { kind: "failed" }
 	| { kind: "found"; release: Release };
 
-export function Settings({ opened, language, t, version, settings, onLanguage, onSettings, onUpdate, onClose }: SettingsProps) {
+export function Settings({ opened, language, t, version, settings, onLanguage, onSettings, onUpdate, readyToClose, onClose }: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
 	/** Downloading the installer (Windows), or why it failed. */
 	const [installing, setInstalling] = useState(false);
@@ -36,6 +38,7 @@ export function Settings({ opened, language, t, version, settings, onLanguage, o
 	const windows = platform(navigator.userAgent) === "windows";
 
 	const install = async (release: Release) => {
+		if (!(await readyToClose())) return;
 		setInstalling(true);
 		setInstallError("");
 		try {
