@@ -1,4 +1,5 @@
 #include "s2a/wiring.hpp"
+#include "s2a/codegen.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -239,6 +240,146 @@ TEST(WiringDiagram, AddsThePinsMissingFromTheDrawing) {
     const std::string svg = s2a::wiring::svg(plan, board, "Test");
     EXPECT_NE(svg.find(">7<"), std::string::npos);
     EXPECT_NE(svg.find(">GND<"), std::string::npos);
+}
+
+} // namespace
+
+namespace {
+
+/// "kind pin..." of each component of a plan, for short comparisons.
+std::vector<std::string> summary(const Plan& plan) {
+    std::vector<std::string> lines;
+    for (const auto& component : plan.components) {
+        std::string line = component.kind;
+        for (const auto& connection : component.connections) {
+            if (connection.boardPin != "5V" && connection.boardPin != "GND" && connection.boardPin != "VIN" &&
+                connection.boardPin != "3V3") {
+                line += " " + connection.boardPin;
+            }
+        }
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+Project textProject(ProgramLanguage language, std::string code) {
+    Project project;
+    project.boardId = "uno";
+    project.language = language;
+    project.code = std::move(code);
+    return project;
+}
+
+TEST(CodeWiring, FindsTheComponentsOfAHandWrittenSketch) {
+    const auto plan = s2a::wiring::plan(textProject(ProgramLanguage::Cpp, R"cpp(#include <Servo.h>
+#include <DHT.h>
+#define BUTTON 2
+const int led = 13;   // the LED
+int pot = A0;
+Servo arm;
+DHT sensor(4, DHT22);
+/* pinMode(7, OUTPUT); in a comment: not a component */
+void setup() {
+  pinMode(led, OUTPUT);
+  pinMode(BUTTON, INPUT_PULLUP);
+  arm.attach(9);
+  sensor.begin();
+  pinMode(6, OUTPUT);
+  Serial.println("digitalWrite(12, HIGH)");
+}
+void loop() {
+  if (digitalRead(BUTTON) == LOW) {
+    digitalWrite(led, HIGH);
+  }
+  arm.write(map(analogRead(pot), 0, 1023, 0, 180));
+  digitalWrite(6, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(6, LOW);
+  long echo = pulseIn(5, HIGH);
+  tone(8, 440, 100);
+}
+)cpp"),
+                                          Language::English);
+    // In the order of the code.
+    EXPECT_EQ(summary(plan), (std::vector<std::string>{"dht 4", "output 13", "button 2", "servo 9", "analog_input A0",
+                                                       "ultrasonic 6 5", "buzzer 8"}));
+    ASSERT_FALSE(plan.components.empty());
+    EXPECT_EQ(plan.components[0].blockIds, std::vector<std::string>{"code-7"}) << "the line of the component";
+}
+
+TEST(CodeWiring, ReadsPythonAndJavaScriptPrograms) {
+    const auto python = s2a::wiring::plan(textProject(ProgramLanguage::Python, "LED = 13\n"
+                                                                              "pinMode(LED, OUTPUT)\n"
+                                                                              "while True:\n"
+                                                                              "    digitalWrite(LED, HIGH)\n"
+                                                                              "    servoWrite(9, analogRead(A1) / 6)\n"),
+                                          Language::English);
+    EXPECT_EQ(summary(python), (std::vector<std::string>{"output 13", "servo 9", "analog_input A1"}));
+    const auto javascript = s2a::wiring::plan(
+        textProject(ProgramLanguage::JavaScript, "pinMode(2, INPUT);\nif (digitalRead(2) == HIGH) { tone(8, 440); }\n"),
+        Language::English);
+    EXPECT_EQ(summary(javascript), (std::vector<std::string>{"input 2", "buzzer 8"}));
+}
+
+TEST(CodeWiring, LeavesOutPinsThatChange) {
+    const auto plan = s2a::wiring::plan(textProject(ProgramLanguage::Cpp, "int led = 3;\n"
+                                                                          "void setup() {}\n"
+                                                                          "void loop() {\n"
+                                                                          "  for (int pin = 3; pin < 6; pin++) digitalWrite(pin, HIGH);\n"
+                                                                          "  led = led + 1;\n"
+                                                                          "  digitalWrite(led, HIGH);\n"
+                                                                          "  digitalWrite(LED_BUILTIN, HIGH);\n"
+                                                                          "}\n"),
+                                        Language::English);
+    EXPECT_TRUE(plan.components.empty()) << summary(plan).front();
+}
+
+TEST(CodeWiring, AddsMyCodeToTheBlocksAndIgnoresTheBlocksOfATextProgram) {
+    Project project;
+    project.boardId = "uno";
+    Block start;
+    start.id = "hat";
+    start.type = "events_when_program_starts";
+    Block servo;
+    servo.id = "servo";
+    servo.type = "motors_servo_write";
+    servo.fields["PIN"] = "9";
+    project.scripts.push_back({0, 0, {start, servo}});
+    project.userCode = UserCode{ProgramLanguage::Cpp, "void beep() { tone(8, 440, 50); }\n"};
+    EXPECT_EQ(summary(s2a::wiring::plan(project, Language::English)), (std::vector<std::string>{"servo 9", "buzzer 8"}));
+
+    project.language = ProgramLanguage::Cpp; // expert mode: the code is the program
+    project.code = "void setup() { pinMode(2, INPUT_PULLUP); }\nvoid loop() { digitalRead(2); }\n";
+    EXPECT_EQ(summary(s2a::wiring::plan(project, Language::English)), std::vector<std::string>{"button 2"});
+}
+
+TEST(CodeWiring, FindsTheComponentsOfTheCodeOfTheBlocks) {
+    // The expert mode starts from the code of the blocks: its components must be found again.
+    Project project;
+    project.boardId = "uno";
+    Block start;
+    start.id = "hat";
+    start.type = "events_when_program_starts";
+    project.scripts.push_back({0, 0, {start}});
+    const auto add = [&](const char* id, const char* type, std::map<std::string, std::string> fields) {
+        Block block;
+        block.id = id;
+        block.type = type;
+        block.fields = std::move(fields);
+        project.scripts[0].blocks.push_back(block);
+    };
+    add("servo", "motors_servo_write", {{"PIN", "9"}});
+    add("motor", "motors_dc_run", {{"EN_PIN", "6"}, {"IN1_PIN", "7"}, {"IN2_PIN", "4"}});
+    add("tone", "sound_play_tone", {{"PIN", "8"}});
+    add("matrix", "lights_matrix_show", {{"DIN_PIN", "12"}, {"CLK_PIN", "11"}, {"CS_PIN", "10"}});
+    add("strip", "lights_neopixel_fill", {{"PIN", "5"}});
+    add("lcd", "display_lcd16_print", {{"RS_PIN", "A0"}, {"E_PIN", "A1"}, {"D4_PIN", "A2"}, {"D5_PIN", "A3"}, {"D6_PIN", "A4"}, {"D7_PIN", "A5"}});
+    const Project text = textProject(ProgramLanguage::Cpp, s2a::codegen::generate(project).source);
+    auto fromBlocks = summary(s2a::wiring::plan(project, Language::English));
+    auto fromCode = summary(s2a::wiring::plan(text, Language::English));
+    std::sort(fromBlocks.begin(), fromBlocks.end());
+    std::sort(fromCode.begin(), fromCode.end());
+    EXPECT_EQ(fromCode, fromBlocks);
 }
 
 } // namespace

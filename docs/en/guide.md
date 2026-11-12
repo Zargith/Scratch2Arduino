@@ -178,6 +178,14 @@ The **Wiring diagram** button shows how to wire the parts **used by your blocks*
   blocks concerned;
 - **Example layout** (for an example): the hand-drawn layout.
 
+**Program written as code**: in expert mode (whole program in C++, Python or JavaScript) and for "My
+code", the diagram is computed from your code. Scratch2Arduino looks for the components in it:
+`myServo.attach(9)` is a servo on pin 9, `DHT sensor(4, DHT22)` a DHT22 on pin 4, `pinMode(2,
+INPUT_PULLUP)` with `digitalRead(2)` a button, `analogRead(A0)` an analog sensor, `tone(8, ...)` a buzzer,
+`pulseIn()` a distance sensor, `digitalWrite` an LED (or other output)... Pins written as numbers or as
+constants (`const int led = 13;`, `#define BUTTON 2`) are understood; a pin kept in a variable that changes
+is not. The table tells on which line of the code each component was found.
+
 The diagram also warns when a pin is used by two parts, when an I2C screen lost its SDA/SCL pins, or
 when the parts need more current than a USB port gives.
 

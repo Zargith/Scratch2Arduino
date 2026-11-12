@@ -227,6 +227,10 @@ private:
 
 Plan plan(const project::Project& project, const BlockCatalog& catalog, const Board& board, Language language) {
     Planner planner(catalog, board, language);
+    if (project.language != project::ProgramLanguage::Blocks) { // the code is the program
+        planner.stack(componentsInCode(project.code, project.language).blocks);
+        return planner.finish();
+    }
     for (const project::Script& script : project.scripts) {
         if (script.blocks.empty()) {
             continue;
@@ -235,6 +239,9 @@ Plan plan(const project::Project& project, const BlockCatalog& catalog, const Bo
         if (first != nullptr && first->shape == BlockShape::Hat) { // loose blocks do not run
             planner.stack(script.blocks);
         }
+    }
+    if (project.userCode) {
+        planner.stack(componentsInCode(project.userCode->code, project.userCode->language).blocks);
     }
     return planner.finish();
 }

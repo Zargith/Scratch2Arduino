@@ -189,6 +189,15 @@ Le bouton **Schéma de câblage** montre comment brancher les composants **utili
   LED) ; *Voir les blocs* montre les blocs concernés ;
 - **Montage de l'exemple** (pour un exemple) : le montage dessiné à la main.
 
+**Programme écrit en code** : en mode expert (programme entier en C++, Python ou JavaScript) et pour
+"Mon code", le schéma est calculé à partir de ton code. Scratch2Arduino y cherche les composants :
+`monServo.attach(9)` est un servomoteur sur la broche 9, `DHT capteur(4, DHT22)` un DHT22 sur la broche 4,
+`pinMode(2, INPUT_PULLUP)` avec `digitalRead(2)` un bouton, `analogRead(A0)` un capteur analogique,
+`tone(8, ...)` un buzzer, `pulseIn()` un capteur de distance, `digitalWrite` une LED (ou autre sortie)...
+Les broches écrites en nombres ou en constantes (`const int led = 13;`, `#define BOUTON 2`) sont
+comprises ; une broche rangée dans une variable qui change ne l'est pas. Le tableau dit à quelle ligne du
+code chaque composant a été trouvé.
+
 Le schéma prévient aussi quand une broche sert à deux composants, quand un écran I2C n'a plus ses broches
 SDA/SCL, ou quand les composants demandent plus de courant qu'un port USB n'en donne.
 

@@ -128,3 +128,12 @@ describe("project wiring window", () => {
 		container.remove();
 	}, 60_000);
 });
+
+describe("components found in the code", () => {
+	it("keeps the blocks and tells the lines of the code", async () => {
+		const { blockIdsOnly, codeLines } = await import("@/ProjectWiring");
+		expect(blockIdsOnly(["a", "code-7", "b"])).toEqual(["a", "b"]);
+		expect(codeLines(["code-12", "a", "code-7", "code-12", "code-start"])).toBe("7, 12");
+		expect(codeLines(["a"])).toBe("");
+	});
+});
