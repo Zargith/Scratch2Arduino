@@ -132,7 +132,7 @@ private:
         for (const Json& connection : description.value("connections", Json::array())) {
             const std::string to = connection.value("to", std::string{});
             Connection wire{localized(connection, "pin", language_), target(to, block, definition),
-                            localized(connection, "via", language_), connection.value("short", std::string{})};
+                            localized(connection, "via", language_), connection.value("short", std::string{}), to};
             if (wire.shortPin.empty()) {
                 wire.shortPin = wire.componentPin;
             }

@@ -10,6 +10,7 @@ add_library(s2a_core STATIC
     src/validator.cpp
     src/codegen.cpp
     src/live.cpp
+    src/simulator.cpp
     src/boards.cpp
     src/diagnostics.cpp
     src/archive.cpp

@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+
+import type { SimState, WiringPlan } from "@/bridge";
+import { isSimPort, outputPins, percent, simParts, SIM_PORT, usesPhone } from "@/simulation";
+
+const component = (kind: string, name: string, pins: Record<string, string>): WiringPlan["components"][number] => ({
+	kind,
+	name,
+	connections: [
+		...Object.entries(pins).map(([role, boardPin]) => ({ componentPin: role, boardPin, via: "", role })),
+		{ componentPin: "GND", boardPin: "GND", via: "", role: "GND" },
+	],
+	note: "",
+	blockIds: [],
+});
+
+const state = (changes: Partial<SimState>): SimState => ({
+	modes: {},
+	outputs: {},
+	servos: {},
+	tones: {},
+	lcd: ["", ""],
+	lcd16: ["", ""],
+	oled: ["", "", "", "", "", "", "", ""],
+	pixels: {},
+	matrices: {},
+	phone: [],
+	pressed: {},
+	analog: {},
+	distances: {},
+	climates: {},
+	...changes,
+});
+
+describe("simulation", () => {
+	it("recognises the virtual board's port", () => {
+		expect(isSimPort(SIM_PORT)).toBe(true);
+		expect(isSimPort("/dev/ttyACM0")).toBe(false);
+		expect(isSimPort(null)).toBe(false);
+	});
+
+	it("draws each component of the plan with the state of its pins", () => {
+		const plan: WiringPlan = {
+			components: [
+				component("output", "LED", { PIN: "9" }),
+				component("button", "Button", { PIN: "2" }),
+				component("potentiometer", "Pot", { PIN: "A0" }),
+				component("ultrasonic", "Distance", { TRIG_PIN: "7", ECHO_PIN: "8" }),
+				component("dht", "DHT", { PIN: "4" }),
+				component("rgb_led", "RGB", { RED_PIN: "3", GREEN_PIN: "5", BLUE_PIN: "6" }),
+				component("dc_motor", "Motor", { EN_PIN: "10", IN1_PIN: "11", IN2_PIN: "12" }),
+				component("matrix", "Matrix", { DIN_PIN: "A1", CS_PIN: "A2", CLK_PIN: "A3" }),
+				component("lcd_i2c", "LCD", {}),
+				component("bluetooth_module", "HC-05", { RX_PIN: "10", TX_PIN: "11" }),
+			],
+			warnings: [],
+		};
+		const parts = simParts(
+			plan,
+			state({
+				outputs: {
+					"9": { level: 128, pwm: true },
+					"3": { level: 255, pwm: false },
+					"10": { level: 255, pwm: true },
+					"12": { level: 255, pwm: false },
+				},
+				pressed: { "2": true },
+				analog: { A0: 1023 },
+				lcd: ["Hello", ""],
+				matrices: { A1: [0x81, 0, 0, 0, 0, 0, 0, 0] },
+			})
+		);
+		expect(parts.map((part) => part.kind)).toEqual([
+			"led",
+			"button",
+			"slider",
+			"distance",
+			"climate",
+			"rgb",
+			"motor",
+			"matrix",
+			"screen",
+		]); // the Bluetooth module is not drawn
+		expect(parts[0]).toMatchObject({ pin: "9", level: 128, key: "output|9" });
+		expect(parts[1]).toMatchObject({ pressed: true });
+		expect(parts[2]).toMatchObject({ sensor: "potentiometer", value: 1023 });
+		expect(parts[3]).toMatchObject({ pin: "7", centimetres: 100 }); // nobody moved it yet
+		expect(parts[4]).toMatchObject({ temperature: 21, humidity: 50 });
+		expect(parts[5]).toMatchObject({ color: [255, 0, 0] });
+		expect(parts[6]).toMatchObject({ speed: -255 }); // IN2 high: backward
+		expect(parts[7]).toMatchObject({ rows: [0x81, 0, 0, 0, 0, 0, 0, 0] });
+		expect(parts[8]).toMatchObject({ screen: "lcd", lines: ["Hello", ""] });
+		expect(simParts(null, null)).toEqual([]);
+	});
+
+	it("lists the output pins in the board's order", () => {
+		const pins = outputPins(
+			state({
+				outputs: { A0: { level: 0, pwm: false }, "13": { level: 255, pwm: false }, "2": { level: 0, pwm: false } },
+			})
+		);
+		expect(pins.map((pin) => pin.pin)).toEqual(["2", "13", "A0"]);
+	});
+
+	it("tells when the program talks to the phone", () => {
+		expect(usesPhone('{"type":"phone_received"}')).toBe(true);
+		expect(usesPhone('{"type":"pins_builtin_led"}')).toBe(false);
+		expect(percent(1023)).toBe(100);
+		expect(percent(0)).toBe(0);
+	});
+});

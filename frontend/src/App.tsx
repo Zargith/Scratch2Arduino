@@ -55,6 +55,8 @@ import {
 	type Port,
 	type RecentProject,
 	type Settings as SavedSettings,
+	type SimState,
+	type WiringPlan,
 } from "@/bridge";
 import { boards, defaultBoardId, findBoard, type Language } from "@/catalog";
 import type { UserDeclaration } from "@/blocks/definitions";
@@ -80,6 +82,8 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
+import { isSimPort, SIM_PORT, usesPhone } from "@/simulation";
+import { Simulator } from "@/Simulator";
 import { findUpdate, platform, type Release } from "@/updates";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
@@ -194,6 +198,11 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** Simulation (Live mode on the virtual board): what it shows, and the components of the blocks. */
+	const [simState, setSimState] = useState<SimState | null>(null);
+	const [simPlan, setSimPlan] = useState<WiringPlan | null>(null);
+	/** The blocks use the Phone blocks: the virtual phone is shown. */
+	const [simPhone, setSimPhone] = useState(false);
 	/** The wiring hints of this Live session were closed by the user. */
 	const [wiringClosed, setWiringClosed] = useState(false);
 	/** Step-by-step mode of the Live mode (block programs). */
@@ -306,8 +315,8 @@ export function App() {
 
 	// A board without Wi-Fi cannot use a Wi-Fi port: back to the first USB port.
 	useEffect(() => {
-		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? null);
-		if (!reachableByBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? null);
+		if (!hasWifi(boardId) && isWifiPort(port)) setPort(ports[0]?.address ?? SIM_PORT);
+		if (!reachableByBluetooth(boardId) && port?.startsWith("bt:")) setPort(ports[0]?.address ?? SIM_PORT);
 	}, [boardId, port, ports]);
 
 	const refreshPorts = useCallback(async () => {
@@ -315,12 +324,16 @@ export function App() {
 		try {
 			const found = await bridge.ports();
 			setPorts(found);
-			// A Wi-Fi or Bluetooth port stays chosen: it is not in the list of plugged-in boards.
+			// A Wi-Fi or Bluetooth port, or the virtual board, stays chosen: it is not in the list of
+			// plugged-in boards. Without any board, the virtual one is chosen.
 			setPort((current) =>
 				current &&
-				(isWifiPort(current) || current.startsWith("bt:") || found.some((candidate) => candidate.address === current))
+				(isWifiPort(current) ||
+					current.startsWith("bt:") ||
+					(isSimPort(current) && found.length === 0) ||
+					found.some((candidate) => candidate.address === current))
 					? current
-					: (found[0]?.address ?? null)
+					: (found[0]?.address ?? SIM_PORT)
 			);
 			const detected = found[0]?.boardId;
 			if (detected && findBoard(detected)) setBoardId(detected);
@@ -823,6 +836,28 @@ export function App() {
 		}
 	};
 
+	/** Simulation: the components the blocks use, drawn on the virtual board. */
+	const refreshSimPlan = () => {
+		const project = currentProject();
+		setSimPhone(usesPhone(JSON.stringify(project)));
+		void bridge
+			.wiring(project, language)
+			.then(setSimPlan)
+			.catch(() => setSimPlan(null)); // half-built blocks: the parts already drawn stay until the next change
+	};
+	const simulated = live && isSimPort(port);
+	// While the virtual board runs: follow its outputs (faster than the Live panel, for blinking LEDs).
+	useEffect(() => {
+		if (!simulated) return;
+		const timer = setInterval(() => {
+			void bridge
+				.simState()
+				.then(setSimState)
+				.catch(() => undefined);
+		}, 100);
+		return () => clearInterval(timer);
+	}, [simulated]);
+
 	const toggleLive = async () => {
 		if (live) {
 			await bridge.liveStop().catch(fail);
@@ -846,6 +881,8 @@ export function App() {
 				return;
 			}
 			setLiveSnapshot(null);
+			setSimState(null);
+			if (isSimPort(port)) refreshSimPlan();
 			setLivePaused(false);
 			setWiringClosed(false);
 			outputShown.current = false;
@@ -1036,6 +1073,7 @@ export function App() {
 								home: t("port.wifi_home", { address: "{address}" }),
 							}),
 							...bluetoothPorts(boardId, bluetoothBoards, t("port.bluetooth", { name: "{name}" })),
+							{ address: SIM_PORT, label: t("port.simulation") },
 						].map((candidate) => ({ value: candidate.address, label: candidate.label }))}
 						value={port}
 						onChange={setPort}
@@ -1251,21 +1289,33 @@ export function App() {
 								if (!live) return;
 								// Live mode: send the new blocks once the child stops dragging for a moment.
 								if (liveUpdate.current) clearTimeout(liveUpdate.current);
-								liveUpdate.current = setTimeout(() => void bridge.liveUpdate(currentProject()).catch(fail), 300);
+								liveUpdate.current = setTimeout(() => {
+									void bridge.liveUpdate(currentProject()).catch(fail);
+									if (isSimPort(port)) refreshSimPlan();
+								}, 300);
 							}}
 						/>
 					)}
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
+			{((live && liveRows.length > 0) || simulated || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
 				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
+					{simulated && (
+						<Simulator
+							plan={simPlan}
+							state={simState}
+							phone={simPhone}
+							t={t}
+							onInput={(...input) => void bridge.simInput(...input).catch(fail)}
+						/>
+					)}
 					{tutorialPage !== null && (
 						<Tutorials
 							language={language}
 							t={t}
 							page={tutorialPage}
-							height={(live && liveRows.length > 0) || monitorShown ? "45dvh" : "calc(100dvh - 104px)"}
+							height={simulated ? "30dvh" : (live && liveRows.length > 0) || monitorShown ? "45dvh" : "calc(100dvh - 104px)"}
 							onNavigate={(page, pageLanguage) => {
 								if (pageLanguage !== language) switchLanguage(pageLanguage);
 								setTutorialPage(page);
@@ -1443,7 +1493,7 @@ export function App() {
 				opened={wifiShown}
 				language={language}
 				boardId={boardId}
-				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
+				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) && !isSimPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
 				t={t}
 				onJoined={(address) => {
 					setWifiAddresses(rememberAddress(address));
@@ -1455,7 +1505,7 @@ export function App() {
 				opened={bluetoothShown}
 				language={language}
 				boardId={boardId}
-				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
+				usbPort={port && !isWifiPort(port) && !isBluetoothPort(port) && !isSimPort(port) ? port : (ports.find((candidate) => !candidate.bluetooth)?.address ?? null)}
 				t={t}
 				onChosen={(board) => {
 					setBluetoothBoards(rememberBoard(board));

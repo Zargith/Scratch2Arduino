@@ -31,6 +31,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers... |
 | Live mode | Control the board in real time, watch sensor values, see which block is running |
+| Simulation | No board at hand: run the blocks on a virtual board drawn on the screen (LEDs, screens, servos, sounds...), press its buttons and move its sensors with the mouse |
 | Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
 | Wireless | Bluetooth (HC-05/HC-06) and Wi-Fi (ESP boards) |
 | Reuse | Save groups of blocks to **My blocks** and reuse them in any project (new block types cannot be created) |
@@ -215,6 +216,10 @@ Click **Live**: the blocks run on the computer and drive the board through the
 the sensors read by the blocks are shown on the right with a graph of their last 30 seconds, and any change
 to the blocks takes effect at once, without uploading. Click **Stop** to end it (the outputs are switched
 off). Use **Upload** to make the board run the program on its own.
+
+Without any board, choose the **Virtual board (no hardware)** port and click **Live**: the blocks run on
+a board drawn beside them (core `sim::VirtualBoard`, which answers like the *S2A live* firmware). Its
+outputs follow the blocks, and its buttons, potentiometers and sensors are changed with the mouse.
 
 ### Writing the program as text: C++, Python, JavaScript
 
