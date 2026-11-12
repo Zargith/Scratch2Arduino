@@ -265,8 +265,28 @@ std::vector<Token> lexPython(std::string_view source) {
                 ++line;
                 continue;
             }
-            if (source[i] == '#') { // a comment line: no indentation change
+            if (source[i] == '#') { // a comment line: no indentation change of its own...
                 const std::size_t end = lineEnd(source, i);
+                // ...but a comment no deeper than the code after it belongs to that code: the blocks
+                // that code closes are closed before it (a comment above a new function).
+                int next = 0;
+                for (std::size_t at = end; at < source.size();) {
+                    std::size_t j = at + 1; // after the '\n'
+                    int indent = 0;
+                    while (j < source.size() && (source[j] == ' ' || source[j] == '\t')) {
+                        indent += source[j] == '\t' ? 4 : 1;
+                        ++j;
+                    }
+                    if (j < source.size() && source[j] != '\n' && source[j] != '\r' && source[j] != '#') {
+                        next = indent;
+                        break;
+                    }
+                    at = lineEnd(source, j);
+                }
+                while (width <= next && next < indents.back()) {
+                    indents.pop_back();
+                    tokens.push_back({Token::Type::Dedent, "", line});
+                }
                 tokens.push_back({Token::Type::Comment, trim(std::string(source.substr(i + 1, end - i - 1))), line});
                 i = end;
                 continue;
