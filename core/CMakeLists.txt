@@ -24,6 +24,7 @@ add_library(s2a_core STATIC
     src/resources.cpp
     src/result.cpp
     src/network.cpp
+    src/code_wiring.cpp
     src/wiring.cpp
     src/wiring_svg.cpp
     src/serial.cpp

@@ -25,6 +25,17 @@ interface ProjectWiringProps {
 type State = { status: "loading" } | { status: "ready"; plan: WiringPlan } | { status: "failed"; message: string };
 
 /** What to wire for the project, computed from its blocks: components, pins and warnings. */
+/** Blocks among the ids of a component (components found in typed code have "code-<line>" ids). */
+export function blockIdsOnly(ids: string[]): string[] {
+	return ids.filter((id) => !id.startsWith("code-"));
+}
+
+/** Lines of the code where a component was found ("7, 12"), "" when it comes from blocks only. */
+export function codeLines(ids: string[]): string {
+	const lines = ids.filter((id) => /^code-\d+$/.test(id)).map((id) => Number(id.slice(5)));
+	return [...new Set(lines)].sort((a, b) => a - b).join(", ");
+}
+
 export function ProjectWiring({ opened, example, language, project, t, onShowBlocks, onClose }: ProjectWiringProps) {
 	const [state, setState] = useState<State>({ status: "loading" });
 	const [tab, setTab] = useState<string | null>("diagram");
@@ -150,8 +161,8 @@ function WiringTable({ state, t, onShowBlocks }: WiringTableProps) {
 				<Alert key={index} color="orange" variant="light" icon={<IconAlertTriangle size={18} />}>
 					<Group justify="space-between" wrap="nowrap" gap="sm">
 						<Text size="sm">{warning.message}</Text>
-						{warning.blockIds.length > 0 && (
-							<Button size="xs" variant="light" color="orange" onClick={() => onShowBlocks(warning.blockIds)}>
+						{blockIdsOnly(warning.blockIds).length > 0 && (
+							<Button size="xs" variant="light" color="orange" onClick={() => onShowBlocks(blockIdsOnly(warning.blockIds))}>
 								{t("wiring.show_blocks")}
 							</Button>
 						)}
@@ -173,9 +184,18 @@ function WiringTable({ state, t, onShowBlocks }: WiringTableProps) {
 							</Badge>
 							<Text fw={700}>{component.name}</Text>
 						</Group>
-						<Button size="xs" variant="subtle" onClick={() => onShowBlocks(component.blockIds)}>
-							{t("wiring.show_blocks")}
-						</Button>
+						<Group gap="xs" wrap="nowrap">
+							{codeLines(component.blockIds) && (
+								<Text size="xs" c="dimmed">
+									{t("wiring.code_lines", { lines: codeLines(component.blockIds) })}
+								</Text>
+							)}
+							{blockIdsOnly(component.blockIds).length > 0 && (
+								<Button size="xs" variant="subtle" onClick={() => onShowBlocks(blockIdsOnly(component.blockIds))}>
+									{t("wiring.show_blocks")}
+								</Button>
+							)}
+						</Group>
 					</Group>
 					<Table striped withTableBorder verticalSpacing={4}>
 						<Table.Thead>

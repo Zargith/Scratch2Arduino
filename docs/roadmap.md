@@ -56,6 +56,8 @@ Goals of the project not yet covered, in the suggested order:
 2. **Arduino library manager** ("extensive library support"): done on 2026-11-12 (chosen by the user), for 0.11.0. "Arduino libraries" window (search the registry, install a chosen version, update, uninstall), libraries saved in the project (`libraries` in `project.json`) and installed by Check on any computer, missing headers explained with suggested libraries, `s2a-cli lib`. To check with a real C++ project on a board.
 3. **Wiring check in Live mode**: done on 2026-11-12 (chosen by the user), for 0.12.0. When Live mode starts, the inputs of the blocks are read for about a second (core `live::checkWiring`): a button always pressed, a floating digital or analog input, a distance sensor without echo or a DHT that does not answer give a "Check the wiring" card with what to check and the blocks concerned (hints only, the program runs). To check on real boards.
 
+4. **Wiring from code** (asked by the user on 2026-11-12): the wiring diagram of a program written as text (expert mode, "My code"): core `wiring::componentsInCode` finds the components from the calls of the code (library objects, `pinMode` / `digitalRead` / `digitalWrite` / `analogRead` / `tone` / `pulseIn`..., simple pin constants; Python and JavaScript converted to C++ first) and gives blocks standing for them to `wiring::plan`; the table tells the line of each. For 0.12.0.
+
 Phase 11 (packaging and release) stays dropped for now and may come back later.
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
