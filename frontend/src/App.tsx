@@ -66,6 +66,7 @@ import { exampleProject, examples, type Example } from "@/examples";
 import { Gallery } from "@/Gallery";
 import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
+import { LiveWiring } from "@/LiveWiring";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
 import {
@@ -193,6 +194,8 @@ export function App() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [live, setLive] = useState(false);
 	const [liveSnapshot, setLiveSnapshot] = useState<LiveSnapshot | null>(null);
+	/** The wiring hints of this Live session were closed by the user. */
+	const [wiringClosed, setWiringClosed] = useState(false);
 	/** Step-by-step mode of the Live mode (block programs). */
 	const [livePaused, setLivePaused] = useState(false);
 	/** The output panel opened by itself once in this Live session (at the first printed line). */
@@ -821,6 +824,7 @@ export function App() {
 			}
 			setLiveSnapshot(null);
 			setLivePaused(false);
+			setWiringClosed(false);
 			outputShown.current = false;
 			history.current = new Map();
 			setLive(true);
@@ -904,6 +908,7 @@ export function App() {
 	/** The language the help window explains: the expert program, or "My code". */
 	const helpLanguage: ProgramLanguage = program !== "blocks" ? program : (userCode?.language ?? "cpp");
 
+	const wiringHints = live && !wiringClosed ? (liveSnapshot?.wiring ?? []) : [];
 	const liveRows = [
 		...Object.entries(liveSnapshot?.variables ?? {}).map(([id, value]) => ({
 			key: `var:${id}`,
@@ -1236,7 +1241,7 @@ export function App() {
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || monitorShown || tutorialPage !== null) && (
+			{((live && liveRows.length > 0) || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
 				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
 					{tutorialPage !== null && (
 						<Tutorials
@@ -1253,6 +1258,17 @@ export function App() {
 								if (chosen) openExample(chosen);
 							}}
 							onClose={() => setTutorialPage(null)}
+						/>
+					)}
+					{wiringHints.length > 0 && (
+						<LiveWiring
+							hints={wiringHints}
+							t={t}
+							onShowBlocks={(blockIds) => {
+								if (view !== "blocks") void showBlocksView();
+								editor.current?.highlight(blockIds);
+							}}
+							onClose={() => setWiringClosed(true)}
 						/>
 					)}
 					{live && liveRows.length > 0 && (

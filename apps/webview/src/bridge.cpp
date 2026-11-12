@@ -163,6 +163,15 @@ bool isReleaseInstaller(const std::string& url) {
     });
 }
 
+/// Wiring check of the Live mode: [{message, blockIds}].
+Json wiringHints(const std::vector<live::WiringHint>& hints) {
+    Json list = Json::array();
+    for (const auto& hint : hints) {
+        list.push_back({{"message", hint.message}, {"blockIds", hint.blockIds}});
+    }
+    return list;
+}
+
 /// Live output for the editor: [{text, error}] (error: printError, console.error, the error that stopped it).
 Json outputLines(const std::vector<live::Session::OutputLine>& lines) {
     Json list = Json::array();
@@ -1035,6 +1044,7 @@ void Bridge::bind() {
                     {"details", snapshot.details},
                     {"running", snapshot.runningBlocks},
                     {"paused", snapshot.paused},
+                    {"wiring", wiringHints(snapshot.wiring)},
                     {"problems", snapshot.problemBlocks},
                     {"variables", snapshot.variables},
                     {"readings", snapshot.readings},

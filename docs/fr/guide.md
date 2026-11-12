@@ -151,6 +151,13 @@ en Python ou JavaScript) s'affiche dans le panneau du moniteur série, qui s'ouv
 ligne. Pour déboguer, `printError()` (et `console.error()` en JavaScript) écrit en rouge, sur la sortie
 d'erreur ; l'erreur qui arrête un programme y reste aussi, avec sa ligne, après l'arrêt.
 
+**Vérification du câblage** : au démarrage du mode Live, avant tes blocs, Scratch2Arduino lit une seconde
+les boutons et capteurs qu'ils utilisent. Si une valeur semble fausse, une carte *Vérifie le câblage*
+dit quoi regarder : un bouton toujours appuyé, une broche qui "flotte" (valeurs qui changent toutes
+seules : fil débranché ou résistance manquante), un capteur de distance sans écho, un capteur DHT qui ne
+répond pas. *Voir les blocs* montre les blocs concernés. Ce sont des conseils : le programme tourne quand
+même. Après avoir corrigé, relance Live pour vérifier encore.
+
 **Pas à pas** : pour comprendre ce que fait ton programme, clique sur **Pause** (à côté d'*Arrêter*,
 touche F9). Les blocs s'arrêtent et le bloc qui va s'exécuter est éclairé. Chaque clic sur **Bloc
 suivant** (F10) exécute ce bloc seulement : regarde la carte et les variables changer, un bloc à la fois.

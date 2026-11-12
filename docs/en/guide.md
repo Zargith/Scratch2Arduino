@@ -143,6 +143,12 @@ Python or JavaScript) shows in the serial monitor panel, which opens by itself a
 `printError()` (and `console.error()` in JavaScript) writes in red, on the error output; the error that
 stops a program also stays there, with its line, after the stop.
 
+**Wiring check**: when Live mode starts, before your blocks, Scratch2Arduino reads for a second the
+buttons and sensors they use. When a value looks wrong, a *Check the wiring* card tells what to look at:
+a button always pressed, a pin that "floats" (values changing by themselves: a loose wire or a missing
+resistor), a distance sensor without echo, a DHT sensor that does not answer. *Show the blocks* shows the
+blocks concerned. These are hints: the program runs anyway. Once fixed, start Live again to check again.
+
 **Step by step**: to understand what your program does, click **Pause** (next to *Stop*, key F9). The
 blocks stop and the block about to run is lit. Each click on **Next block** (F10) runs that block only:
 watch the board and the variables change, one block at a time. *Wait* blocks no longer make you wait in
