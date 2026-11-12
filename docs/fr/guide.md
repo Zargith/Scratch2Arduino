@@ -231,6 +231,25 @@ côté des blocs : elles deviennent de nouveaux blocs.
 - **Mode expert** : tout le programme peut aussi être écrit en texte (*Programme entier en C++, Python
   ou JavaScript*) ; *Aide du langage* rappelle les fonctions disponibles.
 
+### Bibliothèques Arduino
+
+Une **bibliothèque** ajoute des fonctions toutes prêtes à ton code C++ (lire un capteur rare, décoder
+du JSON...). Les blocs installent les leurs tout seuls ; pour ton propre code, utilise le bouton
+**Bibliothèques Arduino** (icône de livres, en haut à droite) :
+
+1. Onglet **Chercher** : tape un nom ou un mot-clé (par exemple `json`), puis *Chercher*. La première
+   fois, la liste des bibliothèques est téléchargée (il faut Internet). Les descriptions sont en anglais.
+2. *Ajouter au projet* installe la bibliothèque (sa dernière version, ou celle choisie dans la liste) et
+   l'ajoute au projet.
+3. Onglet **Ce projet** : la ligne `#include <...>` à écrire en haut de "Mon code" est indiquée.
+   *Retirer du projet* l'enlève de la liste.
+4. Onglet **Installées** : tout ce qui est installé sur l'ordinateur, avec *Mettre à jour* et
+   *Désinstaller*.
+
+Les bibliothèques du projet sont enregistrées dans le fichier `.s2a` : sur un autre ordinateur, *Vérifier*
+les installe toutes seules. Si ton code utilise une bibliothèque absente, le message de *Vérifier* donne
+son nom et propose des bibliothèques qui pourraient la contenir.
+
 ## 12. Projets : enregistrer, ouvrir, partager
 
 - **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).

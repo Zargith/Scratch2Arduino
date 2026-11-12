@@ -42,7 +42,8 @@
     "unknown": "Something unexpected went wrong. The technical details can help find the problem."
   },
   "cli": {
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "done": "Done.",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli lib list|search <words>|install <name>[@<version>]|remove <name>  Arduino libraries (* = comes with a board)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "convert_source": "The file to convert must end with .ino, .cpp, .h, .py or .js.",
     "convert_check": "Lines to convert by hand (kept as comments): {lines}.",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
@@ -197,7 +198,8 @@
     "cpp_empty": "The program is empty: write at least the setup() and loop() functions.",
     "cpp_missing_function": "The {name}() function is missing: an Arduino program always has void setup() { ... } and void loop() { ... }.",
     "cpp_errors": "The program has {count} error(s). Line {line}: {message}",
-    "cpp_library_missing": "The program uses the \"{library}\" library, which is not installed. Scratch2Arduino installs Servo, ESP32Servo, DHT, LiquidCrystal (I2C), U8g2 and Adafruit NeoPixel by itself; install any other one with arduino-cli lib install.",
+    "cpp_library_missing": "The program uses the \"{library}\" library, which is not installed. Open the Libraries window to find it and add it to the project.",
+    "cpp_library_suggestion": "It may be in: {names}.",
     "script_upload": "A Python or JavaScript program runs on the computer and drives the board: use the Live button instead of Upload.",
     "script_ok": "Well done, your program can be read! Start it with the Live button.",
     "pin_unknown": "Pin {pin} does not exist on the {board} board.",

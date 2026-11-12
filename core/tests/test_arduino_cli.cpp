@@ -269,6 +269,95 @@ TEST(ArduinoCli, ListsAndInstallsLibraries) {
     EXPECT_EQ(fake.commands[3].args.at(2), "Servo");
 }
 
+TEST(ArduinoCli, ListsInstalledLibrariesWithTheirVersion) {
+    FakeRunner fake;
+    fake.replies = {reply(R"j({"installed_libraries": [
+      {"library": {"name": "Wire", "version": "1.0", "location": "platform", "provides_includes": ["Wire.h"]}},
+      {"library": {"name": "ArduinoJson", "version": "7.2.0", "author": "Benoit", "sentence": "JSON.",
+                   "location": "user", "provides_includes": ["ArduinoJson.h", "ArduinoJson.hpp"]}}]})j")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto libraries = cli.listLibraries();
+    ASSERT_TRUE(libraries.ok());
+    ASSERT_EQ(libraries.value().size(), 2U);
+    const auto& json = libraries.value()[0]; // sorted by name
+    EXPECT_EQ(json.name, "ArduinoJson");
+    EXPECT_EQ(json.version, "7.2.0");
+    EXPECT_EQ(json.author, "Benoit");
+    EXPECT_EQ(json.includes, (std::vector<std::string>{"ArduinoJson.h", "ArduinoJson.hpp"}));
+    EXPECT_FALSE(json.builtIn);
+    EXPECT_TRUE(libraries.value()[1].builtIn);
+}
+
+TEST(ArduinoCli, SearchesTheRegistry) {
+    FakeRunner fake;
+    fake.replies = {reply(R"j({"libraries": [
+      {"name": "Servo", "latest": {"author": "Arduino", "version": "1.3.0", "sentence": "Servos.",
+       "category": "Device Control", "architectures": ["avr", "esp32"]}, "available_versions": ["1.2.0", "1.3.0"]},
+      {"name": "ServoEasing", "latest": {"version": "3.0.0"}},
+      {"name": "Third"}]})j")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto found = cli.searchLibraries("  servo  -motor ", 2);
+    ASSERT_TRUE(found.ok());
+    ASSERT_EQ(found.value().size(), 2U);
+    EXPECT_EQ(found.value()[0].name, "Servo");
+    EXPECT_EQ(found.value()[0].latestVersion, "1.3.0");
+    EXPECT_EQ(found.value()[0].versions, (std::vector<std::string>{"1.2.0", "1.3.0"}));
+    EXPECT_EQ(found.value()[0].category, "Device Control");
+    EXPECT_EQ(found.value()[1].name, "ServoEasing");
+    // Every word is an argument; none can be read as an option.
+    EXPECT_EQ(fake.commands[0].args, (std::vector<std::string>{"lib", "search", "--omit-releases-details", "servo",
+                                                               "motor", "--json", "--no-color"}));
+}
+
+TEST(ArduinoCli, InstallsAndRemovesOneLibrary) {
+    FakeRunner fake;
+    fake.replies = {reply("{}"), reply("{}"), reply("{}")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    ASSERT_TRUE(cli.installLibrary("Adafruit NeoPixel", "").ok());
+    ASSERT_TRUE(cli.installLibrary("Servo", "1.2.0").ok());
+    ASSERT_TRUE(cli.uninstallLibrary("Servo").ok());
+    EXPECT_EQ(fake.commands[0].args.at(2), "Adafruit NeoPixel");
+    EXPECT_EQ(fake.commands[1].args.at(2), "Servo@1.2.0");
+    EXPECT_EQ(fake.commands[2].args.at(1), "uninstall");
+    // Never an option or a version smuggled in the name.
+    EXPECT_FALSE(cli.installLibrary("--git-url", "").ok());
+    EXPECT_FALSE(cli.installLibrary("Servo@1.0", "").ok());
+    EXPECT_FALSE(cli.installLibrary("Servo", "1.0 --no-deps").ok());
+    EXPECT_FALSE(cli.uninstallLibrary("").ok());
+    EXPECT_EQ(fake.commands.size(), 3U);
+}
+
+TEST(ArduinoCli, ChoosesTheLibrariesToInstallForAProject) {
+    using s2a::toolchain::InstalledLibrary;
+    using s2a::toolchain::librariesToInstall;
+    std::vector<InstalledLibrary> installed(3);
+    installed[0].name = "Servo";
+    installed[0].version = "1.3.0";
+    installed[1].name = "ArduinoJson";
+    installed[1].version = "7.2.0";
+    installed[2].name = "Wire";
+    installed[2].version = "1.0";
+    installed[2].builtIn = true;
+    EXPECT_TRUE(librariesToInstall({"Servo"}, {}, installed).empty());
+    EXPECT_EQ(librariesToInstall({"Servo", "U8g2"}, {{"ArduinoJson", ""}, {"Bounce2", ""}}, installed),
+              (std::vector<std::string>{"Bounce2", "U8g2"}));
+    // A requested version replaces another installed one; built-in libraries stay as they are.
+    EXPECT_EQ(librariesToInstall({"Servo"}, {{"Servo", "1.2.0"}, {"ArduinoJson", "7.2.0"}, {"Wire", "2.0"}}, installed),
+              (std::vector<std::string>{"Servo@1.2.0"}));
+}
+
+TEST(ArduinoCli, SuggestsLibrariesForAMissingHeader) {
+    FakeRunner fake;
+    fake.replies = {reply(R"j({"libraries": [{"name": "ArduinoJson"}]})j"),
+                    reply(R"j({"libraries": [{"name": "ArduinoJson"}, {"name": "Other"}]})j")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto names = s2a::toolchain::librariesProviding(cli, "ArduinoJson.h");
+    ASSERT_TRUE(names.ok());
+    EXPECT_EQ(names.value(), (std::vector<std::string>{"ArduinoJson", "Other"}));
+    EXPECT_EQ(fake.commands[0].args.at(3), "name=ArduinoJson");
+    EXPECT_EQ(fake.commands[1].args.at(3), "provides=ArduinoJson.h");
+}
+
 TEST(ArduinoCli, FindsTheLibrariesASketchNeeds) {
     using s2a::toolchain::requiredLibraries;
     EXPECT_TRUE(requiredLibraries("void setup() {}\n").empty());

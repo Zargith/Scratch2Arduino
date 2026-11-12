@@ -136,6 +136,19 @@ TEST_F(Build, InstallsTheLibrariesOfTheBlocksFirstWhenMissing) {
     EXPECT_EQ(fake.commands[3].args, (std::vector<std::string>{"lib", "install", "Servo", "--json", "--no-color"}));
 }
 
+TEST_F(Build, InstallsTheLibrariesChosenForTheProject) {
+    Project project = blink();
+    project.libraries = {{"ArduinoJson", "7.2.0"}, {"Bounce2", ""}};
+    fake.replies = {reply(kInstalled),
+                    reply(R"j({"installed_libraries": [{"library": {"name": "Bounce2", "version": "2.7", "location": "user"}}]})j"),
+                    reply("{}"), reply("{}"), reply(kCompileSuccess)};
+    const auto result = s2a::toolchain::buildProject(cli(), project, Language::English, options);
+    ASSERT_TRUE(result.ok) << result.message << "\n" << result.details;
+    ASSERT_EQ(fake.commands.size(), 5U);
+    EXPECT_EQ(fake.commands[3].args,
+              (std::vector<std::string>{"lib", "install", "ArduinoJson@7.2.0", "--json", "--no-color"}));
+}
+
 TEST_F(Build, PointsCompilerErrorsAtBlocks) {
     const auto sketch = s2a::codegen::generate(blink());
     const int line = sketch.blockLines.at("wait");

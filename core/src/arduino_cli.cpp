@@ -1,6 +1,7 @@
 #include "s2a/arduino_cli.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <set>
 #include <nlohmann/json.hpp>
@@ -221,6 +222,48 @@ Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) co
 }
 
 Result<std::vector<std::string>> ArduinoCli::installedLibraries() const {
+    auto libraries = listLibraries();
+    if (!libraries.ok()) {
+        return libraries.error();
+    }
+    std::vector<std::string> names;
+    for (InstalledLibrary& library : libraries.value()) {
+        names.push_back(std::move(library.name));
+    }
+    return names;
+}
+
+namespace {
+
+std::vector<std::string> stringsAt(const Json& node, const char* key) {
+    std::vector<std::string> values;
+    if (node.contains(key) && node.at(key).is_array()) {
+        for (const Json& value : node.at(key)) {
+            if (value.is_string()) {
+                values.push_back(value.get<std::string>());
+            }
+        }
+    }
+    return values;
+}
+
+/// A registry name or version given by the user: never read as an option of arduino-cli.
+bool safeArgument(std::string_view text, std::string_view allowedPunctuation) {
+    if (text.empty() || text.size() > 200 || text.front() == '-') {
+        return false;
+    }
+    return std::all_of(text.begin(), text.end(), [&](char c) {
+        const auto byte = static_cast<unsigned char>(c);
+        return std::isalnum(byte) != 0 || byte >= 0x80 || allowedPunctuation.find(c) != std::string_view::npos;
+    });
+}
+
+constexpr std::string_view kNamePunctuation = " ._-+()&',/";
+constexpr std::string_view kVersionPunctuation = ".-+_";
+
+} // namespace
+
+Result<std::vector<InstalledLibrary>> ArduinoCli::listLibraries() const {
     auto output = run({"lib", "list"}, kQuickTimeout);
     if (!output.ok()) {
         return output.error();
@@ -228,18 +271,121 @@ Result<std::vector<std::string>> ArduinoCli::installedLibraries() const {
     if (!output.value().succeeded()) {
         return Error{ErrorCode::ProcessFailed, "arduino-cli lib list failed: " + output.value().err};
     }
-    std::vector<std::string> names;
+    std::vector<InstalledLibrary> libraries;
     const Json json = parseOutput(output.value().out);
     if (json.contains("installed_libraries") && json.at("installed_libraries").is_array()) {
         for (const Json& entry : json.at("installed_libraries")) {
-            if (entry.contains("library") && entry.at("library").is_object()) {
-                if (std::string name = stringOr(entry.at("library"), "name"); !name.empty()) {
-                    names.push_back(std::move(name));
-                }
+            if (!entry.contains("library") || !entry.at("library").is_object()) {
+                continue;
             }
+            const Json& node = entry.at("library");
+            InstalledLibrary library;
+            library.name = stringOr(node, "name");
+            if (library.name.empty()) {
+                continue;
+            }
+            library.version = stringOr(node, "version");
+            library.author = stringOr(node, "author");
+            library.sentence = stringOr(node, "sentence");
+            library.website = stringOr(node, "website");
+            library.includes = stringsAt(node, "provides_includes");
+            // "user" for the libraries installed by lib install; "platform", "ide_builtin"...
+            const std::string location = stringOr(node, "location");
+            library.builtIn = !location.empty() && location != "user";
+            libraries.push_back(std::move(library));
         }
     }
-    return names;
+    std::sort(libraries.begin(), libraries.end(),
+              [](const InstalledLibrary& a, const InstalledLibrary& b) { return a.name < b.name; });
+    return libraries;
+}
+
+Result<CommandOutcome> ArduinoCli::updateLibraryIndex() const {
+    auto index = run({"lib", "update-index"}, kInstallTimeout);
+    if (!index.ok()) {
+        return index.error();
+    }
+    return commandOutcome(index.value());
+}
+
+Result<std::vector<LibraryInfo>> ArduinoCli::searchLibraries(std::string_view query, std::size_t limit) const {
+    std::vector<std::string> args{"lib", "search", "--omit-releases-details"};
+    std::string word;
+    const auto flush = [&]() {
+        // A leading dash would be read as an option.
+        const auto start = word.find_first_not_of('-');
+        if (start != std::string::npos) {
+            args.push_back(word.substr(start));
+        }
+        word.clear();
+    };
+    for (const char c : query) {
+        if (std::isspace(static_cast<unsigned char>(c)) != 0) {
+            flush();
+        } else {
+            word.push_back(c);
+        }
+    }
+    flush();
+    auto output = run(std::move(args), kQuickTimeout);
+    if (!output.ok()) {
+        return output.error();
+    }
+    if (!output.value().succeeded()) {
+        return Error{ErrorCode::ProcessFailed, "arduino-cli lib search failed: " + output.value().err};
+    }
+    std::vector<LibraryInfo> libraries;
+    const Json json = parseOutput(output.value().out);
+    if (json.contains("libraries") && json.at("libraries").is_array()) {
+        for (const Json& node : json.at("libraries")) {
+            if (libraries.size() >= limit) {
+                break;
+            }
+            LibraryInfo library;
+            library.name = stringOr(node, "name");
+            if (library.name.empty()) {
+                continue;
+            }
+            if (node.contains("latest") && node.at("latest").is_object()) {
+                const Json& latest = node.at("latest");
+                library.author = stringOr(latest, "author");
+                library.sentence = stringOr(latest, "sentence");
+                library.category = stringOr(latest, "category");
+                library.website = stringOr(latest, "website");
+                library.latestVersion = stringOr(latest, "version");
+                library.architectures = stringsAt(latest, "architectures");
+            }
+            library.versions = stringsAt(node, "available_versions");
+            libraries.push_back(std::move(library));
+        }
+    }
+    return libraries;
+}
+
+Result<CommandOutcome> ArduinoCli::installLibrary(std::string_view name, std::string_view version) const {
+    if (!safeArgument(name, kNamePunctuation) || (!version.empty() && !safeArgument(version, kVersionPunctuation))) {
+        return Error{ErrorCode::ProcessFailed, "invalid library name or version"};
+    }
+    std::string argument(name);
+    if (!version.empty()) {
+        argument += "@" + std::string(version);
+    }
+    auto install = run({"lib", "install", argument}, kInstallTimeout);
+    if (!install.ok()) {
+        return install.error();
+    }
+    return commandOutcome(install.value());
+}
+
+Result<CommandOutcome> ArduinoCli::uninstallLibrary(std::string_view name) const {
+    if (!safeArgument(name, kNamePunctuation)) {
+        return Error{ErrorCode::ProcessFailed, "invalid library name"};
+    }
+    auto uninstall = run({"lib", "uninstall", std::string(name)}, kQuickTimeout);
+    if (!uninstall.ok()) {
+        return uninstall.error();
+    }
+    return commandOutcome(uninstall.value());
 }
 
 Result<CommandOutcome> ArduinoCli::installLibraries(const std::vector<std::string>& names) const {
@@ -307,6 +453,65 @@ Result<std::vector<std::string>> missingLibraries(const ArduinoCli& cli, const s
         }
     }
     return missing;
+}
+
+std::vector<std::string> librariesToInstall(const std::vector<std::string>& required,
+                                            const std::vector<project::Library>& requests,
+                                            const std::vector<InstalledLibrary>& installed) {
+    const auto find = [&](const std::string& name) {
+        return std::find_if(installed.begin(), installed.end(),
+                            [&](const InstalledLibrary& library) { return library.name == name; });
+    };
+    std::vector<std::string> install;
+    std::set<std::string> seen;
+    // The project's own list first: its version wins over "any version".
+    for (const project::Library& request : requests) {
+        if (request.name.empty() || !seen.insert(request.name).second) {
+            continue;
+        }
+        const auto found = find(request.name);
+        if (found == installed.end()) {
+            install.push_back(request.version.empty() ? request.name : request.name + "@" + request.version);
+        } else if (!request.version.empty() && found->version != request.version && !found->builtIn) {
+            install.push_back(request.name + "@" + request.version);
+        }
+    }
+    for (const std::string& name : required) {
+        if (seen.insert(name).second && find(name) == installed.end()) {
+            install.push_back(name);
+        }
+    }
+    return install;
+}
+
+Result<std::vector<std::string>> librariesProviding(const ArduinoCli& cli, std::string_view header) {
+    std::string stem(header);
+    if (const auto dot = stem.rfind('.'); dot != std::string::npos) {
+        stem.erase(dot);
+    }
+    if (!safeArgument(stem, "._-+")) {
+        return std::vector<std::string>{};
+    }
+    std::vector<std::string> names;
+    const auto add = [&](std::string_view query) -> Status {
+        auto found = cli.searchLibraries(query, 5);
+        if (!found.ok()) {
+            return found.error();
+        }
+        for (LibraryInfo& library : found.value()) {
+            if (std::find(names.begin(), names.end(), library.name) == names.end()) {
+                names.push_back(std::move(library.name));
+            }
+        }
+        return success();
+    };
+    if (auto named = add("name=" + stem); !named.ok()) {
+        return named.error();
+    }
+    if (auto provided = add("provides=" + std::string(header)); !provided.ok()) {
+        return provided.error();
+    }
+    return names;
 }
 
 Result<std::vector<DetectedPort>> ArduinoCli::detectPorts(const BoardDatabase& boards) const {

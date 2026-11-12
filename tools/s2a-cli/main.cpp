@@ -147,6 +147,8 @@ private:
     int compileCommand() const;
     int uploadCommand() const;
     int liveCommand() const;
+    /// lib list | search <words> | install <name>[@<version>] | remove <name>
+    int libCommand() const;
     /// Python and JavaScript projects in Live mode.
     int runScript(const s2a::project::Project& project, const s2a::Board& selected, s2a::live::LiveLink& link) const;
     int version() const;
@@ -710,6 +712,82 @@ int Cli::runScript(const s2a::project::Project& project, const s2a::Board& selec
     return kSuccess;
 }
 
+int Cli::libCommand() const {
+    const auto& args = options_.positional;
+    const std::string action = args.empty() ? std::string{} : args[0];
+    const bool valid = action == "list" ? args.size() == 1
+                       : action == "search" ? args.size() >= 2
+                       : action == "install" || action == "remove" ? args.size() == 2
+                                                                    : false;
+    if (!valid) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const auto cli = arduinoCli();
+    if (!cli) {
+        return kFailure;
+    }
+    const auto error = [&](const s2a::Error& failed) {
+        std::cerr << tr(s2a::errorMessageKey(failed.code)) << '\n';
+        if (options_.verbose) {
+            std::cerr << failed.detail << '\n';
+        }
+        return kFailure;
+    };
+    const auto outcome = [&](const s2a::Result<s2a::toolchain::CommandOutcome>& result) {
+        if (!result.ok()) {
+            return error(result.error());
+        }
+        if (const auto diagnosis = s2a::toolchain::diagnoseInstall(result.value());
+            diagnosis.problem != s2a::toolchain::Problem::None) {
+            return report(diagnosis);
+        }
+        if (!result.value().success) {
+            std::cerr << result.value().error << '\n';
+            return kFailure;
+        }
+        print("cli.done");
+        return kSuccess;
+    };
+    if (action == "list") {
+        const auto libraries = cli->listLibraries();
+        if (!libraries.ok()) {
+            return error(libraries.error());
+        }
+        for (const auto& library : libraries.value()) {
+            std::cout << library.name << ' ' << library.version << (library.builtIn ? " *" : "") << '\n';
+        }
+        return kSuccess;
+    }
+    if (action == "search") {
+        std::string query;
+        for (std::size_t index = 1; index < args.size(); ++index) {
+            query += args[index] + " ";
+        }
+        if (const auto index = cli->updateLibraryIndex(); !index.ok()) {
+            return error(index.error());
+        }
+        const auto found = cli->searchLibraries(query, 30);
+        if (!found.ok()) {
+            return error(found.error());
+        }
+        for (const auto& library : found.value()) {
+            std::cout << library.name << ' ' << library.latestVersion << "  " << library.sentence << '\n';
+        }
+        return kSuccess;
+    }
+    if (action == "install") {
+        const std::string& argument = args[1];
+        const auto at = argument.rfind('@');
+        if (const auto index = cli->updateLibraryIndex(); !index.ok()) {
+            return error(index.error());
+        }
+        return at == std::string::npos ? outcome(cli->installLibrary(argument, ""))
+                                       : outcome(cli->installLibrary(argument.substr(0, at), argument.substr(at + 1)));
+    }
+    return outcome(cli->uninstallLibrary(args[1]));
+}
+
 int Cli::version() const {
     std::cout << s2a::version::kAppName << ' ' << s2a::version::kString << '\n';
     const fs::path executable = s2a::toolchain::locateArduinoCli();
@@ -753,6 +831,9 @@ int Cli::run() {
     }
     if (options_.command == "upload") {
         return uploadCommand();
+    }
+    if (options_.command == "lib") {
+        return libCommand();
     }
     if (options_.command == "version" || options_.command == "--version") {
         return version();

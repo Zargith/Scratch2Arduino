@@ -4,6 +4,7 @@
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/convert.hpp"
+#include "s2a/diagnostics.hpp"
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
@@ -765,6 +766,110 @@ void Bridge::bind() {
                 }
                 return ports.dump();
             });
+        },
+        nullptr);
+
+    // Library manager: the installed libraries, a search in the Arduino registry, install and
+    // remove. The editor keeps the project's own list (Project::libraries).
+    window_.bind(
+        "s2a_libraries_installed",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const auto cli = arduinoCli(language);
+                const std::lock_guard<std::mutex> lock(librariesMutex_);
+                const auto libraries = cli.listLibraries();
+                if (!libraries.ok()) {
+                    throw UserError{tr(errorMessageKey(libraries.error().code), language)};
+                }
+                Json list = Json::array();
+                for (const auto& library : libraries.value()) {
+                    list.push_back({{"name", library.name},
+                                    {"version", library.version},
+                                    {"author", library.author},
+                                    {"sentence", library.sentence},
+                                    {"website", library.website},
+                                    {"includes", library.includes},
+                                    {"builtIn", library.builtIn}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_libraries_search",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Json args = Json::parse(request);
+                const Language language = languageArg(args, 1, language_);
+                const auto cli = arduinoCli(language);
+                const std::lock_guard<std::mutex> lock(librariesMutex_);
+                // Without the internet, the list downloaded earlier still serves.
+                std::string indexError;
+                if (!libraryIndexReady_) {
+                    const auto index = cli.updateLibraryIndex();
+                    if (!index.ok()) {
+                        indexError = tr(errorMessageKey(index.error().code), language);
+                    } else if (const auto diagnosis = toolchain::diagnoseInstall(index.value());
+                               diagnosis.problem != toolchain::Problem::None) {
+                        indexError = toolchain::describe(diagnosis, language);
+                    } else {
+                        libraryIndexReady_ = true;
+                    }
+                }
+                const auto found = cli.searchLibraries(stringArg(args, 0), 50);
+                if (!found.ok()) {
+                    throw UserError{indexError.empty() ? tr(errorMessageKey(found.error().code), language) : indexError};
+                }
+                Json list = Json::array();
+                for (const auto& library : found.value()) {
+                    list.push_back({{"name", library.name},
+                                    {"author", library.author},
+                                    {"sentence", library.sentence},
+                                    {"category", library.category},
+                                    {"website", library.website},
+                                    {"latestVersion", library.latestVersion},
+                                    {"versions", library.versions},
+                                    {"architectures", library.architectures}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    const auto libraryChange = [this](const std::string& id, const std::string& request, bool install) {
+        async(id, [request, install, this]() {
+            const Json args = Json::parse(request);
+            const Language language = languageArg(args, install ? 2 : 1, language_);
+            const std::string name = stringArg(args, 0);
+            const auto cli = arduinoCli(language);
+            const std::lock_guard<std::mutex> lock(librariesMutex_);
+            const auto outcome = install ? cli.installLibrary(name, stringArg(args, 1)) : cli.uninstallLibrary(name);
+            if (!outcome.ok()) {
+                throw UserError{tr(errorMessageKey(outcome.error().code), language)};
+            }
+            if (const auto diagnosis = toolchain::diagnoseInstall(outcome.value());
+                diagnosis.problem != toolchain::Problem::None) {
+                return Json{{"ok", false},
+                            {"message", toolchain::describe(diagnosis, language)},
+                            {"details", diagnosis.technical}}
+                    .dump();
+            }
+            return Json{{"ok", outcome.value().success},
+                        {"message", outcome.value().success ? std::string{} : outcome.value().error},
+                        {"details", outcome.value().out + outcome.value().err}}
+                .dump();
+        });
+    };
+    window_.bind(
+        "s2a_library_install",
+        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            libraryChange(id, request, true);
+        },
+        nullptr);
+    window_.bind(
+        "s2a_library_uninstall",
+        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            libraryChange(id, request, false);
         },
         nullptr);
 

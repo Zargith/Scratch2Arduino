@@ -2,6 +2,7 @@
 
 #include "s2a/boards.hpp"
 #include "s2a/process.hpp"
+#include "s2a/project.hpp"
 #include "s2a/result.hpp"
 
 #include <chrono>
@@ -64,6 +65,31 @@ struct CompileOutcome : CommandOutcome {
     std::vector<MemoryUsage> memory;
 };
 
+/// A library of the Arduino registry (arduino-cli lib search).
+struct LibraryInfo {
+    std::string name;     ///< Registry name, as given to installLibrary() ("Adafruit NeoPixel").
+    std::string author;
+    std::string sentence; ///< One-line description (in English, as published).
+    std::string category; ///< "Display", "Sensors"...
+    std::string website;
+    std::string latestVersion;
+    std::vector<std::string> versions;      ///< Every published version, oldest first.
+    std::vector<std::string> architectures; ///< "avr", "esp32", "*" (any)...
+};
+
+/// A library installed for arduino-cli (arduino-cli lib list).
+struct InstalledLibrary {
+    std::string name;
+    std::string version;
+    std::string author;
+    std::string sentence;
+    std::string website;
+    std::vector<std::string> includes; ///< Headers it provides ("Servo.h").
+    /// Comes with a board package (Wire, SoftwareSerial...): it cannot be removed.
+    bool builtIn = false;
+};
+
+
 /// Drives the arduino-cli executable (JSON output).
 class ArduinoCli {
 public:
@@ -85,7 +111,26 @@ public:
     [[nodiscard]] Result<std::vector<std::string>> installedLibraries() const;
 
     /// Downloads and installs libraries by name (needs the internet, once per library).
+    /// A name may carry a version: "Servo@1.2.0".
     [[nodiscard]] Result<CommandOutcome> installLibraries(const std::vector<std::string>& names) const;
+
+    /// The installed libraries, with their version, those of the board packages included.
+    [[nodiscard]] Result<std::vector<InstalledLibrary>> listLibraries() const;
+
+    /// Downloads the list of the libraries of the Arduino registry (needs the internet).
+    [[nodiscard]] Result<CommandOutcome> updateLibraryIndex() const;
+
+    /// Libraries of the registry matching `query` (words searched in names, authors and
+    /// descriptions), best matches first, at most `limit`. Uses the downloaded list: call
+    /// updateLibraryIndex() first when it may be missing or old.
+    [[nodiscard]] Result<std::vector<LibraryInfo>> searchLibraries(std::string_view query, std::size_t limit) const;
+
+    /// Installs one library (its latest version when `version` is empty) and the libraries it
+    /// needs. Replaces an installed copy of another version.
+    [[nodiscard]] Result<CommandOutcome> installLibrary(std::string_view name, std::string_view version) const;
+
+    /// Removes an installed library.
+    [[nodiscard]] Result<CommandOutcome> uninstallLibrary(std::string_view name) const;
 
     /// Serial ports, with the matching board of `boards` when it can be recognised.
     [[nodiscard]] Result<std::vector<DetectedPort>> detectPorts(const BoardDatabase& boards = BoardDatabase::builtin()) const;
@@ -113,5 +158,17 @@ private:
 
 /// The libraries of `required` that are not installed yet.
 [[nodiscard]] Result<std::vector<std::string>> missingLibraries(const ArduinoCli& cli, const std::vector<std::string>& required);
+
+/// What to install for a project: the libraries of `required` (names, any version) and of
+/// `requests` (Project::libraries) that are not installed, or not in the requested version.
+/// Returned as arguments of installLibraries(): "Name" or "Name@1.2.3". `installed` is the
+/// result of listLibraries().
+[[nodiscard]] std::vector<std::string> librariesToInstall(const std::vector<std::string>& required,
+                                                          const std::vector<project::Library>& requests,
+                                                          const std::vector<InstalledLibrary>& installed);
+
+/// Registry names worth suggesting for a missing header ("ArduinoJson.h" -> "ArduinoJson"):
+/// the libraries named like the header first, then those declaring it. Empty when unknown.
+[[nodiscard]] Result<std::vector<std::string>> librariesProviding(const ArduinoCli& cli, std::string_view header);
 
 } // namespace s2a::toolchain

@@ -219,6 +219,24 @@ blocks: they become new blocks.
 - **Expert mode**: the whole program can also be written as text (*Whole program in C++, Python or
   JavaScript*); *Language help* lists the available functions.
 
+### Arduino libraries
+
+A **library** adds ready-made functions to your C++ code (read an unusual sensor, decode JSON...).
+Blocks install their own by themselves; for your own code, use the **Arduino libraries** button (books
+icon, top right):
+
+1. **Search** tab: type a name or a keyword (for example `json`), then *Search*. The first time, the list
+   of libraries is downloaded (Internet needed). Descriptions are in English.
+2. *Add to the project* installs the library (its latest version, or the one chosen in the list) and adds
+   it to the project.
+3. **This project** tab: shows the `#include <...>` line to write at the top of "My code".
+   *Remove from the project* takes it off the list.
+4. **Installed** tab: everything installed on the computer, with *Update* and *Uninstall*.
+
+The libraries of the project are saved in the `.s2a` file: on another computer, *Check* installs them by
+itself. If your code uses a library that is missing, the *Check* message gives its name and suggests
+libraries that may contain it.
+
 ## 12. Projects: save, open, share
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).

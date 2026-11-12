@@ -237,6 +237,19 @@ Project projectFromJson(Json json) {
         project.userCode = UserCode{*language, stringAt(node, "code", "$.userCode")};
     }
 
+    if (json.contains("libraries")) { // optional, like "functions"
+        const Json& libraries = arrayAt(json, "libraries", root);
+        for (std::size_t index = 0; index < libraries.size(); ++index) {
+            const std::string path = "$.libraries[" + std::to_string(index) + "]";
+            const Json& node = libraries.at(index);
+            if (!node.is_object()) {
+                throw FormatError(path, "a library must be an object");
+            }
+            project.libraries.push_back(
+                {stringAt(node, "name", path), node.contains("version") ? stringAt(node, "version", path) : std::string{}});
+        }
+    }
+
     const Json& scripts = arrayAt(json, "scripts", root);
     for (std::size_t index = 0; index < scripts.size(); ++index) {
         const std::string path = "$.scripts[" + std::to_string(index) + "]";
@@ -327,6 +340,17 @@ std::string toJson(const Project& project) {
             functions.push_back({{"id", function.id}, {"name", function.name}});
         }
         json["functions"] = std::move(functions);
+    }
+    if (!project.libraries.empty()) { // left out otherwise, as "functions"
+        Json libraries = Json::array();
+        for (const Library& library : project.libraries) {
+            Json node{{"name", library.name}};
+            if (!library.version.empty()) {
+                node["version"] = library.version;
+            }
+            libraries.push_back(std::move(node));
+        }
+        json["libraries"] = std::move(libraries);
     }
     if (text) { // left out for blocks: block projects keep the bytes of version 1
         json["language"] = std::string(programLanguageId(project.language));

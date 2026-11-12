@@ -62,6 +62,10 @@ private:
     std::unique_ptr<serial::Monitor> monitor_; ///< Serial monitor, when open.
     std::mutex userMutex_;
     userdata::Store user_; ///< Recent projects and autosave (guarded by userMutex_).
+    /// Library manager: one arduino-cli library command at a time; the list of the registry is
+    /// downloaded at the first search of the session.
+    std::mutex librariesMutex_;
+    bool libraryIndexReady_ = false; ///< Guarded by librariesMutex_.
 
     /// Frees the board's port for an upload or the Live mode.
     void closeMonitor();
