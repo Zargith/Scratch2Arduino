@@ -169,6 +169,11 @@ TEST(Convert, EveryExampleRoundTripsWithoutManualWork) {
     }
 }
 
+TEST(Convert, KeepsACommentAboveTheFunctionItDescribes) {
+    const auto js = convert("def a(x):\n    if x:\n        b()\n\n# About c\ndef c():\n    # inside c\n    d()\n", kPython, kJs);
+    EXPECT_TRUE(has(js.code, "        b();\n    }\n}\n\n// About c\nfunction c() {\n    // inside c\n")) << js.code;
+}
+
 TEST(Convert, BlocksAreNotAText) {
     EXPECT_EQ(convert("x", ProgramLanguage::Blocks, kCpp).code, "x");
 }

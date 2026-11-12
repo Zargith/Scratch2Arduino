@@ -95,6 +95,7 @@ import {
 	isStarterCode,
 	isStarterUserCode,
 	programNames,
+	programSwitch,
 	starterCode,
 	starterUserCode,
 	type CodeProblem,
@@ -740,9 +741,14 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.program_blocks") });
 			return;
 		}
-		if (program !== "blocks" && typed) {
-			// A typed program is converted (after a yes), never thrown away.
-			if (!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))) {
+		const change = programSwitch(program, codeRef.current, typed);
+		if (change.action === "convert") {
+			// A program is converted (after a yes when it was typed), never thrown away: also the C++
+			// made from the blocks or the code of an opened project.
+			if (
+				change.confirm &&
+				!window.confirm(t("program.confirm_replace", { from: programName(program, blocksName), to: programNames[next] }))
+			) {
 				return;
 			}
 			if (!hasHost()) {
@@ -752,7 +758,7 @@ export function App() {
 			try {
 				const converted = await bridge.convert(codeRef.current, program, next);
 				codeRef.current = converted.code;
-				codeEdited.current = true;
+				codeEdited.current = change.confirm; // still untouched when the code came from the blocks
 				setProgram(next);
 				markDirty();
 				showConverted(next, converted.toCheck);
