@@ -32,8 +32,9 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
   Il installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le menu Démarrer.
   Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires*
   puis *Exécuter quand même* (le programme n'est pas encore signé).
-- **Linux et macOS** : télécharge `Scratch2Arduino_installer.sh`, puis dans un terminal :
-  `sh Scratch2Arduino_installer.sh` (ou `--user` pour l'installer seulement pour toi).
+- **Linux et macOS** : télécharge les sources (*Source code*, page *Releases* du projet) et décompresse-les,
+  puis dans ce dossier, dans un terminal : `./Scratch2Arduino_installer.sh` (ou `--user` pour l'installer
+  seulement pour toi).
   Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
   `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
 
