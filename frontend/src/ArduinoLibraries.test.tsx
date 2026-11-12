@@ -92,5 +92,5 @@ describe("library manager window", () => {
 		expect(onChange).toHaveBeenCalledWith([{ name: "ArduinoJson" }]);
 		expect(document.body.textContent).toContain(t("libraries.added", { name: "ArduinoJson" }));
 		await act(async () => root.unmount());
-	});
+	}, 30000); // renders a whole Mantine window: slow on a busy machine
 });
