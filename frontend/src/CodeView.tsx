@@ -56,25 +56,40 @@ export function CodeView({
 	userProblems,
 	disabled,
 }: CodeViewProps) {
+	const modes = programLanguages.map((candidate) => ({
+		value: candidate,
+		label:
+			candidate === "blocks"
+				? t("program.expert_blocks")
+				: `${t("program.expert")} : ${t("program.expert_text", { language: programNames[candidate] })}`,
+	}));
+	// As wide as its longest label (all of them, hidden, share its grid cell), so the text is never
+	// cut; narrower only when the window is too narrow for it.
 	const expert = (
-		<Select
-			aria-label={t("program.expert")}
-			size="xs"
-			w={240}
-			disabled={disabled}
-			data={programLanguages.map((candidate) => ({
-				value: candidate,
-				label:
-					candidate === "blocks"
-						? t("program.expert_blocks")
-						: `${t("program.expert")} : ${t("program.expert_text", { language: programNames[candidate] })}`,
-			}))}
-			value={program}
-			onChange={(value) => {
-				if (value) onProgram(value as ProgramLanguage);
-			}}
-			allowDeselect={false}
-		/>
+		<div style={{ display: "inline-grid", gridTemplateColumns: "minmax(0, max-content)", minWidth: 0, maxWidth: "100%" }}>
+			{modes.map((mode) => (
+				<Text
+					key={mode.value}
+					size="xs"
+					aria-hidden
+					style={{ gridArea: "1 / 1", visibility: "hidden", height: 0, overflow: "hidden", whiteSpace: "nowrap", paddingInline: "12px 40px" }}
+				>
+					{mode.label}
+				</Text>
+			))}
+			<Select
+				aria-label={t("program.expert")}
+				size="xs"
+				style={{ gridArea: "1 / 1", minWidth: 0 }}
+				disabled={disabled}
+				data={modes}
+				value={program}
+				onChange={(value) => {
+					if (value) onProgram(value as ProgramLanguage);
+				}}
+				allowDeselect={false}
+			/>
+		</div>
 	);
 
 	let content;
@@ -156,7 +171,7 @@ export function CodeView({
 				) : (
 					<Text fw={600}>{t("program.expert_text", { language: programNames[program] })}</Text>
 				)}
-				<Group gap="xs">
+				<Group gap="xs" wrap="nowrap" style={{ minWidth: 0, maxWidth: "100%" }}>
 					{program === "blocks" && tab === "mine" && userCode && (
 						<>
 							<Select
