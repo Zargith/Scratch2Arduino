@@ -32,8 +32,9 @@ the application: the **Tutorials and help** button (the graduation cap), next to
   installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the Start menu.
   If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
   signed yet).
-- **Linux and macOS**: download `Scratch2Arduino_installer.sh`, then in a terminal:
-  `sh Scratch2Arduino_installer.sh` (or `--user` to install it for yourself only).
+- **Linux and macOS**: download the sources (*Source code*, the project's *Releases* page) and unpack them,
+  then in that folder, in a terminal: `./Scratch2Arduino_installer.sh` (or `--user` to install it for
+  yourself only).
   On Linux, to be allowed to send programs to the board, type once
   `sudo usermod -aG dialout $USER`, then log out and back in.
 
