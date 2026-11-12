@@ -68,7 +68,7 @@ Pour que la carte travaille seule, il faut **téléverser**.
 ## 5. Enregistre ton projet
 
 Clique sur **Enregistrer** (ou Ctrl+S), donne un nom au fichier : il est rangé dans
-`Documents/Scratch2Arduino`. Clique sur **Voir le code** pour découvrir le code Arduino fabriqué à partir
+`Documents/Scratch2Arduino`. Passe à la vue **Code** (en haut, à côté de *Blocs*) pour découvrir le code Arduino fabriqué à partir
 de tes blocs.
 
 ## Version avancée : avec du code

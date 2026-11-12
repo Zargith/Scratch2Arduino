@@ -65,8 +65,8 @@ to work on its own, you need to **upload**.
 
 ## 5. Save your project
 
-Click **Save** (or Ctrl+S) and name the file: it is stored in `Documents/Scratch2Arduino`. Click
-**Show code** to discover the Arduino code made from your blocks.
+Click **Save** (or Ctrl+S) and name the file: it is stored in `Documents/Scratch2Arduino`. Switch
+to the **Code** view (at the top, next to *Blocks*) to discover the Arduino code made from your blocks.
 
 ## Advanced version: with code
 
