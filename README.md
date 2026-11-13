@@ -280,7 +280,7 @@ the wiring:
 
 | Category | Blocks |
 |---|---|
-| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity |
+| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity, KY-023 joystick (position 0 to 100 on each axis, pushed up/down/left/right, pressed down), HC-SR501 PIR motion sensor, FC-51 / KY-032 infrared obstacle sensor |
 | Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8x8 LED matrix: pictures and single dots |
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D...) forward/backward at 0-100 %, stop |
@@ -290,7 +290,7 @@ the wiring:
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
-`button-led`, `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
+`button-led`, `joystick-leds`, `servo-potentiometer`, `distance-alarm`, `motion-alarm` (PIR sensor), `obstacle-alarm` (infrared obstacle sensor), `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
 button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer). For the ESP32: `esp32-dimmer`,
 `wireless-station` (Live mode over Wi-Fi or Bluetooth) and `phone-lamp` (the phone drives the lamp over
 Bluetooth while the computer follows in Live mode over Wi-Fi), and `remote-robot` (two motors on an L298N driven

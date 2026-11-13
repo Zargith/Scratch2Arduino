@@ -62,6 +62,18 @@
       ]
     },
     {
+      "id": "joystick-leds",
+      "title": { "fr": "Joystick et LED", "en": "Joystick and LEDs" },
+      "description": {
+        "fr": "Pousse le joystick : la LED de cette direction s'allume. Appuie dessus : le buzzer bipe.",
+        "en": "Push the joystick: the LED of that direction lights up. Press it down: the buzzer beeps."
+      },
+      "parts": {
+        "fr": "joystick KY-023, 4 LED, 4 résistances de 220 Ω, buzzer passif",
+        "en": "KY-023 joystick, 4 LEDs, 4 220 Ω resistors, passive buzzer"
+      }
+    },
+    {
       "id": "servo-potentiometer",
       "title": { "fr": "Potentiomètre et servomoteur", "en": "Potentiometer and servo" },
       "description": {
@@ -100,6 +112,30 @@
           }
         }
       ]
+    },
+    {
+      "id": "motion-alarm",
+      "title": { "fr": "Alarme de mouvement", "en": "Motion alarm" },
+      "description": {
+        "fr": "Quand quelqu'un passe devant le capteur PIR, la LED s'allume, le buzzer bipe trois fois et le moniteur série compte les passages.",
+        "en": "When someone walks past the PIR sensor, the LED lights up, the buzzer beeps three times and the serial monitor counts the people passing."
+      },
+      "parts": {
+        "fr": "capteur de mouvement PIR HC-SR501, LED, résistance de 220 Ω, buzzer passif",
+        "en": "HC-SR501 PIR motion sensor, LED, 220 Ω resistor, passive buzzer"
+      }
+    },
+    {
+      "id": "obstacle-alarm",
+      "title": { "fr": "Détecteur d'obstacle", "en": "Obstacle detector" },
+      "description": {
+        "fr": "Approche la main du capteur infrarouge : la LED s'allume et le buzzer sonne tant qu'elle est là.",
+        "en": "Bring your hand close to the infrared sensor: the LED lights up and the buzzer sounds while it is there."
+      },
+      "parts": {
+        "fr": "capteur d'obstacle infrarouge FC-51 (ou KY-032), LED, résistance de 220 Ω, buzzer passif",
+        "en": "FC-51 (or KY-032) infrared obstacle sensor, LED, 220 Ω resistor, passive buzzer"
+      }
     },
     {
       "id": "thermometer",

@@ -323,6 +323,50 @@ TEST(Interpreter, ReadsSensors) {
     EXPECT_DOUBLE_EQ(interpreter.readings().at("A0"), 100);
 }
 
+TEST(Interpreter, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
+    FakePins pins;
+    pins.analogInputs[14] = 1023; // A0: pushed fully right
+    pins.analogInputs[15] = 100;  // A1: pushed up
+    pins.digitalInputs[2] = false; // SW pressed (to GND)
+    pins.digitalInputs[3] = true;  // PIR: motion
+    pins.digitalInputs[4] = true;  // obstacle sensor: nothing in front (HIGH)
+    const auto set = [](const char* id, const char* variable, Block value) {
+        Block result = block(id, "variables_set");
+        result.fields["VARIABLE"] = variable;
+        result.inputs["VALUE"].block = std::move(value);
+        return result;
+    };
+    const auto joystick = [](const char* id, const char* type, std::map<std::string, std::string> fields) {
+        Block result = block(id, type);
+        result.fields = std::move(fields);
+        result.fields.insert({{"X_PIN", "A0"}, {"Y_PIN", "A1"}, {"SW_PIN", "2"}});
+        return result;
+    };
+    Block motion = block("m", "sensors_motion");
+    motion.fields["PIN"] = "3";
+    Block obstacle = block("o", "sensors_obstacle");
+    obstacle.fields["PIN"] = "4";
+    Project project = withScript({block("hat", "events_when_program_starts"),
+                                  set("s1", "x", joystick("j1", "sensors_joystick", {{"AXIS", "X"}})),
+                                  set("s2", "up", joystick("j2", "sensors_joystick_direction", {{"DIRECTION", "UP"}})),
+                                  set("s3", "left", joystick("j3", "sensors_joystick_direction", {{"DIRECTION", "LEFT"}})),
+                                  set("s4", "sw", joystick("j4", "sensors_joystick_pressed", {})),
+                                  set("s5", "motion", motion), set("s6", "near", obstacle)});
+    project.variables = {{"x", "x", 0}, {"up", "up", 0}, {"left", "left", 0}, {"sw", "sw", 0}, {"motion", "motion", 0}, {"near", "near", 0}};
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("x"), 100);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("up"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("left"), 0);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("sw"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("motion"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("near"), 0);
+    const auto sent = pins.take();
+    for (const char* mode : {"M2U", "M3I", "M4U"}) {
+        EXPECT_NE(std::find(sent.begin(), sent.end(), mode), sent.end()) << mode;
+    }
+}
+
 TEST(Interpreter, CallsFunctionsAndComesBack) {
     FakePins pins;
     Block call = block("call", "functions_call");

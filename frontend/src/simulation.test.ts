@@ -93,6 +93,31 @@ describe("simulation", () => {
 		expect(simParts(null, null)).toEqual([]);
 	});
 
+	it("gives a joystick two sliders and a button, and the PIR and obstacle sensors a button", () => {
+		const plan: WiringPlan = {
+			components: [
+				component("joystick", "Joystick", { X_PIN: "A0", Y_PIN: "A1", SW_PIN: "2" }),
+				component("pir", "PIR", { PIN: "3" }),
+				component("obstacle_sensor", "IR", { PIN: "4" }),
+			],
+			warnings: [],
+		};
+		const parts = simParts(plan, state({ analog: { A1: 100 }, pressed: { "2": true, "4": true } }));
+		expect(parts.map((part) => [part.kind, part.detail ?? ""])).toEqual([
+			["slider", "sim.joystick_x"],
+			["slider", "sim.joystick_y"],
+			["button", "sim.joystick_press"],
+			["button", ""],
+			["button", ""],
+		]);
+		expect(new Set(parts.map((part) => part.key)).size).toBe(5); // React keys stay unique
+		expect(parts[0]).toMatchObject({ pin: "A0", value: 512 });
+		expect(parts[1]).toMatchObject({ pin: "A1", value: 100 });
+		expect(parts[2]).toMatchObject({ pin: "2", pressed: true });
+		expect(parts[3]).toMatchObject({ pin: "3", pressed: false, action: "move" });
+		expect(parts[4]).toMatchObject({ pin: "4", pressed: true, action: "near" });
+	});
+
 	it("lists the output pins in the board's order", () => {
 		const pins = outputPins(
 			state({

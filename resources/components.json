@@ -57,6 +57,37 @@
         { "pin": { "fr": "patte 2", "en": "leg 2" }, "to": "GND", "via": { "fr": "résistance 10 kΩ", "en": "10 kΩ resistor" }, "short": "2" }
       ]
     },
+    "joystick": {
+      "name": { "fr": "Joystick (KY-023)", "en": "Joystick (KY-023)" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "+5V", "en": "+5V" }, "to": "VCC" },
+        { "pin": { "fr": "VRx", "en": "VRx" }, "to": "X_PIN" },
+        { "pin": { "fr": "VRy", "en": "VRy" }, "to": "Y_PIN" },
+        { "pin": { "fr": "SW", "en": "SW" }, "to": "SW_PIN" }
+      ],
+      "note": { "fr": "Pas de résistance pour SW : la carte utilise sa résistance de pull-up interne.", "en": "No resistor for SW: the board uses its internal pull-up resistor." }
+    },
+    "pir": {
+      "name": { "fr": "Capteur de mouvement PIR (HC-SR501)", "en": "PIR motion sensor (HC-SR501)" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "OUT", "en": "OUT" }, "to": "PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ],
+      "note": { "fr": "Il met environ une minute à se régler après le branchement.", "en": "It takes about a minute to settle after it is powered." }
+    },
+    "obstacle_sensor": {
+      "name": { "fr": "Capteur d'obstacle infrarouge (FC-51)", "en": "Infrared obstacle sensor (FC-51)" },
+      "current": 20,
+      "connections": [
+        { "pin": { "fr": "OUT", "en": "OUT" }, "to": "PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "VCC" }
+      ]
+    },
     "ultrasonic": {
       "name": { "fr": "Capteur de distance HC-SR04", "en": "HC-SR04 distance sensor" },
       "current": 15,

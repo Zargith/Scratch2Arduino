@@ -370,6 +370,36 @@ TEST(Codegen, KeepsTheInputsOfFunctionsInGlobalsWhenScriptsRunSideBySide) {
     }
 }
 
+TEST(Codegen, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
+    const auto with = [](Block result, std::map<std::string, std::string> fields) {
+        result.fields = std::move(fields);
+        return result;
+    };
+    const auto lightIf = [&](const char* id, Block condition) {
+        Block test = block(id, "control_if");
+        test.inputs["CONDITION"].block = std::move(condition);
+        test.statements["SUBSTACK"] = {led(std::string(id) + "led", "ON")};
+        return test;
+    };
+    Block axis = with(block("x", "sensors_joystick"), {{"AXIS", "Y"}, {"X_PIN", "A0"}, {"Y_PIN", "A1"}, {"SW_PIN", "2"}});
+    Block print = block("print", "serial_print");
+    print.inputs["VALUE"].block = axis;
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), print,
+                             lightIf("left", with(block("l", "sensors_joystick_direction"), {{"DIRECTION", "LEFT"}})),
+                             lightIf("down", with(block("d", "sensors_joystick_direction"), {{"DIRECTION", "DOWN"}})),
+                             lightIf("press", block("p", "sensors_joystick_pressed")),
+                             lightIf("motion", with(block("m", "sensors_motion"), {{"PIN", "3"}})),
+                             lightIf("near", with(block("o", "sensors_obstacle"), {{"PIN", "4"}}))}))
+            .source;
+    for (const char* expected : {"(analogRead(A1) * 100.0 / 1023.0)", "if (analogRead(A0) < 256) {",
+                                 "if (analogRead(A1) > 767) {", "if (digitalRead(2) == LOW) {",
+                                 "if (digitalRead(3) == HIGH) {", "if (digitalRead(4) == LOW) {",
+                                 "pinMode(2, INPUT_PULLUP);", "pinMode(3, INPUT);", "pinMode(4, INPUT_PULLUP);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+}
+
 TEST(Codegen, UsesComponentLibraries) {
     Block temperature = block("t", "sensors_temperature");
     temperature.fields = {{"MODEL", "DHT22"}, {"PIN", "3"}};

@@ -574,6 +574,20 @@ std::vector<CheckedInput> inputsOf(const project::Project& project, const BlockC
                 if (const int pin = pinOf(block, "PIN"); pin >= 0) {
                     add(CheckedInput::Kind::Analog, pin, block);
                 }
+            } else if (type == "sensors_joystick" || type == "sensors_joystick_direction") {
+                for (const char* axis : {"X_PIN", "Y_PIN"}) {
+                    if (const int pin = pinOf(block, axis); pin >= 0) {
+                        add(CheckedInput::Kind::Analog, pin, block);
+                    }
+                }
+            } else if (type == "sensors_joystick_pressed") {
+                if (const int pin = pinOf(block, "SW_PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Button, pin, block).pullUp = true;
+                }
+            } else if (type == "sensors_motion" || type == "sensors_obstacle") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Digital, pin, block).pullUp = type == "sensors_obstacle";
+                }
             } else if (type == "sensors_distance") {
                 const int trig = pinOf(block, "TRIG_PIN");
                 const int echo = pinOf(block, "ECHO_PIN");
@@ -956,6 +970,40 @@ double Interpreter::evaluate(const Block& block) {
         const double percent = pins_.analogRead(number) * 100.0 / 1023.0;
         record(number, percent);
         return percent;
+    }
+    if (type == "sensors_joystick" || type == "sensors_joystick_direction") {
+        const std::string direction = field(block, "DIRECTION");
+        const bool horizontal = type == "sensors_joystick" ? field(block, "AXIS") != "Y"
+                                                           : direction == "LEFT" || direction == "RIGHT";
+        const int number = pin(block, horizontal ? "X_PIN" : "Y_PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const int value = pins_.analogRead(number);
+        record(number, value * 100.0 / 1023.0);
+        if (type == "sensors_joystick") {
+            return value * 100.0 / 1023.0;
+        }
+        return (direction == "LEFT" || direction == "UP" ? value < 256 : value > 767) ? 1 : 0;
+    }
+    if (type == "sensors_joystick_pressed" || type == "sensors_obstacle") {
+        // Both pull their pin LOW: the joystick button to GND, the sensor when something is in front.
+        const int number = pin(block, type == "sensors_obstacle" ? "PIN" : "SW_PIN", PinMode::InputPullup);
+        if (number < 0) {
+            return 0;
+        }
+        const bool low = !pins_.digitalRead(number);
+        record(number, low ? 1 : 0);
+        return low ? 1 : 0;
+    }
+    if (type == "sensors_motion") {
+        const int number = pin(block, "PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const bool high = pins_.digitalRead(number);
+        record(number, high ? 1 : 0);
+        return high ? 1 : 0;
     }
     if (type == "sensors_distance") {
         const int trig = pinNumber(block, "TRIG_PIN");
