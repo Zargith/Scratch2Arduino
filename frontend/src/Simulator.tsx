@@ -16,6 +16,8 @@ interface SimulatorProps {
 	phone: boolean;
 	t(key: MessageKey, params?: Record<string, string>): string;
 	onInput(...input: SimInput): void;
+	/** CSS height its parts may take before they scroll (smaller when other panels are open). */
+	maxHeight?: string;
 }
 
 const ledColor = (level: number) => `rgba(255, 64, 64, ${0.15 + (0.85 * level) / 255})`;
@@ -145,7 +147,7 @@ function useBuzzer(frequency: number, muted: boolean) {
 	);
 }
 
-export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
+export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60dvh - 90px)" }: SimulatorProps) {
 	const [muted, setMuted] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
@@ -323,7 +325,8 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 			<Text size="xs" c="dimmed" mb="xs">
 				{t("sim.help")}
 			</Text>
-			<Stack gap="xs" style={{ maxHeight: "calc(60dvh - 90px)", overflowY: "auto" }}>
+			{/* Room around the parts (and the same width taken back): a scrolling area crops the glow of the LEDs. */}
+			<Stack gap="xs" style={{ maxHeight, overflowY: "auto", padding: 14, margin: -14 }}>
 				{parts.length === 0 && pins.length === 0 && (
 					<Text size="sm" c="dimmed">
 						{t("sim.empty")}
