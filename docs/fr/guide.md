@@ -104,7 +104,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Événements | Le départ du programme | quand le programme démarre |
 | Contrôle | Attendre, répéter, choisir | attendre 1 secondes, répéter 10 fois, répéter indéfiniment, si ... alors ... sinon, attendre jusqu'à ce que |
 | Broches | Les broches de la carte | allumer la LED intégrée, mettre la broche 13 à l'état HAUT, la broche 2 est à l'état HAUT, valeur analogique de la broche A0, mettre la sortie PWM de la broche 9 à 128 |
-| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22) |
+| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22), joystick (position, direction, enfoncé), mouvement vu par un capteur PIR, obstacle devant un capteur infrarouge |
 | Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8x8 (MAX7219) |
 | Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
 | Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D) |

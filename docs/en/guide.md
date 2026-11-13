@@ -98,7 +98,7 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Events | Where the program starts | when the program starts |
 | Control | Wait, repeat, choose | wait 1 seconds, repeat 10 times, forever, if ... then ... else, wait until |
 | Pins | The board's pins | turn the built-in LED on, set pin 13 to HIGH, pin 2 is HIGH, analog value of pin A0, set PWM output of pin 9 to 128 |
-| Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22) |
+| Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22), joystick (position, direction, pressed down), motion seen by a PIR sensor, obstacle in front of an infrared sensor |
 | Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8x8 LED matrix (MAX7219) |
 | Sound | The buzzer | play 440 Hz for 1 seconds, start / stop the buzzer, note C4 |
 | Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D) |
