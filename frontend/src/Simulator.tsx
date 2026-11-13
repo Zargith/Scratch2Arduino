@@ -5,8 +5,9 @@ import { IconCpu, IconPropeller, IconSend, IconVolume, IconVolumeOff } from "@ta
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { SimInput, SimState, WiringPlan } from "@/bridge";
+import { FoldButton } from "@/FoldButton";
 import type { MessageKey } from "@/i18n";
-import { outputPins, percent, simParts, type SimPart } from "@/simulation";
+import { boardPins, keptBoardPins, percent, simParts, type BoardPin, type SimPart } from "@/simulation";
 import "./Simulator.css";
 
 interface SimulatorProps {
@@ -16,7 +17,17 @@ interface SimulatorProps {
 	phone: boolean;
 	t(key: MessageKey, params?: Record<string, string>): string;
 	onInput(...input: SimInput): void;
+	/** CSS height its parts may take before they scroll (smaller when other panels are open). */
+	maxHeight?: string;
+	/**
+	 * Beside the interactive diagram: only the inputs that cannot be used on a drawing (sliders,
+	 * distances, temperatures), the board's pins and the phone; the rest is on the diagram.
+	 */
+	controlsOnly?: boolean;
 }
+
+/** Inputs set with a control (the others are used on the diagram of the virtual board). */
+export const isControl = (part: SimPart): boolean => part.kind === "slider" || part.kind === "distance" || part.kind === "climate";
 
 const ledColor = (level: number) => `rgba(255, 64, 64, ${0.15 + (0.85 * level) / 255})`;
 
@@ -92,6 +103,64 @@ function Servo({ angle, label }: { angle: number; label: string }) {
 	);
 }
 
+/** A stepper motor seen from above: its shaft with a mark that shows the angle turned. */
+function Stepper({ angle, label }: { angle: number; label: string }) {
+	const radians = ((angle - 90) * Math.PI) / 180;
+	return (
+		<svg width={34} height={34} role="img" aria-label={label}>
+			<circle cx={17} cy={17} r={15} fill="var(--mantine-color-gray-2)" stroke="var(--mantine-color-gray-6)" strokeWidth={2} />
+			<line
+				x1={17}
+				y1={17}
+				x2={17 + 12 * Math.cos(radians)}
+				y2={17 + 12 * Math.sin(radians)}
+				stroke="var(--mantine-color-orange-6)"
+				strokeWidth={4}
+				strokeLinecap="round"
+			/>
+			<circle cx={17} cy={17} r={3} fill="var(--mantine-color-gray-8)" />
+		</svg>
+	);
+}
+
+/** The look of a board pin: an LED for an output, a speaker for a sound, a square lit when an input is high, a gauge for an analog input. */
+function PinState({ pin, label }: { pin: BoardPin; label: string }) {
+	switch (pin.kind) {
+		case "output":
+			return <Led level={pin.level} size={12} label={label} />;
+		case "tone":
+			return pin.frequency > 0 ? (
+				<IconVolume size={14} color="var(--mantine-color-orange-6)" aria-label={label} />
+			) : (
+				<IconVolumeOff size={14} color="var(--mantine-color-gray-5)" aria-label={label} />
+			);
+		case "input":
+			return (
+				<span
+					role="img"
+					aria-label={label}
+					style={{
+						width: 12,
+						height: 12,
+						borderRadius: 2,
+						border: "2px solid var(--mantine-color-teal-6)",
+						background: pin.high ? "var(--mantine-color-teal-6)" : "transparent",
+					}}
+				/>
+			);
+		case "analog":
+			return (
+				<span
+					role="img"
+					aria-label={label}
+					style={{ width: 22, height: 6, borderRadius: 3, background: "var(--mantine-color-gray-3)", overflow: "hidden", marginBlock: 3 }}
+				>
+					<span style={{ display: "block", height: "100%", width: `${(pin.value * 100) / 1023}%`, background: "var(--mantine-color-blue-6)" }} />
+				</span>
+			);
+	}
+}
+
 /** The sound of the buzzers, with the browser's audio (a square wave, quiet). */
 function useBuzzer(frequency: number, muted: boolean) {
 	const audio = useRef<{ context: AudioContext; oscillator: OscillatorNode; gain: GainNode } | null>(null);
@@ -125,15 +194,38 @@ function useBuzzer(frequency: number, muted: boolean) {
 	);
 }
 
-export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
+export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60dvh - 90px)", controlsOnly = false }: SimulatorProps) {
 	const [muted, setMuted] = useState(false);
+	/** The side card folded to its title bar (the sound goes on). */
+	const [folded, setFolded] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
-	const pins = outputPins(state);
+	/** Pins used since Live started: they keep their place (see keptBoardPins). */
+	const seenPins = useRef(new Map<string, BoardPin>());
+	const pins = keptBoardPins(boardPins(state), seenPins.current);
 	const sounding = parts.find((part) => part.kind === "buzzer" && part.frequency > 0);
 	useBuzzer(sounding?.kind === "buzzer" ? sounding.frequency : (Object.values(state?.tones ?? {})[0] ?? 0), muted);
 
 	const pinLabel = (pin: string) => t("sim.pin", { pin });
+	/** What a board pin does now, in a few characters: "PWM 128", "440 Hz", "HAUT", "512". */
+	const pinValue = (pin: BoardPin): string => {
+		switch (pin.kind) {
+			case "output":
+				return pin.pwm ? `PWM ${pin.level}` : t(pin.level > 0 ? "sim.high" : "sim.low");
+			case "tone":
+				return pin.frequency > 0 ? `${pin.frequency} Hz` : t("sim.silent");
+			case "input":
+				return t(pin.high ? "sim.high" : "sim.low");
+			case "analog":
+				return String(pin.value);
+		}
+	};
+	const pinTip = (pin: BoardPin): string =>
+		t(pin.kind === "output" ? "sim.pin_output" : pin.kind === "tone" ? "sim.pin_tone" : pin.kind === "analog" ? "sim.pin_analog" : pin.pullup ? "sim.pin_pullup" : "sim.pin_input", {
+			pin: pin.pin,
+			value: pinValue(pin),
+		});
+	const title = (part: SimPart) => (part.detail ? `${part.name}: ${t(part.detail)}` : part.name);
 	const widget = (part: SimPart): ReactNode => {
 		switch (part.kind) {
 			case "led":
@@ -167,7 +259,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						}}
 						onKeyUp={() => onInput("press", part.pin, false)}
 					>
-						{t("sim.press")}
+						{t(part.action === "move" ? "sim.move" : part.action === "near" ? "sim.near" : "sim.press")}
 					</Button>
 				);
 			case "slider":
@@ -177,7 +269,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						min={0}
 						max={1023}
 						label={(value) => (part.sensor === "analog" ? String(value) : `${percent(value)} %`)}
-						ariaLabel={part.name}
+						ariaLabel={title(part)}
 						onChange={(value) => onInput("analog", part.pin, value)}
 					/>
 				);
@@ -200,6 +292,28 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						{part.frequency > 0 ? `${part.frequency} Hz` : t("sim.silent")}
 					</Text>
 				);
+			case "digits":
+				return (
+					<Text
+						ff="monospace"
+						fw={700}
+						size="lg"
+						role="img"
+						aria-label={`${part.name}: ${part.text.trim() || "-"}`}
+						style={{ background: "#212121", color: "#FF1744", padding: "0 8px", borderRadius: 4, letterSpacing: 4, whiteSpace: "pre" }}
+					>
+						{part.text.padStart(4, " ") || "    "}
+					</Text>
+				);
+			case "stepper": {
+				const degrees = Math.round(part.angle);
+				return (
+					<Group gap={6} wrap="nowrap">
+						<Stepper angle={part.angle} label={`${part.name}: ${degrees}°`} />
+						<Text size="sm">{degrees}°</Text>
+					</Group>
+				);
+			}
 			case "servo":
 				return (
 					<Group gap={6} wrap="nowrap">
@@ -254,10 +368,17 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 		}
 	};
 	/** Screens, strips and matrices are wide: below their name rather than beside it. */
+	const shown = controlsOnly ? parts.filter(isControl) : parts;
 	const below = (part: SimPart) => part.kind === "screen" || part.kind === "matrix" || part.kind === "strip" || part.kind === "climate";
 
 	return (
-		<Card withBorder shadow="sm" w={360} style={{ borderColor: "var(--mantine-color-teal-6)" }}>
+		<Card
+			withBorder={!controlsOnly}
+			shadow={controlsOnly ? undefined : "sm"}
+			w={controlsOnly ? "100%" : 360}
+			p={controlsOnly ? "xs" : undefined}
+			style={{ borderColor: "var(--mantine-color-teal-6)" }}
+		>
 			<Group justify="space-between" wrap="nowrap" mb={4}>
 				<Group gap={6} wrap="nowrap">
 					<IconCpu size={18} color="var(--mantine-color-teal-7)" />
@@ -276,26 +397,36 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						{muted ? <IconVolumeOff size={16} /> : <IconVolume size={16} />}
 					</ActionIcon>
 				</Tooltip>
+				{!controlsOnly && <FoldButton folded={folded} onToggle={() => setFolded(!folded)} t={t} />}
 			</Group>
-			<Text size="xs" c="dimmed" mb="xs">
-				{t("sim.help")}
-			</Text>
-			<Stack gap="xs" style={{ maxHeight: "calc(60dvh - 90px)", overflowY: "auto" }}>
-				{parts.length === 0 && pins.length === 0 && (
+			<div style={{ display: folded ? "none" : "block" }}>
+			{!controlsOnly && (
+				<Text size="xs" c="dimmed" mb="xs">
+					{t("sim.help")}
+				</Text>
+			)}
+			{/* Room around the parts (and the same width taken back): a scrolling area crops the glow of the LEDs. */}
+			<Stack gap="xs" style={{ maxHeight, overflowY: "auto", padding: 14, margin: -14 }}>
+				{controlsOnly && shown.length === 0 && (
+					<Text size="sm" c="dimmed">
+						{t("sim.on_diagram")}
+					</Text>
+				)}
+				{!controlsOnly && parts.length === 0 && pins.length === 0 && (
 					<Text size="sm" c="dimmed">
 						{t("sim.empty")}
 					</Text>
 				)}
-				{parts.map((part) =>
+				{shown.map((part) =>
 					below(part) ? (
 						<Stack key={part.key} gap={4}>
-							<Text size="sm">{part.name}</Text>
+							<Text size="sm">{title(part)}</Text>
 							{widget(part)}
 						</Stack>
 					) : (
 						<Group key={part.key} justify="space-between" gap="sm" wrap="nowrap">
 							<Text size="sm" truncate style={{ flex: part.kind === "slider" || part.kind === "distance" ? "0 0 45%" : 1 }}>
-								{part.name}
+								{title(part)}
 							</Text>
 							{widget(part)}
 						</Group>
@@ -307,11 +438,18 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 							{t("sim.pins")}
 						</Text>
 						<Group gap="xs">
-							{pins.map(({ pin, level }) => (
-								<Stack key={pin} gap={0} align="center">
-									<Led level={level} size={12} label={pinLabel(pin)} />
-									<Text size="xs">{pin}</Text>
-								</Stack>
+							{pins.map((pin) => (
+								<Tooltip key={pin.pin} label={pinTip(pin)}>
+									<Stack gap={0} align="center" miw={34}>
+										<PinState pin={pin} label={pinTip(pin)} />
+										<Text size="xs" fw={500}>
+											{pin.pin}
+										</Text>
+										<Text size="10px" c="dimmed">
+											{pinValue(pin)}
+										</Text>
+									</Stack>
+								</Tooltip>
 							))}
 						</Group>
 					</Stack>
@@ -349,6 +487,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 					</Stack>
 				)}
 			</Stack>
+			</div>
 		</Card>
 	);
 }

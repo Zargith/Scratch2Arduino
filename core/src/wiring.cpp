@@ -48,6 +48,7 @@ public:
     }
 
     Plan finish() {
+        mergeGenericInputs();
         warnPins();
         warnPower();
         return std::move(plan_);
@@ -158,6 +159,66 @@ private:
     }
 
     const Component& byKey(const std::string& key) const { return plan_.components.at(index_.at(key)); }
+
+    /// The board pin of a component's signal (its first connection to a block's pin), "" when none.
+    static std::string signalPin(const Component& component) {
+        for (const Connection& wire : component.connections) {
+            if (!isPower(wire.role)) {
+                return wire.boardPin;
+            }
+        }
+        return {};
+    }
+
+    /// A pin only set as an input ("set pin ... as input") or read by "pin ... is HIGH" / "analog value
+    /// of pin ..." is a generic input; when another component (a button, a potentiometer...) uses the
+    /// same pin, it is that component: one part, drawn once, with the blocks of both.
+    void mergeGenericInputs() {
+        std::map<std::size_t, std::string> keys;
+        for (const auto& [key, at] : index_) {
+            keys[at] = key;
+        }
+        const auto generic = [](const Component& component) {
+            return component.kind == "input" || component.kind == "analog_input";
+        };
+        std::set<std::size_t> merged;
+        for (std::size_t i = 0; i < plan_.components.size(); ++i) {
+            const Component& input = plan_.components[i];
+            const std::string pin = signalPin(input);
+            if (!generic(input) || pin.empty()) {
+                continue;
+            }
+            for (std::size_t j = 0; j < plan_.components.size(); ++j) {
+                Component& other = plan_.components[j];
+                const bool samePin = std::any_of(other.connections.begin(), other.connections.end(), [&](const Connection& wire) {
+                    return !isPower(wire.role) && wire.boardPin == pin;
+                });
+                if (j != i && !generic(other) && samePin) {
+                    other.blockIds.insert(other.blockIds.end(), input.blockIds.begin(), input.blockIds.end());
+                    merged.insert(i);
+                    break;
+                }
+            }
+        }
+        if (merged.empty()) {
+            return;
+        }
+        std::vector<Component> kept;
+        index_.clear();
+        for (std::size_t i = 0; i < plan_.components.size(); ++i) {
+            if (merged.count(i) != 0) {
+                for (auto& [pin, users] : signals_) {
+                    for (auto user = users.begin(); user != users.end();) {
+                        user = user->first == keys[i] ? users.erase(user) : std::next(user);
+                    }
+                }
+                continue;
+            }
+            index_[keys[i]] = kept.size();
+            kept.push_back(std::move(plan_.components[i]));
+        }
+        plan_.components = std::move(kept);
+    }
 
     void warnPins() {
         for (const auto& [pin, legs] : signals_) {

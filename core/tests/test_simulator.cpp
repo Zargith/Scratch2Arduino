@@ -77,6 +77,19 @@ TEST(Simulator, DrivesOutputsLikeTheFirmware) {
     EXPECT_EQ(state.matrices["12"][0], 0x81);
     EXPECT_EQ(state.phone, std::vector<std::string>{"salut"});
 
+    link.digits(4, 5, 42);
+    EXPECT_EQ(board->state().digits["4"], "  42");
+    link.digits(4, 5, -12345);
+    EXPECT_EQ(board->state().digits["4"], "----");
+    link.digits(4, 5, std::nullopt);
+    EXPECT_EQ(board->state().digits["4"], "");
+    link.stepper({8, 9, 10, 11}, 512, 10); // a quarter of a turn
+    link.stepper({8, 9, 10, 11}, -1024, 15);
+    state = board->state();
+    EXPECT_DOUBLE_EQ(state.steppers["8"], -90);
+    EXPECT_EQ(state.modes["11"], "output");
+    EXPECT_EQ(state.outputs["11"].level, 0); // coils off after the move
+
     link.tone(8, 0, 0);
     EXPECT_TRUE(board->state().tones.empty());
     link.reset(); // Live mode stopped: everything off

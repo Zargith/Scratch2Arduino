@@ -119,7 +119,7 @@ std::optional<ArgKind> parseKind(std::string_view text) {
     static const std::map<std::string_view, ArgKind> kinds{
         {"number", ArgKind::Number},     {"text", ArgKind::Text},         {"boolean", ArgKind::Boolean},
         {"pin", ArgKind::Pin},           {"dropdown", ArgKind::Dropdown}, {"variable", ArgKind::Variable}, {"function", ArgKind::Function},
-        {"statement", ArgKind::Statement}, {"usercode", ArgKind::UserCode}};
+        {"statement", ArgKind::Statement}, {"usercode", ArgKind::UserCode}, {"label", ArgKind::Label}};
     const auto it = kinds.find(text);
     return it != kinds.end() ? std::optional(it->second) : std::nullopt;
 }

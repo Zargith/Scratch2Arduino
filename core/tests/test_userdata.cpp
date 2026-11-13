@@ -145,7 +145,7 @@ s2a::project::Project group() {
     s2a::project::Project blocks;
     blocks.name = "groupe";
     blocks.variables.push_back({"v1", "score", 0});
-    blocks.functions.push_back({"f1", "flash"});
+    blocks.functions.push_back({"f1", "flash", {}});
     s2a::project::Block set;
     set.id = "b1";
     set.type = "variables_set";

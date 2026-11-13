@@ -410,6 +410,11 @@
                 "type": "functions_call",
                 "fields": {
                   "FUNCTION": "flash"
+                },
+                "inputs": {
+                  "ARG1": {
+                    "value": "0.1"
+                  }
                 }
               },
               {
@@ -852,7 +857,14 @@
           "type": "control_wait",
           "inputs": {
             "SECONDS": {
-              "value": "0.1"
+              "value": "0.1",
+              "block": {
+                "id": "flash_duration",
+                "type": "functions_parameter",
+                "fields": {
+                  "NAME": "durée"
+                }
+              }
             }
           }
         },
@@ -869,7 +881,10 @@
   "functions": [
     {
       "id": "flash",
-      "name": "flash"
+      "name": "flash",
+      "parameters": [
+        "durée"
+      ]
     }
   ]
 }

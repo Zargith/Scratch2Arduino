@@ -42,6 +42,7 @@ describe("settings window", () => {
 						language="fr"
 						t={t}
 						version="0.9.0"
+						board="Arduino Uno"
 						settings={{ language: "", checkUpdates: true, theme: "" }}
 						onLanguage={onLanguage}
 						onSettings={onSettings}
@@ -61,6 +62,14 @@ describe("settings window", () => {
 		expect(checkbox?.checked).toBe(true);
 		await act(async () => checkbox?.click());
 		expect(onSettings).toHaveBeenCalledWith({ language: "", checkUpdates: false, theme: "" });
+
+		const openUrl = vi.spyOn(bridge, "openUrl").mockResolvedValue(true);
+		const report = [...document.querySelectorAll("button")].find((item) => item.textContent === "Signaler un problème");
+		await act(async () => report?.click());
+		const url = new URL(openUrl.mock.calls[0]?.[0] ?? "");
+		expect(url.searchParams.get("body")).toContain("Scratch2Arduino version: 0.9.0");
+		expect(url.searchParams.get("body")).toContain("Board: Arduino Uno");
+		openUrl.mockRestore();
 		await act(async () => root.unmount());
 	});
 
@@ -81,6 +90,7 @@ describe("settings window", () => {
 						language="fr"
 						t={t}
 						version="0.9.0"
+						board="Arduino Uno"
 						settings={{ language: "", checkUpdates: true, theme: "" }}
 						onLanguage={() => undefined}
 						onSettings={() => undefined}

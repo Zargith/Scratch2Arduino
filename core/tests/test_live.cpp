@@ -42,6 +42,13 @@ struct FakePins final : s2a::live::Pins {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
     void servoWrite(int pin, int angle) override { log.push_back("S" + std::to_string(pin) + "=" + std::to_string(angle)); }
+    void digits(int clk, int dio, std::optional<long> number) override {
+        log.push_back("F" + std::to_string(clk) + "," + std::to_string(dio) + "=" + (number ? std::to_string(*number) : "-"));
+    }
+    void stepper(const std::array<int, 4>& pins, long steps, int rpm) override {
+        log.push_back("Q" + std::to_string(pins[0]) + "," + std::to_string(pins[1]) + "," + std::to_string(pins[2]) + "," +
+                      std::to_string(pins[3]) + "=" + std::to_string(steps) + "@" + std::to_string(rpm));
+    }
     double distance(int trig, int echo) override {
         log.push_back("U" + std::to_string(trig) + "/" + std::to_string(echo));
         return distanceCm;
@@ -323,12 +330,79 @@ TEST(Interpreter, ReadsSensors) {
     EXPECT_DOUBLE_EQ(interpreter.readings().at("A0"), 100);
 }
 
+TEST(Interpreter, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
+    FakePins pins;
+    pins.analogInputs[14] = 1023; // A0: pushed fully right
+    pins.analogInputs[15] = 100;  // A1: pushed up
+    pins.digitalInputs[2] = false; // SW pressed (to GND)
+    pins.digitalInputs[3] = true;  // PIR: motion
+    pins.digitalInputs[4] = true;  // obstacle sensor: nothing in front (HIGH)
+    const auto set = [](const char* id, const char* variable, Block value) {
+        Block result = block(id, "variables_set");
+        result.fields["VARIABLE"] = variable;
+        result.inputs["VALUE"].block = std::move(value);
+        return result;
+    };
+    const auto joystick = [](const char* id, const char* type, std::map<std::string, std::string> fields) {
+        Block result = block(id, type);
+        result.fields = std::move(fields);
+        result.fields.insert({{"X_PIN", "A0"}, {"Y_PIN", "A1"}, {"SW_PIN", "2"}});
+        return result;
+    };
+    Block motion = block("m", "sensors_motion");
+    motion.fields["PIN"] = "3";
+    Block obstacle = block("o", "sensors_obstacle");
+    obstacle.fields["PIN"] = "4";
+    Project project = withScript({block("hat", "events_when_program_starts"),
+                                  set("s1", "x", joystick("j1", "sensors_joystick", {{"AXIS", "X"}})),
+                                  set("s2", "up", joystick("j2", "sensors_joystick_direction", {{"DIRECTION", "UP"}})),
+                                  set("s3", "left", joystick("j3", "sensors_joystick_direction", {{"DIRECTION", "LEFT"}})),
+                                  set("s4", "sw", joystick("j4", "sensors_joystick_pressed", {})),
+                                  set("s5", "motion", motion), set("s6", "near", obstacle)});
+    project.variables = {{"x", "x", 0}, {"up", "up", 0}, {"left", "left", 0}, {"sw", "sw", 0}, {"motion", "motion", 0}, {"near", "near", 0}};
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("x"), 100);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("up"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("left"), 0);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("sw"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("motion"), 1);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("near"), 0);
+    const auto sent = pins.take();
+    for (const char* mode : {"M2U", "M3I", "M4U"}) {
+        EXPECT_NE(std::find(sent.begin(), sent.end(), mode), sent.end()) << mode;
+    }
+}
+
+TEST(Interpreter, ShowsNumbersOnTheFourDigitDisplay) {
+    FakePins pins;
+    Block show = block("show", "display_digits_show");
+    show.fields = {{"CLK_PIN", "6"}, {"DIO_PIN", "7"}};
+    show.inputs["VALUE"].value = "41.6";
+    Block clear = block("clear", "display_digits_clear");
+    clear.fields = {{"CLK_PIN", "6"}, {"DIO_PIN", "7"}};
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), show, clear}), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"F6,7=42", "F6,7=-"}));
+}
+
+TEST(Interpreter, TurnsAStepperMotorByDegrees) {
+    FakePins pins;
+    Block turn = block("turn", "motors_stepper_turn");
+    turn.fields = {{"IN1_PIN", "4"}, {"IN2_PIN", "5"}, {"IN3_PIN", "6"}, {"IN4_PIN", "7"}};
+    turn.inputs["DEGREES"].value = "-180";
+    turn.inputs["RPM"].value = "12";
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), turn}), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"Q4,5,6,7=-1024@12"}));
+}
+
 TEST(Interpreter, CallsFunctionsAndComesBack) {
     FakePins pins;
     Block call = block("call", "functions_call");
     call.fields["FUNCTION"] = "f";
     Project project = withScript({block("hat", "events_when_program_starts"), call, led("after", "OFF")});
-    project.functions = {{"f", "blink"}};
+    project.functions = {{"f", "blink", {}}};
     Block define = block("define", "functions_define");
     define.fields["FUNCTION"] = "f";
     project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "1")}});
@@ -342,6 +416,46 @@ TEST(Interpreter, CallsFunctionsAndComesBack) {
     interpreter.step(milliseconds(1000));
     EXPECT_EQ(pins.take(), (std::vector<std::string>{"D13=1", "D13=0"}));
     EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, GivesEachFunctionTheNumbersOfItsCall) {
+    FakePins pins;
+    const auto input = [](const char* id) {
+        Block result = block(id, "functions_parameter");
+        result.fields["NAME"] = "n";
+        return result;
+    };
+    const auto set = [](const char* id, const char* variable, Block value) {
+        Block result = block(id, "variables_set");
+        result.fields["VARIABLE"] = variable;
+        result.inputs["VALUE"].block = std::move(value);
+        return result;
+    };
+    // f(n): v = n, then g(n + 1); g(n): w = n. Each function reads its own "n".
+    Block plusOne = block("plus", "operators_add");
+    plusOne.inputs["NUM1"].block = input("n1");
+    plusOne.inputs["NUM2"].value = "1";
+    Block callG = block("callG", "functions_call");
+    callG.fields["FUNCTION"] = "g";
+    callG.inputs["ARG1"].block = plusOne;
+    Block callF = block("callF", "functions_call");
+    callF.fields["FUNCTION"] = "f";
+    callF.inputs["ARG1"].value = "4";
+    Project project = withScript({block("hat", "events_when_program_starts"), callF, set("after", "v2", input("n3"))});
+    project.variables = {{"v", "v", 0}, {"w", "w", 0}, {"v2", "v2", -1}};
+    project.functions = {{"f", "f", {"n"}}, {"g", "g", {"n"}}};
+    Block defineF = block("defineF", "functions_define");
+    defineF.fields["FUNCTION"] = "f";
+    Block defineG = block("defineG", "functions_define");
+    defineG.fields["FUNCTION"] = "g";
+    project.scripts.push_back({300, 0, {defineF, set("setV", "v", input("n0")), callG}});
+    project.scripts.push_back({600, 0, {defineG, set("setW", "w", input("n2"))}});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_TRUE(interpreter.finished());
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("v"), 4);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("w"), 5);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("v2"), 0) << "outside a function an input is 0";
 }
 
 TEST(Interpreter, DrivesScreensStripsAndMatrices) {

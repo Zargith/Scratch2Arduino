@@ -90,6 +90,52 @@ TEST(Wiring, MergesTheBlocksOfOneComponentAndIgnoresLooseBlocks) {
     EXPECT_EQ(plan.components[1].blockIds, std::vector<std::string>{"other"});
 }
 
+TEST(Wiring, AButtonSetAsAnInputIsOneComponent) {
+    // A 5-key piano: "set pin ... as input" in a function called at start, then "button of pin ... is
+    // pressed" for the same pins: five buttons, not five buttons and five generic inputs.
+    Stack blocks;
+    for (const char* pin : {"2", "3"}) {
+        blocks.push_back(block(std::string("mode") + pin, "pins_set_mode", {{"PIN", pin}, {"MODE", "INPUT"}}));
+        blocks.push_back(block(std::string("read") + pin, "pins_digital_read", {{"PIN", pin}, {"STATE", "LOW"}}));
+        blocks.push_back(block(std::string("button") + pin, "sensors_button_pressed", {{"PIN", pin}}));
+    }
+    blocks.push_back(block("alone", "pins_set_mode", {{"PIN", "7"}, {"MODE", "INPUT"}})); // nothing else on 7
+    const Plan plan = s2a::wiring::plan(program(std::move(blocks)), Language::English);
+    ASSERT_EQ(plan.components.size(), 3U);
+    EXPECT_EQ(plan.components[0].kind, "button");
+    EXPECT_EQ(plan.components[0].blockIds, (std::vector<std::string>{"button2", "mode2", "read2"}));
+    EXPECT_EQ(plan.components[1].kind, "button");
+    EXPECT_EQ(plan.components[2].kind, "input");
+    EXPECT_TRUE(plan.warnings.empty()) << plan.warnings.front().message;
+}
+
+TEST(Wiring, MakesOneJoystickOfItsThreeBlocks) {
+    const std::map<std::string, std::string> pins{{"X_PIN", "A2"}, {"Y_PIN", "A3"}, {"SW_PIN", "7"}};
+    auto with = [&](std::map<std::string, std::string> fields) {
+        fields.insert(pins.begin(), pins.end());
+        return fields;
+    };
+    const Plan plan = s2a::wiring::plan(program({block("x", "sensors_joystick", with({{"AXIS", "X"}})),
+                                                 block("up", "sensors_joystick_direction", with({{"DIRECTION", "UP"}})),
+                                                 block("sw", "sensors_joystick_pressed", with({})),
+                                                 block("pir", "sensors_motion", {{"PIN", "3"}}),
+                                                 block("ir", "sensors_obstacle", {{"PIN", "4"}})}),
+                                        Language::English);
+    ASSERT_EQ(plan.components.size(), 3U);
+    EXPECT_EQ(plan.components[0].kind, "joystick");
+    EXPECT_EQ(plan.components[0].blockIds, (std::vector<std::string>{"x", "up", "sw"}));
+    EXPECT_EQ(wires(plan.components[0]),
+              (std::vector<std::string>{"GND -> GND", "+5V -> 5V", "VRx -> A2", "VRy -> A3", "SW -> 7"}));
+    EXPECT_EQ(wires(plan.components[1]), (std::vector<std::string>{"VCC -> 5V", "OUT -> 3", "GND -> GND"}));
+    EXPECT_EQ(wires(plan.components[2]), (std::vector<std::string>{"OUT -> 4", "GND -> GND", "VCC -> 5V"}));
+    EXPECT_TRUE(plan.warnings.empty());
+    // Drawn as modules, without an unknown part.
+    const std::string svg = s2a::wiring::svg(plan, *s2a::BoardDatabase::builtin().find("uno"), "Test");
+    for (const char* label : {"PIR", "FC-51"}) {
+        EXPECT_NE(svg.find(label), std::string::npos) << label;
+    }
+}
+
 TEST(Wiring, WarnsAboutAPinUsedTwice) {
     const Plan plan = s2a::wiring::plan(
         program({block("led", "pins_digital_write", {{"PIN", "7"}, {"STATE", "HIGH"}}),

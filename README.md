@@ -109,11 +109,27 @@ Scratch2Arduino/
 [8 step-by-step tutorials](docs/en/README.md) - *en français : [guide d'utilisation](docs/fr/guide.md) et
 [tutoriels](docs/fr/README.md)*.
 
+Each [release](https://github.com/Zargith/Scratch2Arduino/releases) has an installer or a package for each
+system (step by step, with troubleshooting: part 1 of the [guide](docs/en/guide.md)):
+
+| System | File | How |
+|---|---|---|
+| Windows 10 / 11 | `Scratch2Arduino_installer.exe` | run it (*More info > Run anyway*: not signed yet) |
+| macOS, Apple chip | `Scratch2Arduino-<version>-macos-arm64.dmg` | drag the app to Applications; first time: *System Settings > Privacy & Security > Open Anyway* (signed ad hoc, not by Apple) |
+| Ubuntu 24.04+, Debian 13, Mint 22 | `scratch2arduino_<version>_amd64.deb` | `sudo apt install ./scratch2arduino_*_amd64.deb` |
+| Fedora 40+, openSUSE | `scratch2arduino-<version>-1.x86_64.rpm` | `sudo dnf install ./scratch2arduino-*.rpm` |
+| Others (Intel Mac, Arch, Raspberry Pi...) | *Source code* | `./Scratch2Arduino_installer.sh` (below) |
+
+The Linux packages install in `/usr` with a menu entry and a udev rule (`/usr/lib/udev/rules.d/60-scratch2arduino.rules`)
+that gives the logged-in user the serial ports of Arduino, CH340, CP210x, FTDI and Espressif boards: no `dialout`
+group needed. CI makes them with CPack (`cpack` in the build folder, `cmake/S2APackaging.cmake`) and installs
+them to check them before attaching them to the release.
+
 ### Windows
 
-Download **`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) and run it. It checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
+**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
 
-### Linux (and macOS)
+### Linux and macOS from the sources
 
 ```bash
 ./Scratch2Arduino_installer.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
@@ -183,6 +199,10 @@ Arduino IDE installed on the same computer.
 On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $USER`, then log out and back in.
 
 ### First project
+
+No board yet? Open **Tutorials and help** (the graduation cap) and start the **interactive tutorial** "My
+doorbell": a box guides you step by step through the blocks, the wiring diagram, the virtual board and a
+little C++ code translated into Python, and checks each step by itself.
 
 1. Plug in an Arduino Uno with a USB cable.
 2. Start **Scratch2Arduino**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
@@ -280,17 +300,17 @@ the wiring:
 
 | Category | Blocks |
 |---|---|
-| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity |
+| Sensors | button pressed (wired to GND, no resistor), potentiometer and light sensor (0 to 100), HC-SR04 ultrasonic distance in cm, DHT11/DHT22 temperature and humidity, KY-023 joystick (position 0 to 100 on each axis, pushed up/down/left/right, pressed down), HC-SR501 PIR motion sensor, FC-51 / KY-032 infrared obstacle sensor |
 | Lights | RGB LED in a named colour, or a red/green/blue mix (0 to 255); NeoPixel (WS2812) strip: whole strip or one LED; MAX7219 8x8 LED matrix: pictures and single dots |
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
-| Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D...) forward/backward at 0-100 %, stop |
-| Screens | write a text or a value on a line of a 16x2 LCD - with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4-D7 on the chosen pins, contrast set with a potentiometer on V0) - or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them) |
+| Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D...) forward/backward at 0-100 %, stop, 28BYJ-48 stepper motor (ULN2003 board) turned by an angle at 1-15 turns a minute |
+| Screens | write a text or a value on a line of a 16x2 LCD - with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4-D7 on the chosen pins, contrast set with a potentiometer on V0) - or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them); a whole number (-999 to 9999) on a TM1637 4-digit display |
 | Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone - over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"...) connected to the board "S2A-xxxx" |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a
 **wiring diagram** (breadboard picture) and its parts list, are presented in [`examples/`](examples/README.md):
-`button-led`, `servo-potentiometer`, `distance-alarm`, `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
+`button-led`, `joystick-leds`, `servo-potentiometer`, `distance-alarm`, `motion-alarm` (PIR sensor), `obstacle-alarm` (infrared obstacle sensor), `parking-barrier` (stepper motor), `countdown` (TM1637 4-digit display), `thermometer` (DHT11 + LCD), `reaction-game` (LED matrix, buzzer,
 button, score on the OLED) and `light-gauge` (NeoPixel strip driven by a potentiometer). For the ESP32: `esp32-dimmer`,
 `wireless-station` (Live mode over Wi-Fi or Bluetooth) and `phone-lamp` (the phone drives the lamp over
 Bluetooth while the computer follows in Live mode over Wi-Fi), and `remote-robot` (two motors on an L298N driven
@@ -324,6 +344,14 @@ The blocks of the function run, then the program goes on after the call. A funct
 own at start-up, and it cannot call itself (Check explains why). In the Arduino code, each function
 becomes a C++ function. Example: [`traffic-light`](examples/projects/traffic-light/project.json), with the
 functions *feu vert*, *feu orange* and *feu rouge*.
+
+A function can have up to 4 **inputs**: numbers given by each call (for instance *biper (fois) (durée)*,
+"beep (times) (length)"). Add them in the function window (**Make a function**, or right-click *define* or
+*call* -> **Edit the function**); renaming, reordering or removing an input updates every *call* and the
+input blocks inside the function. The *call* block gets one slot per input (one line each when there are
+several), and the Functions category lists an input block for each input, to use inside its function only
+(Check explains it otherwise). They are saved in `project.json` as `functions[].parameters`, and become C++
+parameters (`void s2a_function_biper(double arg_fois, double arg_duree)`).
 
 ### Serial monitor
 
@@ -377,6 +405,34 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 ## Languages
 
 The interface is available in **French (default)** and **English**. Translations live in JSON files, and contributions for other languages are welcome.
+
+## Tested on real hardware
+
+Everything is checked by the CI (build on Windows, Linux and macOS, unit tests with a fake board, compile of every
+example and of the Live firmware for each board), but only part of it has run on a real board so far.
+
+**Tested on a board** (Arduino Uno and Mega 2560, Windows):
+
+- upload from the editor and Live mode over USB (Live firmware flashed in one click);
+- LEDs, buttons, buzzer (passive), servo and potentiometer, HC-SR04 distance sensor, DHT11, 16-pin LCD (HD44780),
+  MAX7219 LED matrix;
+- the example projects Blink, Traffic light, Potentiometer and servo, Distance alarm, Thermometer (16-pin LCD) and
+  Reaction game.
+
+**Not tested yet** (help welcome: [report a problem](https://github.com/Zargith/Scratch2Arduino/issues/new/choose)
+or tell us it works):
+
+- boards: Arduino Nano, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
+- Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
+- components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
+  light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
+  obstacle sensor (FC-51 / KY-032);
+- example projects added since: Button and LED, Joystick and LEDs, Motion alarm, Obstacle detector, Remote robot
+  (ESP32 and Uno + HC-05), Phone lamp, Wireless station, ESP32 dimmer, and the "advanced" variants with "My code";
+- functions with inputs on a board (upload and Live);
+- Live mode features: step-by-step mode (Pause / Next block), the wiring check at start-up;
+- Python, JavaScript and C++ ("My code" and the whole-program code modes) on a board, the Arduino library manager
+  with a real C++ project.
 
 ## Contributing
 

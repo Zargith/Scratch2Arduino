@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { bridge, type OutputLine, hasHost } from "@/bridge";
 import type { Language } from "@/catalog";
+import { FoldButton } from "@/FoldButton";
 import type { MessageKey } from "@/i18n";
 
 const bauds = [9600, 19200, 57600, 115200];
@@ -32,6 +33,8 @@ interface SerialMonitorProps {
 
 export function SerialMonitor({ t, language, port, live, liveLines, busy, onError, onClose }: SerialMonitorProps) {
 	const [baud, setBaud] = useState(bauds[0] ?? 9600);
+	/** Folded to its title bar (the connection and the lines are kept). */
+	const [folded, setFolded] = useState(false);
 	/** The user wants to be connected (kept while an upload pauses the connection). */
 	const [wanted, setWanted] = useState(false);
 	const [connected, setConnected] = useState(false);
@@ -115,8 +118,12 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 				<Text fw={700} size="sm">
 					{t("monitor.title")}
 				</Text>
-				<CloseButton size="sm" aria-label={t("dialog.cancel")} onClick={onClose} />
+				<Group gap={4} wrap="nowrap">
+					<FoldButton folded={folded} onToggle={() => setFolded(!folded)} t={t} />
+					<CloseButton size="sm" aria-label={t("dialog.cancel")} onClick={onClose} />
+				</Group>
 			</Group>
+			<div style={{ display: folded ? "none" : "flex", flexDirection: "column", gap: 8 }}>
 			{live ? (
 				<Text size="xs" c="dimmed">
 					{t("monitor.live")}
@@ -197,6 +204,7 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 					</ActionIcon>
 				</Group>
 			)}
+			</div>
 		</Card>
 	);
 }

@@ -71,7 +71,7 @@ describe("virtual board panel", () => {
 		expect(text).toContain("Score 3");
 		expect(text).toContain("Broches de la carte");
 		expect(text).toContain("salut");
-		expect(container.querySelector('[aria-label="broche 13"]')).not.toBeNull();
+		expect(container.querySelector('[aria-label^="Broche 13 : sortie"]')).not.toBeNull();
 
 		const press = [...container.querySelectorAll("button")].find((button) => button.textContent === "Appuie");
 		expect(press).toBeDefined();

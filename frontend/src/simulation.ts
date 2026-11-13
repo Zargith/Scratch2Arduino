@@ -3,6 +3,7 @@
 // components of the project (its wiring plan) and the state of the virtual board into the parts
 // that the Simulator panel draws.
 import type { SimState, WiringPlan } from "@/bridge";
+import type { MessageKey } from "@/i18n";
 
 /** The "port" of the virtual board: the core recognises the "sim:" prefix. */
 export const SIM_PORT = "sim:board";
@@ -19,18 +20,25 @@ interface Base {
 	key: string;
 	/** Name of the component, in the user's language. */
 	name: string;
+	/** Which part of the component, when it has several (the axes of a joystick). */
+	detail?: MessageKey;
 }
 
 export type SimPart = Base &
 	(
 		| { kind: "led"; pin: string; level: number }
 		| { kind: "rgb"; color: [number, number, number] }
-		| { kind: "button"; pin: string; pressed: boolean }
+		/** action: what the button stands for (pressing it, moving in front of a PIR, a hand near a sensor). */
+		| { kind: "button"; pin: string; pressed: boolean; action?: "press" | "move" | "near" }
 		| { kind: "slider"; sensor: "potentiometer" | "light" | "analog"; pin: string; value: number }
 		| { kind: "distance"; pin: string; centimetres: number }
 		| { kind: "climate"; pin: string; temperature: number; humidity: number }
 		| { kind: "buzzer"; pin: string; frequency: number }
 		| { kind: "servo"; pin: string; angle: number }
+		/** angle: turned since Live started (degrees, may be negative or above 360). */
+		| { kind: "stepper"; pin: string; angle: number }
+		/** text: the 4 characters shown ("" when off). */
+		| { kind: "digits"; pin: string; text: string }
 		/** speed: -255 (backward) to 255 (forward). */
 		| { kind: "motor"; speed: number }
 		| { kind: "strip"; pin: string; colors: number[][] }
@@ -80,6 +88,22 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 			case "input":
 				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false });
 				break;
+			case "joystick":
+				for (const [role, detail] of [
+					["X_PIN", "sim.joystick_x"],
+					["Y_PIN", "sim.joystick_y"],
+				] as const) {
+					const axis = pin(role);
+					parts.push({ ...base, key: `${base.key}|${role}`, detail, kind: "slider", sensor: "potentiometer", pin: axis, value: now.analog[axis] ?? DEFAULT_ANALOG });
+				}
+				parts.push({ ...base, key: `${base.key}|SW_PIN`, detail: "sim.joystick_press", kind: "button", pin: pin("SW_PIN"), pressed: now.pressed[pin("SW_PIN")] ?? false });
+				break;
+			case "pir":
+				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false, action: "move" });
+				break;
+			case "obstacle_sensor":
+				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false, action: "near" });
+				break;
 			case "potentiometer":
 			case "light_sensor":
 			case "analog_input":
@@ -107,6 +131,16 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 			case "servo":
 				parts.push({ ...base, kind: "servo", pin: signal, angle: now.servos[signal] ?? 90 });
 				break;
+			case "tm1637": {
+				const clk = pin("CLK_PIN");
+				parts.push({ ...base, kind: "digits", pin: clk, text: now.digits?.[clk] ?? "" });
+				break;
+			}
+			case "stepper": {
+				const in1 = pin("IN1_PIN");
+				parts.push({ ...base, kind: "stepper", pin: in1, angle: now.steppers?.[in1] ?? 0 });
+				break;
+			}
 			case "dc_motor": {
 				const forward = level(pin("IN1_PIN")) > 0;
 				const backward = level(pin("IN2_PIN")) > 0;
@@ -138,13 +172,56 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 	return parts;
 }
 
-/** Pins set as outputs, in the board's order ("2" before "10", digital before "A0"): the small LEDs of the board. */
-export function outputPins(state: SimState | null): { pin: string; level: number }[] {
-	const order = (pin: string) =>
-		/^\d+$/.test(pin) ? Number(pin) : 1000 + pin.charCodeAt(0) * 100 + (Number(pin.slice(1)) || 0);
-	return Object.entries(state?.outputs ?? {})
-		.map(([pin, output]) => ({ pin, level: output.level }))
-		.sort((a, b) => order(a.pin) - order(b.pin));
+/** A pin the program uses, with what it does now (the "board pins" of the virtual board). */
+export type BoardPin =
+	| { pin: string; kind: "output"; level: number; pwm: boolean }
+	/** A buzzer sounding on the pin. */
+	| { pin: string; kind: "tone"; frequency: number }
+	/** A digital input: high or low (a button to GND with the pull-up reads low while pressed). */
+	| { pin: string; kind: "input"; high: boolean; pullup: boolean }
+	/** An analog input (A0, A1...): 0 to 1023. */
+	| { pin: string; kind: "analog"; value: number };
+
+const pinOrder = (pin: string) => (/^\d+$/.test(pin) ? Number(pin) : 1000 + pin.charCodeAt(0) * 100 + (Number(pin.slice(1)) || 0));
+
+/** Every pin the program uses (outputs, sounds, inputs), in the board's order ("2" before "10", digital before "A0"). */
+export function boardPins(state: SimState | null): BoardPin[] {
+	const now = state ?? EMPTY;
+	const pins = new Map<string, BoardPin>();
+	for (const [pin, mode] of Object.entries(now.modes)) {
+		if (mode === "output") continue; // with its level below
+		const pressed = now.pressed[pin] ?? false;
+		const analog = /^A\d+$/.test(pin);
+		pins.set(
+			pin,
+			analog && mode === "input"
+				? { pin, kind: "analog", value: now.analog[pin] ?? DEFAULT_ANALOG }
+				: { pin, kind: "input", high: mode === "pullup" ? !pressed : pressed, pullup: mode === "pullup" }
+		);
+	}
+	for (const [pin, output] of Object.entries(now.outputs)) pins.set(pin, { pin, kind: "output", level: output.level, pwm: output.pwm });
+	for (const [pin, frequency] of Object.entries(now.tones)) if (frequency > 0) pins.set(pin, { pin, kind: "tone", frequency });
+	return [...pins.values()].sort((a, b) => pinOrder(a.pin) - pinOrder(b.pin));
+}
+
+/**
+ * The board pins with those used earlier in this Live session kept in their place: a buzzer that
+ * stops sounding (its pin is free again) shows "silent" instead of leaving the list, so the pins do
+ * not come and go at each note. `seen` keeps what was seen (one map per Live session).
+ */
+export function keptBoardPins(now: BoardPin[], seen: Map<string, BoardPin>): BoardPin[] {
+	const shown = new Map(now.map((pin) => [pin.pin, pin] as const));
+	for (const [pin, before] of seen) {
+		if (shown.has(pin)) continue;
+		// No longer driven: an output or a sound is off now; an input keeps its last state.
+		shown.set(pin, before.kind === "tone" ? { ...before, frequency: 0 } : before.kind === "output" ? { ...before, level: 0 } : before);
+	}
+	for (const pin of now) {
+		// A pin that sounded stays a buzzer (playing a note sets it as an output for a while).
+		if (seen.get(pin.pin)?.kind === "tone" && pin.kind === "output") shown.set(pin.pin, { pin: pin.pin, kind: "tone", frequency: 0 });
+		else seen.set(pin.pin, pin);
+	}
+	return [...shown.values()].sort((a, b) => pinOrder(a.pin) - pinOrder(b.pin));
 }
 
 /** Whether the program uses the Phone blocks (the virtual phone is then shown). */

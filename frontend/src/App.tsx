@@ -20,6 +20,8 @@ import {
 	Tooltip,
 } from "@mantine/core";
 import {
+	IconArrowsMaximize,
+	IconArrowsMinimize,
 	IconBluetooth,
 	IconCheck,
 	IconDeviceFloppy,
@@ -41,7 +43,7 @@ import {
 	IconWifi,
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	bridge,
@@ -54,6 +56,7 @@ import {
 	type Port,
 	type RecentProject,
 	type Settings as SavedSettings,
+	type SimInput,
 	type SimState,
 	type WiringPlan,
 } from "@/bridge";
@@ -63,6 +66,7 @@ import { CodeView, type CodeTab } from "@/CodeView";
 import { Editor, type EditorHandle } from "@/Editor";
 import { type DocPath, docsHome, tutorialFor } from "@/docs";
 import { exampleProject, examples, type Example } from "@/examples";
+import { FoldButton } from "@/FoldButton";
 import { Gallery } from "@/Gallery";
 import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
@@ -81,10 +85,13 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
-import { isSimPort, SIM_PORT, usesPhone } from "@/simulation";
+import { isSimPort, SIM_PORT, simParts, usesPhone } from "@/simulation";
+import { SimBoard } from "@/SimBoard";
 import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
 import { findUpdate, platform, type Release } from "@/updates";
+import { Tour } from "@/tour/Tour";
+import { melodyCode, PROJECT_NAME, type TourContext, type TourStep } from "@/tour/steps";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
@@ -202,6 +209,12 @@ export function App() {
 	/** Simulation (Live mode on the virtual board): what it shows, and the components of the blocks. */
 	const [simState, setSimState] = useState<SimState | null>(null);
 	const [simPlan, setSimPlan] = useState<WiringPlan | null>(null);
+	/** The virtual board's panel (at the bottom) takes most of the window. */
+	const [boardExpanded, setBoardExpanded] = useState(false);
+	/** The virtual board's panel folded to its title bar (the board keeps running). */
+	const [boardFolded, setBoardFolded] = useState(false);
+	/** The live values card folded to its title bar (it stays within reach). */
+	const [valuesFolded, setValuesFolded] = useState(false);
 	/** The blocks use the Phone blocks: the virtual phone is shown. */
 	const [simPhone, setSimPhone] = useState(false);
 	/** The wiring hints of this Live session were closed by the user. */
@@ -210,6 +223,8 @@ export function App() {
 	const [livePaused, setLivePaused] = useState(false);
 	/** The output panel opened by itself once in this Live session (at the first printed line). */
 	const outputShown = useRef(false);
+	/** Live message on screen: shown again only when it changes (once closed, it stays closed). */
+	const liveMessage = useRef("");
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
@@ -236,6 +251,12 @@ export function App() {
 	const [librariesShown, setLibrariesShown] = useState(false);
 	/** Unsaved work found at start-up, offered back to the user. */
 	const [restore, setRestore] = useState<AutosavedProject | null>(null);
+	/** Interactive tutorial: the step shown, null when it is closed. */
+	const [tourStep, setTourStep] = useState<number | null>(null);
+	/** Changes of the blocks, counted while the tutorial is open (its steps look at the project). */
+	const [tourEdits, setTourEdits] = useState(0);
+	/** Successful checks and uploads: a step of the tutorial waits for one. */
+	const [checks, setChecks] = useState(0);
 	/** Edits made so far, and how many the last autosave holds. */
 	const edits = useRef(0);
 	const autosavedEdits = useRef(0);
@@ -306,6 +327,8 @@ export function App() {
 		},
 		[t]
 	);
+	/** A change made on the virtual board (a button held, a slider moved): stable, the diagram keeps it. */
+	const simInput = useCallback((...input: SimInput) => void bridge.simInput(...input).catch(fail), [fail]);
 
 	/** Recreate the editor from a project (open, new) or from the current blocks (language). */
 	const reload = useCallback((state: WorkspaceState) => {
@@ -405,6 +428,39 @@ export function App() {
 		forgetAutosave();
 		loadProgram(starterProject(untitled));
 		reload(projectToWorkspace(starterProject(untitled)));
+	};
+
+	/** Starts the interactive tutorial on a new project (the current one is kept if the user says no). */
+	const startTour = () => {
+		if (dirty && !window.confirm(t("confirm.new"))) return;
+		setGalleryShown(false);
+		setTutorialPage(null);
+		const projectName = PROJECT_NAME[language];
+		initialValues.current = {};
+		setName(projectName);
+		setPath("");
+		setDirty(false);
+		setStatus(null);
+		setExample(null);
+		forgetAutosave();
+		loadProgram(starterProject(projectName));
+		reload(projectToWorkspace(starterProject(projectName)));
+		if (view === "code") void showBlocksView();
+		setTourEdits(0);
+		setTourStep(0);
+	};
+
+	/** The button of a tutorial step: writes the melodie() function in "My code" (C++) and shows it. */
+	const tourAction = (action: NonNullable<TourStep["action"]>["run"]) => {
+		if (action !== "insert-melody") return;
+		const current = userCodeRef.current;
+		const kept = current && current.language === "cpp" && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		const code = melodyCode(language);
+		userCodeRef.current = { language: "cpp", code: kept ? `${current.code.trimEnd()}\n\n${code}` : code };
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		markDirty();
+		void showCodeView("mine");
 	};
 
 	const openExample = (chosen: Example) => {
@@ -846,6 +902,7 @@ export function App() {
 				message: warning ? `${outcome.message}\n${warning}` : outcome.message,
 				details: outcome.details,
 			});
+			if (outcome.ok) setChecks((count) => count + 1);
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
 			showProblems(outcome.problems);
 		} catch (error) {
@@ -915,6 +972,7 @@ export function App() {
 	// While Live mode runs: show what the board does.
 	useEffect(() => {
 		if (!live) return;
+		liveMessage.current = "";
 		const timer = setInterval(() => {
 			void bridge
 				.liveState()
@@ -944,10 +1002,10 @@ export function App() {
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
-					} else if (snapshot.paused && snapshot.state === "running") {
-						setStatus({ kind: "info", message: t("live.paused") });
-					} else if (snapshot.message) {
-						setStatus({ kind: "info", message: snapshot.message });
+					} else {
+						const message = snapshot.paused && snapshot.state === "running" ? t("live.paused") : (snapshot.message ?? "");
+						if (message && message !== liveMessage.current) setStatus({ kind: "info", message });
+						liveMessage.current = message;
 					}
 				})
 				.catch(fail);
@@ -1000,6 +1058,35 @@ export function App() {
 			value,
 		})),
 	];
+
+	// What the tutorial's steps look at: worked out again when the blocks or the editor change.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const tourContext = useMemo<TourContext | null>(
+		() =>
+			tourStep === null
+				? null
+				: {
+						project: currentProject(),
+						view,
+						wiringShown,
+						live,
+						simulated: isSimPort(port),
+						pressed: Object.entries(simState?.pressed ?? {})
+							.filter(([, held]) => held)
+							.map(([pin]) => pin),
+						userCode,
+						checks,
+					},
+		[tourStep, tourEdits, view, wiringShown, live, port, simState, userCode, checks, currentProject]
+	);
+
+	const boardParts = useMemo(() => simParts(simPlan, simState), [simPlan, simState]);
+	/** The virtual board drawn as the wiring diagram, at the bottom of the work area (the host draws it). */
+	const boardShown = simulated && !!simPlan?.svg;
+	const boardHeight = boardFolded ? "40px" : boardExpanded ? "72%" : "50%";
+	/** The column of panels on the right (virtual board, live values, serial monitor...) is shown. */
+	const sidePanels =
+		(live && liveRows.length > 0) || (simulated && !boardShown) || wiringHints.length > 0 || monitorShown || tutorialPage !== null;
 
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
@@ -1260,7 +1347,7 @@ export function App() {
 						),
 					}}
 				/>
-				<div style={{ position: "absolute", inset: "64px 0 0 0" }}>
+				<div style={{ position: "absolute", inset: `64px 0 ${boardShown ? boardHeight : "0"} 0` }}>
 					{view === "code" ? (
 						<CodeView
 							t={t}
@@ -1305,6 +1392,7 @@ export function App() {
 							}
 							onChange={() => {
 								markDirty();
+								if (tourStep !== null) setTourEdits((count) => count + 1);
 								if (!live) return;
 								// Live mode: send the new blocks once the child stops dragging for a moment.
 								if (liveUpdate.current) clearTimeout(liveUpdate.current);
@@ -1316,12 +1404,61 @@ export function App() {
 						/>
 					)}
 				</div>
+				{boardShown && simPlan?.svg && (
+					<div className="s2a-board-panel" style={{ height: boardHeight }}>
+						{boardFolded && (
+							<Group className="s2a-board-folded" justify="space-between" wrap="nowrap">
+								<Text fw={700} size="sm">
+									{t("sim.title")}
+								</Text>
+								<FoldButton folded onToggle={() => setBoardFolded(false)} t={t} />
+							</Group>
+						)}
+						<div className="s2a-board-controls" style={{ display: boardFolded ? "none" : undefined }}>
+							<Simulator
+								controlsOnly
+								plan={simPlan}
+								state={simState}
+								phone={simPhone}
+								t={t}
+								maxHeight="none"
+								onInput={(...input) => void bridge.simInput(...input).catch(fail)}
+							/>
+						</div>
+						<div className="s2a-board-drawing" style={{ display: boardFolded ? "none" : undefined }}>
+							<Group className="s2a-board-size" gap={4} wrap="nowrap">
+								<Tooltip label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}>
+									<ActionIcon
+										variant="default"
+										aria-label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}
+										onClick={() => setBoardExpanded(!boardExpanded)}
+									>
+										{boardExpanded ? <IconArrowsMinimize size={16} /> : <IconArrowsMaximize size={16} />}
+									</ActionIcon>
+								</Tooltip>
+								<FoldButton folded={false} onToggle={() => setBoardFolded(true)} t={t} />
+							</Group>
+							<SimBoard
+								svg={simPlan.svg}
+								parts={boardParts}
+								state={simState}
+								label={t("sim.title")}
+								onInput={simInput}
+							/>
+						</div>
+					</div>
+				)}
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || simulated || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
-				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
-					{simulated && (
+			{sidePanels && (
+				// One column on the right: never taller than the window, it scrolls when the panels need more.
+				<Stack
+					gap="sm"
+					style={{ position: "fixed", top: 80, right: 24, zIndex: 150, maxHeight: "calc(100dvh - 96px)", overflowY: "auto", paddingBottom: 4 }}
+				>
+					{simulated && !boardShown && (
 						<Simulator
+							maxHeight={(live && liveRows.length > 0) || monitorShown || wiringHints.length > 0 ? "28dvh" : "calc(60dvh - 90px)"}
 							plan={simPlan}
 							state={simState}
 							phone={simPhone}
@@ -1344,6 +1481,7 @@ export function App() {
 								if (chosen) openExample(chosen);
 							}}
 							onClose={() => setTutorialPage(null)}
+							onStartTour={startTour}
 						/>
 					)}
 					{wiringHints.length > 0 && (
@@ -1359,10 +1497,13 @@ export function App() {
 					)}
 					{live && liveRows.length > 0 && (
 						<Card withBorder shadow="sm" w={360}>
-							<Text fw={700} size="sm" mb={4}>
-								{t("live.title")}
-							</Text>
-							{liveRows.map((row) => (
+							<Group justify="space-between" wrap="nowrap" mb={valuesFolded ? 0 : 4}>
+								<Text fw={700} size="sm">
+									{t("live.title")}
+								</Text>
+								<FoldButton folded={valuesFolded} onToggle={() => setValuesFolded(!valuesFolded)} t={t} />
+							</Group>
+							{!valuesFolded && liveRows.map((row) => (
 								<Group key={row.key} justify="space-between" gap="sm" wrap="nowrap">
 									<Text size="sm" truncate style={{ flex: 1 }}>
 										{row.label}
@@ -1396,8 +1537,10 @@ export function App() {
 					style={{
 						position: "fixed",
 						left: view === "blocks" ? 330 : 64,
-						right: 110,
-						bottom: 16,
+						// Beside the panels on the right (live values, virtual board...), not over them.
+						right: sidePanels ? 400 : 110,
+						// Above the virtual board's panel when it is open.
+						bottom: boardShown ? `calc(${boardHeight} + 16px)` : 16,
 						zIndex: 150,
 						maxHeight: "50vh",
 						overflowY: "auto",
@@ -1425,11 +1568,22 @@ export function App() {
 				</div>
 			)}
 
+			{tourStep !== null && tourContext && (
+				<Tour
+					language={language}
+					context={tourContext}
+					step={tourStep}
+					onStep={setTourStep}
+					onAction={tourAction}
+					onClose={() => setTourStep(null)}
+				/>
+			)}
 			<Settings
 				opened={settingsShown}
 				language={language}
 				t={t}
 				version={version}
+				board={boards.find((candidate) => candidate.id === boardId)?.name ?? boardId}
 				settings={settings}
 				onLanguage={(next) => {
 					switchLanguage(next);

@@ -8,8 +8,10 @@ recipes (add a block, a component, a board, a translation, an example, a tutoria
 
 ## Ways to help
 
-- **Bug reports and feature ideas**: open an issue describing what you did, what you expected and what happened
-  (OS, board, Scratch2Arduino version).
+- **Bug reports and feature ideas**: open an issue with the *Report a problem* or *Suggest an idea* form
+  (`.github/ISSUE_TEMPLATE/`). In the editor, *Settings > Report a problem* (and the crash screen) opens a new issue
+  holding the same report template as text (GitHub only reads issue forms from the default branch), already
+  filled with the version, OS, board and, after a crash, the error (`frontend/src/report.ts`).
 - **Translations**: the interface is French first, English second; other languages are welcome.
 - **Example projects and tutorials**: especially for classrooms and workshops.
 - **Code**: pick an item of the current roadmap phase and open a pull request.

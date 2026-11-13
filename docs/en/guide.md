@@ -6,6 +6,10 @@ This guide presents the whole application. To learn step by step, follow the
 [tutorials](README.md#tutorials) instead, starting with [Blink](tutorials/01-blink.md). They are also in
 the application: the **Tutorials and help** button (the graduation cap), next to the serial monitor.
 
+For a very first try, without hardware, the same panel offers the **interactive tutorial "My doorbell"**: a
+box guides you step by step (blocks, wiring diagram, virtual board, a little C++ code translated into
+Python) and sees by itself when each step is done.
+
 *Pour le lire en français, change la langue dans les paramètres.*
 
 ## Contents
@@ -28,26 +32,86 @@ the application: the **Tutorials and help** button (the graduation cap), next to
 
 ## 1. Install Scratch2Arduino
 
-- **Windows**: download `Scratch2Arduino_installer.exe` (the project's *Releases* page) and run it. It
-  installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the Start menu.
-  If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
-  signed yet).
-- **Linux and macOS**: download the sources (*Source code*, the project's *Releases* page) and unpack them,
-  then in that folder, in a terminal: `./Scratch2Arduino_installer.sh` (or `--user` to install it for
-  yourself only).
-  On Linux, to be allowed to send programs to the board, type once
-  `sudo usermod -aG dialout $USER`, then log out and back in.
+Everything is downloaded from the project's [*Releases*](https://github.com/Zargith/Scratch2Arduino/releases)
+page, in the *Assets* part of the latest version.
 
-**Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
-(*Download and install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings*
-(gear), or switch this check off. On Windows, *Download and install* starts the installer of the new
-version and closes Scratch2Arduino: if your project is not
-saved, a question first offers to save it, ignore the changes or cancel. On Linux and macOS, Scratch2Arduino is
-installed from its sources: the *Settings* give the commands to run.
+### Windows (10 or 11)
 
-The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
-(Internet is needed that time, then never again for that board). It keeps its own copy of those tools:
-it does not change an Arduino IDE installed on the same computer.
+1. Download `Scratch2Arduino_installer.exe` and run it.
+2. If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
+   signed yet).
+3. The installer installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the
+   Start menu. Internet is needed during the installation.
+
+To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
+
+### macOS (Mac with an Apple chip: M1, M2, M3, M4...)
+
+1. Download `Scratch2Arduino-<version>-macos-arm64.dmg` and open it.
+2. Drag **Scratch2Arduino** onto the **Applications** folder, then eject the disk.
+3. The first time, macOS says the application comes from an "unidentified developer" (it is not signed by
+   Apple yet):
+   - macOS 15 (Sequoia) and newer: open *System Settings > Privacy & Security*, scroll down to the message
+     about Scratch2Arduino and click *Open Anyway*, then confirm;
+   - macOS 14 and older: right-click (or Ctrl-click) Scratch2Arduino in Applications, choose *Open*, then
+     *Open* in the window that appears.
+
+   This is only needed once. If macOS says the application is "damaged", type in the Terminal:
+   `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
+4. Genuine Arduino boards are recognised at once. For a board with a CH340 chip (many cheap Nano and ESP32
+   boards), install the maker's driver if the board does not show up in the ports.
+
+To uninstall: drag Scratch2Arduino from Applications to the Bin.
+On a Mac with an Intel processor, install from the sources (see below).
+
+### Linux
+
+**Ubuntu 24.04 or newer, Debian 13, Linux Mint 22**: download `scratch2arduino_<version>_amd64.deb`, then in a
+terminal, in the download folder:
+
+```bash
+sudo apt install ./scratch2arduino_*_amd64.deb
+```
+
+(Double-clicking the file also opens the Software centre, which can install it.)
+
+**Fedora 40 or newer, openSUSE Tumbleweed**: download `scratch2arduino-<version>-1.x86_64.rpm`, then:
+
+```bash
+sudo dnf install ./scratch2arduino-*.x86_64.rpm        # Fedora
+sudo zypper install ./scratch2arduino-*.x86_64.rpm     # openSUSE
+```
+
+Scratch2Arduino appears in the applications menu (Education or Development category). The package also
+installs the right to use the boards' USB ports: nothing else to do, not even the `dialout` group. If a
+board was already plugged in, unplug it and plug it in again.
+
+To uninstall: `sudo apt remove scratch2arduino` (or `sudo dnf remove scratch2arduino`).
+
+**Other distributions (Arch, Manjaro...), ARM processors (Raspberry Pi) or Intel Macs**: install from the
+sources. Download *Source code* (zip or tar.gz), unpack it, then in that folder, in a terminal:
+`./Scratch2Arduino_installer.sh` (or `./Scratch2Arduino_installer.sh --user` to install it for yourself only).
+The script installs what is missing (apt, dnf, pacman or brew), builds and installs Scratch2Arduino.
+In that case, on Linux, to be allowed to send programs to the board, type once
+`sudo usermod -aG dialout $USER`, then log out and back in.
+
+### Updates
+
+At start-up, Scratch2Arduino looks in the background for a new version and offers it (*Download and
+install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or switch
+this check off.
+
+- Windows: *Download and install* starts the installer of the new version and closes Scratch2Arduino; if
+  your project is not saved, a question first offers to save it, ignore the changes or cancel.
+- macOS and Linux: download the new `.dmg`, `.deb` or `.rpm` from the *Releases* page and install it like the
+  first time: it replaces the older version, your projects and settings are kept. Installed from the
+  sources: the *Settings* give the commands to run.
+
+### The boards' tools
+
+The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board (Internet is
+needed that time, then never again for that board). It keeps its own copy of those tools: it does not change
+an Arduino IDE installed on the same computer.
 
 ## 2. Plug in the board
 
@@ -63,7 +127,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
-  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
+  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version, *Report a problem* which opens a GitHub page already filled with your version, system and board). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
@@ -98,11 +162,11 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Events | Where the program starts | when the program starts |
 | Control | Wait, repeat, choose | wait 1 seconds, repeat 10 times, forever, if ... then ... else, wait until |
 | Pins | The board's pins | turn the built-in LED on, set pin 13 to HIGH, pin 2 is HIGH, analog value of pin A0, set PWM output of pin 9 to 128 |
-| Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22) |
+| Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22), joystick (position, direction, pressed down), motion seen by a PIR sensor, obstacle in front of an infrared sensor |
 | Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8x8 LED matrix (MAX7219) |
 | Sound | The buzzer | play 440 Hz for 1 seconds, start / stop the buzzer, note C4 |
-| Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D) |
-| Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen |
+| Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D), 28BYJ-48 stepper motor (ULN2003 board) turned by an angle |
+| Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen, TM1637 4-digit display |
 | Operators | Compute, compare | + − x /, pick random, map, <, >, =, and, or, not |
 | Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |
 | Functions | Reuse a group of blocks | *Make a function*, define ..., call ... |
@@ -164,14 +228,19 @@ off. For the board to work on its own, without the computer, use **Upload**.
 
 **Without a board: the virtual board**. No board at hand? Choose the **Virtual board (no hardware)**
 port, then click **Live** (it is chosen by itself when no board is plugged in). Your blocks run on a
-board drawn on the screen, in the *Virtual board* panel:
+board drawn on the screen: the *Virtual board* panel opens at the bottom of the window, with **the wiring
+diagram of your project coming to life** on the right and the settings on the left. The button at the top
+right of the diagram enlarges it.
 
-- the **outputs** follow the blocks: LEDs (brighter or dimmer with PWM), RGB LED, buzzer (with its
-  sound, which the speaker button mutes), servo, motor, LCD and OLED screens, NeoPixel strip, LED matrix,
-  and the small LEDs of the board's pins;
-- the **inputs** change with the mouse: hold **Press** for a button, move the sliders of a potentiometer,
-  a light sensor, a distance sensor or a DHT sensor (temperature and humidity); with the *Phone* blocks,
-  type the phone's message at the bottom of the panel.
+- On the diagram, the **outputs** follow the blocks: LEDs light up (brighter or dimmer with PWM), the RGB
+  LED takes its colour, the board's "L" LED follows pin 13, the servo arm and the stepper shaft turn, the
+  LCD, OLED and 4-digit screens show their text, the NeoPixel strip and the LED matrix their colours, and
+  the buzzer vibrates (with its sound, which the speaker button mutes).
+- On the diagram too, **click and hold** a push button, the joystick (to press it down), the PIR motion
+  sensor or the obstacle sensor: the board sees it while you hold it.
+- On the left, the **settings** for what cannot be handled on a drawing: sliders of a potentiometer, a light
+  sensor, the joystick's axes, a distance sensor or a DHT sensor (temperature and humidity); with the
+  *Phone* blocks, type the phone's message at the bottom of the settings.
 
 The parts shown are the ones of the wiring diagram, computed from your blocks. The rest of the Live mode
 works too: step by step, variables, serial monitor, Python and JavaScript. The virtual board takes no
@@ -224,6 +293,13 @@ A function gives a name to a group of blocks to reuse it (like Scratch's "My Blo
 *Functions* category, click **Make a function**, attach blocks under **define ...**, then use **call ...** as
 many times as you like. A function does not run on its own at start-up, and it cannot call itself.
 Right-click *define* to rename or delete it. Example: the [traffic light](tutorials/02-traffic-light.md).
+
+A function can also have **inputs** (up to 4): numbers that each *call* gives it. For instance a
+*beep* function with the inputs *times* and *length* can beep 3 times quickly or once for a long time.
+In the window of **Make a function** (or right-click *define* -> **Edit the function**), click **Add an
+input** and give it a name. The *call* block then has a slot for each input, and the *Functions* category
+has a block named after each input: put it inside the function (for instance in "repeat ... times") to use
+the number of the call. Outside its function, this block has no number: *Check* tells you.
 
 ### My blocks
 

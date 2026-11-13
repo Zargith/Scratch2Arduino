@@ -25,7 +25,7 @@
       "type": "motors_dc_run",
       "shape": "statement",
       "component": "dc_motor",
-      "message": { "fr": "faire tourner le moteur (EN %1, IN1 %2, IN2 %3) %4 à la vitesse %5", "en": "run the motor (EN %1, IN1 %2, IN2 %3) %4 at speed %5" },
+      "message": { "fr": "faire tourner le moteur %4 à la vitesse %5\nbroches EN %1 IN1 %2 IN2 %3", "en": "run the motor %4 at speed %5\npins EN %1 IN1 %2 IN2 %3" },
       "tooltip": {
         "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D...). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
         "en": "Runs a motor wired to an H-bridge (L298N, L293D...). EN sets the speed (PWM pin ~), IN1 and IN2 choose the direction. The speed goes from 0 to 100 %."
@@ -50,12 +50,33 @@
       "type": "motors_dc_stop",
       "shape": "statement",
       "component": "dc_motor",
-      "message": { "fr": "arrêter le moteur (EN %1, IN1 %2, IN2 %3)", "en": "stop the motor (EN %1, IN1 %2, IN2 %3)" },
+      "message": { "fr": "arrêter le moteur\nbroches EN %1 IN1 %2 IN2 %3", "en": "stop the motor\npins EN %1 IN1 %2 IN2 %3" },
       "tooltip": { "fr": "Arrête le moteur branché sur le pont en H.", "en": "Stops the motor wired to the H-bridge." },
       "args": [
         { "name": "EN_PIN", "kind": "pin", "capability": "pwm", "default": "6" },
         { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "7" },
         { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "4" }
+      ]
+    },
+    {
+      "type": "motors_stepper_turn",
+      "shape": "statement",
+      "component": "stepper",
+      "message": {
+        "fr": "tourner le moteur pas à pas de %1 degrés\nà %2 tours par minute\nbroches IN1 %3 IN2 %4 IN3 %5 IN4 %6",
+        "en": "turn the stepper motor by %1 degrees\nat %2 turns a minute\npins IN1 %3 IN2 %4 IN3 %5 IN4 %6"
+      },
+      "tooltip": {
+        "fr": "Fait tourner un moteur pas à pas 28BYJ-48 (avec sa carte ULN2003) de cet angle : 360 pour un tour, un nombre négatif pour l'autre sens. Le programme attend la fin du mouvement. Vitesse de 1 à 15 tours par minute.",
+        "en": "Turns a 28BYJ-48 stepper motor (with its ULN2003 board) by this angle: 360 for a turn, a negative number for the other way. The program waits until the move is over. Speed from 1 to 15 turns a minute."
+      },
+      "args": [
+        { "name": "DEGREES", "kind": "number", "default": 90 },
+        { "name": "RPM", "kind": "number", "default": 10, "min": 1, "max": 15 },
+        { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "8" },
+        { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "9" },
+        { "name": "IN3_PIN", "kind": "pin", "capability": "digital", "default": "10" },
+        { "name": "IN4_PIN", "kind": "pin", "capability": "digital", "default": "11" }
       ]
     }
   ]

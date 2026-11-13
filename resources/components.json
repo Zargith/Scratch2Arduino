@@ -57,6 +57,37 @@
         { "pin": { "fr": "patte 2", "en": "leg 2" }, "to": "GND", "via": { "fr": "résistance 10 kΩ", "en": "10 kΩ resistor" }, "short": "2" }
       ]
     },
+    "joystick": {
+      "name": { "fr": "Joystick (KY-023)", "en": "Joystick (KY-023)" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "+5V", "en": "+5V" }, "to": "VCC" },
+        { "pin": { "fr": "VRx", "en": "VRx" }, "to": "X_PIN" },
+        { "pin": { "fr": "VRy", "en": "VRy" }, "to": "Y_PIN" },
+        { "pin": { "fr": "SW", "en": "SW" }, "to": "SW_PIN" }
+      ],
+      "note": { "fr": "Pas de résistance pour SW : la carte utilise sa résistance de pull-up interne.", "en": "No resistor for SW: the board uses its internal pull-up resistor." }
+    },
+    "pir": {
+      "name": { "fr": "Capteur de mouvement PIR (HC-SR501)", "en": "PIR motion sensor (HC-SR501)" },
+      "current": 1,
+      "connections": [
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "OUT", "en": "OUT" }, "to": "PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ],
+      "note": { "fr": "Il met environ une minute à se régler après le branchement.", "en": "It takes about a minute to settle after it is powered." }
+    },
+    "obstacle_sensor": {
+      "name": { "fr": "Capteur d'obstacle infrarouge (FC-51)", "en": "Infrared obstacle sensor (FC-51)" },
+      "current": 20,
+      "connections": [
+        { "pin": { "fr": "OUT", "en": "OUT" }, "to": "PIN" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "VCC" }
+      ]
+    },
     "ultrasonic": {
       "name": { "fr": "Capteur de distance HC-SR04", "en": "HC-SR04 distance sensor" },
       "current": 15,
@@ -104,6 +135,19 @@
         { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
       ],
       "note": { "fr": "Le moteur se branche sur OUT1 et OUT2, et le pont a sa propre pile (bornier +12V et GND).", "en": "The motor goes on OUT1 and OUT2, and the bridge has its own battery (+12V and GND terminal)." }
+    },
+    "stepper": {
+      "name": { "fr": "Moteur pas à pas 28BYJ-48 (carte ULN2003)", "en": "28BYJ-48 stepper motor (ULN2003 board)" },
+      "current": 240,
+      "connections": [
+        { "pin": { "fr": "IN1", "en": "IN1" }, "to": "IN1_PIN" },
+        { "pin": { "fr": "IN2", "en": "IN2" }, "to": "IN2_PIN" },
+        { "pin": { "fr": "IN3", "en": "IN3" }, "to": "IN3_PIN" },
+        { "pin": { "fr": "IN4", "en": "IN4" }, "to": "IN4_PIN" },
+        { "pin": { "fr": "+", "en": "+" }, "to": "5V" },
+        { "pin": { "fr": "-", "en": "-" }, "to": "GND" }
+      ],
+      "note": { "fr": "Le moteur se branche sur la prise blanche de la carte ULN2003. Il tire beaucoup de courant : avec d'autres composants, alimente la carte par une pile ou un bloc secteur.", "en": "The motor plugs into the white socket of the ULN2003 board. It draws a lot of current: with other parts, power the board from a battery or a mains adapter." }
     },
     "bluetooth_module": {
       "name": { "fr": "Module Bluetooth HC-05 / HC-06", "en": "HC-05 / HC-06 Bluetooth module" },
@@ -154,6 +198,16 @@
         { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
         { "pin": { "fr": "SDA", "en": "SDA" }, "to": "SDA" },
         { "pin": { "fr": "SCL", "en": "SCL" }, "to": "SCL" }
+      ]
+    },
+    "tm1637": {
+      "name": { "fr": "Afficheur 4 chiffres TM1637", "en": "TM1637 4-digit display" },
+      "current": 30,
+      "connections": [
+        { "pin": { "fr": "CLK", "en": "CLK" }, "to": "CLK_PIN" },
+        { "pin": { "fr": "DIO", "en": "DIO" }, "to": "DIO_PIN" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
       ]
     },
     "oled": {

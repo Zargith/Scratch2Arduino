@@ -40,7 +40,12 @@ export interface ProjectVariable {
 export interface ProjectFunction {
 	id: string;
 	name: string;
+	/** Names of its number inputs (slots ARG1..ARG4 of "call"); left out when it has none. */
+	parameters?: string[];
 }
+
+/** Most inputs a function can have (core project::kMaxFunctionParameters). */
+export const MAX_FUNCTION_PARAMETERS = 4;
 
 export interface Project {
 	format: typeof FORMAT_NAME;
@@ -117,7 +122,13 @@ export interface BlockState {
 export interface WorkspaceState {
 	blocks?: { languageVersion: number; blocks: BlockState[] };
 	variables?: { id: string; name: string; type?: string }[];
+	/** Function id -> names of its inputs (only functions that have some). Saved by the editor. */
+	functionParameters?: Record<string, string[]>;
 }
+
+/** Blocks of a function call and definition: their extra state names the inputs of the function. */
+export const FUNCTION_CALL = "functions_call";
+export const FUNCTION_DEFINE = "functions_define";
 
 export function emptyProject(name: string, board: string): Project {
 	return { format: FORMAT_NAME, formatVersion: FORMAT_VERSION, name, board, variables: [], scripts: [] };
@@ -178,7 +189,10 @@ export function workspaceToProject(
 		}));
 	const functions = (state.variables ?? [])
 		.filter((variable) => variable.type === FUNCTION_TYPE)
-		.map((variable) => ({ id: variable.id, name: variable.name }));
+		.map((variable): ProjectFunction => {
+			const parameters = state.functionParameters?.[variable.id] ?? [];
+			return parameters.length > 0 ? { id: variable.id, name: variable.name, parameters: [...parameters] } : { id: variable.id, name: variable.name };
+		});
 	if (functions.length > 0) project.functions = functions;
 	project.scripts = (state.blocks?.blocks ?? []).map((top) => ({
 		x: Math.round(top.x ?? 0),
@@ -190,7 +204,11 @@ export function workspaceToProject(
 
 // --- project -> Blockly --------------------------------------------------------------
 
-function toBlockState(block: ProjectBlock): BlockState {
+/** Inputs of each function of the project being converted (function id -> names). */
+type Parameters = ReadonlyMap<string, string[]>;
+const noParameters: Parameters = new Map();
+
+function toBlockState(block: ProjectBlock, parameters: Parameters = noParameters): BlockState {
 	const definition: CatalogBlock | undefined = findBlock(block.type);
 	const state: BlockState = { type: block.type, id: block.id };
 	const fields: Record<string, FieldState> = {};
@@ -202,26 +220,34 @@ function toBlockState(block: ProjectBlock): BlockState {
 	}
 	// "My code" calls have only the slots of their function's parameters (ARG1..ARGn).
 	const myCodeCall = block.type === "mycode_call" || block.type === "mycode_value";
-	const params = myCodeCall ? Object.keys(block.inputs ?? {}).filter((name) => /^ARG\d+$/.test(name)).length : 0;
+	// A function call has the slots of its function's inputs, a definition shows their names.
+	const functionBlock = block.type === FUNCTION_CALL || block.type === FUNCTION_DEFINE;
+	const inputNames = functionBlock ? (parameters.get(block.fields?.FUNCTION ?? "") ?? []).slice(0, MAX_FUNCTION_PARAMETERS) : [];
+	const params = myCodeCall
+		? Object.keys(block.inputs ?? {}).filter((name) => /^ARG\d+$/.test(name)).length
+		: inputNames.length;
 	if (myCodeCall) state.extraState = { name: block.fields?.NAME ?? "", params };
+	if (functionBlock) state.extraState = { params: inputNames };
+	const slotted = myCodeCall || block.type === FUNCTION_CALL;
 	if (definition) {
 		for (const [name, { shadow }] of Object.entries(shadowInputs(definition))) {
-			if (myCodeCall && /^ARG\d+$/.test(name) && Number(name.slice(3)) > params) continue;
+			if (slotted && /^ARG\d+$/.test(name) && Number(name.slice(3)) > params) continue;
 			inputs[name] = { shadow: structuredClone(shadow) as unknown as BlockState };
 		}
 	}
 	for (const [name, input] of Object.entries(block.inputs ?? {})) {
 		if (!definition?.args?.some((arg) => arg.name === name)) continue; // a slot this version does not have
+		if (slotted && /^ARG\d+$/.test(name) && Number(name.slice(3)) > params) continue; // input removed since
 		const target = (inputs[name] ??= {});
 		const shadowFields = target.shadow?.fields;
 		if (input.value !== undefined && shadowFields) {
 			shadowFields[shadowFields.TEXT !== undefined ? "TEXT" : "NUM"] = input.value;
 		}
 		// A value block this version does not know is left out: the slot keeps its typed value.
-		if (input.block && findBlock(input.block.type)) target.block = toBlockState(input.block);
+		if (input.block && findBlock(input.block.type)) target.block = toBlockState(input.block, parameters);
 	}
 	for (const [name, stack] of Object.entries(block.statements ?? {})) {
-		const first = linked(stack);
+		const first = linked(stack, parameters);
 		if (first) inputs[name] = { block: first };
 	}
 	if (Object.keys(fields).length > 0) state.fields = fields;
@@ -229,12 +255,12 @@ function toBlockState(block: ProjectBlock): BlockState {
 	return state;
 }
 
-function linked(stack: ProjectBlock[]): BlockState | undefined {
+function linked(stack: ProjectBlock[], parameters: Parameters = noParameters): BlockState | undefined {
 	let next: BlockState | undefined;
 	// A block this version does not know (made by a newer Scratch2Arduino) cannot be shown:
 	// it is left out and the blocks below it move up, so the rest of the script still opens.
 	for (const block of [...stack].reverse().filter((candidate) => findBlock(candidate.type))) {
-		const state = toBlockState(block);
+		const state = toBlockState(block, parameters);
 		if (next) state.next = { block: next };
 		next = state;
 	}
@@ -314,12 +340,17 @@ function withValidReferences(project: Project): ProjectScript[] {
 
 export function projectToWorkspace(project: Project): WorkspaceState {
 	const blocks: BlockState[] = [];
+	const parameters = new Map(
+		(project.functions ?? [])
+			.filter((fn) => (fn.parameters ?? []).length > 0)
+			.map((fn) => [fn.id, (fn.parameters ?? []).slice(0, MAX_FUNCTION_PARAMETERS)] as const)
+	);
 	for (const script of withValidReferences(project)) {
 		const overflow: ProjectBlock[][] = [];
-		const first = linked(splitAfterTerminal(script.blocks, overflow));
+		const first = linked(splitAfterTerminal(script.blocks, overflow), parameters);
 		if (first) blocks.push({ ...first, x: script.x, y: script.y });
 		overflow.forEach((stack, index) => {
-			const loose = linked(stack);
+			const loose = linked(stack, parameters);
 			if (loose) blocks.push({ ...loose, x: script.x + 320, y: script.y + 60 * index });
 		});
 	}
@@ -329,6 +360,7 @@ export function projectToWorkspace(project: Project): WorkspaceState {
 			...project.variables.map((variable) => ({ id: variable.id, name: variable.name, type: "" })),
 			...(project.functions ?? []).map((fn) => ({ id: fn.id, name: fn.name, type: FUNCTION_TYPE })),
 		],
+		...(parameters.size > 0 ? { functionParameters: Object.fromEntries(parameters) } : {}),
 	};
 }
 

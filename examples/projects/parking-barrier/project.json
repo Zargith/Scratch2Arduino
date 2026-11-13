@@ -1,0 +1,131 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Barrière de parking",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "red_start",
+          "type": "pins_digital_write",
+          "fields": {
+            "PIN": "7",
+            "STATE": "HIGH"
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if_pressed",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pressed",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "red_off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "7",
+                        "STATE": "LOW"
+                      }
+                    },
+                    {
+                      "id": "green_on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "6",
+                        "STATE": "HIGH"
+                      }
+                    },
+                    {
+                      "id": "open",
+                      "type": "motors_stepper_turn",
+                      "fields": {
+                        "IN1_PIN": "8",
+                        "IN2_PIN": "9",
+                        "IN3_PIN": "10",
+                        "IN4_PIN": "11"
+                      },
+                      "inputs": {
+                        "DEGREES": {
+                          "value": "90"
+                        },
+                        "RPM": {
+                          "value": "12"
+                        }
+                      }
+                    },
+                    {
+                      "id": "wait",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "id": "close",
+                      "type": "motors_stepper_turn",
+                      "fields": {
+                        "IN1_PIN": "8",
+                        "IN2_PIN": "9",
+                        "IN3_PIN": "10",
+                        "IN4_PIN": "11"
+                      },
+                      "inputs": {
+                        "DEGREES": {
+                          "value": "-90"
+                        },
+                        "RPM": {
+                          "value": "12"
+                        }
+                      }
+                    },
+                    {
+                      "id": "green_off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "6",
+                        "STATE": "LOW"
+                      }
+                    },
+                    {
+                      "id": "red_on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "7",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

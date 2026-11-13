@@ -6,6 +6,10 @@ Ce guide présente tout le logiciel. Pour apprendre pas à pas, suis plutôt les
 [tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md). Ils sont aussi
 dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à côté du moniteur série.
 
+Pour un tout premier essai, sans matériel, ce même panneau propose le **tutoriel interactif "Ma sonnette"** :
+un cadre te guide étape par étape (blocs, schéma de câblage, carte virtuelle, un peu de code C++ traduit en
+Python) et voit tout seul quand chaque étape est faite.
+
 *To read it in English, change the language in the settings.*
 
 ## Sommaire
@@ -28,26 +32,87 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
 
 ## 1. Installer Scratch2Arduino
 
-- **Windows** : télécharge `Scratch2Arduino_installer.exe` (page *Releases* du projet) et lance-le.
-  Il installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le menu Démarrer.
-  Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires*
-  puis *Exécuter quand même* (le programme n'est pas encore signé).
-- **Linux et macOS** : télécharge les sources (*Source code*, page *Releases* du projet) et décompresse-les,
-  puis dans ce dossier, dans un terminal : `./Scratch2Arduino_installer.sh` (ou `--user` pour l'installer
-  seulement pour toi).
-  Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
-  `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
+Tout se télécharge sur la page [*Releases*](https://github.com/Zargith/Scratch2Arduino/releases) du projet,
+dans la partie *Assets* de la dernière version.
 
-**Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
-la propose (*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut
-aussi vérifier dans les *Paramètres* (engrenage), ou désactiver cette recherche. Sous Windows, *Télécharger
-et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino : si ton projet n'est pas
-enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou d'annuler. Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
-commandes à lancer.
+### Windows (10 ou 11)
 
-Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
-cette fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne
-modifie pas un Arduino IDE installé sur le même ordinateur.
+1. Télécharge `Scratch2Arduino_installer.exe` et lance-le.
+2. Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires* puis
+   *Exécuter quand même* (le programme n'est pas encore signé).
+3. L'installeur installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le
+   menu Démarrer. Il faut Internet pendant l'installation.
+
+Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
+
+### macOS (Mac avec puce Apple : M1, M2, M3, M4...)
+
+1. Télécharge `Scratch2Arduino-<version>-macos-arm64.dmg` et ouvre-le.
+2. Glisse **Scratch2Arduino** sur le dossier **Applications**, puis éjecte le disque.
+3. Au premier lancement, macOS dit que l'application vient d'un "développeur non identifié" (elle n'est pas
+   encore signée par Apple) :
+   - macOS 15 (Sequoia) et plus récent : ouvre *Réglages Système > Confidentialité et sécurité*, descends
+     jusqu'au message sur Scratch2Arduino et clique sur *Ouvrir quand même*, puis confirme ;
+   - macOS 14 et plus ancien : fais un clic droit (ou Ctrl + clic) sur Scratch2Arduino dans Applications,
+     choisis *Ouvrir*, puis *Ouvrir* dans la fenêtre qui s'affiche.
+
+   Cela ne se fait qu'une fois. Si macOS dit que l'application est "endommagée", tape dans le Terminal :
+   `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
+4. Les cartes Arduino d'origine sont reconnues directement. Pour une carte avec une puce CH340 (beaucoup de
+   Nano et d'ESP32 bon marché), installe le pilote du fabricant si la carte n'apparaît pas dans les ports.
+
+Pour désinstaller : glisse Scratch2Arduino d'Applications vers la Corbeille.
+Sur un Mac avec processeur Intel, installe depuis les sources (voir plus bas).
+
+### Linux
+
+**Ubuntu 24.04 ou plus récent, Debian 13, Linux Mint 22** : télécharge `scratch2arduino_<version>_amd64.deb`,
+puis dans un terminal, dans le dossier du téléchargement :
+
+```bash
+sudo apt install ./scratch2arduino_*_amd64.deb
+```
+
+(Un double clic sur le fichier ouvre aussi la Logithèque, qui sait l'installer.)
+
+**Fedora 40 ou plus récent, openSUSE Tumbleweed** : télécharge `scratch2arduino-<version>-1.x86_64.rpm`, puis :
+
+```bash
+sudo dnf install ./scratch2arduino-*.x86_64.rpm        # Fedora
+sudo zypper install ./scratch2arduino-*.x86_64.rpm     # openSUSE
+```
+
+Scratch2Arduino apparaît dans le menu des applications (catégorie Éducation ou Développement). Le paquet
+installe aussi le droit d'utiliser les ports USB des cartes : rien d'autre à faire, même pas de groupe
+`dialout`. Si une carte était déjà branchée, débranche-la et rebranche-la.
+
+Pour désinstaller : `sudo apt remove scratch2arduino` (ou `sudo dnf remove scratch2arduino`).
+
+**Autres distributions (Arch, Manjaro...), processeur ARM (Raspberry Pi) ou Mac Intel** : installe depuis les
+sources. Télécharge *Source code* (zip ou tar.gz), décompresse-le, puis dans ce dossier, dans un terminal :
+`./Scratch2Arduino_installer.sh` (ou `./Scratch2Arduino_installer.sh --user` pour l'installer seulement pour
+toi). Le script installe ce qui manque (apt, dnf, pacman ou brew), compile et installe Scratch2Arduino.
+Dans ce cas, sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
+`sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
+
+### Mises à jour
+
+Au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et la propose
+(*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut aussi vérifier
+dans les *Paramètres* (engrenage), ou désactiver cette recherche.
+
+- Windows : *Télécharger et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino ;
+  si ton projet n'est pas enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou
+  d'annuler.
+- macOS et Linux : télécharge le nouveau `.dmg`, `.deb` ou `.rpm` sur la page *Releases* et installe-le
+  comme la première fois : il remplace l'ancienne version, tes projets et tes réglages sont gardés.
+  Installé depuis les sources : les *Paramètres* donnent les commandes à lancer.
+
+### Les outils des cartes
+
+Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet cette
+fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne modifie pas un
+Arduino IDE installé sur le même ordinateur.
 
 ## 2. Brancher la carte
 
@@ -65,7 +130,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
   une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; **Live**, **Vérifier**,
-  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version, *Signaler un problème* qui ouvre une page GitHub déjà remplie avec ta version, ton système et ta carte). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
   voir ses blocs.
@@ -104,11 +169,11 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Événements | Le départ du programme | quand le programme démarre |
 | Contrôle | Attendre, répéter, choisir | attendre 1 secondes, répéter 10 fois, répéter indéfiniment, si ... alors ... sinon, attendre jusqu'à ce que |
 | Broches | Les broches de la carte | allumer la LED intégrée, mettre la broche 13 à l'état HAUT, la broche 2 est à l'état HAUT, valeur analogique de la broche A0, mettre la sortie PWM de la broche 9 à 128 |
-| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22) |
+| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22), joystick (position, direction, enfoncé), mouvement vu par un capteur PIR, obstacle devant un capteur infrarouge |
 | Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8x8 (MAX7219) |
 | Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
-| Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D) |
-| Écrans | Afficher du texte | écran LCD 16x2 (module I2C ou 16 broches), écran OLED SSD1306 |
+| Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D), moteur pas à pas 28BYJ-48 (carte ULN2003) tourné d'un angle |
+| Écrans | Afficher du texte | écran LCD 16x2 (module I2C ou 16 broches), écran OLED SSD1306, afficheur 4 chiffres TM1637 |
 | Opérateurs | Calculer, comparer | + − x /, nombre aléatoire, convertir, <, >, =, et, ou, non |
 | Variables | Retenir des valeurs | *Créer une variable*, mettre ... à ..., ajouter ... à ... |
 | Fonctions | Réutiliser un groupe de blocs | *Créer une fonction*, définir ..., appeler ... |
@@ -173,14 +238,20 @@ sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ord
 
 **Sans carte : la carte virtuelle**. Pas de carte sous la main ? Choisis le port **Carte virtuelle
 (sans matériel)**, puis clique sur **Live** (c'est le port choisi tout seul quand aucune carte n'est
-branchée). Tes blocs tournent sur une carte dessinée à l'écran, dans le panneau *Carte virtuelle* :
+branchée). Le panneau *Carte virtuelle* s'ouvre en bas de l'écran : à droite, **le schéma de câblage de
+ton projet prend vie** ; à gauche, les réglages. Le bouton en haut à droite du schéma l'agrandit.
 
-- les **sorties** suivent les blocs : LED (plus ou moins lumineuses en PWM), LED RGB, buzzer (avec le
-  son, que le bouton haut-parleur coupe), servomoteur, moteur, écrans LCD et OLED, ruban NeoPixel,
-  matrice de LED, et les petites LED des broches de la carte ;
-- les **entrées** se changent à la souris : maintiens **Appuie** pour un bouton, bouge les curseurs d'un
-  potentiomètre, d'un capteur de lumière, d'un capteur de distance ou d'un capteur DHT (température et
-  humidité) ; avec les blocs *Téléphone*, écris le message du téléphone en bas du panneau.
+- Sur le schéma, les **sorties** suivent les blocs : les LED s'allument (plus ou moins fort en PWM), la LED
+  RGB prend sa couleur, la LED "L" de la carte suit la broche 13, le bras du servomoteur et l'axe du moteur
+  pas à pas tournent, les écrans LCD, OLED et l'afficheur 4 chiffres montrent leur texte, le ruban
+  NeoPixel et la matrice de LED leurs couleurs, et le buzzer vibre (avec le son, que le bouton haut-parleur
+  coupe).
+- Sur le schéma aussi, **clique et garde appuyé** sur un bouton poussoir, sur le joystick (pour
+  l'enfoncer), sur le capteur de mouvement PIR ou sur le capteur d'obstacle : la carte le voit tant que tu
+  restes appuyé.
+- À gauche, les **réglages** de ce qui ne se manipule pas sur un dessin : curseurs d'un potentiomètre, d'un
+  capteur de lumière, des axes du joystick, d'un capteur de distance ou d'un capteur DHT (température et
+  humidité) ; avec les blocs *Téléphone*, écris le message du téléphone en bas des réglages.
 
 Les composants affichés sont ceux du schéma de câblage, calculés à partir de tes blocs. Tout le reste du
 mode Live marche aussi : pas à pas, variables, moniteur série, Python et JavaScript. La carte virtuelle ne
@@ -237,6 +308,14 @@ Dans la famille *Fonctions*, clique sur **Créer une fonction**, accroche des bl
 puis utilise **appeler ...** autant de fois que tu veux. Une fonction ne s'exécute pas toute seule au
 démarrage, et elle ne peut pas s'appeler elle-même. Clic droit sur *définir* pour la renommer ou la
 supprimer. Exemple : le [Feu tricolore](tutorials/02-traffic-light.md).
+
+Une fonction peut aussi avoir des **entrées** (jusqu'à 4) : des nombres que chaque *appeler* lui donne.
+Par exemple une fonction *biper* avec les entrées *fois* et *durée* peut biper 3 fois vite ou une seule
+fois longtemps. Dans la fenêtre de **Créer une fonction** (ou clic droit sur *définir* -> **Modifier la
+fonction**), clique sur **Ajouter une entrée** et donne-lui un nom. Le bloc *appeler* a alors une case
+pour chaque entrée, et la famille *Fonctions* a un bloc au nom de chaque entrée : mets-le dans la
+fonction (par exemple dans "répéter ... fois") pour utiliser le nombre de l'appel. En dehors de sa
+fonction, ce bloc n'a pas de nombre : *Vérifier* te le dit.
 
 ### Mes blocs
 

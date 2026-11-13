@@ -15,8 +15,8 @@
       "shape": "statement",
       "component": "buzzer",
       "message": {
-        "fr": "jouer %2 Hz pendant %3 secondes sur le buzzer de la broche %1",
-        "en": "play %2 Hz for %3 seconds on the buzzer of pin %1"
+        "fr": "jouer %2 Hz pendant %3 secondes\nsur le buzzer de la broche %1",
+        "en": "play %2 Hz for %3 seconds\non the buzzer of pin %1"
       },
       "tooltip": {
         "fr": "Fait sonner un buzzer, puis attend la fin du son avant de passer au bloc suivant. Plus le nombre de Hz est grand, plus le son est aigu (440 Hz est le la de la musique). Il faut un buzzer passif (sans autocollant, on voit le circuit dessous) : un buzzer actif grésille au lieu de jouer la note.",

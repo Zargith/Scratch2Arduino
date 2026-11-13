@@ -234,6 +234,8 @@ std::string simulationJson(const sim::VirtualBoard::State& state) {
     return Json{{"modes", state.modes},
                 {"outputs", outputs},
                 {"servos", state.servos},
+                {"steppers", state.steppers},
+                {"digits", state.digits},
                 {"tones", state.tones},
                 {"lcd", state.lcd},
                 {"lcd16", state.lcd16},

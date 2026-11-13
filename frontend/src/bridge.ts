@@ -43,6 +43,10 @@ export interface SimState {
 	/** level 0-255 (0 or 255 for a digital pin); pwm: set by "analogWrite". */
 	outputs: Record<string, { level: number; pwm: boolean }>;
 	servos: Record<string, number>;
+	/** IN1 pin of a stepper motor -> angle turned since Live started (degrees). Left out by older hosts. */
+	steppers?: Record<string, number>;
+	/** CLK pin of a TM1637 display -> its 4 characters ("  42", "----"), "" when off. Left out by older hosts. */
+	digits?: Record<string, string>;
 	/** Frequency now sounding (Hz). */
 	tones: Record<string, number>;
 	lcd: string[];

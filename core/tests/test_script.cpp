@@ -33,6 +33,13 @@ struct FakePins final : s2a::live::Pins {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
     void servoWrite(int pin, int angle) override { log.push_back("S" + std::to_string(pin) + "=" + std::to_string(angle)); }
+    void digits(int clk, int dio, std::optional<long> number) override {
+        log.push_back("F" + std::to_string(clk) + "," + std::to_string(dio) + "=" + (number ? std::to_string(*number) : "-"));
+    }
+    void stepper(const std::array<int, 4>& pins, long steps, int rpm) override {
+        log.push_back("Q" + std::to_string(pins[0]) + "," + std::to_string(pins[1]) + "," + std::to_string(pins[2]) + "," +
+                      std::to_string(pins[3]) + "=" + std::to_string(steps) + "@" + std::to_string(rpm));
+    }
     double distance(int /*trig*/, int /*echo*/) override { return 0; }
     std::optional<std::pair<double, double>> dht(int /*pin*/, int /*model*/) override { return std::nullopt; }
     void lcdLine(int /*row*/, const std::string& /*text*/) override {}

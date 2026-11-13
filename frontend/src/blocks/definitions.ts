@@ -1,8 +1,10 @@
 // Turns the shared block catalog into scratch-blocks definitions, toolbox and theme.
 import * as Blockly from "scratch-blocks";
 
+import { defineFunctionBlocks, FUNCTION_PARAMETER, functionPalette } from "@/blocks/functions";
 import { translate } from "@/i18n";
 import { catalog, shadowInputs, type Board, type CatalogBlock, type Language, type PinCapability } from "@/catalog";
+import { FUNCTION_CALL, FUNCTION_DEFINE } from "@/project/convert";
 
 export const CREATE_VARIABLE_CALLBACK = "S2A_CREATE_VARIABLE";
 export const CREATE_FUNCTION_CALLBACK = "S2A_CREATE_FUNCTION";
@@ -104,6 +106,12 @@ function registerPinField(): void {
  * of the function ("Rename the function", "Delete the function"), not of a variable.
  */
 let functionLanguage: Language = "fr";
+/** Opens the function window for the function of this id ("Edit the function" menu entry). */
+let editFunction: ((id: string) => void) | null = null;
+
+export function setEditFunctionHandler(handler: ((id: string) => void) | null): void {
+	editFunction = handler;
+}
 
 function registerFunctionField(): void {
 	if (Blockly.registry.hasItem(Blockly.registry.Type.FIELD, "field_s2a_function")) return;
@@ -118,7 +126,7 @@ function registerFunctionField(): void {
 				return options.map((option) => {
 					const id = (option as unknown[])[1];
 					if (id === Blockly.RENAME_VARIABLE_ID) {
-						return [translate(functionLanguage, "functions.rename"), id] as Blockly.MenuOption;
+						return [translate(functionLanguage, "functions.edit"), id] as Blockly.MenuOption;
 					}
 					if (id === Blockly.DELETE_VARIABLE_ID) {
 						return [translate(functionLanguage, "functions.delete", { name: this.getText() }), id] as Blockly.MenuOption;
@@ -129,6 +137,12 @@ function registerFunctionField(): void {
 		}
 
 		protected override onItemSelected_(menu: Blockly.Menu, menuItem: Blockly.MenuItem): void {
+			// Name and inputs are changed together, in the function window.
+			if (menuItem.getValue() === Blockly.RENAME_VARIABLE_ID && editFunction) {
+				const id = this.getValue();
+				if (id) editFunction(id);
+				return;
+			}
 			if (menuItem.getValue() !== Blockly.DELETE_VARIABLE_ID) {
 				super.onItemSelected_(menu, menuItem);
 				return;
@@ -171,6 +185,7 @@ function argJson(block: CatalogBlock, index: number, language: Language): JsonAr
 			// Only plain variables: functions are variables of another type and must not be listed.
 			return { type: "field_variable", name: arg.name, variable: null, variableTypes: [""], defaultType: "" };
 		case "usercode":
+		case "label":
 			return { type: "field_label_serializable", name: arg.name, text: "" };
 		case "function":
 			return {
@@ -200,10 +215,20 @@ export function blockJson(block: CatalogBlock, language: Language): Record<strin
 		text = "";
 		args = [];
 	};
-	for (const part of block.message[language].split(/(%\d+)/)) {
+	const message = block.message[language];
+	for (const part of message.split(/(%\d+)/)) {
 		const placeholder = /^%(\d+)$/.exec(part);
 		if (!placeholder) {
-			text += part;
+			// A line break of the catalog: the rest goes on a new line (the block grows taller
+			// instead of wider). An end-of-row input takes what came before on its line.
+			const lines = part.split("\n");
+			lines.forEach((line, index) => {
+				if (index > 0) {
+					args.push({ type: "input_end_row" });
+					text += `%${args.length} `;
+				}
+				text += line;
+			});
 			continue;
 		}
 		const arg = argJson(block, Number(placeholder[1]) - 1, language);
@@ -218,6 +243,8 @@ export function blockJson(block: CatalogBlock, language: Language): Record<strin
 		}
 	}
 	flush();
+	// Lines break only where the catalog says so (and around statement mouths).
+	if (message.includes("\n")) json.inputsInline = true;
 
 	switch (block.shape) {
 		case "hat":
@@ -286,9 +313,15 @@ export function defineBlocks(language: Language): void {
 	registerFunctionField();
 	functionLanguage = language;
 	defineMyCodeCalls(language);
+	const callBlock = catalog.flatMap((entry) => entry.blocks).find((block) => block.type === FUNCTION_CALL);
+	const defineBlock = catalog.flatMap((entry) => entry.blocks).find((block) => block.type === FUNCTION_DEFINE);
+	if (callBlock && defineBlock) {
+		defineFunctionBlocks(blockJson(callBlock, language), blockJson(defineBlock, language), translate(language, "functions.inputs"));
+	}
 	for (const entry of catalog) {
 		for (const block of entry.blocks) {
 			if (block.type === MY_CODE_CALL || block.type === MY_CODE_VALUE) continue;
+			if (block.type === FUNCTION_CALL || block.type === FUNCTION_DEFINE) continue;
 			const json = blockJson(block, language);
 			Blockly.Blocks[block.type] = {
 				init(this: Blockly.Block) {
@@ -322,7 +355,7 @@ export function defineBlocks(language: Language): void {
 }
 
 /** Blocks whose name is a label set from the palette ("My code" variables): never recycled. */
-const NAMED_BY_LABEL = new Set(["mycode_get", "mycode_set"]);
+const NAMED_BY_LABEL = new Set(["mycode_get", "mycode_set", FUNCTION_PARAMETER]);
 
 function shade(hex: string, factor: number): string {
 	const value = Number.parseInt(hex.slice(1), 16);
@@ -362,8 +395,8 @@ export function blocksTheme(): Blockly.Theme {
 export function toolbox(
 	language: Language,
 	variables: { id: string }[],
-	labels: { createVariable: string; createFunction: string },
-	functions: { id: string }[] = [],
+	labels: { createVariable: string; createFunction: string; inputsOf?: (name: string) => string },
+	functions: { id: string; name: string }[] = [],
 	library?: { title: string; manage: string; groups: { id: string; name: string }[] },
 	myCode: { declarations: UserDeclaration[]; empty: string } = { declarations: [], empty: "" }
 ): Blockly.utils.toolbox.ToolboxDefinition {
@@ -404,11 +437,10 @@ export function toolbox(
 					callbackkey: CREATE_VARIABLE_CALLBACK,
 				});
 			} else if (category.id === "functions") {
-				contents = named(blocks, "FUNCTION", functions[0], {
-					kind: "button",
-					text: labels.createFunction,
-					callbackkey: CREATE_FUNCTION_CALLBACK,
-				});
+				contents = [
+					{ kind: "button", text: labels.createFunction, callbackkey: CREATE_FUNCTION_CALLBACK },
+					...functionPalette(functions, labels.inputsOf ?? ((name) => name)),
+				];
 			} else if (category.id === "mycode") {
 				contents = myCodeContents(myCode.declarations, myCode.empty);
 			} else {

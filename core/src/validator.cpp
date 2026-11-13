@@ -42,6 +42,7 @@ public:
     std::vector<Issue> run() {
         collectFunctions();
         collectModules();
+        collectPullUpPins();
         bool hasStart = false;
         for (const project::Script& script : project_.scripts) {
             if (script.blocks.empty()) {
@@ -84,6 +85,7 @@ public:
 private:
     static constexpr std::string_view kDefine = "functions_define";
     static constexpr std::string_view kCall = "functions_call";
+    static constexpr std::string_view kParameter = "functions_parameter";
     static constexpr std::string_view kModule = "phone_module";
 
     std::string functionOf(const Block& block) const {
@@ -99,6 +101,26 @@ private:
             }
         }
         return id;
+    }
+
+    /// Pins of the blocks that read a button (or a sensor) pulling the pin to GND: they need the
+    /// internal pull-up resistor, which "set pin ... as input" (INPUT) takes away.
+    void collectPullUpPins() {
+        static const std::map<std::string_view, const char*> kReaders{
+            {"sensors_button_pressed", "PIN"}, {"sensors_joystick_pressed", "SW_PIN"}, {"sensors_obstacle", "PIN"}};
+        for (const project::Script& script : project_.scripts) {
+            const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog_.find(script.blocks.front().type);
+            if (first == nullptr || first->shape != BlockShape::Hat) {
+                continue;
+            }
+            project::forEachBlock(script.blocks, [&](const Block& block) {
+                if (const auto reader = kReaders.find(block.type); reader != kReaders.end()) {
+                    if (const int pin = pinOf(block, reader->second); pin >= 0) {
+                        pullUpPins_.insert(pin);
+                    }
+                }
+            });
+        }
     }
 
     /// The "Bluetooth module" blocks of the scripts that run.
@@ -219,6 +241,11 @@ private:
                 result += message[i];
             }
         }
+        // Several slots in a row ("call ... ... ...") read as one; a line break as a space.
+        for (std::size_t at = result.find("... ..."); at != std::string::npos; at = result.find("... ...")) {
+            result.erase(at, 4);
+        }
+        std::replace(result.begin(), result.end(), '\n', ' ');
         // Drop a trailing "..." (C-block mouth) and spaces.
         while (!result.empty() && (result.back() == ' ')) {
             result.pop_back();
@@ -303,6 +330,15 @@ private:
         if (board_ != nullptr && block.type.rfind("phone_", 0) == 0) {
             checkPhone(block);
         }
+        if (board_ != nullptr && block.type == "pins_set_mode") {
+            const auto mode = block.fields.find("MODE");
+            if (const int pin = pinOf(block, "PIN");
+                mode != block.fields.end() && mode->second == "INPUT" && pullUpPins_.count(pin) != 0) {
+                const Pin* found = board_->findPin(pin);
+                add(Rule::ButtonWithoutPullUp, Severity::Warning, block,
+                    {{"pin", found != nullptr ? found->label : std::to_string(pin)}});
+            }
+        }
         for (const BlockArg& arg : definition->args) {
             switch (arg.kind) {
             case ArgKind::Number: {
@@ -371,8 +407,26 @@ private:
             case ArgKind::UserCode:
                 checkUserCode(block, arg);
                 break;
+            case ArgKind::Label:
+                if (block.type == kParameter) {
+                    checkParameter(block, arg);
+                }
+                break;
             }
         }
+    }
+
+    /// An input block reads the number given by "call": only inside the function that has the input.
+    void checkParameter(const Block& block, const BlockArg& arg) {
+        const auto field = block.fields.find(arg.name);
+        const std::string name = field != block.fields.end() ? field->second : std::string{};
+        for (const project::Function& function : project_.functions) {
+            if (function.id == currentFunction_ &&
+                std::find(function.parameters.begin(), function.parameters.end(), name) != function.parameters.end()) {
+                return;
+            }
+        }
+        add(Rule::ParameterOutsideFunction, Severity::Error, block, {{"name", name}});
     }
 
     void checkUserCode(const Block& block, const BlockArg& arg) {
@@ -393,6 +447,7 @@ private:
         }
     }
 
+    std::set<int> pullUpPins_; ///< Pins read as a button to GND (they need the pull-up).
     const project::Project& project_;
     const std::vector<usercode::Declaration> declarations_ = usercode::declarations(project_);
     const BlockCatalog& catalog_;
@@ -450,6 +505,10 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.function_defined_twice";
     case Rule::RecursiveFunction:
         return "validation.recursive_function";
+    case Rule::ParameterOutsideFunction:
+        return "validation.parameter_outside_function";
+    case Rule::ButtonWithoutPullUp:
+        return "validation.button_without_pullup";
     case Rule::NoBluetooth:
         return "validation.no_bluetooth";
     case Rule::ModuleMissing:

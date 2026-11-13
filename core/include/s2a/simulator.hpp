@@ -51,6 +51,8 @@ public:
         std::map<std::string, std::string> modes; ///< label -> "input", "pullup" or "output".
         std::map<std::string, Output> outputs;    ///< Pins set as outputs.
         std::map<std::string, int> servos;        ///< label -> angle (0-180).
+        std::map<std::string, double> steppers;   ///< IN1 pin label -> angle turned since the start (degrees).
+        std::map<std::string, std::string> digits; ///< TM1637 CLK pin label -> its 4 characters ("  42", "----"), "" when off.
         std::map<std::string, int> tones;         ///< label -> frequency now sounding (Hz).
         std::array<std::string, 2> lcd;           ///< I2C 16x2 screen.
         std::array<std::string, 2> lcd16;         ///< 16-pin 16x2 screen.
@@ -92,6 +94,8 @@ private:
     std::map<int, char> modes_; ///< 'I', 'U' or 'O'.
     std::map<int, State::Output> outputs_;
     std::map<int, int> servos_;
+    std::map<int, long> steppers_; ///< IN1 pin -> steps turned.
+    std::map<int, std::string> digits_; ///< TM1637 CLK pin -> what it shows.
     int tonePin_ = -1;
     int toneFrequency_ = 0;
     std::optional<Clock::time_point> toneEnd_;

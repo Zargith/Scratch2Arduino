@@ -32,7 +32,9 @@ struct ScriptError;
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 9"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 10";
+/// Steps of a turn of a 28BYJ-48 stepper motor driven two coils at a time (blocks give degrees).
+inline constexpr long kStepsPerTurn = 2048; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -55,6 +57,11 @@ public:
     virtual void tone(int pin, int frequency, int milliseconds) = 0;
     /// Angle (0-180) of a servo.
     virtual void servoWrite(int pin, int angle) = 0;
+    /// Turns a 28BYJ-48 stepper motor on a ULN2003 board (pins IN1-IN4) by `steps` (2048 a turn,
+    /// negative: the other way) at `rpm` turns a minute; returns once the move is done.
+    virtual void stepper(const std::array<int, 4>& pins, long steps, int rpm) = 0;
+    /// A whole number on a TM1637 4-digit display (CLK, DIO); nullopt turns it off.
+    virtual void digits(int clk, int dio, std::optional<long> number) = 0;
     /// Distance in centimetres measured by an HC-SR04 ultrasonic sensor (400 when nothing answers).
     [[nodiscard]] virtual double distance(int trigPin, int echoPin) = 0;
     /// Temperature (°C) and humidity (%) of a DHT11 (model 11) or DHT22 (22); nullopt when it does not answer.
@@ -135,6 +142,8 @@ public:
     [[nodiscard]] int analogRead(int pin) override;
     void tone(int pin, int frequency, int milliseconds) override;
     void servoWrite(int pin, int angle) override;
+    void stepper(const std::array<int, 4>& pins, long steps, int rpm) override;
+    void digits(int clk, int dio, std::optional<long> number) override;
     [[nodiscard]] double distance(int trigPin, int echoPin) override;
     [[nodiscard]] std::optional<std::pair<double, double>> dht(int pin, int model) override;
     void lcdLine(int row, const std::string& text) override;
@@ -236,6 +245,7 @@ private:
         std::string parent; ///< Block whose mouth holds the stack ("" for the script itself)...
         std::string slot;   ///< ...and the name of that mouth: used to find it again after an update.
         long remaining = 0; ///< Turns left for "repeat"; -1 forever.
+        std::map<std::string, double> arguments; ///< Function body: input name -> number given by "call".
     };
     struct Thread {
         std::string hat;
@@ -267,6 +277,7 @@ private:
     const Board& board_;
     Pins& pins_;
     std::vector<Thread> threads_;
+    const Thread* running_ = nullptr; ///< Thread whose block is being run (inputs of its function).
     bool paused_ = false;
     int pendingSteps_ = 0;
     std::size_t stepCursor_ = 0; ///< Next thread to run one block in step-by-step mode.

@@ -183,6 +183,203 @@
           "default": "3"
         }
       ]
+    },
+    {
+      "type": "sensors_joystick",
+      "shape": "reporter",
+      "component": "joystick",
+      "message": {
+        "fr": "joystick %1 (VRx %2 VRy %3 SW %4)",
+        "en": "joystick %1 (VRx %2 VRy %3 SW %4)"
+      },
+      "tooltip": {
+        "fr": "Position du joystick de 0 à 100 : environ 50 quand on le lâche, 0 et 100 quand on le pousse à fond d'un côté ou de l'autre. VRx et VRy sur des broches analogiques, SW sur une broche numérique, +5V sur 5V et GND sur GND.",
+        "en": "Position of the joystick from 0 to 100: about 50 when it is let go, 0 and 100 when it is pushed fully one way or the other. VRx and VRy to analog pins, SW to a digital pin, +5V to 5V and GND to GND."
+      },
+      "args": [
+        {
+          "name": "AXIS",
+          "kind": "dropdown",
+          "default": "X",
+          "options": [
+            {
+              "value": "X",
+              "label": {
+                "fr": "horizontal (0 à 100)",
+                "en": "left-right (0 to 100)"
+              }
+            },
+            {
+              "value": "Y",
+              "label": {
+                "fr": "vertical (0 à 100)",
+                "en": "up-down (0 to 100)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "X_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A0"
+        },
+        {
+          "name": "Y_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A1"
+        },
+        {
+          "name": "SW_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "2"
+        }
+      ]
+    },
+    {
+      "type": "sensors_joystick_direction",
+      "shape": "boolean",
+      "component": "joystick",
+      "message": {
+        "fr": "joystick poussé vers %1 (VRx %2 VRy %3 SW %4)",
+        "en": "joystick pushed %1 (VRx %2 VRy %3 SW %4)"
+      },
+      "tooltip": {
+        "fr": "Vrai quand le joystick est poussé loin dans cette direction. Si haut et bas (ou gauche et droite) sont inversés, tourne le joystick d'un demi-tour.",
+        "en": "True when the joystick is pushed far in this direction. If up and down (or left and right) are the wrong way round, turn the joystick half a turn."
+      },
+      "args": [
+        {
+          "name": "DIRECTION",
+          "kind": "dropdown",
+          "default": "UP",
+          "options": [
+            {
+              "value": "UP",
+              "label": {
+                "fr": "le haut",
+                "en": "up"
+              }
+            },
+            {
+              "value": "DOWN",
+              "label": {
+                "fr": "le bas",
+                "en": "down"
+              }
+            },
+            {
+              "value": "LEFT",
+              "label": {
+                "fr": "la gauche",
+                "en": "left"
+              }
+            },
+            {
+              "value": "RIGHT",
+              "label": {
+                "fr": "la droite",
+                "en": "right"
+              }
+            }
+          ]
+        },
+        {
+          "name": "X_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A0"
+        },
+        {
+          "name": "Y_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A1"
+        },
+        {
+          "name": "SW_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "2"
+        }
+      ]
+    },
+    {
+      "type": "sensors_joystick_pressed",
+      "shape": "boolean",
+      "component": "joystick",
+      "message": {
+        "fr": "joystick enfoncé (VRx %1 VRy %2 SW %3)",
+        "en": "joystick pressed down (VRx %1 VRy %2 SW %3)"
+      },
+      "tooltip": {
+        "fr": "Vrai pendant qu'on appuie sur le joystick comme sur un bouton (sa broche SW). Pas besoin de résistance.",
+        "en": "True while the joystick is pressed down like a button (its SW pin). No resistor needed."
+      },
+      "args": [
+        {
+          "name": "X_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A0"
+        },
+        {
+          "name": "Y_PIN",
+          "kind": "pin",
+          "capability": "analog",
+          "default": "A1"
+        },
+        {
+          "name": "SW_PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "2"
+        }
+      ]
+    },
+    {
+      "type": "sensors_motion",
+      "shape": "boolean",
+      "component": "pir",
+      "message": {
+        "fr": "mouvement vu par le capteur PIR de la broche %1",
+        "en": "motion seen by the PIR sensor of pin %1"
+      },
+      "tooltip": {
+        "fr": "Vrai quand le capteur de mouvement (HC-SR501) voit quelqu'un bouger. Il lui faut environ une minute pour se régler après le branchement ; ses deux petites vis règlent la distance et la durée.",
+        "en": "True when the motion sensor (HC-SR501) sees someone move. It needs about a minute to settle after it is powered; its two small screws set the distance and the duration."
+      },
+      "args": [
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "3"
+        }
+      ]
+    },
+    {
+      "type": "sensors_obstacle",
+      "shape": "boolean",
+      "component": "obstacle_sensor",
+      "message": {
+        "fr": "obstacle devant le capteur infrarouge de la broche %1",
+        "en": "obstacle in front of the infrared sensor of pin %1"
+      },
+      "tooltip": {
+        "fr": "Vrai quand quelque chose est tout près devant le capteur d'obstacle infrarouge (FC-51, KY-032) : quelques centimètres, réglables avec sa petite vis. Sa LED s'allume aussi.",
+        "en": "True when something is very close in front of the infrared obstacle sensor (FC-51, KY-032): a few centimetres, set with its small screw. Its LED lights up too."
+      },
+      "args": [
+        {
+          "name": "PIN",
+          "kind": "pin",
+          "capability": "digital",
+          "default": "4"
+        }
+      ]
     }
   ]
 }

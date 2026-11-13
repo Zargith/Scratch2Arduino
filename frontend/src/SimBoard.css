@@ -1,0 +1,103 @@
+/* The virtual board drawn as the wiring diagram (SimBoard.tsx). */
+.s2a-simboard {
+	width: 100%;
+	height: 100%;
+	user-select: none;
+	touch-action: none;
+}
+
+.s2a-simboard svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+/* What can be pressed with the mouse: buttons, the joystick's push, PIR and obstacle sensors. */
+.s2a-simboard [data-sim="press"] {
+	cursor: pointer;
+}
+
+.s2a-simboard [data-sim="press"]:hover [data-sim="cap"] {
+	filter: brightness(1.25);
+}
+
+.s2a-simboard [data-pressed] [data-sim="cap"] {
+	filter: brightness(1.8);
+	transform-box: fill-box;
+	transform-origin: center;
+	transform: scale(0.9);
+}
+
+.s2a-simboard [data-sim="halo"],
+.s2a-simboard [data-sim="led"],
+.s2a-simboard [data-sim="arm"],
+.s2a-simboard [data-sim="shaft"],
+.s2a-simboard [data-sim="knob"] {
+	transition:
+		opacity 60ms linear,
+		filter 60ms linear,
+		transform 120ms ease-out;
+}
+
+/* A buzzer that sounds: its ring pulses. */
+.s2a-simboard [data-sounding] [data-sim="sound"] {
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: s2a-sound 0.5s ease-out infinite;
+}
+
+@keyframes s2a-sound {
+	from {
+		transform: scale(0.8);
+		opacity: 1;
+	}
+	to {
+		transform: scale(1.4);
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.s2a-simboard [data-sounding] [data-sim="sound"] {
+		animation: none;
+	}
+}
+
+/* Its panel at the bottom of the work area (App.tsx): the controls on the left, the drawing on the right. */
+.s2a-board-panel {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	border-top: 2px solid var(--mantine-color-teal-6);
+	background: var(--mantine-color-body);
+	z-index: 120;
+}
+
+.s2a-board-controls {
+	width: 300px;
+	flex: none;
+	overflow-y: auto;
+	border-right: 1px solid var(--mantine-color-default-border);
+}
+
+.s2a-board-drawing {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	padding: 4px;
+}
+
+.s2a-board-size {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 1;
+}
+
+/* The panel folded to its title bar. */
+.s2a-board-folded {
+	flex: 1;
+	padding: 0 12px;
+}
