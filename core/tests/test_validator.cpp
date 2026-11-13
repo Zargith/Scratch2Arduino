@@ -166,6 +166,25 @@ TEST(Validator, ParameterOutsideFunction) {
     EXPECT_NE(s2a::validation::describe(issues[0], Language::French).find("\"durée\""), std::string::npos);
 }
 
+TEST(Validator, WarnsWhenAButtonPinLosesItsPullUp) {
+    Block button = block("b", "sensors_button_pressed");
+    button.fields["PIN"] = "2";
+    Block condition = block("if", "control_if");
+    condition.inputs["CONDITION"].block = button;
+    condition.statements["SUBSTACK"] = {led("on")};
+    Block input = block("mode", "pins_set_mode");
+    input.fields = {{"PIN", "2"}, {"MODE", "INPUT"}};
+    Block pullUp = block("mode2", "pins_set_mode");
+    pullUp.fields = {{"PIN", "2"}, {"MODE", "INPUT_PULLUP"}};
+    Block other = block("mode3", "pins_set_mode");
+    other.fields = {{"PIN", "4"}, {"MODE", "INPUT"}}; // no button there
+    const Issue issue = single(check(program({hat(), input, pullUp, other, condition})));
+    EXPECT_EQ(issue.rule, Rule::ButtonWithoutPullUp);
+    EXPECT_EQ(issue.severity, Severity::Warning);
+    EXPECT_EQ(issue.blockId, "mode");
+    EXPECT_NE(s2a::validation::describe(issue, Language::French).find("broche 2"), std::string::npos);
+}
+
 TEST(Validator, RecursiveFunction) {
     // f calls g, g calls f: neither would ever end.
     const auto issues = check(withFunctions({hat(), call("c", "f")}, {{define("d1", "f"), call("cg", "g")},
@@ -270,7 +289,7 @@ TEST(Validator, ChecksReportersAndNestedStacks) {
 }
 
 TEST(Validator, EveryRuleHasMessagesInBothLanguages) {
-    for (int rule = static_cast<int>(Rule::NoStartBlock); rule <= static_cast<int>(Rule::ParameterOutsideFunction); ++rule) {
+    for (int rule = static_cast<int>(Rule::NoStartBlock); rule <= static_cast<int>(Rule::ButtonWithoutPullUp); ++rule) {
         const std::string key(s2a::validation::ruleKey(static_cast<Rule>(rule)));
         for (const Language language : {Language::French, Language::English}) {
             EXPECT_NE(s2a::tr(key, language), key) << key;

@@ -42,6 +42,7 @@ public:
     std::vector<Issue> run() {
         collectFunctions();
         collectModules();
+        collectPullUpPins();
         bool hasStart = false;
         for (const project::Script& script : project_.scripts) {
             if (script.blocks.empty()) {
@@ -100,6 +101,26 @@ private:
             }
         }
         return id;
+    }
+
+    /// Pins of the blocks that read a button (or a sensor) pulling the pin to GND: they need the
+    /// internal pull-up resistor, which "set pin ... as input" (INPUT) takes away.
+    void collectPullUpPins() {
+        static const std::map<std::string_view, const char*> kReaders{
+            {"sensors_button_pressed", "PIN"}, {"sensors_joystick_pressed", "SW_PIN"}, {"sensors_obstacle", "PIN"}};
+        for (const project::Script& script : project_.scripts) {
+            const BlockDefinition* first = script.blocks.empty() ? nullptr : catalog_.find(script.blocks.front().type);
+            if (first == nullptr || first->shape != BlockShape::Hat) {
+                continue;
+            }
+            project::forEachBlock(script.blocks, [&](const Block& block) {
+                if (const auto reader = kReaders.find(block.type); reader != kReaders.end()) {
+                    if (const int pin = pinOf(block, reader->second); pin >= 0) {
+                        pullUpPins_.insert(pin);
+                    }
+                }
+            });
+        }
     }
 
     /// The "Bluetooth module" blocks of the scripts that run.
@@ -309,6 +330,15 @@ private:
         if (board_ != nullptr && block.type.rfind("phone_", 0) == 0) {
             checkPhone(block);
         }
+        if (board_ != nullptr && block.type == "pins_set_mode") {
+            const auto mode = block.fields.find("MODE");
+            if (const int pin = pinOf(block, "PIN");
+                mode != block.fields.end() && mode->second == "INPUT" && pullUpPins_.count(pin) != 0) {
+                const Pin* found = board_->findPin(pin);
+                add(Rule::ButtonWithoutPullUp, Severity::Warning, block,
+                    {{"pin", found != nullptr ? found->label : std::to_string(pin)}});
+            }
+        }
         for (const BlockArg& arg : definition->args) {
             switch (arg.kind) {
             case ArgKind::Number: {
@@ -417,6 +447,7 @@ private:
         }
     }
 
+    std::set<int> pullUpPins_; ///< Pins read as a button to GND (they need the pull-up).
     const project::Project& project_;
     const std::vector<usercode::Declaration> declarations_ = usercode::declarations(project_);
     const BlockCatalog& catalog_;
@@ -476,6 +507,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.recursive_function";
     case Rule::ParameterOutsideFunction:
         return "validation.parameter_outside_function";
+    case Rule::ButtonWithoutPullUp:
+        return "validation.button_without_pullup";
     case Rule::NoBluetooth:
         return "validation.no_bluetooth";
     case Rule::ModuleMissing:

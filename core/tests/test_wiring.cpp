@@ -90,6 +90,25 @@ TEST(Wiring, MergesTheBlocksOfOneComponentAndIgnoresLooseBlocks) {
     EXPECT_EQ(plan.components[1].blockIds, std::vector<std::string>{"other"});
 }
 
+TEST(Wiring, AButtonSetAsAnInputIsOneComponent) {
+    // A 5-key piano: "set pin ... as input" in a function called at start, then "button of pin ... is
+    // pressed" for the same pins: five buttons, not five buttons and five generic inputs.
+    Stack blocks;
+    for (const char* pin : {"2", "3"}) {
+        blocks.push_back(block(std::string("mode") + pin, "pins_set_mode", {{"PIN", pin}, {"MODE", "INPUT"}}));
+        blocks.push_back(block(std::string("read") + pin, "pins_digital_read", {{"PIN", pin}, {"STATE", "LOW"}}));
+        blocks.push_back(block(std::string("button") + pin, "sensors_button_pressed", {{"PIN", pin}}));
+    }
+    blocks.push_back(block("alone", "pins_set_mode", {{"PIN", "7"}, {"MODE", "INPUT"}})); // nothing else on 7
+    const Plan plan = s2a::wiring::plan(program(std::move(blocks)), Language::English);
+    ASSERT_EQ(plan.components.size(), 3U);
+    EXPECT_EQ(plan.components[0].kind, "button");
+    EXPECT_EQ(plan.components[0].blockIds, (std::vector<std::string>{"button2", "mode2", "read2"}));
+    EXPECT_EQ(plan.components[1].kind, "button");
+    EXPECT_EQ(plan.components[2].kind, "input");
+    EXPECT_TRUE(plan.warnings.empty()) << plan.warnings.front().message;
+}
+
 TEST(Wiring, MakesOneJoystickOfItsThreeBlocks) {
     const std::map<std::string, std::string> pins{{"X_PIN", "A2"}, {"Y_PIN", "A3"}, {"SW_PIN", "7"}};
     auto with = [&](std::map<std::string, std::string> fields) {
