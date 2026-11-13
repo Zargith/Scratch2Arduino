@@ -20,12 +20,28 @@
     {
       "type": "functions_call",
       "shape": "statement",
-      "message": { "fr": "appeler %1", "en": "call %1" },
+      "message": { "fr": "appeler %1 %2 %3 %4 %5", "en": "call %1 %2 %3 %4 %5" },
       "tooltip": {
-        "fr": "Exécute les blocs de la fonction, puis continue avec le bloc suivant. Pratique pour ne pas répéter les mêmes blocs à plusieurs endroits.",
-        "en": "Runs the blocks of the function, then goes on with the next block. Handy to avoid repeating the same blocks in several places."
+        "fr": "Exécute les blocs de la fonction avec les nombres donnés à ses entrées, puis continue avec le bloc suivant. Pratique pour ne pas répéter les mêmes blocs à plusieurs endroits.",
+        "en": "Runs the blocks of the function with the numbers given to its inputs, then goes on with the next block. Handy to avoid repeating the same blocks in several places."
       },
-      "args": [{ "name": "FUNCTION", "kind": "function" }]
+      "args": [
+        { "name": "FUNCTION", "kind": "function" },
+        { "name": "ARG1", "kind": "number", "default": 0 },
+        { "name": "ARG2", "kind": "number", "default": 0 },
+        { "name": "ARG3", "kind": "number", "default": 0 },
+        { "name": "ARG4", "kind": "number", "default": 0 }
+      ]
+    },
+    {
+      "type": "functions_parameter",
+      "shape": "reporter",
+      "message": { "fr": "%1", "en": "%1" },
+      "tooltip": {
+        "fr": "Le nombre donné à cette entrée par le bloc \"appeler\". Ne marche que dans les blocs de la fonction qui a cette entrée.",
+        "en": "The number given to this input by the \"call\" block. Only works in the blocks of the function that has this input."
+      },
+      "args": [{ "name": "NAME", "kind": "label" }]
     }
   ]
 }

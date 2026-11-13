@@ -15,8 +15,8 @@
       "shape": "statement",
       "component": "rgb_led",
       "message": {
-        "fr": "mettre la LED RGB (R %1, V %2, B %3) en %4",
-        "en": "set the RGB LED (R %1, G %2, B %3) to %4"
+        "fr": "mettre la LED RGB en %4\nbroches R %1 V %2 B %3",
+        "en": "set the RGB LED to %4\npins R %1 G %2 B %3"
       },
       "tooltip": {
         "fr": "Allume une LED RGB d'une couleur. Branche ses pattes rouge (R), verte (V) et bleue (B) sur trois broches PWM (~), chacune avec une résistance, et la patte la plus longue sur GND.",
@@ -111,8 +111,8 @@
       "shape": "statement",
       "component": "rgb_led",
       "message": {
-        "fr": "mettre la LED RGB (R %1, V %2, B %3) à rouge %4 vert %5 bleu %6",
-        "en": "set the RGB LED (R %1, G %2, B %3) to red %4 green %5 blue %6"
+        "fr": "mettre la LED RGB à rouge %4\nvert %5 bleu %6\nbroches R %1 V %2 B %3",
+        "en": "set the RGB LED to red %4\ngreen %5 blue %6\npins R %1 G %2 B %3"
       },
       "tooltip": {
         "fr": "Mélange les trois couleurs de la LED RGB : chaque valeur va de 0 (éteint) à 255 (à fond). Par exemple rouge 255, vert 128, bleu 0 donne de l'orange.",
@@ -165,8 +165,8 @@
       "shape": "statement",
       "component": "neopixel",
       "message": {
-        "fr": "mettre tout le ruban NeoPixel de la broche %1 (%2 LED) en %3",
-        "en": "set the whole NeoPixel strip of pin %1 (%2 LEDs) to %3"
+        "fr": "mettre tout le ruban NeoPixel en %3\nbroche %1, %2 LED",
+        "en": "set the whole NeoPixel strip to %3\npin %1, %2 LEDs"
       },
       "tooltip": {
         "fr": "Allume toutes les LED d'un ruban ou d'un anneau NeoPixel (WS2812) de la même couleur. Fil DIN (ou DI) du ruban sur la broche, 5V sur 5V, GND sur GND. Indique le nombre de LED du ruban (jusqu'à 100) ; il doit être le même dans tous les blocs de ce ruban.",
@@ -256,8 +256,8 @@
       "shape": "statement",
       "component": "neopixel",
       "message": {
-        "fr": "mettre la LED n° %3 du ruban NeoPixel de la broche %1 (%2 LED) en %4",
-        "en": "set LED number %3 of the NeoPixel strip of pin %1 (%2 LEDs) to %4"
+        "fr": "mettre la LED n° %3 du ruban NeoPixel en %4\nbroche %1, %2 LED",
+        "en": "set LED number %3 of the NeoPixel strip to %4\npin %1, %2 LEDs"
       },
       "tooltip": {
         "fr": "Change la couleur d'une seule LED du ruban : la première est la n° 1. Fil DIN (ou DI) du ruban sur la broche, 5V sur 5V, GND sur GND. Indique le nombre de LED du ruban (jusqu'à 100) ; il doit être le même dans tous les blocs de ce ruban.",
@@ -354,8 +354,8 @@
       "shape": "statement",
       "component": "matrix",
       "message": {
-        "fr": "afficher %4 sur la matrice de LED (DIN %1, CLK %2, CS %3)",
-        "en": "show %4 on the LED matrix (DIN %1, CLK %2, CS %3)"
+        "fr": "afficher %4 sur la matrice de LED\nDIN %1 CLK %2 CS %3",
+        "en": "show %4 on the LED matrix\nDIN %1 CLK %2 CS %3"
       },
       "tooltip": {
         "fr": "Dessine une image sur une matrice de 8x8 LED. Matrice 8x8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",
@@ -471,8 +471,8 @@
       "shape": "statement",
       "component": "matrix",
       "message": {
-        "fr": "%6 le point x %4 y %5 de la matrice de LED (DIN %1, CLK %2, CS %3)",
-        "en": "turn %6 the dot x %4 y %5 of the LED matrix (DIN %1, CLK %2, CS %3)"
+        "fr": "%6 le point x %4 y %5 de la matrice de LED\nDIN %1 CLK %2 CS %3",
+        "en": "turn %6 the dot x %4 y %5 of the LED matrix\nDIN %1 CLK %2 CS %3"
       },
       "tooltip": {
         "fr": "Allume ou éteint un seul point : x va de 1 (à gauche) à 8 (à droite), y de 1 (en haut) à 8 (en bas). Matrice 8x8 avec puce MAX7219 : VCC sur 5V, GND sur GND, DIN, CS et CLK sur les broches choisies.",

@@ -3,6 +3,7 @@
 // components of the project (its wiring plan) and the state of the virtual board into the parts
 // that the Simulator panel draws.
 import type { SimState, WiringPlan } from "@/bridge";
+import type { MessageKey } from "@/i18n";
 
 /** The "port" of the virtual board: the core recognises the "sim:" prefix. */
 export const SIM_PORT = "sim:board";
@@ -19,13 +20,16 @@ interface Base {
 	key: string;
 	/** Name of the component, in the user's language. */
 	name: string;
+	/** Which part of the component, when it has several (the axes of a joystick). */
+	detail?: MessageKey;
 }
 
 export type SimPart = Base &
 	(
 		| { kind: "led"; pin: string; level: number }
 		| { kind: "rgb"; color: [number, number, number] }
-		| { kind: "button"; pin: string; pressed: boolean }
+		/** action: what the button stands for (pressing it, moving in front of a PIR, a hand near a sensor). */
+		| { kind: "button"; pin: string; pressed: boolean; action?: "press" | "move" | "near" }
 		| { kind: "slider"; sensor: "potentiometer" | "light" | "analog"; pin: string; value: number }
 		| { kind: "distance"; pin: string; centimetres: number }
 		| { kind: "climate"; pin: string; temperature: number; humidity: number }
@@ -79,6 +83,22 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 			case "button":
 			case "input":
 				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false });
+				break;
+			case "joystick":
+				for (const [role, detail] of [
+					["X_PIN", "sim.joystick_x"],
+					["Y_PIN", "sim.joystick_y"],
+				] as const) {
+					const axis = pin(role);
+					parts.push({ ...base, key: `${base.key}|${role}`, detail, kind: "slider", sensor: "potentiometer", pin: axis, value: now.analog[axis] ?? DEFAULT_ANALOG });
+				}
+				parts.push({ ...base, key: `${base.key}|SW_PIN`, detail: "sim.joystick_press", kind: "button", pin: pin("SW_PIN"), pressed: now.pressed[pin("SW_PIN")] ?? false });
+				break;
+			case "pir":
+				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false, action: "move" });
+				break;
+			case "obstacle_sensor":
+				parts.push({ ...base, kind: "button", pin: signal, pressed: now.pressed[signal] ?? false, action: "near" });
 				break;
 			case "potentiometer":
 			case "light_sensor":

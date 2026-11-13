@@ -1,0 +1,26 @@
+name: "Proposer une idée / Suggest an idea"
+description: "Un nouveau bloc, composant, exemple ou une amélioration. / A new block, component, example or an improvement."
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci pour ton idée ! Tu peux écrire en français ou en anglais.
+        Thank you for your idea! You can write in French or in English.
+  - type: textarea
+    id: idea
+    attributes:
+      label: "Ton idée / Your idea"
+      description: "Qu'est-ce qui manque, et que voudrais-tu pouvoir faire ? / What is missing, and what would you like to do?"
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: "Un exemple / An example"
+      description: "Un projet, un composant (avec sa référence) ou une situation en classe. / A project, a component (with its reference) or a classroom situation."
+  - type: input
+    id: version
+    attributes:
+      label: "Version de Scratch2Arduino / Scratch2Arduino version"
+      placeholder: "0.13.0"

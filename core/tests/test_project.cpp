@@ -135,13 +135,37 @@ TEST(ProjectJson, RoundTripsExactly) {
 TEST(ProjectJson, RoundTripsFunctionsAndLeavesThemOutWhenThereAreNone) {
     Project project = blink();
     EXPECT_EQ(toJson(project).find("\"functions\""), std::string::npos) << "older projects keep their bytes";
-    project.functions.push_back({"f1", "clignoter vite"});
+    project.functions.push_back({"f1", "clignoter vite", {}});
     const std::string json = toJson(project);
     const auto parsed = fromJson(json);
     ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
     ASSERT_EQ(parsed.value().functions.size(), 1U);
     EXPECT_EQ(parsed.value().functions[0].name, "clignoter vite");
     EXPECT_EQ(toJson(parsed.value()), json);
+}
+
+TEST(ProjectJson, RoundTripsFunctionParametersAndLeavesThemOutWhenThereAreNone) {
+    Project project = blink();
+    project.functions.push_back({"f1", "biper", {"nombre", "durée"}});
+    project.functions.push_back({"f2", "attendre", {}});
+    const std::string json = toJson(project);
+    EXPECT_NE(json.find("\"parameters\": [\n        \"nombre\""), std::string::npos) << json;
+    EXPECT_EQ(json.find("\"parameters\"", json.find("\"attendre\"")), std::string::npos) << "no inputs: left out";
+    const auto parsed = fromJson(json);
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    EXPECT_EQ(parsed.value().functions.at(0).parameters, (std::vector<std::string>{"nombre", "durée"}));
+    EXPECT_TRUE(parsed.value().functions.at(1).parameters.empty());
+    EXPECT_EQ(toJson(parsed.value()), json);
+}
+
+TEST(ProjectJson, RefusesAParameterThatIsNotAName) {
+    Project project = blink();
+    project.functions.push_back({"f1", "biper", {"nombre"}});
+    std::string json = toJson(project);
+    json.replace(json.find("\"nombre\""), 8, "12");
+    const auto parsed = fromJson(json);
+    ASSERT_FALSE(parsed.ok());
+    EXPECT_NE(parsed.error().detail.find("$.functions[0].parameters[0]"), std::string::npos) << parsed.error().detail;
 }
 
 TEST(ProjectJson, RoundTripsTheLibrariesAndLeavesThemOutWhenThereAreNone) {

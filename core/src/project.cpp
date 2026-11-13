@@ -209,7 +209,17 @@ Project projectFromJson(Json json) {
             if (!node.is_object()) {
                 throw FormatError(path, "a function must be an object");
             }
-            project.functions.push_back({stringAt(node, "id", path), stringAt(node, "name", path)});
+            Function function{stringAt(node, "id", path), stringAt(node, "name", path), {}};
+            if (node.contains("parameters")) { // optional: left out for a function without inputs
+                const Json& parameters = arrayAt(node, "parameters", path);
+                for (std::size_t i = 0; i < parameters.size(); ++i) {
+                    if (!parameters.at(i).is_string()) {
+                        throw FormatError(path + ".parameters[" + std::to_string(i) + "]", "a parameter must be a name");
+                    }
+                    function.parameters.push_back(parameters.at(i).get<std::string>());
+                }
+            }
+            project.functions.push_back(std::move(function));
         }
     }
 
@@ -337,7 +347,11 @@ std::string toJson(const Project& project) {
     if (!project.functions.empty()) { // left out otherwise: older projects keep the same bytes
         Json functions = Json::array();
         for (const Function& function : project.functions) {
-            functions.push_back({{"id", function.id}, {"name", function.name}});
+            Json node = {{"id", function.id}, {"name", function.name}};
+            if (!function.parameters.empty()) {
+                node["parameters"] = function.parameters;
+            }
+            functions.push_back(std::move(node));
         }
         json["functions"] = std::move(functions);
     }

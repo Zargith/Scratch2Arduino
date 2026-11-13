@@ -5,6 +5,7 @@ import { useState } from "react";
 import { bridge, type Settings as SavedSettings } from "@/bridge";
 import type { Language } from "@/catalog";
 import type { MessageKey } from "@/i18n";
+import { reportUrl } from "@/report";
 import { findUpdate, platform, type Release } from "@/updates";
 
 interface SettingsProps {
@@ -13,6 +14,8 @@ interface SettingsProps {
 	t(key: MessageKey, params?: Record<string, string>): string;
 	/** Installed version ("" outside the application). */
 	version: string;
+	/** Name of the chosen board, put in a problem report. */
+	board: string;
 	settings: SavedSettings;
 	onLanguage(language: Language): void;
 	onSettings(settings: SavedSettings): void;
@@ -30,7 +33,7 @@ type Check =
 	| { kind: "failed" }
 	| { kind: "found"; release: Release };
 
-export function Settings({ opened, language, t, version, settings, onLanguage, onSettings, onUpdate, readyToClose, onClose }: SettingsProps) {
+export function Settings({ opened, language, t, version, board, settings, onLanguage, onSettings, onUpdate, readyToClose, onClose }: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
 	/** Downloading the installer (Windows), or why it failed. */
 	const [installing, setInstalling] = useState(false);
@@ -146,6 +149,18 @@ export function Settings({ opened, language, t, version, settings, onLanguage, o
 						checked={settings.checkUpdates}
 						onChange={(event) => onSettings({ ...settings, checkUpdates: event.currentTarget.checked })}
 					/>
+				</Stack>
+				<Stack gap={6}>
+					<Title order={6}>{t("settings.help")}</Title>
+					<Text size="sm">{t("settings.report_help")}</Text>
+					<Group gap="sm">
+						<Button
+							variant="default"
+							onClick={() => void bridge.openUrl(reportUrl({ version, board }, navigator.userAgent)).catch(() => undefined)}
+						>
+							{t("settings.report")}
+						</Button>
+					</Group>
 				</Stack>
 			</Stack>
 		</Modal>

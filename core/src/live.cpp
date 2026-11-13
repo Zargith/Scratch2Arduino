@@ -574,6 +574,20 @@ std::vector<CheckedInput> inputsOf(const project::Project& project, const BlockC
                 if (const int pin = pinOf(block, "PIN"); pin >= 0) {
                     add(CheckedInput::Kind::Analog, pin, block);
                 }
+            } else if (type == "sensors_joystick" || type == "sensors_joystick_direction") {
+                for (const char* axis : {"X_PIN", "Y_PIN"}) {
+                    if (const int pin = pinOf(block, axis); pin >= 0) {
+                        add(CheckedInput::Kind::Analog, pin, block);
+                    }
+                }
+            } else if (type == "sensors_joystick_pressed") {
+                if (const int pin = pinOf(block, "SW_PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Button, pin, block).pullUp = true;
+                }
+            } else if (type == "sensors_motion" || type == "sensors_obstacle") {
+                if (const int pin = pinOf(block, "PIN"); pin >= 0) {
+                    add(CheckedInput::Kind::Digital, pin, block).pullUp = type == "sensors_obstacle";
+                }
             } else if (type == "sensors_distance") {
                 const int trig = pinOf(block, "TRIG_PIN");
                 const int echo = pinOf(block, "ECHO_PIN");
@@ -736,7 +750,7 @@ void Interpreter::start() {
         }
         Thread thread;
         thread.hat = script.blocks.front().id;
-        thread.frames.push_back({&script.blocks, 1, {}, {}, {}, 0});
+        thread.frames.push_back({&script.blocks, 1, {}, {}, {}, 0, {}});
         threads_.push_back(std::move(thread));
     }
 }
@@ -957,6 +971,40 @@ double Interpreter::evaluate(const Block& block) {
         record(number, percent);
         return percent;
     }
+    if (type == "sensors_joystick" || type == "sensors_joystick_direction") {
+        const std::string direction = field(block, "DIRECTION");
+        const bool horizontal = type == "sensors_joystick" ? field(block, "AXIS") != "Y"
+                                                           : direction == "LEFT" || direction == "RIGHT";
+        const int number = pin(block, horizontal ? "X_PIN" : "Y_PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const int value = pins_.analogRead(number);
+        record(number, value * 100.0 / 1023.0);
+        if (type == "sensors_joystick") {
+            return value * 100.0 / 1023.0;
+        }
+        return (direction == "LEFT" || direction == "UP" ? value < 256 : value > 767) ? 1 : 0;
+    }
+    if (type == "sensors_joystick_pressed" || type == "sensors_obstacle") {
+        // Both pull their pin LOW: the joystick button to GND, the sensor when something is in front.
+        const int number = pin(block, type == "sensors_obstacle" ? "PIN" : "SW_PIN", PinMode::InputPullup);
+        if (number < 0) {
+            return 0;
+        }
+        const bool low = !pins_.digitalRead(number);
+        record(number, low ? 1 : 0);
+        return low ? 1 : 0;
+    }
+    if (type == "sensors_motion") {
+        const int number = pin(block, "PIN", PinMode::Input);
+        if (number < 0) {
+            return 0;
+        }
+        const bool high = pins_.digitalRead(number);
+        record(number, high ? 1 : 0);
+        return high ? 1 : 0;
+    }
     if (type == "sensors_distance") {
         const int trig = pinNumber(block, "TRIG_PIN");
         const int echo = pinNumber(block, "ECHO_PIN");
@@ -1000,10 +1048,20 @@ double Interpreter::evaluate(const Block& block) {
         const auto found = variables_.find(field(block, "VARIABLE"));
         return found != variables_.end() ? found->second : 0;
     }
+    if (type == "functions_parameter" && running_ != nullptr) {
+        // The innermost function being run; outside a function (refused by the validator): 0.
+        for (auto frame = running_->frames.rbegin(); frame != running_->frames.rend(); ++frame) {
+            if (frame->slot == kFunctionSlot) {
+                const auto found = frame->arguments.find(field(block, "NAME"));
+                return found != frame->arguments.end() ? found->second : 0;
+            }
+        }
+    }
     return 0;
 }
 
 void Interpreter::run(Thread& thread, Clock now, int limit) {
+    running_ = &thread;
     // Each turn runs one block; the turns that only leave a finished stack are not counted.
     for (int budget = kStepBudget; budget > 0; --budget) {
         if (thread.frames.empty()) {
@@ -1034,7 +1092,7 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
             if (inner->empty() && !loop) {
                 return;
             }
-            thread.frames.push_back({inner, 0, loop ? block.id : std::string(), block.id, name, turns});
+            thread.frames.push_back({inner, 0, loop ? block.id : std::string(), block.id, name, turns, {}});
         };
 
         if (type == "pins_builtin_led") {
@@ -1215,7 +1273,18 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
                     // Like the mouth of an if: the blocks of the function, then back after the call.
                     // The validator refuses recursion; the limit only protects from a mistake.
                     if (thread.frames.size() < kMaxFrames) {
-                        thread.frames.push_back({&script.blocks, 1, {}, script.blocks.front().id, kFunctionSlot, 0});
+                        // The numbers of its inputs, worked out before entering it (ARG1 -> 1st input...).
+                        std::map<std::string, double> arguments;
+                        for (const project::Function& function : project_.functions) {
+                            if (function.id != id) {
+                                continue;
+                            }
+                            for (std::size_t i = 0; i < function.parameters.size() && i < project::kMaxFunctionParameters; ++i) {
+                                arguments.emplace(function.parameters[i], number(block, "ARG" + std::to_string(i + 1)));
+                            }
+                        }
+                        thread.frames.push_back(
+                            {&script.blocks, 1, {}, script.blocks.front().id, kFunctionSlot, 0, std::move(arguments)});
                     }
                     break;
                 }

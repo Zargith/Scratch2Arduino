@@ -69,8 +69,8 @@
       "shape": "statement",
       "component": "lcd16",
       "message": {
-        "fr": "écrire %1 sur la ligne %2 de l'écran LCD 16 broches (RS %3 E %4 D4 %5 D5 %6 D6 %7 D7 %8)",
-        "en": "write %1 on line %2 of the 16-pin LCD screen (RS %3 E %4 D4 %5 D5 %6 D6 %7 D7 %8)"
+        "fr": "écrire %1 sur la ligne %2\nde l'écran LCD 16 broches\nRS %3 E %4 D4 %5\nD5 %6 D6 %7 D7 %8",
+        "en": "write %1 on line %2\nof the 16-pin LCD screen\nRS %3 E %4 D4 %5\nD5 %6 D6 %7 D7 %8"
       },
       "tooltip": {
         "fr": "Écrit un texte ou une valeur sur une ligne (16 caractères au plus, les accents sont enlevés). Écran LCD 16x2 à 16 broches (sans module I2C) : VSS sur GND, VDD sur 5V, V0 sur la patte du milieu d'un potentiomètre (ses deux autres pattes sur 5V et GND) pour régler le contraste, RW sur GND, A sur 5V à travers une résistance de 220 Ω, K sur GND, D0 à D3 ne sont pas branchées, RS, E, D4, D5, D6 et D7 sur les broches choisies.",
@@ -146,8 +146,8 @@
       "shape": "statement",
       "component": "lcd16",
       "message": {
-        "fr": "effacer l'écran LCD 16 broches (RS %1 E %2 D4 %3 D5 %4 D6 %5 D7 %6)",
-        "en": "clear the 16-pin LCD screen (RS %1 E %2 D4 %3 D5 %4 D6 %5 D7 %6)"
+        "fr": "effacer l'écran LCD 16 broches\nRS %1 E %2 D4 %3\nD5 %4 D6 %5 D7 %6",
+        "en": "clear the 16-pin LCD screen\nRS %1 E %2 D4 %3\nD5 %4 D6 %5 D7 %6"
       },
       "tooltip": {
         "fr": "Efface tout l'écran LCD. Écran LCD 16x2 à 16 broches (sans module I2C) : VSS sur GND, VDD sur 5V, V0 sur la patte du milieu d'un potentiomètre (ses deux autres pattes sur 5V et GND) pour régler le contraste, RW sur GND, A sur 5V à travers une résistance de 220 Ω, K sur GND, D0 à D3 ne sont pas branchées, RS, E, D4, D5, D6 et D7 sur les broches choisies.",

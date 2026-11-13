@@ -1,0 +1,83 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Détecteur d'obstacle",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if_near",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "near",
+                      "type": "sensors_obstacle",
+                      "fields": {
+                        "PIN": "4"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "light_on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "HIGH"
+                      }
+                    },
+                    {
+                      "id": "sound_on",
+                      "type": "sound_start_tone",
+                      "fields": {
+                        "PIN": "6"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "1200"
+                        }
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "light_off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "LOW"
+                      }
+                    },
+                    {
+                      "id": "sound_off",
+                      "type": "sound_stop",
+                      "fields": {
+                        "PIN": "6"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -302,7 +302,7 @@ Project withBlinkFunction() {
     Block forever = block("loop", "control_forever");
     forever.statements["SUBSTACK"] = {call};
     Project project = withScript({block("hat", "events_when_program_starts"), forever});
-    project.functions = {{"f", "clignoter vite"}};
+    project.functions = {{"f", "clignoter vite", {}}};
     Block define = block("define", "functions_define");
     define.fields["FUNCTION"] = "f";
     project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "0.1"), led("off", "OFF"), wait("w2", "0.1")}});
@@ -327,6 +327,77 @@ TEST(Codegen, WritesFunctionsInsideScriptsThatRunSideBySide) {
     EXPECT_NE(source.find("{ // clignoter vite\n      digitalWrite(LED_BUILTIN, HIGH);\n      S2A_WAIT(task, 0.1);"),
               std::string::npos)
         << source;
+}
+
+/// "biper (fois) (durée)": the function waits "durée" seconds; called with 3 and 0.5 + 0.25.
+Project withInputs() {
+    Block sum = block("sum", "operators_add");
+    sum.inputs["NUM1"].value = "0.5";
+    sum.inputs["NUM2"].value = "0.25";
+    Block call = block("call", "functions_call");
+    call.fields["FUNCTION"] = "f";
+    call.inputs["ARG1"].value = "3";
+    call.inputs["ARG2"].block = sum;
+    Project project = withScript({block("hat", "events_when_program_starts"), call});
+    project.functions = {{"f", "biper", {"fois", "durée"}}};
+    Block define = block("define", "functions_define");
+    define.fields["FUNCTION"] = "f";
+    Block input = block("p", "functions_parameter");
+    input.fields["NAME"] = "durée";
+    Block pause = block("w", "control_wait");
+    pause.inputs["SECONDS"].block = input;
+    project.scripts.push_back({300, 0, {define, led("on", "ON"), pause}});
+    return project;
+}
+
+TEST(Codegen, GivesTheInputsOfAFunctionAsParameters) {
+    const auto source = generate(withInputs()).source;
+    for (const char* expected : {"void s2a_function_biper(double arg_fois, double arg_duree);\n",
+                                 "void s2a_function_biper(double arg_fois, double arg_duree) {\n",
+                                 "  s2a_wait(arg_duree);\n", "s2a_function_biper(3, (0.5 + 0.25));"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+}
+
+TEST(Codegen, KeepsTheInputsOfFunctionsInGlobalsWhenScriptsRunSideBySide) {
+    Project project = withInputs();
+    project.scripts.push_back({600, 0, {block("hat2", "events_when_program_starts"), led("on2", "ON")}});
+    const auto source = generate(project).source;
+    for (const char* expected : {"double s2a_arg_duree_2 = 0; // input \"durée\" of biper\n",
+                                 "s2a_arg_fois_1 = 3;\n", "s2a_arg_duree_2 = (0.5 + 0.25);\n",
+                                 "S2A_WAIT(task, s2a_arg_duree_2);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+}
+
+TEST(Codegen, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
+    const auto with = [](Block result, std::map<std::string, std::string> fields) {
+        result.fields = std::move(fields);
+        return result;
+    };
+    const auto lightIf = [&](const char* id, Block condition) {
+        Block test = block(id, "control_if");
+        test.inputs["CONDITION"].block = std::move(condition);
+        test.statements["SUBSTACK"] = {led(std::string(id) + "led", "ON")};
+        return test;
+    };
+    Block axis = with(block("x", "sensors_joystick"), {{"AXIS", "Y"}, {"X_PIN", "A0"}, {"Y_PIN", "A1"}, {"SW_PIN", "2"}});
+    Block print = block("print", "serial_print");
+    print.inputs["VALUE"].block = axis;
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), print,
+                             lightIf("left", with(block("l", "sensors_joystick_direction"), {{"DIRECTION", "LEFT"}})),
+                             lightIf("down", with(block("d", "sensors_joystick_direction"), {{"DIRECTION", "DOWN"}})),
+                             lightIf("press", block("p", "sensors_joystick_pressed")),
+                             lightIf("motion", with(block("m", "sensors_motion"), {{"PIN", "3"}})),
+                             lightIf("near", with(block("o", "sensors_obstacle"), {{"PIN", "4"}}))}))
+            .source;
+    for (const char* expected : {"(analogRead(A1) * 100.0 / 1023.0)", "if (analogRead(A0) < 256) {",
+                                 "if (analogRead(A1) > 767) {", "if (digitalRead(2) == LOW) {",
+                                 "if (digitalRead(3) == HIGH) {", "if (digitalRead(4) == LOW) {",
+                                 "pinMode(2, INPUT_PULLUP);", "pinMode(3, INPUT);", "pinMode(4, INPUT_PULLUP);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
 }
 
 TEST(Codegen, UsesComponentLibraries) {

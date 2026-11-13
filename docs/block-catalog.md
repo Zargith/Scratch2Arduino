@@ -33,10 +33,10 @@ Every block shown by the editors is described in JSON, one file per toolbox cate
 | `type` | `lower_snake_case`, unique, prefixed by the category id (`pins_...`). Stored in projects: never rename a released block. |
 | `shape` | `hat` (starts a script), `statement`, `c` (wraps stacks, needs >= 1 `statement` argument), `reporter` (number/text), `boolean`. |
 | `terminal` | `true` when nothing can be attached below (`control_forever`). Not allowed on reporters and booleans. |
-| `message` | French **and** English. `%1`...`%n` refer to the arguments in declaration order; each appears exactly once per language, in any order (`"ajouter %2 à %1"` / `"change %1 by %2"`). |
+| `message` | French **and** English. `%1`...`%n` refer to the arguments in declaration order; each appears exactly once per language, in any order (`"ajouter %2 à %1"` / `"change %1 by %2"`). A `\n` starts a new line on the block: keep blocks taller rather than wider, with the wiring pins on a line of their own (`"faire tourner le moteur %4 à la vitesse %5\nbroches EN %1 IN1 %2 IN2 %3"`). |
 | `tooltip` | French and English, written for beginners. |
 | `args[].name` | `UPPER_CASE`, unique in the block. Stored in projects. |
-| `args[].kind` | `number`, `text`, `boolean` (slots), `pin`, `dropdown`, `variable`, `function` (menus of the project's variables and functions), `statement` (inside a `c` block). |
+| `args[].kind` | `number`, `text`, `boolean` (slots), `pin`, `dropdown`, `variable`, `function` (menus of the project's variables and functions), `statement` (inside a `c` block), `usercode` (name of a "My code" function or variable), `label` (a name written by the editor, such as a function input). |
 | `default` | Allowed on `number`, `text`, `pin`, `dropdown` (must be one of the option values). |
 | `min` / `max` | `number` arguments only. |
 | `capability` | Required on `pin` arguments: `digital`, `analog`, `pwm` or `interrupt`. The menu lists the pins of the selected board that have it. |

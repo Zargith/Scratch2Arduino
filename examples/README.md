@@ -18,8 +18,11 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Clignotant / Blink](#clignotant--blink) | aucun / none |
 | [Feu tricolore](#feu-tricolore--traffic-light) (fonctions / functions) | 3 LED, 3 x 220 Ω |
 | [Bouton et LED](#bouton-et-led--button-and-led) | bouton, LED, 220 Ω |
+| [Joystick et LED](#joystick-et-led--joystick-and-leds) | joystick KY-023, 4 LED, 4 x 220 Ω, buzzer |
 | [Potentiomètre et servomoteur](#potentiomètre-et-servomoteur--potentiometer-and-servo) | potentiomètre, servo SG90 |
 | [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 x 220 Ω, buzzer |
+| [Alarme de mouvement](#alarme-de-mouvement--motion-alarm) | capteur PIR HC-SR501, LED, 220 Ω, buzzer |
+| [Détecteur d'obstacle](#détecteur-dobstacle--obstacle-detector) | capteur infrarouge FC-51, LED, 220 Ω, buzzer |
 | [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16x2 I2C |
 | [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16x2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
@@ -79,6 +82,23 @@ pull-up resistor.
 | Bouton, un côté / button, one side | 2 |
 | Bouton, autre côté / button, other side | GND |
 
+## Joystick et LED / Joystick and LEDs
+
+![Joystick et LED](projects/joystick-leds/wiring.png)
+
+Pousse le joystick : la LED de cette direction s'allume (haut 8, bas 9, gauche 10, droite 11). Appuie dessus :
+le buzzer bipe. Si haut et bas sont inversés, tourne le joystick d'un demi-tour. / Push the joystick: the LED
+of that direction lights up (up 8, down 9, left 10, right 11). Press it down: the buzzer beeps. If up and down
+are the wrong way round, turn the joystick half a turn.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Joystick : GND / +5V | GND / 5V |
+| Joystick : VRx / VRy | A0 / A1 |
+| Joystick : SW (sans résistance / no resistor) | 2 |
+| 4 LED, chacune par une résistance de 220 Ω / each through a 220 Ω resistor | 8, 9, 10, 11 |
+| Buzzer passif / passive buzzer (+) | 6 |
+
 ## Potentiomètre et servomoteur / Potentiometer and servo
 
 ![Potentiomètre et servomoteur](projects/servo-potentiometer/wiring.png)
@@ -109,6 +129,37 @@ faster and faster.
 | LED RGB (cathode commune / common cathode) : R, G, B, chacune par une résistance de 220 Ω / each through a 220 Ω resistor | 9, 10, 6 |
 | LED RGB : patte la plus longue / longest leg | GND |
 | Buzzer : + / − | 8 / GND |
+
+## Alarme de mouvement / Motion alarm
+
+![Alarme de mouvement](projects/motion-alarm/wiring.png)
+
+Quand quelqu'un passe devant le capteur PIR, la LED s'allume, le buzzer bipe trois fois et le moniteur série
+affiche le nombre de passages. Le capteur met environ une minute à se régler après le branchement. / When
+someone walks past the PIR sensor, the LED lights up, the buzzer beeps three times and the serial monitor
+shows how many people passed. The sensor takes about a minute to settle after it is powered.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Capteur PIR HC-SR501 : VCC / GND | 5V / GND |
+| Capteur PIR : OUT | 3 |
+| LED, par une résistance de 220 Ω / through a 220 Ω resistor | 8 |
+| Buzzer passif / passive buzzer (+) | 6 |
+
+## Détecteur d'obstacle / Obstacle detector
+
+![Détecteur d'obstacle](projects/obstacle-alarm/wiring.png)
+
+Approche la main du capteur infrarouge : la LED s'allume et le buzzer sonne tant qu'elle est là. La petite vis
+bleue règle la distance (quelques centimètres). / Bring your hand close to the infrared sensor: the LED lights
+up and the buzzer sounds while it is there. The small blue screw sets the distance (a few centimetres).
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Capteur FC-51 : VCC / GND | 5V / GND |
+| Capteur FC-51 : OUT | 4 |
+| LED, par une résistance de 220 Ω / through a 220 Ω resistor | 8 |
+| Buzzer passif / passive buzzer (+) | 6 |
 
 ## Thermomètre / Thermometer
 

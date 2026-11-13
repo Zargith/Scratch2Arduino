@@ -41,7 +41,7 @@ import {
 	IconWifi,
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	bridge,
@@ -85,6 +85,8 @@ import { isSimPort, SIM_PORT, usesPhone } from "@/simulation";
 import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
 import { findUpdate, platform, type Release } from "@/updates";
+import { Tour } from "@/tour/Tour";
+import { melodyCode, PROJECT_NAME, type TourContext, type TourStep } from "@/tour/steps";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
@@ -236,6 +238,12 @@ export function App() {
 	const [librariesShown, setLibrariesShown] = useState(false);
 	/** Unsaved work found at start-up, offered back to the user. */
 	const [restore, setRestore] = useState<AutosavedProject | null>(null);
+	/** Interactive tutorial: the step shown, null when it is closed. */
+	const [tourStep, setTourStep] = useState<number | null>(null);
+	/** Changes of the blocks, counted while the tutorial is open (its steps look at the project). */
+	const [tourEdits, setTourEdits] = useState(0);
+	/** Successful checks and uploads: a step of the tutorial waits for one. */
+	const [checks, setChecks] = useState(0);
 	/** Edits made so far, and how many the last autosave holds. */
 	const edits = useRef(0);
 	const autosavedEdits = useRef(0);
@@ -405,6 +413,39 @@ export function App() {
 		forgetAutosave();
 		loadProgram(starterProject(untitled));
 		reload(projectToWorkspace(starterProject(untitled)));
+	};
+
+	/** Starts the interactive tutorial on a new project (the current one is kept if the user says no). */
+	const startTour = () => {
+		if (dirty && !window.confirm(t("confirm.new"))) return;
+		setGalleryShown(false);
+		setTutorialPage(null);
+		const projectName = PROJECT_NAME[language];
+		initialValues.current = {};
+		setName(projectName);
+		setPath("");
+		setDirty(false);
+		setStatus(null);
+		setExample(null);
+		forgetAutosave();
+		loadProgram(starterProject(projectName));
+		reload(projectToWorkspace(starterProject(projectName)));
+		if (view === "code") void showBlocksView();
+		setTourEdits(0);
+		setTourStep(0);
+	};
+
+	/** The button of a tutorial step: writes the melodie() function in "My code" (C++) and shows it. */
+	const tourAction = (action: NonNullable<TourStep["action"]>["run"]) => {
+		if (action !== "insert-melody") return;
+		const current = userCodeRef.current;
+		const kept = current && current.language === "cpp" && !isStarterCode(current.code) && !isStarterUserCode(current.code);
+		const code = melodyCode(language);
+		userCodeRef.current = { language: "cpp", code: kept ? `${current.code.trimEnd()}\n\n${code}` : code };
+		setUserCode(userCodeRef.current);
+		setUserProblems([]);
+		markDirty();
+		void showCodeView("mine");
 	};
 
 	const openExample = (chosen: Example) => {
@@ -846,6 +887,7 @@ export function App() {
 				message: warning ? `${outcome.message}\n${warning}` : outcome.message,
 				details: outcome.details,
 			});
+			if (outcome.ok) setChecks((count) => count + 1);
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
 			showProblems(outcome.problems);
 		} catch (error) {
@@ -1000,6 +1042,27 @@ export function App() {
 			value,
 		})),
 	];
+
+	// What the tutorial's steps look at: worked out again when the blocks or the editor change.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const tourContext = useMemo<TourContext | null>(
+		() =>
+			tourStep === null
+				? null
+				: {
+						project: currentProject(),
+						view,
+						wiringShown,
+						live,
+						simulated: isSimPort(port),
+						pressed: Object.entries(simState?.pressed ?? {})
+							.filter(([, held]) => held)
+							.map(([pin]) => pin),
+						userCode,
+						checks,
+					},
+		[tourStep, tourEdits, view, wiringShown, live, port, simState, userCode, checks, currentProject]
+	);
 
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
@@ -1305,6 +1368,7 @@ export function App() {
 							}
 							onChange={() => {
 								markDirty();
+								if (tourStep !== null) setTourEdits((count) => count + 1);
 								if (!live) return;
 								// Live mode: send the new blocks once the child stops dragging for a moment.
 								if (liveUpdate.current) clearTimeout(liveUpdate.current);
@@ -1344,6 +1408,7 @@ export function App() {
 								if (chosen) openExample(chosen);
 							}}
 							onClose={() => setTutorialPage(null)}
+							onStartTour={startTour}
 						/>
 					)}
 					{wiringHints.length > 0 && (
@@ -1425,11 +1490,22 @@ export function App() {
 				</div>
 			)}
 
+			{tourStep !== null && tourContext && (
+				<Tour
+					language={language}
+					context={tourContext}
+					step={tourStep}
+					onStep={setTourStep}
+					onAction={tourAction}
+					onClose={() => setTourStep(null)}
+				/>
+			)}
 			<Settings
 				opened={settingsShown}
 				language={language}
 				t={t}
 				version={version}
+				board={boards.find((candidate) => candidate.id === boardId)?.name ?? boardId}
 				settings={settings}
 				onLanguage={(next) => {
 					switchLanguage(next);

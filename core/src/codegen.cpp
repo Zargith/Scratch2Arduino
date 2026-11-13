@@ -83,6 +83,18 @@ public:
             }
             used.insert(name);
             functions_[function.id] = name;
+            // Its inputs: C++ parameters "arg_<name>", unique within the function.
+            std::set<std::string> taken;
+            auto& parameters = parameters_[function.id];
+            for (std::size_t i = 0; i < function.parameters.size() && i < project::kMaxFunctionParameters; ++i) {
+                const std::string stem = "arg_" + identifier(function.parameters[i]);
+                std::string parameter = stem;
+                for (int suffix = 2; taken.count(parameter) != 0; ++suffix) {
+                    parameter = stem + "_" + std::to_string(suffix);
+                }
+                taken.insert(parameter);
+                parameters.emplace_back(function.parameters[i], parameter);
+            }
         }
         for (const project::Script& script : project.scripts) {
             if (!script.blocks.empty() && script.blocks.front().type == kDefine) {
@@ -150,12 +162,22 @@ private:
             return; // the validator reports a missing or duplicated function
         }
         generatedFunctions_.insert(name->second);
+        const std::string id = field(script.blocks.front(), "FUNCTION");
+        std::string signature = "void " + name->second + "(";
+        Scope scope;
+        for (const auto& [input, parameter] : parameters_[id]) {
+            signature += (scope.empty() ? "double " : ", double ") + parameter;
+            scope.emplace(input, parameter);
+        }
+        signature += ")";
+        scopes_.push_back(std::move(scope));
         Body body;
         body.mark(script.blocks.front().id);
         for (std::size_t i = 1; i < script.blocks.size(); ++i) {
             statement(body, script.blocks[i], 1);
         }
-        functionBodies_.emplace_back(name->second, std::move(body));
+        scopes_.pop_back();
+        functionBodies_.emplace_back(signature, std::move(body));
     }
 
     // --- arguments -------------------------------------------------------------------
@@ -294,6 +316,27 @@ private:
         if (type == "sensors_potentiometer" || type == "sensors_light") {
             return "(analogRead(" + pin(block, "PIN", PinMode::Input) + ") * 100.0 / 1023.0)";
         }
+        if (type == "sensors_joystick") {
+            const std::string axis = field(block, "AXIS") == "Y" ? "Y_PIN" : "X_PIN";
+            return "(analogRead(" + pin(block, axis, PinMode::Input) + ") * 100.0 / 1023.0)";
+        }
+        if (type == "sensors_joystick_direction") {
+            // Pushed far: below a quarter or above three quarters of the way.
+            const std::string direction = field(block, "DIRECTION");
+            const bool horizontal = direction == "LEFT" || direction == "RIGHT";
+            const std::string read = "analogRead(" + pin(block, horizontal ? "X_PIN" : "Y_PIN", PinMode::Input) + ")";
+            return "(" + read + (direction == "LEFT" || direction == "UP" ? " < 256)" : " > 767)");
+        }
+        if (type == "sensors_joystick_pressed") {
+            return "(digitalRead(" + pin(block, "SW_PIN", PinMode::InputPullup) + ") == LOW)";
+        }
+        if (type == "sensors_motion") {
+            return "(digitalRead(" + pin(block, "PIN", PinMode::Input) + ") == HIGH)";
+        }
+        if (type == "sensors_obstacle") {
+            // The sensor pulls its output LOW when something is in front of it.
+            return "(digitalRead(" + pin(block, "PIN", PinMode::InputPullup) + ") == LOW)";
+        }
         if (type == "sensors_distance") {
             helpers_.insert("distance");
             const std::string trig = pin(block, "TRIG_PIN", PinMode::Output);
@@ -325,6 +368,15 @@ private:
         if (type == "variables_get") {
             const std::string name = variable(block);
             return name.empty() ? "0" : name;
+        }
+        if (type == "functions_parameter") {
+            // The number given by "call"; outside its function (reported by the validator): 0.
+            if (!scopes_.empty()) {
+                if (const auto found = scopes_.back().find(field(block, "NAME")); found != scopes_.back().end()) {
+                    return found->second;
+                }
+            }
+            return "0";
         }
         if (type == usercode::kValueBlock) {
             const std::string call = userCall(block, true);
@@ -774,16 +826,37 @@ private:
             if (name == functions_.end() || definition == definitions_.end()) {
                 return; // reported by the validator
             }
+            // The numbers given to its inputs, worked out where the call is.
+            const auto& parameters = parameters_[id];
+            std::vector<std::string> arguments;
+            for (std::size_t i = 0; i < parameters.size(); ++i) {
+                arguments.push_back(number(block, "ARG" + std::to_string(i + 1)));
+            }
             if (!tasks_) {
-                body.add(depth, name->second + "();");
+                std::string call = name->second + "(";
+                for (std::size_t i = 0; i < arguments.size(); ++i) {
+                    call += (i == 0 ? "" : ", ") + arguments[i];
+                }
+                body.add(depth, call + ");");
             } else if (inlining_.insert(id).second) {
                 // Side by side, a wait inside the function must let the other scripts run:
-                // its blocks are written here, inside the script.
+                // its blocks are written here, inside the script. A local variable would not
+                // survive a wait (the task returns), so each input of each call is a global.
                 body.add(depth, "{ // " + oneLine(functionName(id)));
+                Scope scope;
+                for (std::size_t i = 0; i < parameters.size(); ++i) {
+                    const std::string global = "s2a_" + parameters[i].second + "_" + std::to_string(++argumentGlobals_);
+                    argumentDeclarations_.push_back("double " + global + " = 0; // input \"" +
+                                                    oneLine(parameters[i].first) + "\" of " + oneLine(functionName(id)));
+                    body.add(depth + 1, global + " = " + arguments[i] + ";");
+                    scope.emplace(parameters[i].first, global);
+                }
+                scopes_.push_back(std::move(scope));
                 const project::Stack& stack = definition->second->blocks;
                 for (std::size_t i = 1; i < stack.size(); ++i) {
                     statement(body, stack[i], depth + 1);
                 }
+                scopes_.pop_back();
                 body.add(depth, "}");
                 inlining_.erase(id);
             }
@@ -858,6 +931,10 @@ private:
                           oneLine(variable.name));
         }
         if (!project_.variables.empty()) {
+            out.emplace_back("");
+        }
+        if (!argumentDeclarations_.empty()) {
+            out.insert(out.end(), argumentDeclarations_.begin(), argumentDeclarations_.end());
             out.emplace_back("");
         }
 
@@ -1022,12 +1099,12 @@ private:
         Sketch sketch;
         if (!functionBodies_.empty()) {
             out.emplace_back("// Functions (\"define\" blocks), run by the \"call\" blocks.");
-            for (const auto& [name, body] : functionBodies_) {
-                out.push_back("void " + name + "();");
+            for (const auto& [signature, body] : functionBodies_) {
+                out.push_back(signature + ";");
             }
             out.emplace_back("");
-            for (const auto& [name, body] : functionBodies_) {
-                out.push_back("void " + name + "() {");
+            for (const auto& [signature, body] : functionBodies_) {
+                out.push_back(signature + " {");
                 append(out, sketch, body);
                 out.emplace_back("}");
                 out.emplace_back("");
@@ -1130,7 +1207,13 @@ private:
     std::map<std::string, std::string> variables_; ///< Variable id -> C++ name.
     std::map<std::string, std::string> functions_; ///< Function id -> C++ name.
     std::map<std::string, const project::Script*> definitions_; ///< Function id -> its "define" script.
-    std::vector<std::pair<std::string, Body>> functionBodies_;  ///< Single-script programs.
+    std::vector<std::pair<std::string, Body>> functionBodies_;  ///< Signature and body (single-script programs).
+    /// Function id -> its inputs: name in the blocks, C++ name of the parameter.
+    std::map<std::string, std::vector<std::pair<std::string, std::string>>> parameters_;
+    using Scope = std::map<std::string, std::string>; ///< Input name -> C++ expression giving its number.
+    std::vector<Scope> scopes_;                       ///< Inputs of the function being written (innermost last).
+    int argumentGlobals_ = 0;
+    std::vector<std::string> argumentDeclarations_; ///< Globals holding the inputs of calls written inside tasks.
     std::set<std::string> generatedFunctions_;
     std::set<std::string> inlining_; ///< Functions being written inside a script (no endless recursion).
     std::set<std::string> helpers_;

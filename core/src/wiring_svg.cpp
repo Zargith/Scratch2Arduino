@@ -270,6 +270,15 @@ std::pair<double, double> moduleSize(const std::string& kind, std::size_t pins) 
     if (kind == "bluetooth_module") {
         return {std::max(minimum, 120.0), 130};
     }
+    if (kind == "joystick") {
+        return {std::max(minimum, 120.0), 140};
+    }
+    if (kind == "pir") {
+        return {std::max(minimum, 110.0), 130};
+    }
+    if (kind == "obstacle_sensor") {
+        return {std::max(minimum, 90.0), 140};
+    }
     return {std::max(minimum, 100.0), 110};
 }
 
@@ -341,6 +350,33 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.line({{at.x + 22, at.y + 34}, {at.x + w - 30, at.y + 34}}, "#4FC3F7", 3);
         svg.line({{at.x + 22, at.y + 50}, {at.x + w - 50, at.y + 50}}, "#4FC3F7", 3);
         svg.text({at.x + w / 2, at.y + 94}, "OLED", 10, "#FFFFFF", "middle", true);
+    } else if (kind == "joystick") {
+        // KY-023: the square base of the stick and its round grey thumb cap.
+        const Point mid{at.x + w / 2, at.y + 52};
+        svg.rect(mid.x - 34, mid.y - 34, 68, 68, "#424242", "#212121", 6, 2);
+        svg.circle(mid.x, mid.y, 27, "#9E9E9E", "#616161", 2);
+        svg.circle(mid.x, mid.y, 18, "#BDBDBD", "#757575", 1);
+        for (int ridge = -2; ridge <= 2; ++ridge) {
+            svg.line({{mid.x - 12, mid.y + ridge * 5}, {mid.x + 12, mid.y + ridge * 5}}, "#9E9E9E", 1.5);
+        }
+    } else if (kind == "pir") {
+        // HC-SR501: the white Fresnel dome on its square frame.
+        const Point mid{at.x + w / 2, at.y + 48};
+        svg.rect(mid.x - 38, mid.y - 38, 76, 76, "#ECEFF1", "#B0BEC5", 4, 2);
+        svg.circle(mid.x, mid.y, 32, "#FAFAFA", "#CFD8DC", 2);
+        for (const double r : {24.0, 16.0, 8.0}) {
+            svg.circle(mid.x, mid.y, r, "none", "#E0E0E0", 1.5);
+        }
+        svg.text({at.x + w / 2, at.y + 100}, "PIR", 10, "#FFFFFF", "middle", true);
+    } else if (kind == "obstacle_sensor") {
+        // FC-51: the infrared emitter (clear) and receiver (dark) at the front, its blue screw.
+        svg.circle(at.x + w / 2 - 14, at.y + 22, 10, "#E3F2FD", "#90CAF9", 2);
+        svg.circle(at.x + w / 2 + 14, at.y + 22, 10, "#263238", "#000000", 2);
+        svg.rect(at.x + w / 2 - 12, at.y + 46, 24, 24, "#1E88E5", "#0D47A1", 2, 2);
+        svg.circle(at.x + w / 2, at.y + 58, 7, "#FFFFFF", "#90A4AE", 1);
+        svg.line({{at.x + w / 2 - 5, at.y + 58}, {at.x + w / 2 + 5, at.y + 58}}, "#455A64", 2);
+        svg.circle(at.x + w / 2 + 26, at.y + 82, 4, "#E53935");
+        svg.text({at.x + w / 2, at.y + 98}, "FC-51", 10, "#FFFFFF", "middle", true);
     } else {
         svg.circle(at.x + w / 2, at.y + 34, 12, "#FFCC80", "#EF6C00", 2);
         svg.text({at.x + w / 2, at.y + 66}, name.substr(0, std::min<std::size_t>(name.size(), 14)), 9, "#FFFFFF", "middle",
@@ -349,6 +385,12 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
 }
 
 std::string moduleColour(const std::string& kind) {
+    if (kind == "joystick" || kind == "obstacle_sensor") {
+        return kind == "joystick" ? "#1565C0" : "#283593";
+    }
+    if (kind == "pir") {
+        return "#2E7D32";
+    }
     if (kind == "ultrasonic" || kind == "dht" || kind == "servo") {
         return kind == "servo" ? "#ECEFF1" : "#1565C0";
     }
@@ -834,11 +876,26 @@ private:
                 }
                 badgeAt = {centre.x - (rgb ? 34 : 24), centre.y - (rgb ? 26 : 20)};
             } else if (kind == "button") {
-                const Point e = b.hole(col, 'e');
-                const Point f = b.hole(col, 'f');
-                svg.rect(e.x - 9, e.y - 8, 58, f.y - e.y + 16, "#90A4AE", "#607D8B", 4, 2);
-                svg.circle(e.x + 20, (e.y + f.y) / 2, 13, "#263238");
-                badgeAt = {e.x - 22, e.y - 18};
+                // A 4-leg push button (6 mm tactile switch) across the middle channel, as in the
+                // kits: its legs in rows e and f of two columns. The legs facing each other across
+                // the channel are always joined; pressing joins the two columns.
+                const Point topLeft = b.hole(col, 'e');
+                const Point bottomRight = b.hole(col + 2, 'f');
+                for (const Point leg : {topLeft, b.hole(col + 2, 'e'), b.hole(col, 'f'), bottomRight}) {
+                    const double toward = leg.y < (topLeft.y + bottomRight.y) / 2 ? 1 : -1; // legs bend under the body
+                    svg.line({{leg.x, leg.y}, {leg.x, leg.y + toward * 9}}, "#B0BEC5", 4);
+                    svg.circle(leg.x, leg.y, 3.5, "#CFD8DC", "#78909C", 1);
+                }
+                const double margin = 3;
+                const double left = topLeft.x + margin;
+                const double top = topLeft.y + 6;
+                const double width = bottomRight.x - topLeft.x - 2 * margin;
+                const double height = bottomRight.y - topLeft.y - 12;
+                svg.rect(left, top, width, height, "#37474F", "#263238", 3, 2); // body
+                const Point mid{(topLeft.x + bottomRight.x) / 2, (topLeft.y + bottomRight.y) / 2};
+                svg.circle(mid.x, mid.y, std::min(width, height) * 0.36, "#212121", "#000000", 1.5); // cap
+                svg.circle(mid.x - 3, mid.y - 3, std::min(width, height) * 0.12, "#424242");
+                badgeAt = {topLeft.x - 22, topLeft.y - 18};
             } else if (kind == "potentiometer") {
                 const Point mid = b.hole(col + 1, 'h');
                 svg.rect(mid.x - 30, mid.y - 26, 60, 52, "#1565C0", "#0D47A1", 4, 2);

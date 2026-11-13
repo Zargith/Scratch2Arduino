@@ -92,7 +92,13 @@ struct Variable {
 struct Function {
     std::string id;
     std::string name;
+    /// Names of its number inputs, in the order of the slots of the "call" blocks (ARG1, ARG2...);
+    /// empty for a function without inputs. Read inside the function by "parameter" blocks.
+    std::vector<std::string> parameters;
 };
+
+/// Most inputs a function can have (slots ARG1..ARG4 of "call").
+inline constexpr std::size_t kMaxFunctionParameters = 4;
 
 /// How the program of a project is written.
 enum class ProgramLanguage {

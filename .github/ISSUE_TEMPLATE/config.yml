@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "Guide de l'utilisateur / User guide"
+    url: https://github.com/Zargith/Scratch2Arduino/tree/main/docs
+    about: "Tutoriels et réponses aux questions courantes. / Tutorials and answers to common questions."

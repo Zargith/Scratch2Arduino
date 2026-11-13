@@ -6,6 +6,10 @@ Ce guide présente tout le logiciel. Pour apprendre pas à pas, suis plutôt les
 [tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md). Ils sont aussi
 dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à côté du moniteur série.
 
+Pour un tout premier essai, sans matériel, ce même panneau propose le **tutoriel interactif "Ma sonnette"** :
+un cadre te guide étape par étape (blocs, schéma de câblage, carte virtuelle, un peu de code C++ traduit en
+Python) et voit tout seul quand chaque étape est faite.
+
 *To read it in English, change the language in the settings.*
 
 ## Sommaire
@@ -65,7 +69,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
   une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; **Live**, **Vérifier**,
-  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version, *Signaler un problème* qui ouvre une page GitHub déjà remplie avec ta version, ton système et ta carte). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
   voir ses blocs.
@@ -104,7 +108,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Événements | Le départ du programme | quand le programme démarre |
 | Contrôle | Attendre, répéter, choisir | attendre 1 secondes, répéter 10 fois, répéter indéfiniment, si ... alors ... sinon, attendre jusqu'à ce que |
 | Broches | Les broches de la carte | allumer la LED intégrée, mettre la broche 13 à l'état HAUT, la broche 2 est à l'état HAUT, valeur analogique de la broche A0, mettre la sortie PWM de la broche 9 à 128 |
-| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22) |
+| Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22), joystick (position, direction, enfoncé), mouvement vu par un capteur PIR, obstacle devant un capteur infrarouge |
 | Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8x8 (MAX7219) |
 | Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
 | Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D) |
@@ -237,6 +241,14 @@ Dans la famille *Fonctions*, clique sur **Créer une fonction**, accroche des bl
 puis utilise **appeler ...** autant de fois que tu veux. Une fonction ne s'exécute pas toute seule au
 démarrage, et elle ne peut pas s'appeler elle-même. Clic droit sur *définir* pour la renommer ou la
 supprimer. Exemple : le [Feu tricolore](tutorials/02-traffic-light.md).
+
+Une fonction peut aussi avoir des **entrées** (jusqu'à 4) : des nombres que chaque *appeler* lui donne.
+Par exemple une fonction *biper* avec les entrées *fois* et *durée* peut biper 3 fois vite ou une seule
+fois longtemps. Dans la fenêtre de **Créer une fonction** (ou clic droit sur *définir* -> **Modifier la
+fonction**), clique sur **Ajouter une entrée** et donne-lui un nom. Le bloc *appeler* a alors une case
+pour chaque entrée, et la famille *Fonctions* a un bloc au nom de chaque entrée : mets-le dans la
+fonction (par exemple dans "répéter ... fois") pour utiliser le nombre de l'appel. En dehors de sa
+fonction, ce bloc n'a pas de nombre : *Vérifier* te le dit.
 
 ### Mes blocs
 

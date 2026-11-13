@@ -40,6 +40,7 @@ enum class ArgKind {
     Function,  ///< Function menu (functions of the project).
     Statement, ///< Stack of blocks inside a C-block.
     UserCode,  ///< Name of a function or variable of the project's "My code" file.
+    Label,     ///< Text written on the block by the editor (the name of a function input).
 };
 
 struct DropdownOption {

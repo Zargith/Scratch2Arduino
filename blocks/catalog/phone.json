@@ -12,8 +12,8 @@
       "shape": "statement",
       "component": "bluetooth_module",
       "message": {
-        "fr": "module Bluetooth HC-05 / HC-06 : TXD sur la broche %1, RXD sur la broche %2",
-        "en": "HC-05 / HC-06 Bluetooth module: TXD to pin %1, RXD to pin %2"
+        "fr": "module Bluetooth HC-05 / HC-06\nTXD sur la broche %1, RXD sur la broche %2",
+        "en": "HC-05 / HC-06 Bluetooth module\nTXD to pin %1, RXD to pin %2"
       },
       "tooltip": {
         "fr": "Pour les cartes Arduino (Uno, Nano, Mega), qui n'ont pas de Bluetooth : dit où le module est branché, pour que les blocs Téléphone passent par lui. Mets-le sous \"quand le programme démarre\". Sur le téléphone, une appli de terminal Bluetooth se connecte à \"HC-05\" (code 1234 ou 0000).",

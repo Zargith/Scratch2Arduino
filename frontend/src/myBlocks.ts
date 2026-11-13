@@ -25,6 +25,8 @@ export interface VariableInfo {
 	name: string;
 	/** "" for a variable, "function" for a function. */
 	type?: string;
+	/** A function: the names of its inputs. */
+	parameters?: string[];
 }
 
 function visit(blocks: ProjectBlock[], action: (block: ProjectBlock) => void) {
@@ -56,8 +58,11 @@ export function countBlocks(group: Project): number {
  * variables and functions its blocks use are kept.
  */
 export function stackToGroup(top: BlockState, variables: VariableInfo[]): Project {
+	const functionParameters = Object.fromEntries(
+		variables.filter((variable) => (variable.parameters ?? []).length > 0).map((variable) => [variable.id, variable.parameters ?? []])
+	);
 	const project = workspaceToProject(
-		{ blocks: { languageVersion: 0, blocks: [{ ...top, x: 0, y: 0 }] }, variables },
+		{ blocks: { languageVersion: 0, blocks: [{ ...top, x: 0, y: 0 }] }, variables, functionParameters },
 		{ name: "", board: emptyProject("", "uno").board }
 	);
 	const used = new Set<string>();
@@ -77,7 +82,7 @@ export interface Insertion {
 	/** Top blocks to add to the workspace (Blockly state, fresh ids, no position). */
 	blocks: BlockState[];
 	/** Variables and functions to create first: the project has none with these names. */
-	create: Required<VariableInfo>[];
+	create: (Required<Omit<VariableInfo, "parameters">> & Pick<VariableInfo, "parameters">)[];
 }
 
 /**
@@ -86,8 +91,8 @@ export interface Insertion {
  */
 export function groupToBlocks(group: Project, existing: VariableInfo[], newId: () => string): Insertion {
 	const ids = new Map<string, string>();
-	const create: Required<VariableInfo>[] = [];
-	const resolve = (id: string, name: string, type: string) => {
+	const create: Insertion["create"] = [];
+	const resolve = (id: string, name: string, type: string, parameters?: string[]) => {
 		const found = existing.find((candidate) => candidate.name === name && (candidate.type ?? "") === type);
 		const planned = create.find((candidate) => candidate.name === name && candidate.type === type);
 		const target = found?.id ?? planned?.id;
@@ -95,12 +100,12 @@ export function groupToBlocks(group: Project, existing: VariableInfo[], newId: (
 			ids.set(id, target);
 			return;
 		}
-		const created = { id: newId(), name, type };
+		const created = { id: newId(), name, type, ...(parameters && parameters.length > 0 ? { parameters } : {}) };
 		create.push(created);
 		ids.set(id, created.id);
 	};
 	for (const variable of group.variables) resolve(variable.id, variable.name, "");
-	for (const fn of group.functions ?? []) resolve(fn.id, fn.name, FUNCTION_TYPE);
+	for (const fn of group.functions ?? []) resolve(fn.id, fn.name, FUNCTION_TYPE, fn.parameters);
 
 	const scripts = structuredClone(group.scripts);
 	for (const script of scripts) {

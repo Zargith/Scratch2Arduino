@@ -84,6 +84,7 @@ public:
 private:
     static constexpr std::string_view kDefine = "functions_define";
     static constexpr std::string_view kCall = "functions_call";
+    static constexpr std::string_view kParameter = "functions_parameter";
     static constexpr std::string_view kModule = "phone_module";
 
     std::string functionOf(const Block& block) const {
@@ -219,6 +220,11 @@ private:
                 result += message[i];
             }
         }
+        // Several slots in a row ("call ... ... ...") read as one; a line break as a space.
+        for (std::size_t at = result.find("... ..."); at != std::string::npos; at = result.find("... ...")) {
+            result.erase(at, 4);
+        }
+        std::replace(result.begin(), result.end(), '\n', ' ');
         // Drop a trailing "..." (C-block mouth) and spaces.
         while (!result.empty() && (result.back() == ' ')) {
             result.pop_back();
@@ -371,8 +377,26 @@ private:
             case ArgKind::UserCode:
                 checkUserCode(block, arg);
                 break;
+            case ArgKind::Label:
+                if (block.type == kParameter) {
+                    checkParameter(block, arg);
+                }
+                break;
             }
         }
+    }
+
+    /// An input block reads the number given by "call": only inside the function that has the input.
+    void checkParameter(const Block& block, const BlockArg& arg) {
+        const auto field = block.fields.find(arg.name);
+        const std::string name = field != block.fields.end() ? field->second : std::string{};
+        for (const project::Function& function : project_.functions) {
+            if (function.id == currentFunction_ &&
+                std::find(function.parameters.begin(), function.parameters.end(), name) != function.parameters.end()) {
+                return;
+            }
+        }
+        add(Rule::ParameterOutsideFunction, Severity::Error, block, {{"name", name}});
     }
 
     void checkUserCode(const Block& block, const BlockArg& arg) {
@@ -450,6 +474,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.function_defined_twice";
     case Rule::RecursiveFunction:
         return "validation.recursive_function";
+    case Rule::ParameterOutsideFunction:
+        return "validation.parameter_outside_function";
     case Rule::NoBluetooth:
         return "validation.no_bluetooth";
     case Rule::ModuleMissing:

@@ -12,11 +12,20 @@ import {
 	MANAGE_LIBRARY_CALLBACK,
 	OPEN_CODE_CALLBACK,
 	setCurrentBoard,
+	setEditFunctionHandler,
 	setUserDeclarations,
 	toolbox,
 	type UserDeclaration,
 } from "@/blocks/definitions";
+import {
+	changeFunctionParameters,
+	functionParameters,
+	registerParametersSerializer,
+	setFunctionParameters,
+	syncFunctionBlocks,
+} from "@/blocks/functions";
 import type { Board, Language } from "@/catalog";
+import { FunctionDialog, type FunctionDraft } from "@/FunctionDialog";
 import { translate } from "@/i18n";
 import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
 import type { BlockState, Project, WorkspaceState } from "@/project/convert";
@@ -62,6 +71,34 @@ interface PromptRequest {
 
 const LOOSE = "S2A_LOOSE_BLOCK";
 const SAVE_TO_LIBRARY = "s2a_save_to_library";
+const EDIT_FUNCTION = "s2a_edit_function";
+
+/** The function window, opened from a block's menu. */
+let openFunctionWindow: ((id: string) => void) | null = null;
+
+/** Right-click on a "define" or "call" block: "Edit the function" (name and inputs). */
+function registerEditFunction() {
+	const registry = Blockly.ContextMenuRegistry.registry;
+	if (registry.getItem(EDIT_FUNCTION)) return;
+	registry.register({
+		id: EDIT_FUNCTION,
+		scopeType: Blockly.ContextMenuRegistry.ScopeType.BLOCK,
+		displayText: () => translate(menuLanguage, "functions.edit"),
+		preconditionFn: (scope) =>
+			scope.block &&
+			!scope.block.isInFlyout &&
+			(scope.block.type === "functions_define" || scope.block.type === "functions_call") &&
+			scope.block.getFieldValue("FUNCTION") &&
+			openFunctionWindow
+				? "enabled"
+				: "hidden",
+		callback: (scope) => {
+			const id = scope.block?.getFieldValue("FUNCTION");
+			if (id) openFunctionWindow?.(String(id));
+		},
+		weight: 9,
+	});
+}
 
 /** What the "Save to My blocks" menu entry does in the editor currently shown. */
 let saveToLibrary: ((block: Blockly.BlockSvg) => void) | null = null;
@@ -87,7 +124,11 @@ function variablesOf(workspace: Blockly.Workspace): VariableInfo[] {
 	return workspace
 		.getVariableMap()
 		.getAllVariables()
-		.map((variable) => ({ id: variable.getId(), name: variable.getName(), type: variable.getType() }));
+		.map((variable) => {
+			const info: VariableInfo = { id: variable.getId(), name: variable.getName(), type: variable.getType() };
+			const inputs = variable.getType() === FUNCTION_TYPE ? functionParameters(variable.getId()) : [];
+			return inputs.length > 0 ? { ...info, parameters: inputs } : info;
+		});
 }
 
 /** Adds a "My blocks" group at the top left of the visible area, as one undo step. */
@@ -100,6 +141,7 @@ function insertGroup(workspace: Blockly.WorkspaceSvg, group: Project) {
 	try {
 		for (const variable of insertion.create) {
 			workspace.getVariableMap().createVariable(variable.name, variable.type, variable.id);
+			if (variable.parameters) setFunctionParameters(variable.id, variable.parameters);
 		}
 		for (const state of insertion.blocks) {
 			const block = Blockly.serialization.blocks.append(
@@ -108,6 +150,8 @@ function insertGroup(workspace: Blockly.WorkspaceSvg, group: Project) {
 			) as Blockly.BlockSvg;
 			y += block.getHeightWidth().height + 24;
 		}
+		// A function the project already had keeps its own inputs: its calls take them.
+		syncFunctionBlocks(workspace);
 	} finally {
 		Blockly.Events.setGroup(false);
 	}
@@ -169,6 +213,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	onOpenCodeRef.current = onOpenCode;
 	const refreshToolbox = useRef<(() => void) | null>(null);
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
+	/** Function window: the function changed (its id), or "" for a new one; null when closed. */
+	const [functionWindow, setFunctionWindow] = useState<{ id: string; draft: FunctionDraft | null } | null>(null);
 	const glowing = useRef<Set<string>>(new Set());
 
 	useImperativeHandle(ref, () => ({
@@ -207,7 +253,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		const labels = {
 			createVariable: translate(language, "variables.create"),
 			createFunction: translate(language, "functions.create"),
+			inputsOf: (name: string) => translate(language, "functions.inputs_of", { name }),
 		};
+		registerParametersSerializer();
 		const myCode = () => ({ declarations: declarationsRef.current, empty: translate(language, "mycode.empty") });
 		const libraryToolbox = () => ({
 			title: translate(language, "library.title"),
@@ -229,9 +277,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		created.registerButtonCallback(CREATE_VARIABLE_CALLBACK, () => {
 			Blockly.ScratchVariables.createVariable(created);
 		});
-		created.registerButtonCallback(CREATE_FUNCTION_CALLBACK, () => {
-			Blockly.ScratchVariables.createVariable(created, undefined, FUNCTION_TYPE);
-		});
+		created.registerButtonCallback(CREATE_FUNCTION_CALLBACK, () => setFunctionWindow({ id: "", draft: null }));
+		const editFunction = (id: string) => {
+			const variable = created.getVariableMap().getVariableById(id);
+			if (variable) setFunctionWindow({ id, draft: { name: variable.getName(), inputs: functionParameters(id) } });
+		};
+		setEditFunctionHandler(editFunction);
+		openFunctionWindow = editFunction;
+		registerEditFunction();
 		created.registerButtonCallback(MANAGE_LIBRARY_CALLBACK, () => onManageLibraryRef.current());
 		created.registerButtonCallback(OPEN_CODE_CALLBACK, () => onOpenCodeRef.current?.());
 		const registerGroupButtons = () => {
@@ -301,6 +354,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		}
 		Blockly.Events.disable(); // opening a project does not modify it
 		try {
+			syncFunctionBlocks(created);
 			markLooseBlocks(created);
 		} finally {
 			Blockly.Events.enable();
@@ -310,7 +364,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 				created
 					.getVariableMap()
 					.getVariablesOfType(type)
-					.map((variable) => ({ id: variable.getId() }));
+					.map((variable) => ({ id: variable.getId(), name: variable.getName() }));
 			registerGroupButtons();
 			created.updateToolbox(toolbox(language, idsOf(""), labels, idsOf(FUNCTION_TYPE), libraryToolbox(), myCode()));
 			// ScratchContinuousToolbox only redraws its flyout on request.
@@ -354,6 +408,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 			document.removeEventListener("keydown", forwardShortcut);
 			resize.disconnect();
 			saveToLibrary = null;
+			openFunctionWindow = null;
+			setEditFunctionHandler(null);
 			refreshToolbox.current = null;
 			created.dispose();
 			workspace.current = null;
@@ -379,6 +435,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		libraryRef.current = library;
 		refreshToolbox.current?.();
 	}, [library]);
+
+	/** The function window was closed with OK: create the function, or change it. */
+	const functionDone = (name: string, inputs: { name: string; from: number | null }[]) => {
+		const target = workspace.current;
+		const opened = functionWindow;
+		setFunctionWindow(null);
+		if (!target || !opened) return;
+		Blockly.Events.setGroup(true);
+		try {
+			if (opened.id === "") {
+				const created = target.getVariableMap().createVariable(name, FUNCTION_TYPE);
+				setFunctionParameters(
+					created.getId(),
+					inputs.map((input) => input.name)
+				);
+			} else {
+				if (target.getVariableMap().getVariableById(opened.id)?.getName() !== name) {
+					target.getVariableMap().renameVariable(target.getVariableMap().getVariableById(opened.id)!, name);
+				}
+				changeFunctionParameters(target, opened.id, inputs);
+			}
+		} finally {
+			Blockly.Events.setGroup(false);
+		}
+		refreshToolbox.current?.();
+		onChangeRef.current();
+	};
 
 	const close = (value: string | null) => {
 		prompt?.resolve(value);
@@ -414,6 +497,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 					</Stack>
 				</form>
 			</Modal>
+			<FunctionDialog
+				opened={functionWindow !== null}
+				language={language}
+				initial={functionWindow?.draft ?? null}
+				nameTaken={(name) =>
+					(workspace.current?.getVariableMap().getVariablesOfType(FUNCTION_TYPE) ?? []).some(
+						(variable) => variable.getName() === name && variable.getId() !== functionWindow?.id
+					)
+				}
+				onCancel={() => setFunctionWindow(null)}
+				onDone={functionDone}
+			/>
 		</>
 	);
 });
