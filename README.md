@@ -184,6 +184,10 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 
 ### First project
 
+No board yet? Open **Tutorials and help** (the graduation cap) and start the **interactive tutorial** "My
+doorbell": a box guides you step by step through the blocks, the wiring diagram, the virtual board and a
+little C++ code translated into Python, and checks each step by itself.
+
 1. Plug in an Arduino Uno with a USB cable.
 2. Start **Scratch2Arduino**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
 3. Under **when the program starts**, drag **forever**, then inside it **turn the built-in LED on**, **wait 1 seconds**, **turn the built-in LED off**, **wait 1 seconds**.

@@ -1,8 +1,8 @@
 // Side panel showing the bundled user documentation (tutorials and guide), to follow a tutorial
 // while building its blocks. Links between pages open in the panel; a tutorial can open its
 // example from the gallery.
-import { ActionIcon, Button, Card, Group, Text, Tooltip, Typography } from "@mantine/core";
-import { IconExternalLink, IconList, IconX } from "@tabler/icons-react";
+import { ActionIcon, Alert, Button, Card, Group, Text, Tooltip, Typography } from "@mantine/core";
+import { IconExternalLink, IconHandClick, IconList, IconX } from "@tabler/icons-react";
 import { type MouseEvent, useEffect, useMemo, useRef } from "react";
 
 import type { Language } from "@/catalog";
@@ -21,10 +21,12 @@ interface TutorialsProps {
 	onNavigate(page: DocPath, language: Language): void;
 	/** Opens the gallery example of a tutorial. */
 	onOpenExample(exampleId: string): void;
+	/** Starts the interactive tutorial (on a new project). */
+	onStartTour?(): void;
 	onClose(): void;
 }
 
-export function Tutorials({ language, t, page, height, onNavigate, onOpenExample, onClose }: TutorialsProps) {
+export function Tutorials({ language, t, page, height, onNavigate, onOpenExample, onStartTour, onClose }: TutorialsProps) {
 	const html = useMemo(() => renderDoc(language, page), [language, page]);
 	const content = useRef<HTMLDivElement>(null);
 	const tutorial = tutorials.find((candidate) => candidate.path === page);
@@ -91,6 +93,16 @@ export function Tutorials({ language, t, page, height, onNavigate, onOpenExample
 					</ActionIcon>
 				</Group>
 			</Group>
+			{page === docsHome && onStartTour && (
+				<Alert variant="light" color="orange" mb="xs" title={t("tour.offer_title")} icon={<IconHandClick size={18} />}>
+					<Text size="sm" mb="xs">
+						{t("tour.offer")}
+					</Text>
+					<Button size="xs" onClick={onStartTour}>
+						{t("tour.start")}
+					</Button>
+				</Alert>
+			)}
 			<Typography
 				ref={content}
 				onClick={followLink}

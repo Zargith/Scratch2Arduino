@@ -6,6 +6,10 @@ This guide presents the whole application. To learn step by step, follow the
 [tutorials](README.md#tutorials) instead, starting with [Blink](tutorials/01-blink.md). They are also in
 the application: the **Tutorials and help** button (the graduation cap), next to the serial monitor.
 
+For a very first try, without hardware, the same panel offers the **interactive tutorial "My doorbell"**: a
+box guides you step by step (blocks, wiring diagram, virtual board, a little C++ code translated into
+Python) and sees by itself when each step is done.
+
 *Pour le lire en français, change la langue dans les paramètres.*
 
 ## Contents
