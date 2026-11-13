@@ -1,0 +1,223 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Joystick et LED",
+  "board": "uno",
+  "variables": [],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if_up",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pushed_up",
+                      "type": "sensors_joystick_direction",
+                      "fields": {
+                        "DIRECTION": "UP",
+                        "X_PIN": "A0",
+                        "Y_PIN": "A1",
+                        "SW_PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on_up",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off_up",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if_down",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pushed_down",
+                      "type": "sensors_joystick_direction",
+                      "fields": {
+                        "DIRECTION": "DOWN",
+                        "X_PIN": "A0",
+                        "Y_PIN": "A1",
+                        "SW_PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on_down",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "9",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off_down",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "9",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if_left",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pushed_left",
+                      "type": "sensors_joystick_direction",
+                      "fields": {
+                        "DIRECTION": "LEFT",
+                        "X_PIN": "A0",
+                        "Y_PIN": "A1",
+                        "SW_PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on_left",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "10",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off_left",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "10",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if_right",
+                "type": "control_if_else",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pushed_right",
+                      "type": "sensors_joystick_direction",
+                      "fields": {
+                        "DIRECTION": "RIGHT",
+                        "X_PIN": "A0",
+                        "Y_PIN": "A1",
+                        "SW_PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "on_right",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "11",
+                        "STATE": "HIGH"
+                      }
+                    }
+                  ],
+                  "SUBSTACK2": [
+                    {
+                      "id": "off_right",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "11",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "if_pressed",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pressed",
+                      "type": "sensors_joystick_pressed",
+                      "fields": {
+                        "X_PIN": "A0",
+                        "Y_PIN": "A1",
+                        "SW_PIN": "2"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "beep",
+                      "type": "sound_play_tone",
+                      "fields": {
+                        "PIN": "6"
+                      },
+                      "inputs": {
+                        "FREQUENCY": {
+                          "value": "880"
+                        },
+                        "SECONDS": {
+                          "value": "0.1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

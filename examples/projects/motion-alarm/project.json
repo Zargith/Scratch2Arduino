@@ -1,0 +1,156 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Alarme de mouvement",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "passages",
+      "name": "passages",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "if_motion",
+                "type": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "motion",
+                      "type": "sensors_motion",
+                      "fields": {
+                        "PIN": "3"
+                      }
+                    }
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "count",
+                      "type": "variables_change",
+                      "fields": {
+                        "VARIABLE": "passages"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "print",
+                      "type": "serial_print",
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "get",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "passages"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "light_on",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "HIGH"
+                      }
+                    },
+                    {
+                      "id": "beeps",
+                      "type": "control_repeat",
+                      "inputs": {
+                        "TIMES": {
+                          "value": "3"
+                        }
+                      },
+                      "statements": {
+                        "SUBSTACK": [
+                          {
+                            "id": "beep",
+                            "type": "sound_play_tone",
+                            "fields": {
+                              "PIN": "6"
+                            },
+                            "inputs": {
+                              "FREQUENCY": {
+                                "value": "988"
+                              },
+                              "SECONDS": {
+                                "value": "0.15"
+                              }
+                            }
+                          },
+                          {
+                            "id": "pause",
+                            "type": "control_wait",
+                            "inputs": {
+                              "SECONDS": {
+                                "value": "0.15"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "until_still",
+                      "type": "control_wait_until",
+                      "inputs": {
+                        "CONDITION": {
+                          "block": {
+                            "id": "not",
+                            "type": "operators_not",
+                            "inputs": {
+                              "OPERAND": {
+                                "block": {
+                                  "id": "still",
+                                  "type": "sensors_motion",
+                                  "fields": {
+                                    "PIN": "3"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "light_off",
+                      "type": "pins_digital_write",
+                      "fields": {
+                        "PIN": "8",
+                        "STATE": "LOW"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

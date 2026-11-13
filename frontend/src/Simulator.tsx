@@ -134,6 +134,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 	useBuzzer(sounding?.kind === "buzzer" ? sounding.frequency : (Object.values(state?.tones ?? {})[0] ?? 0), muted);
 
 	const pinLabel = (pin: string) => t("sim.pin", { pin });
+	const title = (part: SimPart) => (part.detail ? `${part.name}: ${t(part.detail)}` : part.name);
 	const widget = (part: SimPart): ReactNode => {
 		switch (part.kind) {
 			case "led":
@@ -167,7 +168,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						}}
 						onKeyUp={() => onInput("press", part.pin, false)}
 					>
-						{t("sim.press")}
+						{t(part.action === "move" ? "sim.move" : part.action === "near" ? "sim.near" : "sim.press")}
 					</Button>
 				);
 			case "slider":
@@ -177,7 +178,7 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						min={0}
 						max={1023}
 						label={(value) => (part.sensor === "analog" ? String(value) : `${percent(value)} %`)}
-						ariaLabel={part.name}
+						ariaLabel={title(part)}
 						onChange={(value) => onInput("analog", part.pin, value)}
 					/>
 				);
@@ -289,13 +290,13 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 				{parts.map((part) =>
 					below(part) ? (
 						<Stack key={part.key} gap={4}>
-							<Text size="sm">{part.name}</Text>
+							<Text size="sm">{title(part)}</Text>
 							{widget(part)}
 						</Stack>
 					) : (
 						<Group key={part.key} justify="space-between" gap="sm" wrap="nowrap">
 							<Text size="sm" truncate style={{ flex: part.kind === "slider" || part.kind === "distance" ? "0 0 45%" : 1 }}>
-								{part.name}
+								{title(part)}
 							</Text>
 							{widget(part)}
 						</Group>

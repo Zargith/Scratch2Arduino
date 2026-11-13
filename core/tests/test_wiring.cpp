@@ -90,6 +90,33 @@ TEST(Wiring, MergesTheBlocksOfOneComponentAndIgnoresLooseBlocks) {
     EXPECT_EQ(plan.components[1].blockIds, std::vector<std::string>{"other"});
 }
 
+TEST(Wiring, MakesOneJoystickOfItsThreeBlocks) {
+    const std::map<std::string, std::string> pins{{"X_PIN", "A2"}, {"Y_PIN", "A3"}, {"SW_PIN", "7"}};
+    auto with = [&](std::map<std::string, std::string> fields) {
+        fields.insert(pins.begin(), pins.end());
+        return fields;
+    };
+    const Plan plan = s2a::wiring::plan(program({block("x", "sensors_joystick", with({{"AXIS", "X"}})),
+                                                 block("up", "sensors_joystick_direction", with({{"DIRECTION", "UP"}})),
+                                                 block("sw", "sensors_joystick_pressed", with({})),
+                                                 block("pir", "sensors_motion", {{"PIN", "3"}}),
+                                                 block("ir", "sensors_obstacle", {{"PIN", "4"}})}),
+                                        Language::English);
+    ASSERT_EQ(plan.components.size(), 3U);
+    EXPECT_EQ(plan.components[0].kind, "joystick");
+    EXPECT_EQ(plan.components[0].blockIds, (std::vector<std::string>{"x", "up", "sw"}));
+    EXPECT_EQ(wires(plan.components[0]),
+              (std::vector<std::string>{"GND -> GND", "+5V -> 5V", "VRx -> A2", "VRy -> A3", "SW -> 7"}));
+    EXPECT_EQ(wires(plan.components[1]), (std::vector<std::string>{"VCC -> 5V", "OUT -> 3", "GND -> GND"}));
+    EXPECT_EQ(wires(plan.components[2]), (std::vector<std::string>{"OUT -> 4", "GND -> GND", "VCC -> 5V"}));
+    EXPECT_TRUE(plan.warnings.empty());
+    // Drawn as modules, without an unknown part.
+    const std::string svg = s2a::wiring::svg(plan, *s2a::BoardDatabase::builtin().find("uno"), "Test");
+    for (const char* label : {"PIR", "FC-51"}) {
+        EXPECT_NE(svg.find(label), std::string::npos) << label;
+    }
+}
+
 TEST(Wiring, WarnsAboutAPinUsedTwice) {
     const Plan plan = s2a::wiring::plan(
         program({block("led", "pins_digital_write", {{"PIN", "7"}, {"STATE", "HIGH"}}),

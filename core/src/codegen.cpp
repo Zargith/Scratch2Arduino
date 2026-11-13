@@ -316,6 +316,27 @@ private:
         if (type == "sensors_potentiometer" || type == "sensors_light") {
             return "(analogRead(" + pin(block, "PIN", PinMode::Input) + ") * 100.0 / 1023.0)";
         }
+        if (type == "sensors_joystick") {
+            const std::string axis = field(block, "AXIS") == "Y" ? "Y_PIN" : "X_PIN";
+            return "(analogRead(" + pin(block, axis, PinMode::Input) + ") * 100.0 / 1023.0)";
+        }
+        if (type == "sensors_joystick_direction") {
+            // Pushed far: below a quarter or above three quarters of the way.
+            const std::string direction = field(block, "DIRECTION");
+            const bool horizontal = direction == "LEFT" || direction == "RIGHT";
+            const std::string read = "analogRead(" + pin(block, horizontal ? "X_PIN" : "Y_PIN", PinMode::Input) + ")";
+            return "(" + read + (direction == "LEFT" || direction == "UP" ? " < 256)" : " > 767)");
+        }
+        if (type == "sensors_joystick_pressed") {
+            return "(digitalRead(" + pin(block, "SW_PIN", PinMode::InputPullup) + ") == LOW)";
+        }
+        if (type == "sensors_motion") {
+            return "(digitalRead(" + pin(block, "PIN", PinMode::Input) + ") == HIGH)";
+        }
+        if (type == "sensors_obstacle") {
+            // The sensor pulls its output LOW when something is in front of it.
+            return "(digitalRead(" + pin(block, "PIN", PinMode::InputPullup) + ") == LOW)";
+        }
         if (type == "sensors_distance") {
             helpers_.insert("distance");
             const std::string trig = pin(block, "TRIG_PIN", PinMode::Output);
