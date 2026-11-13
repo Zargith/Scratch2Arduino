@@ -18,7 +18,15 @@ interface SimulatorProps {
 	onInput(...input: SimInput): void;
 	/** CSS height its parts may take before they scroll (smaller when other panels are open). */
 	maxHeight?: string;
+	/**
+	 * Beside the interactive diagram: only the inputs that cannot be used on a drawing (sliders,
+	 * distances, temperatures), the board's pins and the phone; the rest is on the diagram.
+	 */
+	controlsOnly?: boolean;
 }
+
+/** Inputs set with a control (the others are used on the diagram of the virtual board). */
+export const isControl = (part: SimPart): boolean => part.kind === "slider" || part.kind === "distance" || part.kind === "climate";
 
 const ledColor = (level: number) => `rgba(255, 64, 64, ${0.15 + (0.85 * level) / 255})`;
 
@@ -147,7 +155,7 @@ function useBuzzer(frequency: number, muted: boolean) {
 	);
 }
 
-export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60dvh - 90px)" }: SimulatorProps) {
+export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60dvh - 90px)", controlsOnly = false }: SimulatorProps) {
 	const [muted, setMuted] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
@@ -299,10 +307,17 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 		}
 	};
 	/** Screens, strips and matrices are wide: below their name rather than beside it. */
+	const shown = controlsOnly ? parts.filter(isControl) : parts;
 	const below = (part: SimPart) => part.kind === "screen" || part.kind === "matrix" || part.kind === "strip" || part.kind === "climate";
 
 	return (
-		<Card withBorder shadow="sm" w={360} style={{ borderColor: "var(--mantine-color-teal-6)" }}>
+		<Card
+			withBorder={!controlsOnly}
+			shadow={controlsOnly ? undefined : "sm"}
+			w={controlsOnly ? "100%" : 360}
+			p={controlsOnly ? "xs" : undefined}
+			style={{ borderColor: "var(--mantine-color-teal-6)" }}
+		>
 			<Group justify="space-between" wrap="nowrap" mb={4}>
 				<Group gap={6} wrap="nowrap">
 					<IconCpu size={18} color="var(--mantine-color-teal-7)" />
@@ -327,12 +342,17 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 			</Text>
 			{/* Room around the parts (and the same width taken back): a scrolling area crops the glow of the LEDs. */}
 			<Stack gap="xs" style={{ maxHeight, overflowY: "auto", padding: 14, margin: -14 }}>
-				{parts.length === 0 && pins.length === 0 && (
+				{controlsOnly && shown.length === 0 && (
+					<Text size="sm" c="dimmed">
+						{t("sim.on_diagram")}
+					</Text>
+				)}
+				{!controlsOnly && parts.length === 0 && pins.length === 0 && (
 					<Text size="sm" c="dimmed">
 						{t("sim.empty")}
 					</Text>
 				)}
-				{parts.map((part) =>
+				{shown.map((part) =>
 					below(part) ? (
 						<Stack key={part.key} gap={4}>
 							<Text size="sm">{title(part)}</Text>

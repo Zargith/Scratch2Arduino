@@ -20,6 +20,8 @@ import {
 	Tooltip,
 } from "@mantine/core";
 import {
+	IconArrowsMaximize,
+	IconArrowsMinimize,
 	IconBluetooth,
 	IconCheck,
 	IconDeviceFloppy,
@@ -54,6 +56,7 @@ import {
 	type Port,
 	type RecentProject,
 	type Settings as SavedSettings,
+	type SimInput,
 	type SimState,
 	type WiringPlan,
 } from "@/bridge";
@@ -81,7 +84,8 @@ import type { SavedGroup } from "@/myBlocks";
 import logo from "@/logo.png";
 import { SerialMonitor } from "@/SerialMonitor";
 import { Settings } from "@/Settings";
-import { isSimPort, SIM_PORT, usesPhone } from "@/simulation";
+import { isSimPort, SIM_PORT, simParts, usesPhone } from "@/simulation";
+import { SimBoard } from "@/SimBoard";
 import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
 import { findUpdate, platform, type Release } from "@/updates";
@@ -204,6 +208,8 @@ export function App() {
 	/** Simulation (Live mode on the virtual board): what it shows, and the components of the blocks. */
 	const [simState, setSimState] = useState<SimState | null>(null);
 	const [simPlan, setSimPlan] = useState<WiringPlan | null>(null);
+	/** The virtual board's panel (at the bottom) takes most of the window. */
+	const [boardExpanded, setBoardExpanded] = useState(false);
 	/** The blocks use the Phone blocks: the virtual phone is shown. */
 	const [simPhone, setSimPhone] = useState(false);
 	/** The wiring hints of this Live session were closed by the user. */
@@ -316,6 +322,8 @@ export function App() {
 		},
 		[t]
 	);
+	/** A change made on the virtual board (a button held, a slider moved): stable, the diagram keeps it. */
+	const simInput = useCallback((...input: SimInput) => void bridge.simInput(...input).catch(fail), [fail]);
 
 	/** Recreate the editor from a project (open, new) or from the current blocks (language). */
 	const reload = useCallback((state: WorkspaceState) => {
@@ -1067,8 +1075,13 @@ export function App() {
 		[tourStep, tourEdits, view, wiringShown, live, port, simState, userCode, checks, currentProject]
 	);
 
+	const boardParts = useMemo(() => simParts(simPlan, simState), [simPlan, simState]);
+	/** The virtual board drawn as the wiring diagram, at the bottom of the work area (the host draws it). */
+	const boardShown = simulated && !!simPlan?.svg;
+	const boardHeight = boardExpanded ? "72%" : "50%";
 	/** The column of panels on the right (virtual board, live values, serial monitor...) is shown. */
-	const sidePanels = (live && liveRows.length > 0) || simulated || wiringHints.length > 0 || monitorShown || tutorialPage !== null;
+	const sidePanels =
+		(live && liveRows.length > 0) || (simulated && !boardShown) || wiringHints.length > 0 || monitorShown || tutorialPage !== null;
 
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
@@ -1329,7 +1342,7 @@ export function App() {
 						),
 					}}
 				/>
-				<div style={{ position: "absolute", inset: "64px 0 0 0" }}>
+				<div style={{ position: "absolute", inset: `64px 0 ${boardShown ? boardHeight : "0"} 0` }}>
 					{view === "code" ? (
 						<CodeView
 							t={t}
@@ -1386,6 +1399,40 @@ export function App() {
 						/>
 					)}
 				</div>
+				{boardShown && simPlan?.svg && (
+					<div className="s2a-board-panel" style={{ height: boardHeight }}>
+						<div className="s2a-board-controls">
+							<Simulator
+								controlsOnly
+								plan={simPlan}
+								state={simState}
+								phone={simPhone}
+								t={t}
+								maxHeight="none"
+								onInput={(...input) => void bridge.simInput(...input).catch(fail)}
+							/>
+						</div>
+						<div className="s2a-board-drawing">
+							<Tooltip label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}>
+								<ActionIcon
+									className="s2a-board-size"
+									variant="default"
+									aria-label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}
+									onClick={() => setBoardExpanded(!boardExpanded)}
+								>
+									{boardExpanded ? <IconArrowsMinimize size={16} /> : <IconArrowsMaximize size={16} />}
+								</ActionIcon>
+							</Tooltip>
+							<SimBoard
+								svg={simPlan.svg}
+								parts={boardParts}
+								state={simState}
+								label={t("sim.title")}
+								onInput={simInput}
+							/>
+						</div>
+					</div>
+				)}
 			</AppShell.Main>
 
 			{sidePanels && (
@@ -1394,7 +1441,7 @@ export function App() {
 					gap="sm"
 					style={{ position: "fixed", top: 80, right: 24, zIndex: 150, maxHeight: "calc(100dvh - 96px)", overflowY: "auto", paddingBottom: 4 }}
 				>
-					{simulated && (
+					{simulated && !boardShown && (
 						<Simulator
 							maxHeight={(live && liveRows.length > 0) || monitorShown || wiringHints.length > 0 ? "28dvh" : "calc(60dvh - 90px)"}
 							plan={simPlan}
@@ -1474,7 +1521,8 @@ export function App() {
 						left: view === "blocks" ? 330 : 64,
 						// Beside the panels on the right (live values, virtual board...), not over them.
 						right: sidePanels ? 400 : 110,
-						bottom: 16,
+						// Above the virtual board's panel when it is open.
+						bottom: boardShown ? `calc(${boardHeight} + 16px)` : 16,
 						zIndex: 150,
 						maxHeight: "50vh",
 						overflowY: "auto",

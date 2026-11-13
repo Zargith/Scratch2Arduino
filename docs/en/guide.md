@@ -228,14 +228,19 @@ off. For the board to work on its own, without the computer, use **Upload**.
 
 **Without a board: the virtual board**. No board at hand? Choose the **Virtual board (no hardware)**
 port, then click **Live** (it is chosen by itself when no board is plugged in). Your blocks run on a
-board drawn on the screen, in the *Virtual board* panel:
+board drawn on the screen: the *Virtual board* panel opens at the bottom of the window, with **the wiring
+diagram of your project coming to life** on the right and the settings on the left. The button at the top
+right of the diagram enlarges it.
 
-- the **outputs** follow the blocks: LEDs (brighter or dimmer with PWM), RGB LED, buzzer (with its
-  sound, which the speaker button mutes), servo, motor, LCD and OLED screens, NeoPixel strip, LED matrix,
-  and the small LEDs of the board's pins;
-- the **inputs** change with the mouse: hold **Press** for a button, move the sliders of a potentiometer,
-  a light sensor, a distance sensor or a DHT sensor (temperature and humidity); with the *Phone* blocks,
-  type the phone's message at the bottom of the panel.
+- On the diagram, the **outputs** follow the blocks: LEDs light up (brighter or dimmer with PWM), the RGB
+  LED takes its colour, the board's "L" LED follows pin 13, the servo arm and the stepper shaft turn, the
+  LCD, OLED and 4-digit screens show their text, the NeoPixel strip and the LED matrix their colours, and
+  the buzzer vibrates (with its sound, which the speaker button mutes).
+- On the diagram too, **click and hold** a push button, the joystick (to press it down), the PIR motion
+  sensor or the obstacle sensor: the board sees it while you hold it.
+- On the left, the **settings** for what cannot be handled on a drawing: sliders of a potentiometer, a light
+  sensor, the joystick's axes, a distance sensor or a DHT sensor (temperature and humidity); with the
+  *Phone* blocks, type the phone's message at the bottom of the settings.
 
 The parts shown are the ones of the wiring diagram, computed from your blocks. The rest of the Live mode
 works too: step by step, variables, serial monitor, Python and JavaScript. The virtual board takes no

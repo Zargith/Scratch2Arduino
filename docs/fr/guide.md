@@ -238,14 +238,20 @@ sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ord
 
 **Sans carte : la carte virtuelle**. Pas de carte sous la main ? Choisis le port **Carte virtuelle
 (sans matériel)**, puis clique sur **Live** (c'est le port choisi tout seul quand aucune carte n'est
-branchée). Tes blocs tournent sur une carte dessinée à l'écran, dans le panneau *Carte virtuelle* :
+branchée). Le panneau *Carte virtuelle* s'ouvre en bas de l'écran : à droite, **le schéma de câblage de
+ton projet prend vie** ; à gauche, les réglages. Le bouton en haut à droite du schéma l'agrandit.
 
-- les **sorties** suivent les blocs : LED (plus ou moins lumineuses en PWM), LED RGB, buzzer (avec le
-  son, que le bouton haut-parleur coupe), servomoteur, moteur, écrans LCD et OLED, ruban NeoPixel,
-  matrice de LED, et les petites LED des broches de la carte ;
-- les **entrées** se changent à la souris : maintiens **Appuie** pour un bouton, bouge les curseurs d'un
-  potentiomètre, d'un capteur de lumière, d'un capteur de distance ou d'un capteur DHT (température et
-  humidité) ; avec les blocs *Téléphone*, écris le message du téléphone en bas du panneau.
+- Sur le schéma, les **sorties** suivent les blocs : les LED s'allument (plus ou moins fort en PWM), la LED
+  RGB prend sa couleur, la LED "L" de la carte suit la broche 13, le bras du servomoteur et l'axe du moteur
+  pas à pas tournent, les écrans LCD, OLED et l'afficheur 4 chiffres montrent leur texte, le ruban
+  NeoPixel et la matrice de LED leurs couleurs, et le buzzer vibre (avec le son, que le bouton haut-parleur
+  coupe).
+- Sur le schéma aussi, **clique et garde appuyé** sur un bouton poussoir, sur le joystick (pour
+  l'enfoncer), sur le capteur de mouvement PIR ou sur le capteur d'obstacle : la carte le voit tant que tu
+  restes appuyé.
+- À gauche, les **réglages** de ce qui ne se manipule pas sur un dessin : curseurs d'un potentiomètre, d'un
+  capteur de lumière, des axes du joystick, d'un capteur de distance ou d'un capteur DHT (température et
+  humidité) ; avec les blocs *Téléphone*, écris le message du téléphone en bas des réglages.
 
 Les composants affichés sont ceux du schéma de câblage, calculés à partir de tes blocs. Tout le reste du
 mode Live marche aussi : pas à pas, variables, moniteur série, Python et JavaScript. La carte virtuelle ne
