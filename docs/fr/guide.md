@@ -238,6 +238,14 @@ puis utilise **appeler ...** autant de fois que tu veux. Une fonction ne s'exéc
 démarrage, et elle ne peut pas s'appeler elle-même. Clic droit sur *définir* pour la renommer ou la
 supprimer. Exemple : le [Feu tricolore](tutorials/02-traffic-light.md).
 
+Une fonction peut aussi avoir des **entrées** (jusqu'à 4) : des nombres que chaque *appeler* lui donne.
+Par exemple une fonction *biper* avec les entrées *fois* et *durée* peut biper 3 fois vite ou une seule
+fois longtemps. Dans la fenêtre de **Créer une fonction** (ou clic droit sur *définir* -> **Modifier la
+fonction**), clique sur **Ajouter une entrée** et donne-lui un nom. Le bloc *appeler* a alors une case
+pour chaque entrée, et la famille *Fonctions* a un bloc au nom de chaque entrée : mets-le dans la
+fonction (par exemple dans "répéter ... fois") pour utiliser le nombre de l'appel. En dehors de sa
+fonction, ce bloc n'a pas de nombre : *Vérifier* te le dit.
+
 ### Mes blocs
 
 Pour garder un groupe de blocs **pour tous tes projets** : clic droit sur le premier bloc ->
