@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SimInput, SimState, WiringPlan } from "@/bridge";
 import { FoldButton } from "@/FoldButton";
 import type { MessageKey } from "@/i18n";
-import { outputPins, percent, simParts, type SimPart } from "@/simulation";
+import { boardPins, percent, simParts, type BoardPin, type SimPart } from "@/simulation";
 import "./Simulator.css";
 
 interface SimulatorProps {
@@ -123,6 +123,40 @@ function Stepper({ angle, label }: { angle: number; label: string }) {
 	);
 }
 
+/** The look of a board pin: an LED for an output, a speaker for a sound, a square lit when an input is high, a gauge for an analog input. */
+function PinState({ pin, label }: { pin: BoardPin; label: string }) {
+	switch (pin.kind) {
+		case "output":
+			return <Led level={pin.level} size={12} label={label} />;
+		case "tone":
+			return <IconVolume size={14} color="var(--mantine-color-orange-6)" aria-label={label} />;
+		case "input":
+			return (
+				<span
+					role="img"
+					aria-label={label}
+					style={{
+						width: 12,
+						height: 12,
+						borderRadius: 2,
+						border: "2px solid var(--mantine-color-teal-6)",
+						background: pin.high ? "var(--mantine-color-teal-6)" : "transparent",
+					}}
+				/>
+			);
+		case "analog":
+			return (
+				<span
+					role="img"
+					aria-label={label}
+					style={{ width: 22, height: 6, borderRadius: 3, background: "var(--mantine-color-gray-3)", overflow: "hidden", marginBlock: 3 }}
+				>
+					<span style={{ display: "block", height: "100%", width: `${(pin.value * 100) / 1023}%`, background: "var(--mantine-color-blue-6)" }} />
+				</span>
+			);
+	}
+}
+
 /** The sound of the buzzers, with the browser's audio (a square wave, quiet). */
 function useBuzzer(frequency: number, muted: boolean) {
 	const audio = useRef<{ context: AudioContext; oscillator: OscillatorNode; gain: GainNode } | null>(null);
@@ -162,11 +196,29 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 	const [folded, setFolded] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
-	const pins = outputPins(state);
+	const pins = boardPins(state);
 	const sounding = parts.find((part) => part.kind === "buzzer" && part.frequency > 0);
 	useBuzzer(sounding?.kind === "buzzer" ? sounding.frequency : (Object.values(state?.tones ?? {})[0] ?? 0), muted);
 
 	const pinLabel = (pin: string) => t("sim.pin", { pin });
+	/** What a board pin does now, in a few characters: "PWM 128", "440 Hz", "HAUT", "512". */
+	const pinValue = (pin: BoardPin): string => {
+		switch (pin.kind) {
+			case "output":
+				return pin.pwm ? `PWM ${pin.level}` : t(pin.level > 0 ? "sim.high" : "sim.low");
+			case "tone":
+				return `${pin.frequency} Hz`;
+			case "input":
+				return t(pin.high ? "sim.high" : "sim.low");
+			case "analog":
+				return String(pin.value);
+		}
+	};
+	const pinTip = (pin: BoardPin): string =>
+		t(pin.kind === "output" ? "sim.pin_output" : pin.kind === "tone" ? "sim.pin_tone" : pin.kind === "analog" ? "sim.pin_analog" : pin.pullup ? "sim.pin_pullup" : "sim.pin_input", {
+			pin: pin.pin,
+			value: pinValue(pin),
+		});
 	const title = (part: SimPart) => (part.detail ? `${part.name}: ${t(part.detail)}` : part.name);
 	const widget = (part: SimPart): ReactNode => {
 		switch (part.kind) {
@@ -380,11 +432,18 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 							{t("sim.pins")}
 						</Text>
 						<Group gap="xs">
-							{pins.map(({ pin, level }) => (
-								<Stack key={pin} gap={0} align="center">
-									<Led level={level} size={12} label={pinLabel(pin)} />
-									<Text size="xs">{pin}</Text>
-								</Stack>
+							{pins.map((pin) => (
+								<Tooltip key={pin.pin} label={pinTip(pin)}>
+									<Stack gap={0} align="center" miw={34}>
+										<PinState pin={pin} label={pinTip(pin)} />
+										<Text size="xs" fw={500}>
+											{pin.pin}
+										</Text>
+										<Text size="10px" c="dimmed">
+											{pinValue(pin)}
+										</Text>
+									</Stack>
+								</Tooltip>
 							))}
 						</Group>
 					</Stack>
