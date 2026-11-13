@@ -63,7 +63,7 @@ it does not change an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
-  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version). On a small
+  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version, *Report a problem* which opens a GitHub page already filled with your version, system and board). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and

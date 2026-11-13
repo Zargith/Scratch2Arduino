@@ -1,0 +1,62 @@
+name: "Signaler un problème / Report a problem"
+description: "Quelque chose ne marche pas comme prévu. / Something does not work as expected."
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de nous aider à améliorer Scratch2Arduino ! Tu peux écrire en français ou en anglais.
+        Thank you for helping to improve Scratch2Arduino! You can write in French or in English.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "Ce qui s'est passé / What happened"
+      description: "Décris ce que tu as vu (message d'erreur, fenêtre, carte qui ne réagit pas...). / Describe what you saw (error message, window, board that does not react...)."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Comment le refaire / How to make it happen again"
+      description: "Les étapes, une par ligne. Tu peux joindre ton projet .s2a (glisse-le ici). / The steps, one per line. You can attach your .s2a project (drop it here)."
+      placeholder: |
+        1. Ouvrir l'exemple Feu tricolore / Open the Traffic light example
+        2. Cliquer sur Live / Click Live
+        3. ...
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Ce que tu attendais / What you expected"
+  - type: input
+    id: version
+    attributes:
+      label: "Version de Scratch2Arduino / Scratch2Arduino version"
+      description: "Dans Paramètres (roue dentée). / In Settings (gear button)."
+      placeholder: "0.13.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: "Système / Operating system"
+      placeholder: "Windows 11, Ubuntu 24.04, macOS 15..."
+  - type: input
+    id: board
+    attributes:
+      label: "Carte / Board"
+      placeholder: "Arduino Uno, ESP32, carte virtuelle / virtual board..."
+  - type: dropdown
+    id: mode
+    attributes:
+      label: "Pendant / While"
+      multiple: true
+      options:
+        - "Construction des blocs / Building blocks"
+        - "Vérifier / Check"
+        - "Téléverser / Upload"
+        - "Mode Live / Live mode"
+        - "Carte virtuelle / Virtual board"
+        - "Code (C++, Python, JavaScript)"
+        - "Schéma de câblage / Wiring diagram"
+        - "Installation ou mise à jour / Install or update"
+        - "Autre / Other"

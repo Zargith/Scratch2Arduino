@@ -1430,6 +1430,7 @@ export function App() {
 				language={language}
 				t={t}
 				version={version}
+				board={boards.find((candidate) => candidate.id === boardId)?.name ?? boardId}
 				settings={settings}
 				onLanguage={(next) => {
 					switchLanguage(next);

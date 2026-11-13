@@ -65,7 +65,7 @@ modifie pas un Arduino IDE installé sur le même ordinateur.
 - **Barre du haut**, de gauche à droite : le nom du projet ; *Nouveau*, *Ouvrir*, *Enregistrer*,
   *Projets récents* ; la carte et le port ; *Tutoriels et aide* ; *Moniteur série* ; *Wi-Fi* (seulement pour
   une ESP32 ou une ESP8266) et *Bluetooth* (ESP32, ou carte Arduino avec un module HC-05 / HC-06) ; *Schéma de câblage* ; **Live**, **Vérifier**,
-  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
+  **Téléverser** ; les **Paramètres** (l'engrenage : langue, apparence claire ou sombre, recherche d'une nouvelle version, *Signaler un problème* qui ouvre une page GitHub déjà remplie avec ta version, ton système et ta carte). Sur un petit écran, Live, Vérifier et Téléverser ne montrent que
   leur icône : passe la souris dessus pour lire leur nom.
 - **Palette** (à gauche) : les familles de blocs, avec une couleur chacune. Clique sur une famille pour
   voir ses blocs.
