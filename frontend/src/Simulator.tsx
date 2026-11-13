@@ -92,6 +92,26 @@ function Servo({ angle, label }: { angle: number; label: string }) {
 	);
 }
 
+/** A stepper motor seen from above: its shaft with a mark that shows the angle turned. */
+function Stepper({ angle, label }: { angle: number; label: string }) {
+	const radians = ((angle - 90) * Math.PI) / 180;
+	return (
+		<svg width={34} height={34} role="img" aria-label={label}>
+			<circle cx={17} cy={17} r={15} fill="var(--mantine-color-gray-2)" stroke="var(--mantine-color-gray-6)" strokeWidth={2} />
+			<line
+				x1={17}
+				y1={17}
+				x2={17 + 12 * Math.cos(radians)}
+				y2={17 + 12 * Math.sin(radians)}
+				stroke="var(--mantine-color-orange-6)"
+				strokeWidth={4}
+				strokeLinecap="round"
+			/>
+			<circle cx={17} cy={17} r={3} fill="var(--mantine-color-gray-8)" />
+		</svg>
+	);
+}
+
 /** The sound of the buzzers, with the browser's audio (a square wave, quiet). */
 function useBuzzer(frequency: number, muted: boolean) {
 	const audio = useRef<{ context: AudioContext; oscillator: OscillatorNode; gain: GainNode } | null>(null);
@@ -201,6 +221,15 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						{part.frequency > 0 ? `${part.frequency} Hz` : t("sim.silent")}
 					</Text>
 				);
+			case "stepper": {
+				const degrees = Math.round(part.angle);
+				return (
+					<Group gap={6} wrap="nowrap">
+						<Stepper angle={part.angle} label={`${part.name}: ${degrees}°`} />
+						<Text size="sm">{degrees}°</Text>
+					</Group>
+				);
+			}
 			case "servo":
 				return (
 					<Group gap={6} wrap="nowrap">

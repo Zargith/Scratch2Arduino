@@ -42,6 +42,10 @@ struct FakePins final : s2a::live::Pins {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
     void servoWrite(int pin, int angle) override { log.push_back("S" + std::to_string(pin) + "=" + std::to_string(angle)); }
+    void stepper(const std::array<int, 4>& pins, long steps, int rpm) override {
+        log.push_back("Q" + std::to_string(pins[0]) + "," + std::to_string(pins[1]) + "," + std::to_string(pins[2]) + "," +
+                      std::to_string(pins[3]) + "=" + std::to_string(steps) + "@" + std::to_string(rpm));
+    }
     double distance(int trig, int echo) override {
         log.push_back("U" + std::to_string(trig) + "/" + std::to_string(echo));
         return distanceCm;
@@ -365,6 +369,17 @@ TEST(Interpreter, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
     for (const char* mode : {"M2U", "M3I", "M4U"}) {
         EXPECT_NE(std::find(sent.begin(), sent.end(), mode), sent.end()) << mode;
     }
+}
+
+TEST(Interpreter, TurnsAStepperMotorByDegrees) {
+    FakePins pins;
+    Block turn = block("turn", "motors_stepper_turn");
+    turn.fields = {{"IN1_PIN", "4"}, {"IN2_PIN", "5"}, {"IN3_PIN", "6"}, {"IN4_PIN", "7"}};
+    turn.inputs["DEGREES"].value = "-180";
+    turn.inputs["RPM"].value = "12";
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), turn}), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"Q4,5,6,7=-1024@12"}));
 }
 
 TEST(Interpreter, CallsFunctionsAndComesBack) {

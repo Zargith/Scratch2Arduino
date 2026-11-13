@@ -35,6 +35,8 @@ export type SimPart = Base &
 		| { kind: "climate"; pin: string; temperature: number; humidity: number }
 		| { kind: "buzzer"; pin: string; frequency: number }
 		| { kind: "servo"; pin: string; angle: number }
+		/** angle: turned since Live started (degrees, may be negative or above 360). */
+		| { kind: "stepper"; pin: string; angle: number }
 		/** speed: -255 (backward) to 255 (forward). */
 		| { kind: "motor"; speed: number }
 		| { kind: "strip"; pin: string; colors: number[][] }
@@ -127,6 +129,11 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 			case "servo":
 				parts.push({ ...base, kind: "servo", pin: signal, angle: now.servos[signal] ?? 90 });
 				break;
+			case "stepper": {
+				const in1 = pin("IN1_PIN");
+				parts.push({ ...base, kind: "stepper", pin: in1, angle: now.steppers?.[in1] ?? 0 });
+				break;
+			}
 			case "dc_motor": {
 				const forward = level(pin("IN1_PIN")) > 0;
 				const backward = level(pin("IN2_PIN")) > 0;

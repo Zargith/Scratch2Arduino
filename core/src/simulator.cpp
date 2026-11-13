@@ -54,6 +54,7 @@ void VirtualBoard::reset() {
         output = State::Output{};
     }
     servos_.clear();
+    steppers_.clear();
     tonePin_ = -1;
     toneFrequency_ = 0;
     toneEnd_.reset();
@@ -155,6 +156,21 @@ std::string VirtualBoard::answer(std::string_view command) {
             toneFrequency_ = static_cast<int>(std::clamp(value, 31L, 65535L));
             toneEnd_ = duration > 0 ? std::optional(Clock::now() + milliseconds(duration)) : std::nullopt;
         }
+        return "ok";
+    }
+    case 'Q': {
+        // Stepper motor: the move is done at once (the board answers when it is over).
+        std::array<long, 4> pins{};
+        long steps = 0;
+        if (!(words >> pins[0] >> pins[1] >> pins[2] >> pins[3] >> steps >> value)) {
+            return unknown;
+        }
+        for (const long coil : pins) {
+            servos_.erase(static_cast<int>(coil));
+            modes_[static_cast<int>(coil)] = 'O';
+            outputs_[static_cast<int>(coil)] = State::Output{}; // coils off after the move
+        }
+        steppers_[static_cast<int>(pins[0])] += steps;
         return "ok";
     }
     case 'S':
@@ -281,6 +297,9 @@ VirtualBoard::State VirtualBoard::state() const {
     }
     for (const auto& [pin, angle] : servos_) {
         state.servos[label(pin)] = angle;
+    }
+    for (const auto& [pin, steps] : steppers_) {
+        state.steppers[label(pin)] = static_cast<double>(steps) * 360.0 / static_cast<double>(live::kStepsPerTurn);
     }
     if (tonePin_ >= 0 && (!toneEnd_ || Clock::now() < *toneEnd_)) {
         state.tones[label(tonePin_)] = toneFrequency_;

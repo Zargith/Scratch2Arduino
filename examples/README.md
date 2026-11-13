@@ -23,6 +23,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Alarme de distance](#alarme-de-distance--distance-alarm) | HC-SR04, LED RGB, 3 x 220 Ω, buzzer |
 | [Alarme de mouvement](#alarme-de-mouvement--motion-alarm) | capteur PIR HC-SR501, LED, 220 Ω, buzzer |
 | [Détecteur d'obstacle](#détecteur-dobstacle--obstacle-detector) | capteur infrarouge FC-51, LED, 220 Ω, buzzer |
+| [Barrière de parking](#barrière-de-parking--parking-barrier) | moteur pas à pas 28BYJ-48 + ULN2003, bouton, 2 LED, 2 x 220 Ω |
 | [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16x2 I2C |
 | [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16x2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
@@ -160,6 +161,25 @@ up and the buzzer sounds while it is there. The small blue screw sets the distan
 | Capteur FC-51 : OUT | 4 |
 | LED, par une résistance de 220 Ω / through a 220 Ω resistor | 8 |
 | Buzzer passif / passive buzzer (+) | 6 |
+
+## Barrière de parking / Parking barrier
+
+![Barrière de parking](projects/parking-barrier/wiring.png)
+
+Appuie sur le bouton : le moteur pas à pas lève la barrière d'un quart de tour (90 degrés), la LED jaune
+s'allume 3 secondes, puis la barrière redescend et la LED rouge revient. Colle une paille ou un bâtonnet sur
+l'axe du moteur pour faire la barrière. / Press the button: the stepper motor lifts the barrier by a quarter
+turn (90 degrees), the yellow LED lights up for 3 seconds, then the barrier comes down and the red LED is
+back. Glue a straw or a stick on the motor's shaft to make the barrier.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Carte ULN2003 : IN1, IN2, IN3, IN4 | 8, 9, 10, 11 |
+| Carte ULN2003 : + / - | 5V / GND |
+| Moteur 28BYJ-48 / motor | prise blanche de la carte ULN2003 / white socket of the ULN2003 board |
+| Bouton, un côté / button, one side (autre côté / other side: GND) | 2 |
+| LED rouge / red, par une résistance de 220 Ω | 7 |
+| LED jaune / yellow, par une résistance de 220 Ω | 6 |
 
 ## Thermomètre / Thermometer
 
