@@ -73,14 +73,29 @@ jobs:
         run: |
           cli="$RUNNER_TEMP/s2a/bin/s2a-cli"
           "$cli" version
+          # Windows runners sometimes fail to start one of the compiler processes ("exit status
+          # 0xc0000142", STATUS_DLL_INIT_FAILED): not the sketch. Only that error is tried again.
+          compile() {
+            local attempt output status
+            for attempt in 1 2 3; do
+              status=0
+              output=$("$cli" compile "$@" --lang en --verbose 2>&1) || status=$?
+              echo "$output"
+              if [ "$status" -eq 0 ]; then return 0; fi
+              if ! grep -q "0xc0000142" <<<"$output"; then return "$status"; fi
+              echo "::warning::A compiler process did not start (0xc0000142), trying again ($attempt/3)"
+              sleep 5
+            done
+            return "$status"
+          }
           for board in uno nano mega; do
             "$cli" setup --board "$board"
-            "$cli" compile examples/sketches/blink --board "$board" --lang en --verbose
-            "$cli" compile firmware/s2a_live --board "$board" --lang en --verbose
+            compile examples/sketches/blink --board "$board"
+            compile firmware/s2a_live --board "$board"
             for project in examples/projects/*/project.json; do
               # The ESP32 examples use ESP32 pin numbers: compiled in the ESP32 step below.
               grep -qE '"board": "esp(32|8266)"' "$project" && continue
-              "$cli" compile "$project" --board "$board" --lang en --verbose
+              compile "$project" --board "$board"
             done
           done
           # ESP32 and ESP8266: their tools are big, so they are checked on Linux only. The Arduino examples use
