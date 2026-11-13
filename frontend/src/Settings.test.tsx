@@ -67,8 +67,8 @@ describe("settings window", () => {
 		const report = [...document.querySelectorAll("button")].find((item) => item.textContent === "Signaler un problème");
 		await act(async () => report?.click());
 		const url = new URL(openUrl.mock.calls[0]?.[0] ?? "");
-		expect(url.searchParams.get("version")).toBe("0.9.0");
-		expect(url.searchParams.get("board")).toBe("Arduino Uno");
+		expect(url.searchParams.get("body")).toContain("Scratch2Arduino version: 0.9.0");
+		expect(url.searchParams.get("body")).toContain("Board: Arduino Uno");
 		openUrl.mockRestore();
 		await act(async () => root.unmount());
 	});
