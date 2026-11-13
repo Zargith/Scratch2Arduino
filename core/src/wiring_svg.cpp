@@ -15,6 +15,8 @@
 #include <map>
 #include <optional>
 #include <regex>
+#include <set>
+#include <utility>
 #include <sstream>
 
 namespace s2a::wiring {
@@ -57,9 +59,15 @@ std::size_t characters(const std::string& text) {
 
 class Svg {
 public:
+    /// Attributes for the next element written (the virtual board finds its parts by them): `data-sim="led"`.
+    void mark(std::string attributes) { pending_ = " " + std::move(attributes); }
+    /// A group of elements (one component of the diagram), closed by close().
+    void open(const std::string& attributes) { out_ << "<g " << attributes << ">\n"; }
+    void close() { out_ << "</g>\n"; }
+
     void rect(double x, double y, double w, double h, const std::string& fill, const std::string& stroke = {},
               double radius = 0, double width = 1) {
-        out_ << R"(<rect x=")" << num(x) << R"(" y=")" << num(y) << R"(" width=")" << num(w) << R"(" height=")"
+        out_ << "<rect" << take() << R"( x=")" << num(x) << R"(" y=")" << num(y) << R"(" width=")" << num(w) << R"(" height=")"
              << num(h) << R"(" rx=")" << num(radius) << R"(" fill=")" << fill << '"';
         if (!stroke.empty()) {
             out_ << R"( stroke=")" << stroke << R"(" stroke-width=")" << num(width) << '"';
@@ -67,7 +75,7 @@ public:
         out_ << "/>\n";
     }
     void circle(double x, double y, double r, const std::string& fill, const std::string& stroke = {}, double width = 1) {
-        out_ << R"(<circle cx=")" << num(x) << R"(" cy=")" << num(y) << R"(" r=")" << num(r) << R"(" fill=")" << fill
+        out_ << "<circle" << take() << R"( cx=")" << num(x) << R"(" cy=")" << num(y) << R"(" r=")" << num(r) << R"(" fill=")" << fill
              << '"';
         if (!stroke.empty()) {
             out_ << R"( stroke=")" << stroke << R"(" stroke-width=")" << num(width) << '"';
@@ -75,7 +83,7 @@ public:
         out_ << "/>\n";
     }
     void line(const std::vector<Point>& points, const std::string& colour, double width) {
-        out_ << R"(<polyline fill="none" stroke-linejoin="round" stroke-linecap="round" stroke=")" << colour
+        out_ << "<polyline" << take() << R"( fill="none" stroke-linejoin="round" stroke-linecap="round" stroke=")" << colour
              << R"(" stroke-width=")" << num(width) << R"(" points=")";
         for (const Point& point : points) {
             out_ << num(point.x) << ',' << num(point.y) << ' ';
@@ -83,7 +91,7 @@ public:
         out_ << "\"/>\n";
     }
     void polygon(const std::vector<Point>& points, const std::string& fill, const std::string& stroke = {}) {
-        out_ << R"(<polygon fill=")" << fill << '"';
+        out_ << "<polygon" << take() << R"( fill=")" << fill << '"';
         if (!stroke.empty()) {
             out_ << R"( stroke=")" << stroke << '"';
         }
@@ -95,7 +103,7 @@ public:
     }
     void text(Point at, const std::string& content, double size, const std::string& colour,
               const char* anchor = "start", bool bold = false, double rotate = 0) {
-        out_ << R"(<text x=")" << num(at.x) << R"(" y=")" << num(at.y) << R"(" font-size=")" << num(size)
+        out_ << "<text" << take() << R"( x=")" << num(at.x) << R"(" y=")" << num(at.y) << R"(" font-size=")" << num(size)
              << R"(" fill=")" << colour << R"(" text-anchor=")" << anchor << '"';
         if (bold) {
             out_ << R"( font-weight="bold")";
@@ -108,8 +116,30 @@ public:
     [[nodiscard]] std::string str() const { return out_.str(); }
 
 private:
+    std::string take() { return std::exchange(pending_, std::string{}); }
+
     std::ostringstream out_;
+    std::string pending_;
 };
+
+/// Key of a component for the virtual board: its kind and the board pins of its signals ("output|8"),
+/// as the editor names its parts (frontend/src/simulation.ts).
+std::string partKey(const Component& component) {
+    std::string key = component.kind;
+    for (const Connection& connection : component.connections) {
+        static const std::set<std::string> kPower{"GND", "5V", "3V3", "VCC", "VIN", "SDA", "SCL"};
+        if (!connection.role.empty() && kPower.count(connection.role) == 0) {
+            key += "|" + connection.boardPin;
+        }
+    }
+    return key;
+}
+
+/// The halo of a light (an LED of the diagram, lit by the virtual board): invisible in a picture.
+void halo(Svg& svg, double x, double y, double r, const std::string& colour) {
+    svg.mark(R"(data-sim="halo" style="color:)" + colour + R"(" opacity="0")");
+    svg.circle(x, y, r, "url(#s2a-glow)");
+}
 
 // Wire colours, as in most kits: red for +, black for GND, bright colours for signals.
 constexpr const char* kRed = "#D32F2F";
@@ -307,6 +337,7 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
     } else if (kind == "servo") {
         svg.rect(at.x + 10, at.y + 20, w - 20, 50, "#1E88E5", "#0D47A1", 6, 2);
         svg.circle(at.x + 40, at.y + 45, 12, "#FFFFFF");
+        svg.mark(R"(data-sim="arm" data-cx=")" + num(at.x + 40) + R"(" data-cy=")" + num(at.y + 45) + '"'); // 90° (up)
         svg.line({{at.x + 40, at.y + 45}, {at.x + 40, at.y + 6}}, "#FFFFFF", 10);
         svg.text({at.x + w - 18, at.y + 50}, "SG90", 10, "#FFFFFF", "end", true);
     } else if (kind == "dc_motor") {
@@ -321,6 +352,7 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         const char* colours[] = {"#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#8E24AA", "#616161", "#616161"};
         for (int i = 0; i < 8; ++i) {
             svg.rect(at.x + 14 + i * ((w - 28) / 8), at.y + 14, 18, 18, "#FAFAFA", "#BDBDBD", 2);
+            svg.mark(R"(data-sim="pixel" data-index=")" + std::to_string(i) + '"');
             svg.circle(at.x + 23 + i * ((w - 28) / 8), at.y + 23, 6, colours[i]);
         }
         svg.text({at.x + w / 2, at.y + 48}, "NeoPixel", 10, "#FFFFFF", "middle", true);
@@ -329,6 +361,7 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         for (int row = 0; row < 8; ++row) {
             for (int col = 0; col < 8; ++col) {
                 const bool lit = (row + col) % 3 == 0;
+                svg.mark(R"(data-sim="dot" data-row=")" + std::to_string(row) + R"(" data-col=")" + std::to_string(col) + '"');
                 svg.circle(at.x + w / 2 - 43 + col * 12.3, at.y + 17 + row * 12.3, 4.5, lit ? "#F44336" : "#4E1C1A");
             }
         }
@@ -336,7 +369,9 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
     } else if (kind == "lcd_i2c" || kind == "lcd16") {
         svg.rect(at.x + 14, at.y + 14, w - 28, 66, "#1B5E20", {}, 4);
         svg.rect(at.x + 22, at.y + 22, w - 44, 50, "#9CCC65", {}, 2);
+        svg.mark(R"(data-sim="line" data-row="1" xml:space="preserve")");
         svg.text({at.x + 30, at.y + 42}, "Scratch2Arduino", 15, "#1B5E20", "start", true);
+        svg.mark(R"(data-sim="line" data-row="2" xml:space="preserve")");
         svg.text({at.x + 30, at.y + 64}, "21", 15, "#1B5E20", "start", true);
         svg.text({at.x + w - 14, at.y + 96}, kind == "lcd16" ? "LCD 16x2" : "LCD 16x2 I2C", 10, "#FFFFFF", "end",
                  true);
@@ -353,12 +388,19 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.text({at.x + w / 2, at.y + 98}, "HC-05", 11, "#FFFFFF", "middle", true);
     } else if (kind == "oled") {
         svg.rect(at.x + 12, at.y + 14, w - 24, 64, "#000000", {}, 3);
+        svg.open(R"(data-sim="sample")"); // what a picture shows; the virtual board writes the 8 lines
         svg.line({{at.x + 22, at.y + 34}, {at.x + w - 30, at.y + 34}}, "#4FC3F7", 3);
         svg.line({{at.x + 22, at.y + 50}, {at.x + w - 50, at.y + 50}}, "#4FC3F7", 3);
+        svg.close();
+        for (int row = 1; row <= 8; ++row) {
+            svg.mark(R"(data-sim="line" data-row=")" + std::to_string(row) + R"(" xml:space="preserve")");
+            svg.text({at.x + 16, at.y + 13 + row * 8}, "", 7, "#4FC3F7", "start", false);
+        }
         svg.text({at.x + w / 2, at.y + 94}, "OLED", 10, "#FFFFFF", "middle", true);
     } else if (kind == "tm1637") {
         // Four red digits showing 1234, and the colon.
         svg.rect(at.x + 10, at.y + 10, w - 20, 48, "#212121", "#000000", 3, 1);
+        svg.mark(R"(data-sim="digits" xml:space="preserve")");
         svg.text({at.x + w / 2, at.y + 46}, "12:34", 30, "#FF1744", "middle", true);
         svg.text({at.x + w / 2, at.y + 74}, "TM1637", 10, "#FFFFFF", "middle", true);
     } else if (kind == "stepper") {
@@ -373,34 +415,45 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.line({{at.x + 62, at.y + 82}, {motor.x - 26, motor.y + 20}}, "#FB8C00", 3); // its five wires
         svg.circle(motor.x, motor.y, 34, "#CFD8DC", "#78909C", 2);
         svg.circle(motor.x, motor.y - 12, 9, "#ECEFF1", "#90A4AE", 2);
+        svg.mark(R"(data-sim="shaft" data-cx=")" + num(motor.x) + R"(" data-cy=")" + num(motor.y - 12) + '"');
         svg.rect(motor.x - 2.5, motor.y - 20, 5, 16, "#FFD54F", "#F9A825", 1); // its shaft
         svg.text({motor.x, motor.y + 22}, "28BYJ-48", 8, "#37474F", "middle", true);
     } else if (kind == "joystick") {
         // KY-023: the square base of the stick and its round grey thumb cap.
         const Point mid{at.x + w / 2, at.y + 52};
         svg.rect(mid.x - 34, mid.y - 34, 68, 68, "#424242", "#212121", 6, 2);
+        svg.open(R"(data-sim="press")"); // its push button (SW), pressed with the mouse on the virtual board
+        svg.mark(R"(data-sim="cap")");
         svg.circle(mid.x, mid.y, 27, "#9E9E9E", "#616161", 2);
         svg.circle(mid.x, mid.y, 18, "#BDBDBD", "#757575", 1);
         for (int ridge = -2; ridge <= 2; ++ridge) {
             svg.line({{mid.x - 12, mid.y + ridge * 5}, {mid.x + 12, mid.y + ridge * 5}}, "#9E9E9E", 1.5);
         }
+        svg.close();
     } else if (kind == "pir") {
         // HC-SR501: the white Fresnel dome on its square frame.
         const Point mid{at.x + w / 2, at.y + 48};
+        svg.open(R"(data-sim="press")"); // someone moves in front: held with the mouse on the virtual board
         svg.rect(mid.x - 38, mid.y - 38, 76, 76, "#ECEFF1", "#B0BEC5", 4, 2);
+        svg.mark(R"(data-sim="cap")");
         svg.circle(mid.x, mid.y, 32, "#FAFAFA", "#CFD8DC", 2);
         for (const double r : {24.0, 16.0, 8.0}) {
             svg.circle(mid.x, mid.y, r, "none", "#E0E0E0", 1.5);
         }
+        svg.close();
         svg.text({at.x + w / 2, at.y + 100}, "PIR", 10, "#FFFFFF", "middle", true);
     } else if (kind == "obstacle_sensor") {
         // FC-51: the infrared emitter (clear) and receiver (dark) at the front, its blue screw.
+        svg.open(R"(data-sim="press")"); // a hand in front: held with the mouse on the virtual board
+        svg.mark(R"(data-sim="cap")");
         svg.circle(at.x + w / 2 - 14, at.y + 22, 10, "#E3F2FD", "#90CAF9", 2);
         svg.circle(at.x + w / 2 + 14, at.y + 22, 10, "#263238", "#000000", 2);
+        svg.close();
         svg.rect(at.x + w / 2 - 12, at.y + 46, 24, 24, "#1E88E5", "#0D47A1", 2, 2);
         svg.circle(at.x + w / 2, at.y + 58, 7, "#FFFFFF", "#90A4AE", 1);
         svg.line({{at.x + w / 2 - 5, at.y + 58}, {at.x + w / 2 + 5, at.y + 58}}, "#455A64", 2);
-        svg.circle(at.x + w / 2 + 26, at.y + 82, 4, "#E53935");
+        svg.mark(R"(data-sim="indicator")"); // lights up when something is in front
+        svg.circle(at.x + w / 2 + 26, at.y + 82, 4, "#5D1F1F");
         svg.text({at.x + w / 2, at.y + 98}, "FC-51", 10, "#FFFFFF", "middle", true);
     } else {
         svg.circle(at.x + w / 2, at.y + 34, 12, "#FFCC80", "#EF6C00", 2);
@@ -517,7 +570,10 @@ public:
         out << R"(<svg xmlns="http://www.w3.org/2000/svg" width=")" << num(width_) << R"(" height=")" << num(height_)
             << R"(" viewBox="0 0 )" << num(width_) << ' ' << num(height_)
             << R"(" font-family="DejaVu Sans, Segoe UI, Helvetica, Arial, sans-serif">)" << '\n'
-            << R"(<rect width="100%" height="100%" fill="#ECEFF1"/>)" << '\n';
+            << R"(<rect width="100%" height="100%" fill="#ECEFF1"/>)" << '\n'
+            // The glow of the lights when the virtual board runs (their colour comes from `color`).
+            << R"(<defs><radialGradient id="s2a-glow"><stop offset="0%" stop-color="currentColor" stop-opacity="0.95"/>)"
+            << R"(<stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>)" << '\n';
         Svg head;
         head.text({30, 40}, title_, 24, "#263238", "start", true);
         out << head.str() << svg.str() << "</svg>\n";
@@ -816,6 +872,16 @@ private:
             }
             svg.text({o.x + w * 0.42, o.y + h * 0.42}, board_.drawing.title, std::min(46.0, h / 4), "#FFFFFF", "middle",
                      true);
+            // The "L" LED of the board (its built-in LED), lit by the virtual board.
+            if (const Pin* led = board_.findPin(board_.builtinLed); led != nullptr && h > 250) {
+                const Point at{o.x + w * 0.38, o.y + h * 0.2};
+                svg.open(R"(data-part="board-led|)" + led->label + '"');
+                halo(svg, at.x, at.y, 22, "#FFEB3B");
+                svg.mark(R"(data-sim="led")");
+                svg.rect(at.x - 8, at.y - 4, 16, 8, "#FFF9C4", "#BDB76B", 1, 1);
+                svg.text({at.x + 14, at.y + 4}, "L", 10, "#FFFFFF", "start", true);
+                svg.close();
+            }
             svg.text({o.x + w * 0.42, o.y + h * 0.42 + std::min(46.0, h / 4) * 0.6}, "ARDUINO", std::min(16.0, h / 9),
                      "#B2EBF2", "middle", true);
         } else {
@@ -857,6 +923,7 @@ private:
             const Placed& placed = placed_[c];
             const Component& component = plan_.components[c];
             const std::string number = std::to_string(c + 1);
+            svg.open(R"(data-part=")" + partKey(component) + '"');
             if (!placed.onBreadboard) {
                 std::vector<std::string> names;
                 for (const Connection& connection : component.connections) {
@@ -867,6 +934,7 @@ private:
                        component.kind == "servo" ? "#37474F" : "#FFFFFF");
                 moduleBody(svg, component.kind, placed.at, placed.w, placed.h, component.name);
                 badge(svg, {placed.at.x - 6, placed.at.y - 6}, number);
+                svg.close();
                 continue;
             }
             const int col = placed.column;
@@ -884,6 +952,8 @@ private:
                 const Point last = b.hole(col + legs - 1, 'h');
                 const Point centre{(first.x + last.x) / 2, first.y};
                 if (rgb) {
+                    halo(svg, centre.x, centre.y, 60, "#FFFFFF");
+                    svg.mark(R"(data-sim="led")");
                     svg.circle(centre.x, centre.y, 26, "#F5F5F5", "#9E9E9E", 2);
                     svg.circle(centre.x - 8, centre.y - 6, 6, "#EF5350");
                     svg.circle(centre.x + 8, centre.y - 6, 6, "#66BB6A");
@@ -899,6 +969,8 @@ private:
                     // Successive LEDs in different colours, as in a kit: red, yellow, green, blue.
                     static const char* const kLeds[] = {"#E53935", "#FDD835", "#43A047", "#1E88E5"};
                     const std::string colour = kLeds[leds++ % std::size(kLeds)];
+                    halo(svg, centre.x, centre.y, 42, colour);
+                    svg.mark(R"(data-sim="led")");
                     svg.circle(centre.x, centre.y, 15, colour, darker(colour), 2);
                     svg.circle(centre.x - 5, centre.y - 5, 4, "#FFFFFF");
                     svg.line({{centre.x + 11, centre.y - 10}, {centre.x + 11, centre.y + 10}}, darker(colour), 2); // flat side: −
@@ -922,20 +994,26 @@ private:
                 const double top = topLeft.y + 6;
                 const double width = bottomRight.x - topLeft.x - 2 * margin;
                 const double height = bottomRight.y - topLeft.y - 12;
+                svg.open(R"(data-sim="press")"); // pressed with the mouse on the virtual board
                 svg.rect(left, top, width, height, "#37474F", "#263238", 3, 2); // body
                 const Point mid{(topLeft.x + bottomRight.x) / 2, (topLeft.y + bottomRight.y) / 2};
+                svg.mark(R"(data-sim="cap")");
                 svg.circle(mid.x, mid.y, std::min(width, height) * 0.36, "#212121", "#000000", 1.5); // cap
                 svg.circle(mid.x - 3, mid.y - 3, std::min(width, height) * 0.12, "#424242");
+                svg.close();
                 badgeAt = {topLeft.x - 22, topLeft.y - 18};
             } else if (kind == "potentiometer") {
                 const Point mid = b.hole(col + 1, 'h');
                 svg.rect(mid.x - 30, mid.y - 26, 60, 52, "#1565C0", "#0D47A1", 4, 2);
                 svg.circle(mid.x, mid.y, 17, "#ECEFF1", "#90A4AE", 2);
-                svg.line({{mid.x, mid.y}, {mid.x + 9, mid.y - 13}}, "#455A64", 3);
+                svg.mark(R"(data-sim="knob" data-cx=")" + num(mid.x) + R"(" data-cy=")" + num(mid.y) + '"');
+                svg.line({{mid.x, mid.y}, {mid.x, mid.y - 15}}, "#455A64", 3); // in the middle position
                 svg.text({mid.x + 34, mid.y + 4}, "10 kΩ", 10, "#455A64", "start", true);
                 badgeAt = {mid.x - 40, mid.y - 30};
             } else if (kind == "buzzer") {
                 const Point mid = b.hole(col + 1, 'h');
+                svg.mark(R"(data-sim="sound" opacity="0")"); // rings while it sounds
+                svg.circle(mid.x, mid.y, 34, "none", "#FB8C00", 3);
                 svg.circle(mid.x, mid.y, 26, "#212121", "#000000", 2);
                 svg.circle(mid.x, mid.y, 6, "#424242");
                 svg.text({mid.x - 15, mid.y - 7}, "+", 13, "#FFFFFF", "middle", true);
@@ -953,6 +1031,7 @@ private:
                 badgeAt = {mid.x - 26, mid.y - 22};
             }
             badge(svg, badgeAt, number);
+            svg.close();
         }
     }
 

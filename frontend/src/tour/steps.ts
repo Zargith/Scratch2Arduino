@@ -20,7 +20,7 @@ export interface TourContext {
 }
 
 /** aria-labels of the editor the tutorial points at (keys of i18n.ts). */
-export type TargetLabel = "toolbar.wiring" | "toolbar.live" | "toolbar.build" | "view.label" | "code.mine_language";
+export type TargetLabel = "toolbar.wiring" | "toolbar.live" | "toolbar.build" | "view.label" | "code.mine_language" | "sim.title";
 
 /** Where a step points: a palette category, a control (by its label) or a button by its text. */
 export type TourTarget =
@@ -177,8 +177,8 @@ export const steps: TourStep[] = [
 		id: "live",
 		title: { fr: "Essayer sans carte", en: "Try it without a board" },
 		text: {
-			fr: "Ferme le schéma. Dans la liste des ports, choisis \"Carte virtuelle (sans matériel)\", puis clique sur Live (le triangle). Le panneau de la carte virtuelle s'ouvre.",
-			en: "Close the diagram. In the list of ports, choose \"Virtual board (no hardware)\", then click Live (the triangle). The virtual board panel opens.",
+			fr: "Ferme le schéma. Dans la liste des ports, choisis \"Carte virtuelle (sans matériel)\", puis clique sur Live (le triangle). Le panneau de la carte virtuelle s'ouvre en bas de l'écran.",
+			en: "Close the diagram. In the list of ports, choose \"Virtual board (no hardware)\", then click Live (the triangle). The virtual board panel opens at the bottom of the window.",
 		},
 		target: { kind: "label", key: "toolbar.live" },
 		done: (context) => context.live && context.simulated,
@@ -187,10 +187,10 @@ export const steps: TourStep[] = [
 		id: "press",
 		title: { fr: "Sonne !", en: "Ring!" },
 		text: {
-			fr: "Dans le panneau de la carte virtuelle, garde le bouton \"Appuie\" enfoncé : la LED de la broche 8 s'allume. Lâche-le : elle s'éteint.",
-			en: "In the virtual board panel, hold the \"Press\" button down: the LED of pin 8 lights up. Let go: it goes off.",
+			fr: "En bas, le schéma de câblage prend vie : c'est la carte virtuelle. Clique sur le bouton poussoir du schéma et garde-le enfoncé : la LED de la broche 8 s'allume. Lâche-le : elle s'éteint.",
+			en: "At the bottom, the wiring diagram comes to life: it is the virtual board. Click the push button of the diagram and hold it down: the LED of pin 8 lights up. Let go: it goes off.",
 		},
-		target: { kind: "text", text: { fr: "Appuie", en: "Press" } },
+		target: { kind: "label", key: "sim.title" },
 		done: (context, memory) => {
 			if (context.live && context.pressed.includes("2")) memory.pressed = true;
 			return memory.pressed === true;
