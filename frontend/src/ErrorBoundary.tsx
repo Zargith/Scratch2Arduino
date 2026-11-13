@@ -1,7 +1,9 @@
-import { Alert, Button, Code, Container, ScrollArea, Stack, Text } from "@mantine/core";
+import { Alert, Button, Code, Container, Group, ScrollArea, Stack, Text } from "@mantine/core";
 import { Component, type ReactNode } from "react";
 
+import { bridge } from "@/bridge";
 import { detectLanguage, translate } from "@/i18n";
+import { reportUrl } from "@/report";
 
 interface ErrorBoundaryProps {
 	children(attempt: number): ReactNode;
@@ -42,12 +44,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 								{details}
 							</Code>
 						</ScrollArea.Autosize>
-						<Button
-							onClick={() => this.setState((state) => ({ error: null, attempt: state.attempt + 1 }))}
-							style={{ alignSelf: "flex-start" }}
-						>
-							{translate(language, "crash.restart")}
-						</Button>
+						<Group gap="sm">
+							<Button onClick={() => this.setState((state) => ({ error: null, attempt: state.attempt + 1 }))}>
+								{translate(language, "crash.restart")}
+							</Button>
+							<Button
+								variant="default"
+								onClick={() =>
+									void bridge
+										.openUrl(reportUrl({ version: "", board: "", details }, navigator.userAgent))
+										.catch(() => undefined)
+								}
+							>
+								{translate(language, "settings.report")}
+							</Button>
+						</Group>
 					</Stack>
 				</Alert>
 			</Container>
