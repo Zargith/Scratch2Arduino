@@ -30,10 +30,10 @@ Everything the phases plan is built. What is left:
 
 Tested by the user on an Arduino Uno (Windows): upload, Live mode over USB, LEDs, buttons, passive buzzer, servo and
 potentiometer, HC-SR04, DHT11, 16-pin LCD, MAX7219 matrix, and the examples Blink, Traffic light, Potentiometer and
-servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. The README keeps the up-to-date list
+servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. Also tested on an Arduino Mega 2560. The README keeps the up-to-date list
 ("Tested on real hardware"). Still to run on a real board:
 
-- Nano and Mega; Linux and macOS with a real board;
+- Nano; Linux and macOS with a real board;
 - NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor;
 - ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
 - ESP8266 (NodeMCU): Live over Wi-Fi;

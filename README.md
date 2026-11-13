@@ -411,7 +411,7 @@ The interface is available in **French (default)** and **English**. Translations
 Everything is checked by the CI (build on Windows, Linux and macOS, unit tests with a fake board, compile of every
 example and of the Live firmware for each board), but only part of it has run on a real board so far.
 
-**Tested on a board** (Arduino Uno, Windows):
+**Tested on a board** (Arduino Uno and Mega 2560, Windows):
 
 - upload from the editor and Live mode over USB (Live firmware flashed in one click);
 - LEDs, buttons, buzzer (passive), servo and potentiometer, HC-SR04 distance sensor, DHT11, 16-pin LCD (HD44780),
@@ -422,7 +422,7 @@ example and of the Live firmware for each board), but only part of it has run on
 **Not tested yet** (help welcome: [report a problem](https://github.com/Zargith/Scratch2Arduino/issues/new/choose)
 or tell us it works):
 
-- boards: Arduino Nano and Mega, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
+- boards: Arduino Nano, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
 - Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
 - components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
   light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
