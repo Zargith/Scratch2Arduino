@@ -204,6 +204,26 @@ export function boardPins(state: SimState | null): BoardPin[] {
 	return [...pins.values()].sort((a, b) => pinOrder(a.pin) - pinOrder(b.pin));
 }
 
+/**
+ * The board pins with those used earlier in this Live session kept in their place: a buzzer that
+ * stops sounding (its pin is free again) shows "silent" instead of leaving the list, so the pins do
+ * not come and go at each note. `seen` keeps what was seen (one map per Live session).
+ */
+export function keptBoardPins(now: BoardPin[], seen: Map<string, BoardPin>): BoardPin[] {
+	const shown = new Map(now.map((pin) => [pin.pin, pin] as const));
+	for (const [pin, before] of seen) {
+		if (shown.has(pin)) continue;
+		// No longer driven: an output or a sound is off now; an input keeps its last state.
+		shown.set(pin, before.kind === "tone" ? { ...before, frequency: 0 } : before.kind === "output" ? { ...before, level: 0 } : before);
+	}
+	for (const pin of now) {
+		// A pin that sounded stays a buzzer (playing a note sets it as an output for a while).
+		if (seen.get(pin.pin)?.kind === "tone" && pin.kind === "output") shown.set(pin.pin, { pin: pin.pin, kind: "tone", frequency: 0 });
+		else seen.set(pin.pin, pin);
+	}
+	return [...shown.values()].sort((a, b) => pinOrder(a.pin) - pinOrder(b.pin));
+}
+
 /** Whether the program uses the Phone blocks (the virtual phone is then shown). */
 export const usesPhone = (projectJson: string): boolean => projectJson.includes('"phone_');
 

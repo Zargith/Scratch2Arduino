@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SimState, WiringPlan } from "@/bridge";
-import { boardPins, isSimPort, percent, simParts, SIM_PORT, usesPhone } from "@/simulation";
+import { boardPins, isSimPort, keptBoardPins, percent, simParts, SIM_PORT, usesPhone } from "@/simulation";
 
 const component = (kind: string, name: string, pins: Record<string, string>): WiringPlan["components"][number] => ({
 	kind,
@@ -152,6 +152,24 @@ describe("simulation", () => {
 			{ pin: "A0", kind: "analog", value: 300 },
 		]);
 		expect(boardPins(null)).toEqual([]);
+	});
+
+	it("keeps the pins used during the Live session in their place", () => {
+		const seen = new Map();
+		const sounding = keptBoardPins(boardPins(state({ modes: { "2": "pullup" }, tones: { "8": 440 } })), seen);
+		expect(sounding.map((pin) => pin.pin)).toEqual(["2", "8"]);
+		// The note ended: pin 8 is free again, it stays as a silent buzzer.
+		const silent = keptBoardPins(boardPins(state({ modes: { "2": "pullup" } })), seen);
+		expect(silent).toEqual([
+			{ pin: "2", kind: "input", high: true, pullup: true },
+			{ pin: "8", kind: "tone", frequency: 0 },
+		]);
+		// The next note sets pin 8 as an output for a while: still the buzzer.
+		const again = keptBoardPins(boardPins(state({ modes: { "2": "pullup", "8": "output" }, outputs: { "8": { level: 0, pwm: false } } })), seen);
+		expect(again[1]).toEqual({ pin: "8", kind: "tone", frequency: 0 });
+		// An LED switched off keeps its place, off.
+		keptBoardPins(boardPins(state({ outputs: { "13": { level: 255, pwm: false } } })), seen);
+		expect(keptBoardPins(boardPins(state({})), seen).find((pin) => pin.pin === "13")).toEqual({ pin: "13", kind: "output", level: 0, pwm: false });
 	});
 
 	it("tells when the program talks to the phone", () => {
