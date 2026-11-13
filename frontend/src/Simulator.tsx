@@ -5,6 +5,7 @@ import { IconCpu, IconPropeller, IconSend, IconVolume, IconVolumeOff } from "@ta
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { SimInput, SimState, WiringPlan } from "@/bridge";
+import { FoldButton } from "@/FoldButton";
 import type { MessageKey } from "@/i18n";
 import { outputPins, percent, simParts, type SimPart } from "@/simulation";
 import "./Simulator.css";
@@ -157,6 +158,8 @@ function useBuzzer(frequency: number, muted: boolean) {
 
 export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60dvh - 90px)", controlsOnly = false }: SimulatorProps) {
 	const [muted, setMuted] = useState(false);
+	/** The side card folded to its title bar (the sound goes on). */
+	const [folded, setFolded] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
 	const pins = outputPins(state);
@@ -336,7 +339,9 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 						{muted ? <IconVolumeOff size={16} /> : <IconVolume size={16} />}
 					</ActionIcon>
 				</Tooltip>
+				{!controlsOnly && <FoldButton folded={folded} onToggle={() => setFolded(!folded)} t={t} />}
 			</Group>
+			<div style={{ display: folded ? "none" : "block" }}>
 			<Text size="xs" c="dimmed" mb="xs">
 				{t("sim.help")}
 			</Text>
@@ -415,6 +420,7 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 					</Stack>
 				)}
 			</Stack>
+			</div>
 		</Card>
 	);
 }

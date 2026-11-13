@@ -66,6 +66,7 @@ import { CodeView, type CodeTab } from "@/CodeView";
 import { Editor, type EditorHandle } from "@/Editor";
 import { type DocPath, docsHome, tutorialFor } from "@/docs";
 import { exampleProject, examples, type Example } from "@/examples";
+import { FoldButton } from "@/FoldButton";
 import { Gallery } from "@/Gallery";
 import { ArduinoLibraries } from "@/ArduinoLibraries";
 import { Library } from "@/Library";
@@ -210,6 +211,8 @@ export function App() {
 	const [simPlan, setSimPlan] = useState<WiringPlan | null>(null);
 	/** The virtual board's panel (at the bottom) takes most of the window. */
 	const [boardExpanded, setBoardExpanded] = useState(false);
+	/** The live values card folded to its title bar (it stays within reach). */
+	const [valuesFolded, setValuesFolded] = useState(false);
 	/** The blocks use the Phone blocks: the virtual phone is shown. */
 	const [simPhone, setSimPhone] = useState(false);
 	/** The wiring hints of this Live session were closed by the user. */
@@ -1482,10 +1485,13 @@ export function App() {
 					)}
 					{live && liveRows.length > 0 && (
 						<Card withBorder shadow="sm" w={360}>
-							<Text fw={700} size="sm" mb={4}>
-								{t("live.title")}
-							</Text>
-							{liveRows.map((row) => (
+							<Group justify="space-between" wrap="nowrap" mb={valuesFolded ? 0 : 4}>
+								<Text fw={700} size="sm">
+									{t("live.title")}
+								</Text>
+								<FoldButton folded={valuesFolded} onToggle={() => setValuesFolded(!valuesFolded)} t={t} />
+							</Group>
+							{!valuesFolded && liveRows.map((row) => (
 								<Group key={row.key} justify="space-between" gap="sm" wrap="nowrap">
 									<Text size="sm" truncate style={{ flex: 1 }}>
 										{row.label}
