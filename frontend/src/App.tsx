@@ -212,6 +212,8 @@ export function App() {
 	const [livePaused, setLivePaused] = useState(false);
 	/** The output panel opened by itself once in this Live session (at the first printed line). */
 	const outputShown = useRef(false);
+	/** Live message on screen: shown again only when it changes (once closed, it stays closed). */
+	const liveMessage = useRef("");
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
@@ -957,6 +959,7 @@ export function App() {
 	// While Live mode runs: show what the board does.
 	useEffect(() => {
 		if (!live) return;
+		liveMessage.current = "";
 		const timer = setInterval(() => {
 			void bridge
 				.liveState()
@@ -986,10 +989,10 @@ export function App() {
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
-					} else if (snapshot.paused && snapshot.state === "running") {
-						setStatus({ kind: "info", message: t("live.paused") });
-					} else if (snapshot.message) {
-						setStatus({ kind: "info", message: snapshot.message });
+					} else {
+						const message = snapshot.paused && snapshot.state === "running" ? t("live.paused") : (snapshot.message ?? "");
+						if (message && message !== liveMessage.current) setStatus({ kind: "info", message });
+						liveMessage.current = message;
 					}
 				})
 				.catch(fail);
@@ -1063,6 +1066,9 @@ export function App() {
 					},
 		[tourStep, tourEdits, view, wiringShown, live, port, simState, userCode, checks, currentProject]
 	);
+
+	/** The column of panels on the right (virtual board, live values, serial monitor...) is shown. */
+	const sidePanels = (live && liveRows.length > 0) || simulated || wiringHints.length > 0 || monitorShown || tutorialPage !== null;
 
 	return (
 		<AppShell header={{ height: 64 }} padding={0}>
@@ -1382,10 +1388,15 @@ export function App() {
 				</div>
 			</AppShell.Main>
 
-			{((live && liveRows.length > 0) || simulated || wiringHints.length > 0 || monitorShown || tutorialPage !== null) && (
-				<Stack gap="sm" style={{ position: "fixed", top: 80, right: 24, zIndex: 150 }}>
+			{sidePanels && (
+				// One column on the right: never taller than the window, it scrolls when the panels need more.
+				<Stack
+					gap="sm"
+					style={{ position: "fixed", top: 80, right: 24, zIndex: 150, maxHeight: "calc(100dvh - 96px)", overflowY: "auto", paddingBottom: 4 }}
+				>
 					{simulated && (
 						<Simulator
+							maxHeight={(live && liveRows.length > 0) || monitorShown || wiringHints.length > 0 ? "28dvh" : "calc(60dvh - 90px)"}
 							plan={simPlan}
 							state={simState}
 							phone={simPhone}
@@ -1461,7 +1472,8 @@ export function App() {
 					style={{
 						position: "fixed",
 						left: view === "blocks" ? 330 : 64,
-						right: 110,
+						// Beside the panels on the right (live values, virtual board...), not over them.
+						right: sidePanels ? 400 : 110,
 						bottom: 16,
 						zIndex: 150,
 						maxHeight: "50vh",
