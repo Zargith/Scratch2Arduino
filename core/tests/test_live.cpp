@@ -328,7 +328,7 @@ TEST(Interpreter, CallsFunctionsAndComesBack) {
     Block call = block("call", "functions_call");
     call.fields["FUNCTION"] = "f";
     Project project = withScript({block("hat", "events_when_program_starts"), call, led("after", "OFF")});
-    project.functions = {{"f", "blink"}};
+    project.functions = {{"f", "blink", {}}};
     Block define = block("define", "functions_define");
     define.fields["FUNCTION"] = "f";
     project.scripts.push_back({300, 0, {define, led("on", "ON"), wait("w", "1")}});
@@ -342,6 +342,46 @@ TEST(Interpreter, CallsFunctionsAndComesBack) {
     interpreter.step(milliseconds(1000));
     EXPECT_EQ(pins.take(), (std::vector<std::string>{"D13=1", "D13=0"}));
     EXPECT_TRUE(interpreter.finished());
+}
+
+TEST(Interpreter, GivesEachFunctionTheNumbersOfItsCall) {
+    FakePins pins;
+    const auto input = [](const char* id) {
+        Block result = block(id, "functions_parameter");
+        result.fields["NAME"] = "n";
+        return result;
+    };
+    const auto set = [](const char* id, const char* variable, Block value) {
+        Block result = block(id, "variables_set");
+        result.fields["VARIABLE"] = variable;
+        result.inputs["VALUE"].block = std::move(value);
+        return result;
+    };
+    // f(n): v = n, then g(n + 1); g(n): w = n. Each function reads its own "n".
+    Block plusOne = block("plus", "operators_add");
+    plusOne.inputs["NUM1"].block = input("n1");
+    plusOne.inputs["NUM2"].value = "1";
+    Block callG = block("callG", "functions_call");
+    callG.fields["FUNCTION"] = "g";
+    callG.inputs["ARG1"].block = plusOne;
+    Block callF = block("callF", "functions_call");
+    callF.fields["FUNCTION"] = "f";
+    callF.inputs["ARG1"].value = "4";
+    Project project = withScript({block("hat", "events_when_program_starts"), callF, set("after", "v2", input("n3"))});
+    project.variables = {{"v", "v", 0}, {"w", "w", 0}, {"v2", "v2", -1}};
+    project.functions = {{"f", "f", {"n"}}, {"g", "g", {"n"}}};
+    Block defineF = block("defineF", "functions_define");
+    defineF.fields["FUNCTION"] = "f";
+    Block defineG = block("defineG", "functions_define");
+    defineG.fields["FUNCTION"] = "g";
+    project.scripts.push_back({300, 0, {defineF, set("setV", "v", input("n0")), callG}});
+    project.scripts.push_back({600, 0, {defineG, set("setW", "w", input("n2"))}});
+    Interpreter interpreter(project, BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_TRUE(interpreter.finished());
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("v"), 4);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("w"), 5);
+    EXPECT_DOUBLE_EQ(interpreter.variables().at("v2"), 0) << "outside a function an input is 0";
 }
 
 TEST(Interpreter, DrivesScreensStripsAndMatrices) {

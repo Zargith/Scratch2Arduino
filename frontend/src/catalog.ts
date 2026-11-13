@@ -13,7 +13,8 @@ export type ArgKind =
 	| "variable"
 	| "function"
 	| "statement"
-	| "usercode";
+	| "usercode"
+	| "label";
 export type PinCapability = "digital" | "analog" | "pwm" | "interrupt";
 
 export interface BlockArg {

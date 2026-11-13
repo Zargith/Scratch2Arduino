@@ -236,6 +236,7 @@ private:
         std::string parent; ///< Block whose mouth holds the stack ("" for the script itself)...
         std::string slot;   ///< ...and the name of that mouth: used to find it again after an update.
         long remaining = 0; ///< Turns left for "repeat"; -1 forever.
+        std::map<std::string, double> arguments; ///< Function body: input name -> number given by "call".
     };
     struct Thread {
         std::string hat;
@@ -267,6 +268,7 @@ private:
     const Board& board_;
     Pins& pins_;
     std::vector<Thread> threads_;
+    const Thread* running_ = nullptr; ///< Thread whose block is being run (inputs of its function).
     bool paused_ = false;
     int pendingSteps_ = 0;
     std::size_t stepCursor_ = 0; ///< Next thread to run one block in step-by-step mode.

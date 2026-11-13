@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <gtest/gtest.h>
 #include <sstream>
 
@@ -96,7 +97,7 @@ Block call(std::string id, std::string function) {
 
 Project withFunctions(Stack main, std::vector<Stack> definitions) {
     Project project = program(std::move(main));
-    project.functions = {{"f", "blink"}, {"g", "beep"}};
+    project.functions = {{"f", "blink", {}}, {"g", "beep", {}}};
     for (Stack& stack : definitions) {
         project.scripts.push_back({300, 0, std::move(stack)});
     }
@@ -131,6 +132,38 @@ TEST(Validator, FunctionDefinedTwice) {
         single(check(withFunctions({hat(), call("c", "f")}, {{define("d1", "f"), led()}, {define("d2", "f"), led("l2")}})));
     EXPECT_EQ(issue.rule, Rule::FunctionDefinedTwice);
     EXPECT_EQ(issue.blockId, "d2");
+}
+
+Block parameter(std::string id, std::string name) {
+    Block result = block(std::move(id), "functions_parameter");
+    result.fields["NAME"] = std::move(name);
+    return result;
+}
+
+/// "wait (input) seconds" with the input block in its slot.
+Block waitFor(std::string id, Block value) {
+    Block result = block(std::move(id), "control_wait");
+    result.inputs["SECONDS"].block = std::move(value);
+    return result;
+}
+
+TEST(Validator, AcceptsAnInputInsideItsFunction) {
+    Project project = withFunctions({hat(), call("c", "f")}, {{define("d", "f"), waitFor("w", parameter("p", "durée"))}});
+    project.functions[0].parameters = {"durée"};
+    EXPECT_TRUE(check(project).empty());
+}
+
+TEST(Validator, ParameterOutsideFunction) {
+    // In the main script, and in a function that does not have this input.
+    Project project = withFunctions({hat(), call("c", "f"), call("c2", "g"), waitFor("w1", parameter("p1", "durée"))},
+                                    {{define("d", "f"), led()}, {define("d2", "g"), waitFor("w2", parameter("p2", "durée"))}});
+    project.functions[0].parameters = {"durée"};
+    const auto issues = check(project);
+    ASSERT_EQ(issues.size(), 2U);
+    for (const Issue& issue : issues) {
+        EXPECT_EQ(issue.rule, Rule::ParameterOutsideFunction);
+    }
+    EXPECT_NE(s2a::validation::describe(issues[0], Language::French).find("\"durée\""), std::string::npos);
 }
 
 TEST(Validator, RecursiveFunction) {
@@ -237,7 +270,7 @@ TEST(Validator, ChecksReportersAndNestedStacks) {
 }
 
 TEST(Validator, EveryRuleHasMessagesInBothLanguages) {
-    for (int rule = static_cast<int>(Rule::NoStartBlock); rule <= static_cast<int>(Rule::UnknownBlock); ++rule) {
+    for (int rule = static_cast<int>(Rule::NoStartBlock); rule <= static_cast<int>(Rule::ParameterOutsideFunction); ++rule) {
         const std::string key(s2a::validation::ruleKey(static_cast<Rule>(rule)));
         for (const Language language : {Language::French, Language::English}) {
             EXPECT_NE(s2a::tr(key, language), key) << key;
