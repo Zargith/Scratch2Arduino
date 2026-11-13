@@ -378,6 +378,32 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
 
 The interface is available in **French (default)** and **English**. Translations live in JSON files, and contributions for other languages are welcome.
 
+## Tested on real hardware
+
+Everything is checked by the CI (build on Windows, Linux and macOS, unit tests with a fake board, compile of every
+example and of the Live firmware for each board), but only part of it has run on a real board so far.
+
+**Tested on a board** (Arduino Uno, Windows):
+
+- upload from the editor and Live mode over USB (Live firmware flashed in one click);
+- LEDs, buttons, buzzer (passive), servo and potentiometer, HC-SR04 distance sensor, DHT11, 16-pin LCD (HD44780),
+  MAX7219 LED matrix;
+- the example projects Blink, Traffic light, Potentiometer and servo, Distance alarm, Thermometer (16-pin LCD) and
+  Reaction game.
+
+**Not tested yet** (help welcome: [report a problem](https://github.com/Zargith/Scratch2Arduino/issues/new/choose)
+or tell us it works):
+
+- boards: Arduino Nano and Mega, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
+- Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
+- components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
+  light sensor, HC-05 / HC-06 Bluetooth modules;
+- example projects added since: Button and LED, Remote robot (ESP32 and Uno + HC-05), Phone lamp, Wireless
+  station, ESP32 dimmer, and the "advanced" variants with "My code";
+- Live mode features: step-by-step mode (Pause / Next block), the wiring check at start-up;
+- Python, JavaScript and C++ ("My code" and the whole-program code modes) on a board, the Arduino library manager
+  with a real C++ project.
+
 ## Contributing
 
 Bug reports, feature requests, translations, example projects and code are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the [developer guide](docs/developer-guide.md) and the [roadmap](docs/roadmap.md).

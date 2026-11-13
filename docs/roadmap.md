@@ -28,14 +28,18 @@ Everything the phases plan is built. What is left:
 
 ### Checks on real hardware
 
-Nothing below has run on a real board yet (only CI, core tests with a fake board and compile checks):
+Tested by the user on an Arduino Uno (Windows): upload, Live mode over USB, LEDs, buttons, passive buzzer, servo and
+potentiometer, HC-SR04, DHT11, 16-pin LCD, MAX7219 matrix, and the examples Blink, Traffic light, Potentiometer and
+servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. The README keeps the up-to-date list
+("Tested on real hardware"). Still to run on a real board:
 
-- upload from the editor and from `s2a-cli` on Uno, Nano and Mega, on the three OS (Phases 2 and 3a);
-- Live mode over USB: firmware flashed in one click, blocks changed while running (Phase 5);
-- every component of Phase 6 with its example project, in upload and Live modes (Phase 6 "done when");
+- Nano and Mega; Linux and macOS with a real board;
+- NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor;
 - ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
 - ESP8266 (NodeMCU): Live over Wi-Fi;
 - HC-05 / HC-06 on Uno, Nano and Mega: pins saved from the Bluetooth window, Live mode through the module, "Bluetooth module" block in upload and Live, the Uno + HC-05 remote robot (no module at hand yet);
+- the examples added after the first hardware tests (Button and LED, Remote robot, Phone lamp, Wireless station, ESP32 dimmer, advanced variants);
+- step-by-step Live mode and the Live wiring check;
 - Python and JavaScript in Live mode, and C++ projects, on a real board (Phase 9).
 
 ### Phase 10: workshop
