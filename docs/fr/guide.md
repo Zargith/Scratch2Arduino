@@ -32,26 +32,87 @@ Python) et voit tout seul quand chaque étape est faite.
 
 ## 1. Installer Scratch2Arduino
 
-- **Windows** : télécharge `Scratch2Arduino_installer.exe` (page *Releases* du projet) et lance-le.
-  Il installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le menu Démarrer.
-  Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires*
-  puis *Exécuter quand même* (le programme n'est pas encore signé).
-- **Linux et macOS** : télécharge les sources (*Source code*, page *Releases* du projet) et décompresse-les,
-  puis dans ce dossier, dans un terminal : `./Scratch2Arduino_installer.sh` (ou `--user` pour l'installer
-  seulement pour toi).
-  Sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
-  `sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
+Tout se télécharge sur la page [*Releases*](https://github.com/Zargith/Scratch2Arduino/releases) du projet,
+dans la partie *Assets* de la dernière version.
 
-**Mises à jour** : au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et
-la propose (*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut
-aussi vérifier dans les *Paramètres* (engrenage), ou désactiver cette recherche. Sous Windows, *Télécharger
-et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino : si ton projet n'est pas
-enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou d'annuler. Sous Linux et macOS, Scratch2Arduino s'installe depuis ses sources : les *Paramètres* donnent les
-commandes à lancer.
+### Windows (10 ou 11)
 
-Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet
-cette fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne
-modifie pas un Arduino IDE installé sur le même ordinateur.
+1. Télécharge `Scratch2Arduino_installer.exe` et lance-le.
+2. Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires* puis
+   *Exécuter quand même* (le programme n'est pas encore signé).
+3. L'installeur installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le
+   menu Démarrer. Il faut Internet pendant l'installation.
+
+Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
+
+### macOS (Mac avec puce Apple : M1, M2, M3, M4...)
+
+1. Télécharge `Scratch2Arduino-<version>-macos-arm64.dmg` et ouvre-le.
+2. Glisse **Scratch2Arduino** sur le dossier **Applications**, puis éjecte le disque.
+3. Au premier lancement, macOS dit que l'application vient d'un "développeur non identifié" (elle n'est pas
+   encore signée par Apple) :
+   - macOS 15 (Sequoia) et plus récent : ouvre *Réglages Système > Confidentialité et sécurité*, descends
+     jusqu'au message sur Scratch2Arduino et clique sur *Ouvrir quand même*, puis confirme ;
+   - macOS 14 et plus ancien : fais un clic droit (ou Ctrl + clic) sur Scratch2Arduino dans Applications,
+     choisis *Ouvrir*, puis *Ouvrir* dans la fenêtre qui s'affiche.
+
+   Cela ne se fait qu'une fois. Si macOS dit que l'application est "endommagée", tape dans le Terminal :
+   `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
+4. Les cartes Arduino d'origine sont reconnues directement. Pour une carte avec une puce CH340 (beaucoup de
+   Nano et d'ESP32 bon marché), installe le pilote du fabricant si la carte n'apparaît pas dans les ports.
+
+Pour désinstaller : glisse Scratch2Arduino d'Applications vers la Corbeille.
+Sur un Mac avec processeur Intel, installe depuis les sources (voir plus bas).
+
+### Linux
+
+**Ubuntu 24.04 ou plus récent, Debian 13, Linux Mint 22** : télécharge `scratch2arduino_<version>_amd64.deb`,
+puis dans un terminal, dans le dossier du téléchargement :
+
+```bash
+sudo apt install ./scratch2arduino_*_amd64.deb
+```
+
+(Un double clic sur le fichier ouvre aussi la Logithèque, qui sait l'installer.)
+
+**Fedora 40 ou plus récent, openSUSE Tumbleweed** : télécharge `scratch2arduino-<version>-1.x86_64.rpm`, puis :
+
+```bash
+sudo dnf install ./scratch2arduino-*.x86_64.rpm        # Fedora
+sudo zypper install ./scratch2arduino-*.x86_64.rpm     # openSUSE
+```
+
+Scratch2Arduino apparaît dans le menu des applications (catégorie Éducation ou Développement). Le paquet
+installe aussi le droit d'utiliser les ports USB des cartes : rien d'autre à faire, même pas de groupe
+`dialout`. Si une carte était déjà branchée, débranche-la et rebranche-la.
+
+Pour désinstaller : `sudo apt remove scratch2arduino` (ou `sudo dnf remove scratch2arduino`).
+
+**Autres distributions (Arch, Manjaro...), processeur ARM (Raspberry Pi) ou Mac Intel** : installe depuis les
+sources. Télécharge *Source code* (zip ou tar.gz), décompresse-le, puis dans ce dossier, dans un terminal :
+`./Scratch2Arduino_installer.sh` (ou `./Scratch2Arduino_installer.sh --user` pour l'installer seulement pour
+toi). Le script installe ce qui manque (apt, dnf, pacman ou brew), compile et installe Scratch2Arduino.
+Dans ce cas, sur Linux, pour pouvoir envoyer les programmes sur la carte, tape une fois
+`sudo usermod -aG dialout $USER` puis ferme ta session et rouvre-la.
+
+### Mises à jour
+
+Au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et la propose
+(*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut aussi vérifier
+dans les *Paramètres* (engrenage), ou désactiver cette recherche.
+
+- Windows : *Télécharger et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino ;
+  si ton projet n'est pas enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou
+  d'annuler.
+- macOS et Linux : télécharge le nouveau `.dmg`, `.deb` ou `.rpm` sur la page *Releases* et installe-le
+  comme la première fois : il remplace l'ancienne version, tes projets et tes réglages sont gardés.
+  Installé depuis les sources : les *Paramètres* donnent les commandes à lancer.
+
+### Les outils des cartes
+
+Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet cette
+fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne modifie pas un
+Arduino IDE installé sur le même ordinateur.
 
 ## 2. Brancher la carte
 

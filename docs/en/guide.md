@@ -32,26 +32,86 @@ Python) and sees by itself when each step is done.
 
 ## 1. Install Scratch2Arduino
 
-- **Windows**: download `Scratch2Arduino_installer.exe` (the project's *Releases* page) and run it. It
-  installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the Start menu.
-  If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
-  signed yet).
-- **Linux and macOS**: download the sources (*Source code*, the project's *Releases* page) and unpack them,
-  then in that folder, in a terminal: `./Scratch2Arduino_installer.sh` (or `--user` to install it for
-  yourself only).
-  On Linux, to be allowed to send programs to the board, type once
-  `sudo usermod -aG dialout $USER`, then log out and back in.
+Everything is downloaded from the project's [*Releases*](https://github.com/Zargith/Scratch2Arduino/releases)
+page, in the *Assets* part of the latest version.
 
-**Updates**: at start-up, Scratch2Arduino looks in the background for a new version and offers it
-(*Download and install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings*
-(gear), or switch this check off. On Windows, *Download and install* starts the installer of the new
-version and closes Scratch2Arduino: if your project is not
-saved, a question first offers to save it, ignore the changes or cancel. On Linux and macOS, Scratch2Arduino is
-installed from its sources: the *Settings* give the commands to run.
+### Windows (10 or 11)
 
-The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board
-(Internet is needed that time, then never again for that board). It keeps its own copy of those tools:
-it does not change an Arduino IDE installed on the same computer.
+1. Download `Scratch2Arduino_installer.exe` and run it.
+2. If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
+   signed yet).
+3. The installer installs what is missing, then Scratch2Arduino, with shortcuts on the desktop and in the
+   Start menu. Internet is needed during the installation.
+
+To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
+
+### macOS (Mac with an Apple chip: M1, M2, M3, M4...)
+
+1. Download `Scratch2Arduino-<version>-macos-arm64.dmg` and open it.
+2. Drag **Scratch2Arduino** onto the **Applications** folder, then eject the disk.
+3. The first time, macOS says the application comes from an "unidentified developer" (it is not signed by
+   Apple yet):
+   - macOS 15 (Sequoia) and newer: open *System Settings > Privacy & Security*, scroll down to the message
+     about Scratch2Arduino and click *Open Anyway*, then confirm;
+   - macOS 14 and older: right-click (or Ctrl-click) Scratch2Arduino in Applications, choose *Open*, then
+     *Open* in the window that appears.
+
+   This is only needed once. If macOS says the application is "damaged", type in the Terminal:
+   `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
+4. Genuine Arduino boards are recognised at once. For a board with a CH340 chip (many cheap Nano and ESP32
+   boards), install the maker's driver if the board does not show up in the ports.
+
+To uninstall: drag Scratch2Arduino from Applications to the Bin.
+On a Mac with an Intel processor, install from the sources (see below).
+
+### Linux
+
+**Ubuntu 24.04 or newer, Debian 13, Linux Mint 22**: download `scratch2arduino_<version>_amd64.deb`, then in a
+terminal, in the download folder:
+
+```bash
+sudo apt install ./scratch2arduino_*_amd64.deb
+```
+
+(Double-clicking the file also opens the Software centre, which can install it.)
+
+**Fedora 40 or newer, openSUSE Tumbleweed**: download `scratch2arduino-<version>-1.x86_64.rpm`, then:
+
+```bash
+sudo dnf install ./scratch2arduino-*.x86_64.rpm        # Fedora
+sudo zypper install ./scratch2arduino-*.x86_64.rpm     # openSUSE
+```
+
+Scratch2Arduino appears in the applications menu (Education or Development category). The package also
+installs the right to use the boards' USB ports: nothing else to do, not even the `dialout` group. If a
+board was already plugged in, unplug it and plug it in again.
+
+To uninstall: `sudo apt remove scratch2arduino` (or `sudo dnf remove scratch2arduino`).
+
+**Other distributions (Arch, Manjaro...), ARM processors (Raspberry Pi) or Intel Macs**: install from the
+sources. Download *Source code* (zip or tar.gz), unpack it, then in that folder, in a terminal:
+`./Scratch2Arduino_installer.sh` (or `./Scratch2Arduino_installer.sh --user` to install it for yourself only).
+The script installs what is missing (apt, dnf, pacman or brew), builds and installs Scratch2Arduino.
+In that case, on Linux, to be allowed to send programs to the board, type once
+`sudo usermod -aG dialout $USER`, then log out and back in.
+
+### Updates
+
+At start-up, Scratch2Arduino looks in the background for a new version and offers it (*Download and
+install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or switch
+this check off.
+
+- Windows: *Download and install* starts the installer of the new version and closes Scratch2Arduino; if
+  your project is not saved, a question first offers to save it, ignore the changes or cancel.
+- macOS and Linux: download the new `.dmg`, `.deb` or `.rpm` from the *Releases* page and install it like the
+  first time: it replaces the older version, your projects and settings are kept. Installed from the
+  sources: the *Settings* give the commands to run.
+
+### The boards' tools
+
+The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board (Internet is
+needed that time, then never again for that board). It keeps its own copy of those tools: it does not change
+an Arduino IDE installed on the same computer.
 
 ## 2. Plug in the board
 

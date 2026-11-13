@@ -31,7 +31,8 @@ jobs:
         timeout-minutes: 15
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config libwebkit2gtk-4.1-dev
+          # rpm: rpmbuild for the .rpm package (the .deb uses dpkg-shlibdeps from dpkg-dev).
+          sudo apt-get install -y cmake ninja-build pkg-config libwebkit2gtk-4.1-dev rpm dpkg-dev
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
@@ -53,8 +54,13 @@ jobs:
           else
             generator=(-G Ninja) ; werror=ON
           fi
+          # Linux: the packages install in /usr (menu entry included) with the udev rule.
+          packaging=()
+          if [ "$RUNNER_OS" = Linux ]; then
+            packaging=(-DCMAKE_INSTALL_PREFIX=/usr -DS2A_INSTALL_UDEV_RULES=ON)
+          fi
           cmake -S . -B build "${generator[@]}" -DCMAKE_BUILD_TYPE=Release \
-            -DS2A_BUILD_TESTS=ON -DS2A_WARNINGS_AS_ERRORS=$werror
+            -DS2A_BUILD_TESTS=ON -DS2A_WARNINGS_AS_ERRORS=$werror "${packaging[@]}"
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -72,6 +78,9 @@ jobs:
         shell: bash
         run: |
           cli="$RUNNER_TEMP/s2a/bin/s2a-cli"
+          if [ "$RUNNER_OS" = macOS ]; then
+            cli="$RUNNER_TEMP/s2a/Scratch2Arduino.app/Contents/MacOS/s2a-cli"
+          fi
           "$cli" version
           # The Windows runner runs out of resources after about a hundred compiles: it can no longer
           # start processes ("exit status 0xc0000142", even bash's own fork fails). There the examples
@@ -113,6 +122,62 @@ jobs:
             "$cli" compile examples/sketches/blink --board esp8266 --lang en --verbose
             "$cli" compile firmware/s2a_live --board esp8266 --lang en --verbose
           fi
+
+      - name: Packages (.deb and .rpm on Linux, .dmg on macOS)
+        if: runner.os != 'Windows'
+        working-directory: build
+        run: cpack -C Release
+
+      - name: Install the .deb and check it (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          deb=$(ls build/scratch2arduino_*.deb)
+          rpm=$(ls build/scratch2arduino-*.rpm)
+          dpkg-deb --info "$deb"
+          rpm -qp --requires "$rpm"
+          sudo apt-get install -y "./$deb"
+          for file in /usr/bin/scratch2arduino /usr/bin/s2a-cli /usr/libexec/scratch2arduino/arduino-cli \
+                      /usr/share/scratch2arduino/frontend/index.html /usr/share/applications/scratch2arduino.desktop \
+                      /usr/share/icons/hicolor/256x256/apps/scratch2arduino.png /usr/lib/udev/rules.d/60-scratch2arduino.rules; do
+            test -e "$file" || { echo "::error::missing $file"; exit 1; }
+          done
+          grep -q '^Exec=/usr/bin/scratch2arduino' /usr/share/applications/scratch2arduino.desktop
+          s2a-cli version
+          s2a-cli boards
+          sudo apt-get remove -y scratch2arduino
+          test ! -e /usr/bin/scratch2arduino
+
+      - name: Open the .dmg and check the application (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          dmg=$(ls build/Scratch2Arduino-*.dmg)
+          hdiutil attach "$dmg" -mountpoint /tmp/s2a-dmg -nobrowse
+          app=/tmp/s2a-dmg/Scratch2Arduino.app
+          ls -la /tmp/s2a-dmg
+          for file in "$app/Contents/MacOS/Scratch2Arduino" "$app/Contents/MacOS/arduino-cli" "$app/Contents/MacOS/s2a-cli" \
+                      "$app/Contents/Resources/frontend/index.html" "$app/Contents/Resources/scratch2arduino.icns" "$app/Contents/Info.plist"; do
+            test -e "$file" || { echo "::error::missing $file"; exit 1; }
+          done
+          test -L /tmp/s2a-dmg/Applications
+          codesign --verify --deep --strict "$app"
+          "$app/Contents/MacOS/s2a-cli" version
+          hdiutil detach /tmp/s2a-dmg
+
+      - name: Upload the Linux packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages-linux
+          path: |
+            build/scratch2arduino_*.deb
+            build/scratch2arduino-*.rpm
+
+      - name: Upload the macOS disk image
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-macos
+          path: build/Scratch2Arduino-*.dmg
 
   data:
     name: Data files (JSON schema)
@@ -341,6 +406,14 @@ jobs:
           name: frontend
           path: dist
 
+      - name: Download the Linux packages and the macOS disk image
+        if: steps.version.outputs.exists == 'false'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: package*-*
+          path: dist
+          merge-multiple: true
+
       - name: Create the GitHub release
         if: steps.version.outputs.exists == 'false'
         env:
@@ -351,7 +424,8 @@ jobs:
           mv dist/scratch2arduino-frontend.zip "dist/scratch2arduino-frontend-$VERSION.zip"
           # How to install, then the notes generated by GitHub (merged pull requests).
           sed "s/{VERSION}/$VERSION/g" .github/release-notes.md > release-notes.md
-          gh release create "v$VERSION" dist/Scratch2Arduino_installer.exe "dist/scratch2arduino-frontend-$VERSION.zip" \
+          gh release create "v$VERSION" dist/Scratch2Arduino_installer.exe dist/*.deb dist/*.rpm dist/*.dmg \
+            "dist/scratch2arduino-frontend-$VERSION.zip" \
             --target "$GITHUB_SHA" \
             --title "Scratch2Arduino $VERSION" \
             --notes-file release-notes.md \

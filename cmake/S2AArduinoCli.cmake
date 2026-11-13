@@ -57,10 +57,13 @@ if(S2A_BUNDLE_ARDUINO_CLI)
     endif()
 endif()
 
+# s2a_bundle_arduino_cli(<target> [NO_INSTALL]): arduino-cli next to <target> in the build tree, and
+# in the install tree unless NO_INSTALL (s2a-cli inside the macOS bundle uses the application's copy).
 function(s2a_bundle_arduino_cli target)
     if(NOT S2A_ARDUINO_CLI_EXECUTABLE)
         return()
     endif()
+    cmake_parse_arguments(ARG "NO_INSTALL" "" "" ${ARGN})
     get_filename_component(name "${S2A_ARDUINO_CLI_EXECUTABLE}" NAME)
     # Build tree: next to the executable (inside Contents/MacOS for a macOS bundle). A target that
     # runs on every build (copy_if_different is a no-op when up to date) rather than a POST_BUILD
@@ -71,6 +74,9 @@ function(s2a_bundle_arduino_cli target)
         VERBATIM)
     add_dependencies(${target}_arduino_cli ${target})
     # Install tree.
+    if(ARG_NO_INSTALL)
+        return()
+    endif()
     get_target_property(is_bundle ${target} MACOSX_BUNDLE)
     if(APPLE AND is_bundle)
         install(PROGRAMS "${S2A_ARDUINO_CLI_EXECUTABLE}" DESTINATION "$<TARGET_FILE_NAME:${target}>.app/Contents/MacOS")
