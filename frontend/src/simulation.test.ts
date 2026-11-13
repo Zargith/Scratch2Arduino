@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SimState, WiringPlan } from "@/bridge";
-import { isSimPort, outputPins, percent, simParts, SIM_PORT, usesPhone } from "@/simulation";
+import { boardPins, isSimPort, percent, simParts, SIM_PORT, usesPhone } from "@/simulation";
 
 const component = (kind: string, name: string, pins: Record<string, string>): WiringPlan["components"][number] => ({
 	kind,
@@ -133,13 +133,25 @@ describe("simulation", () => {
 		expect(parts[4]).toMatchObject({ pin: "4", pressed: true, action: "near" });
 	});
 
-	it("lists the output pins in the board's order", () => {
-		const pins = outputPins(
+	it("lists every pin the program uses, with what it does, in the board's order", () => {
+		const pins = boardPins(
 			state({
-				outputs: { A0: { level: 0, pwm: false }, "13": { level: 255, pwm: false }, "2": { level: 0, pwm: false } },
+				modes: { A0: "input", "2": "pullup", "4": "input", "13": "output", "6": "output" },
+				outputs: { "13": { level: 255, pwm: false }, "9": { level: 128, pwm: true }, "6": { level: 0, pwm: false } },
+				tones: { "6": 440 },
+				pressed: { "2": true },
+				analog: { A0: 300 },
 			})
 		);
-		expect(pins.map((pin) => pin.pin)).toEqual(["2", "13", "A0"]);
+		expect(pins).toEqual([
+			{ pin: "2", kind: "input", high: false, pullup: true }, // a button to GND, pressed
+			{ pin: "4", kind: "input", high: false, pullup: false },
+			{ pin: "6", kind: "tone", frequency: 440 },
+			{ pin: "9", kind: "output", level: 128, pwm: true },
+			{ pin: "13", kind: "output", level: 255, pwm: false },
+			{ pin: "A0", kind: "analog", value: 300 },
+		]);
+		expect(boardPins(null)).toEqual([]);
 	});
 
 	it("tells when the program talks to the phone", () => {

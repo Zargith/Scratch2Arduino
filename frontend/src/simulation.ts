@@ -172,13 +172,36 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 	return parts;
 }
 
-/** Pins set as outputs, in the board's order ("2" before "10", digital before "A0"): the small LEDs of the board. */
-export function outputPins(state: SimState | null): { pin: string; level: number }[] {
-	const order = (pin: string) =>
-		/^\d+$/.test(pin) ? Number(pin) : 1000 + pin.charCodeAt(0) * 100 + (Number(pin.slice(1)) || 0);
-	return Object.entries(state?.outputs ?? {})
-		.map(([pin, output]) => ({ pin, level: output.level }))
-		.sort((a, b) => order(a.pin) - order(b.pin));
+/** A pin the program uses, with what it does now (the "board pins" of the virtual board). */
+export type BoardPin =
+	| { pin: string; kind: "output"; level: number; pwm: boolean }
+	/** A buzzer sounding on the pin. */
+	| { pin: string; kind: "tone"; frequency: number }
+	/** A digital input: high or low (a button to GND with the pull-up reads low while pressed). */
+	| { pin: string; kind: "input"; high: boolean; pullup: boolean }
+	/** An analog input (A0, A1...): 0 to 1023. */
+	| { pin: string; kind: "analog"; value: number };
+
+const pinOrder = (pin: string) => (/^\d+$/.test(pin) ? Number(pin) : 1000 + pin.charCodeAt(0) * 100 + (Number(pin.slice(1)) || 0));
+
+/** Every pin the program uses (outputs, sounds, inputs), in the board's order ("2" before "10", digital before "A0"). */
+export function boardPins(state: SimState | null): BoardPin[] {
+	const now = state ?? EMPTY;
+	const pins = new Map<string, BoardPin>();
+	for (const [pin, mode] of Object.entries(now.modes)) {
+		if (mode === "output") continue; // with its level below
+		const pressed = now.pressed[pin] ?? false;
+		const analog = /^A\d+$/.test(pin);
+		pins.set(
+			pin,
+			analog && mode === "input"
+				? { pin, kind: "analog", value: now.analog[pin] ?? DEFAULT_ANALOG }
+				: { pin, kind: "input", high: mode === "pullup" ? !pressed : pressed, pullup: mode === "pullup" }
+		);
+	}
+	for (const [pin, output] of Object.entries(now.outputs)) pins.set(pin, { pin, kind: "output", level: output.level, pwm: output.pwm });
+	for (const [pin, frequency] of Object.entries(now.tones)) if (frequency > 0) pins.set(pin, { pin, kind: "tone", frequency });
+	return [...pins.values()].sort((a, b) => pinOrder(a.pin) - pinOrder(b.pin));
 }
 
 /** Whether the program uses the Phone blocks (the virtual phone is then shown). */
