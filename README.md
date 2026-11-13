@@ -409,9 +409,11 @@ or tell us it works):
 - boards: Arduino Nano and Mega, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
 - Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
 - components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
-  light sensor, HC-05 / HC-06 Bluetooth modules;
-- example projects added since: Button and LED, Remote robot (ESP32 and Uno + HC-05), Phone lamp, Wireless
-  station, ESP32 dimmer, and the "advanced" variants with "My code";
+  light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
+  obstacle sensor (FC-51 / KY-032);
+- example projects added since: Button and LED, Joystick and LEDs, Motion alarm, Obstacle detector, Remote robot
+  (ESP32 and Uno + HC-05), Phone lamp, Wireless station, ESP32 dimmer, and the "advanced" variants with "My code";
+- functions with inputs on a board (upload and Live);
 - Live mode features: step-by-step mode (Pause / Next block), the wiring check at start-up;
 - Python, JavaScript and C++ ("My code" and the whole-program code modes) on a board, the Arduino library manager
   with a real C++ project.

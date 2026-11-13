@@ -38,7 +38,8 @@ servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. The README keeps
 - ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
 - ESP8266 (NodeMCU): Live over Wi-Fi;
 - HC-05 / HC-06 on Uno, Nano and Mega: pins saved from the Bluetooth window, Live mode through the module, "Bluetooth module" block in upload and Live, the Uno + HC-05 remote robot (no module at hand yet);
-- the examples added after the first hardware tests (Button and LED, Remote robot, Phone lamp, Wireless station, ESP32 dimmer, advanced variants);
+- the examples added after the first hardware tests (Button and LED, Joystick and LEDs, Motion alarm, Obstacle detector, Remote robot, Phone lamp, Wireless station, ESP32 dimmer, advanced variants) and their components (joystick, PIR, infrared obstacle sensor);
+- functions with inputs on a board;
 - step-by-step Live mode and the Live wiring check;
 - Python and JavaScript in Live mode, and C++ projects, on a real board (Phase 9).
 
