@@ -834,11 +834,26 @@ private:
                 }
                 badgeAt = {centre.x - (rgb ? 34 : 24), centre.y - (rgb ? 26 : 20)};
             } else if (kind == "button") {
-                const Point e = b.hole(col, 'e');
-                const Point f = b.hole(col, 'f');
-                svg.rect(e.x - 9, e.y - 8, 58, f.y - e.y + 16, "#90A4AE", "#607D8B", 4, 2);
-                svg.circle(e.x + 20, (e.y + f.y) / 2, 13, "#263238");
-                badgeAt = {e.x - 22, e.y - 18};
+                // A 4-leg push button (6 mm tactile switch) across the middle channel, as in the
+                // kits: its legs in rows e and f of two columns. The legs facing each other across
+                // the channel are always joined; pressing joins the two columns.
+                const Point topLeft = b.hole(col, 'e');
+                const Point bottomRight = b.hole(col + 2, 'f');
+                for (const Point leg : {topLeft, b.hole(col + 2, 'e'), b.hole(col, 'f'), bottomRight}) {
+                    const double toward = leg.y < (topLeft.y + bottomRight.y) / 2 ? 1 : -1; // legs bend under the body
+                    svg.line({{leg.x, leg.y}, {leg.x, leg.y + toward * 9}}, "#B0BEC5", 4);
+                    svg.circle(leg.x, leg.y, 3.5, "#CFD8DC", "#78909C", 1);
+                }
+                const double margin = 3;
+                const double left = topLeft.x + margin;
+                const double top = topLeft.y + 6;
+                const double width = bottomRight.x - topLeft.x - 2 * margin;
+                const double height = bottomRight.y - topLeft.y - 12;
+                svg.rect(left, top, width, height, "#37474F", "#263238", 3, 2); // body
+                const Point mid{(topLeft.x + bottomRight.x) / 2, (topLeft.y + bottomRight.y) / 2};
+                svg.circle(mid.x, mid.y, std::min(width, height) * 0.36, "#212121", "#000000", 1.5); // cap
+                svg.circle(mid.x - 3, mid.y - 3, std::min(width, height) * 0.12, "#424242");
+                badgeAt = {topLeft.x - 22, topLeft.y - 18};
             } else if (kind == "potentiometer") {
                 const Point mid = b.hole(col + 1, 'h');
                 svg.rect(mid.x - 30, mid.y - 26, 60, 52, "#1565C0", "#0D47A1", 4, 2);
