@@ -73,25 +73,27 @@ jobs:
         run: |
           cli="$RUNNER_TEMP/s2a/bin/s2a-cli"
           "$cli" version
-          # Windows runners sometimes fail to start one of the compiler processes ("exit status
-          # 0xc0000142", STATUS_DLL_INIT_FAILED): not the sketch. Only that error is tried again.
+          # The Windows runner runs out of resources after about a hundred compiles: it can no longer
+          # start processes ("exit status 0xc0000142", even bash's own fork fails). There the examples
+          # are compiled for the Uno only (Nano and Mega on Linux and macOS); Blink and the Live firmware
+          # for every board. When a compile fails on Windows, the running processes are listed.
           compile() {
-            local attempt output status
-            for attempt in 1 2 3; do
-              status=0
-              output=$("$cli" compile "$@" --lang en --verbose 2>&1) || status=$?
-              echo "$output"
-              if [ "$status" -eq 0 ]; then return 0; fi
-              if ! grep -q "0xc0000142" <<<"$output"; then return "$status"; fi
-              echo "::warning::A compiler process did not start (0xc0000142), trying again ($attempt/3)"
-              sleep 5
-            done
+            "$cli" compile "$@" --lang en --verbose && return 0
+            local status=$?
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              echo "::group::Processes running when the compile failed"
+              powershell -NoProfile -Command "Get-Process | Group-Object ProcessName | Sort-Object Count -Descending | Select-Object -First 15 Count, Name | Format-Table -AutoSize; 'Total: ' + (Get-Process).Count" || true
+              echo "::endgroup::"
+            fi
             return "$status"
           }
           for board in uno nano mega; do
             "$cli" setup --board "$board"
             compile examples/sketches/blink --board "$board"
             compile firmware/s2a_live --board "$board"
+            if [ "$RUNNER_OS" = "Windows" ] && [ "$board" != "uno" ]; then
+              continue
+            fi
             for project in examples/projects/*/project.json; do
               # The ESP32 examples use ESP32 pin numbers: compiled in the ESP32 step below.
               grep -qE '"board": "esp(32|8266)"' "$project" && continue
