@@ -400,6 +400,18 @@ TEST(Codegen, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
     }
 }
 
+TEST(Codegen, DrivesTheFourDigitDisplayWithoutPinMode) {
+    Block show = block("show", "display_digits_show");
+    show.inputs["VALUE"].value = "7";
+    Block clear = block("clear", "display_digits_clear");
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), show, clear})).source;
+    for (const char* expected : {"void s2a_tm_show(int clk, int dio, bool show, long value) {", "s2a_tm_show(4, 5, true, lround(7));",
+                                 "s2a_tm_show(4, 5, false, 0);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+    EXPECT_EQ(source.find("pinMode(4, OUTPUT);"), std::string::npos) << "the display sets its own pins\n" << source;
+}
+
 TEST(Codegen, TurnsAStepperMotorWithTheSameStepsAsTheFirmware) {
     Block turn = block("turn", "motors_stepper_turn");
     turn.inputs["DEGREES"].value = "360";

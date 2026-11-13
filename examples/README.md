@@ -24,6 +24,7 @@ On a breadboard, the 5 holes of a column (a to e, or f to j) are joined together
 | [Alarme de mouvement](#alarme-de-mouvement--motion-alarm) | capteur PIR HC-SR501, LED, 220 Ω, buzzer |
 | [Détecteur d'obstacle](#détecteur-dobstacle--obstacle-detector) | capteur infrarouge FC-51, LED, 220 Ω, buzzer |
 | [Barrière de parking](#barrière-de-parking--parking-barrier) | moteur pas à pas 28BYJ-48 + ULN2003, bouton, 2 LED, 2 x 220 Ω |
+| [Compte à rebours](#compte-à-rebours--countdown) | afficheur 4 chiffres TM1637, bouton, buzzer |
 | [Thermomètre](#thermomètre--thermometer) | DHT11, écran LCD 16x2 I2C |
 | [Thermomètre, écran 16 broches](#thermomètre-écran-16-broches--thermometer-16-pin-screen) | DHT11, écran LCD 16x2 à 16 broches, potentiomètre, 220 Ω |
 | [Jeu de réaction](#jeu-de-réaction--reaction-game) | matrice MAX7219, OLED SSD1306, bouton, buzzer |
@@ -180,6 +181,21 @@ back. Glue a straw or a stick on the motor's shaft to make the barrier.
 | Bouton, un côté / button, one side (autre côté / other side: GND) | 2 |
 | LED rouge / red, par une résistance de 220 Ω | 7 |
 | LED jaune / yellow, par une résistance de 220 Ω | 6 |
+
+## Compte à rebours / Countdown
+
+![Compte à rebours](projects/countdown/wiring.png)
+
+Appuie sur le bouton : l'afficheur compte de 10 à 0, une seconde à la fois, puis le buzzer sonne. La
+variable *secondes* garde le nombre affiché. / Press the button: the display counts from 10 to 0, one second
+at a time, then the buzzer rings. The *secondes* variable keeps the number shown.
+
+| Composant / Part | Broche / Pin |
+|---|---|
+| Afficheur TM1637 : CLK / DIO | 4 / 5 |
+| Afficheur TM1637 : VCC / GND | 5V / GND |
+| Bouton, un côté / button, one side (autre côté / other side: GND) | 2 |
+| Buzzer passif / passive buzzer (+) | 6 |
 
 ## Thermomètre / Thermometer
 

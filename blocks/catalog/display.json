@@ -287,6 +287,41 @@
         "fr": "Efface tout l'écran OLED. Écran OLED SSD1306 128x64 en I2C : branché comme l'écran LCD (GND, VCC, SDA, SCL).",
         "en": "Clears the whole OLED screen. SSD1306 128x64 I2C OLED screen: wired like the LCD (GND, VCC, SDA, SCL)."
       }
+    },
+    {
+      "type": "display_digits_show",
+      "shape": "statement",
+      "component": "tm1637",
+      "message": {
+        "fr": "afficher %1 sur l'afficheur 4 chiffres\nbroches CLK %2 DIO %3",
+        "en": "show %1 on the 4-digit display\npins CLK %2 DIO %3"
+      },
+      "tooltip": {
+        "fr": "Montre un nombre entier de -999 à 9999 sur l'afficheur à 4 chiffres TM1637 (arrondi ; \"----\" quand il ne tient pas). CLK et DIO sur deux broches, VCC sur 5V, GND sur GND.",
+        "en": "Shows a whole number from -999 to 9999 on the TM1637 4-digit display (rounded; \"----\" when it does not fit). CLK and DIO to two pins, VCC to 5V, GND to GND."
+      },
+      "args": [
+        { "name": "VALUE", "kind": "number", "default": 1234 },
+        { "name": "CLK_PIN", "kind": "pin", "capability": "digital", "default": "4" },
+        { "name": "DIO_PIN", "kind": "pin", "capability": "digital", "default": "5" }
+      ]
+    },
+    {
+      "type": "display_digits_clear",
+      "shape": "statement",
+      "component": "tm1637",
+      "message": {
+        "fr": "effacer l'afficheur 4 chiffres\nbroches CLK %1 DIO %2",
+        "en": "clear the 4-digit display\npins CLK %1 DIO %2"
+      },
+      "tooltip": {
+        "fr": "Éteint les 4 chiffres de l'afficheur TM1637.",
+        "en": "Turns off the 4 digits of the TM1637 display."
+      },
+      "args": [
+        { "name": "CLK_PIN", "kind": "pin", "capability": "digital", "default": "4" },
+        { "name": "DIO_PIN", "kind": "pin", "capability": "digital", "default": "5" }
+      ]
     }
   ]
 }

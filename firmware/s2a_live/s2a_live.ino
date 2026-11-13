@@ -24,6 +24,8 @@
 //   N <pin> <count> <index> <r> <g> <b>  colour of LED <index> (1-<count>, 0: all) of a
 //                   NeoPixel strip                                       -> "ok"
 //   G <din> <clk> <cs> <row> <bits>  row <row> (1-8) of a MAX7219 8x8 LED matrix -> "ok"
+//   F <clk> <dio> <number>  a whole number (-999 to 9999) on a TM1637 4-digit display; "F <clk> <dio> -"
+//                   turns it off                                         -> "ok"
 //   Q <in1> <in2> <in3> <in4> <steps> <rpm>  turns a 28BYJ-48 stepper motor (ULN2003 board) by
 //                   <steps> (2048 a turn, negative: the other way) at <rpm> turns a minute (1-15),
 //                   then switches its coils off; answers once the move is done   -> "ok"
@@ -388,6 +390,79 @@ void reply(char kind, int pin, long value) {
 }
 
 // Reads the next integer of `text` starting at `*position`; false when there is none.
+// TM1637 4-digit display: its two-wire link driven by hand (the module has pull-ups: a pin left as
+// an input reads high), the same in uploaded programs and in the Live firmware.
+void s2a_tm_bit(int pin, bool high) {
+  if (high) {
+    pinMode(pin, INPUT);
+  } else {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+  }
+  delayMicroseconds(5);
+}
+
+void s2a_tm_start(int clk, int dio) {
+  s2a_tm_bit(clk, true);
+  s2a_tm_bit(dio, true);
+  s2a_tm_bit(dio, false);
+}
+
+void s2a_tm_stop(int clk, int dio) {
+  s2a_tm_bit(clk, false);
+  s2a_tm_bit(dio, false);
+  s2a_tm_bit(clk, true);
+  s2a_tm_bit(dio, true);
+}
+
+void s2a_tm_byte(int clk, int dio, byte value) {
+  for (int i = 0; i < 8; i++) {
+    s2a_tm_bit(clk, false);
+    s2a_tm_bit(dio, value & 1);
+    value >>= 1;
+    s2a_tm_bit(clk, true);
+  }
+  s2a_tm_bit(clk, false); // the display acknowledges
+  s2a_tm_bit(dio, true);
+  s2a_tm_bit(clk, true);
+  s2a_tm_bit(clk, false);
+}
+
+// A whole number from -999 to 9999 on the right of the display ("----" when it does not fit);
+// show false turns the display off.
+void s2a_tm_show(int clk, int dio, bool show, long value) {
+  static const byte digits[10] = {0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f};
+  byte segments[4] = {0, 0, 0, 0};
+  if (show && (value > 9999 || value < -999)) {
+    for (int i = 0; i < 4; i++) {
+      segments[i] = 0x40;
+    }
+  } else if (show) {
+    const bool negative = value < 0;
+    unsigned long rest = labs(value);
+    int i = 3;
+    do {
+      segments[i--] = digits[rest % 10];
+      rest /= 10;
+    } while (rest > 0 && i >= 0);
+    if (negative && i >= 0) {
+      segments[i] = 0x40;
+    }
+  }
+  s2a_tm_start(clk, dio);
+  s2a_tm_byte(clk, dio, 0x40); // the digits follow one another
+  s2a_tm_stop(clk, dio);
+  s2a_tm_start(clk, dio);
+  s2a_tm_byte(clk, dio, 0xC0); // from the first digit
+  for (int i = 0; i < 4; i++) {
+    s2a_tm_byte(clk, dio, segments[i]);
+  }
+  s2a_tm_stop(clk, dio);
+  s2a_tm_start(clk, dio);
+  s2a_tm_byte(clk, dio, show ? 0x8F : 0x80); // on at full brightness, or off
+  s2a_tm_stop(clk, dio);
+}
+
 // 28BYJ-48 stepper motor through a ULN2003 board: two coils on at a time, one phase further at each
 // step (the same steps as the uploaded programs, s2a_stepper in core/src/codegen.cpp).
 void stepMotor(const int pins[4], long steps, long rpm) {
@@ -823,6 +898,20 @@ void execute(const char* command) {
       return;
     }
     break;
+  case 'F': {
+    long dio = 0;
+    if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &dio) && validPin(dio)) {
+      releaseServo(pin);
+      releaseServo(dio);
+      output[pin] = false;
+      output[dio] = false;
+      const bool show = readNumber(command, &position, &value);
+      s2a_tm_show(pin, dio, show, value);
+      reply("ok");
+      return;
+    }
+    break;
+  }
   case 'Q': {
     int pins[4];
     long number = 0;

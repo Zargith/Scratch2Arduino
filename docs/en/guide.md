@@ -106,7 +106,7 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8x8 LED matrix (MAX7219) |
 | Sound | The buzzer | play 440 Hz for 1 seconds, start / stop the buzzer, note C4 |
 | Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D), 28BYJ-48 stepper motor (ULN2003 board) turned by an angle |
-| Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen |
+| Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen, TM1637 4-digit display |
 | Operators | Compute, compare | + − x /, pick random, map, <, >, =, and, or, not |
 | Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |
 | Functions | Reuse a group of blocks | *Make a function*, define ..., call ... |

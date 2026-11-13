@@ -276,6 +276,9 @@ std::pair<double, double> moduleSize(const std::string& kind, std::size_t pins) 
     if (kind == "stepper") {
         return {std::max(minimum, 170.0), 150};
     }
+    if (kind == "tm1637") {
+        return {std::max(minimum, 160.0), 120};
+    }
     if (kind == "pir") {
         return {std::max(minimum, 110.0), 130};
     }
@@ -353,6 +356,11 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.line({{at.x + 22, at.y + 34}, {at.x + w - 30, at.y + 34}}, "#4FC3F7", 3);
         svg.line({{at.x + 22, at.y + 50}, {at.x + w - 50, at.y + 50}}, "#4FC3F7", 3);
         svg.text({at.x + w / 2, at.y + 94}, "OLED", 10, "#FFFFFF", "middle", true);
+    } else if (kind == "tm1637") {
+        // Four red digits showing 1234, and the colon.
+        svg.rect(at.x + 10, at.y + 10, w - 20, 48, "#212121", "#000000", 3, 1);
+        svg.text({at.x + w / 2, at.y + 46}, "12:34", 30, "#FF1744", "middle", true);
+        svg.text({at.x + w / 2, at.y + 74}, "TM1637", 10, "#FFFFFF", "middle", true);
     } else if (kind == "stepper") {
         // ULN2003 board (its chip and four LEDs) and the 28BYJ-48 motor plugged into its socket.
         svg.rect(at.x + 12, at.y + 14, 52, 34, "#212121", {}, 2);
@@ -404,6 +412,9 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
 std::string moduleColour(const std::string& kind) {
     if (kind == "stepper") {
         return "#2E7D32";
+    }
+    if (kind == "tm1637") {
+        return "#1565C0";
     }
     if (kind == "joystick" || kind == "obstacle_sensor") {
         return kind == "joystick" ? "#1565C0" : "#283593";

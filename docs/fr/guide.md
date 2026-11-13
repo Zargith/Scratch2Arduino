@@ -112,7 +112,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8x8 (MAX7219) |
 | Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
 | Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D), moteur pas à pas 28BYJ-48 (carte ULN2003) tourné d'un angle |
-| Écrans | Afficher du texte | écran LCD 16x2 (module I2C ou 16 broches), écran OLED SSD1306 |
+| Écrans | Afficher du texte | écran LCD 16x2 (module I2C ou 16 broches), écran OLED SSD1306, afficheur 4 chiffres TM1637 |
 | Opérateurs | Calculer, comparer | + − x /, nombre aléatoire, convertir, <, >, =, et, ou, non |
 | Variables | Retenir des valeurs | *Créer une variable*, mettre ... à ..., ajouter ... à ... |
 | Fonctions | Réutiliser un groupe de blocs | *Créer une fonction*, définir ..., appeler ... |

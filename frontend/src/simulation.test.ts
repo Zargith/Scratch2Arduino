@@ -93,6 +93,12 @@ describe("simulation", () => {
 		expect(simParts(null, null)).toEqual([]);
 	});
 
+	it("shows what the 4-digit display shows", () => {
+		const plan: WiringPlan = { components: [component("tm1637", "Digits", { CLK_PIN: "4", DIO_PIN: "5" })], warnings: [] };
+		expect(simParts(plan, state({ digits: { "4": "  42" } }))).toMatchObject([{ kind: "digits", pin: "4", text: "  42" }]);
+		expect(simParts(plan, state({}))).toMatchObject([{ kind: "digits", text: "" }]);
+	});
+
 	it("shows the angle a stepper motor turned", () => {
 		const plan: WiringPlan = {
 			components: [component("stepper", "Stepper", { IN1_PIN: "8", IN2_PIN: "9", IN3_PIN: "10", IN4_PIN: "11" })],

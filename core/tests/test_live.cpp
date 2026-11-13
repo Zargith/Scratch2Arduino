@@ -42,6 +42,9 @@ struct FakePins final : s2a::live::Pins {
         log.push_back("T" + std::to_string(pin) + "=" + std::to_string(frequency) + "/" + std::to_string(ms));
     }
     void servoWrite(int pin, int angle) override { log.push_back("S" + std::to_string(pin) + "=" + std::to_string(angle)); }
+    void digits(int clk, int dio, std::optional<long> number) override {
+        log.push_back("F" + std::to_string(clk) + "," + std::to_string(dio) + "=" + (number ? std::to_string(*number) : "-"));
+    }
     void stepper(const std::array<int, 4>& pins, long steps, int rpm) override {
         log.push_back("Q" + std::to_string(pins[0]) + "," + std::to_string(pins[1]) + "," + std::to_string(pins[2]) + "," +
                       std::to_string(pins[3]) + "=" + std::to_string(steps) + "@" + std::to_string(rpm));
@@ -369,6 +372,18 @@ TEST(Interpreter, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
     for (const char* mode : {"M2U", "M3I", "M4U"}) {
         EXPECT_NE(std::find(sent.begin(), sent.end(), mode), sent.end()) << mode;
     }
+}
+
+TEST(Interpreter, ShowsNumbersOnTheFourDigitDisplay) {
+    FakePins pins;
+    Block show = block("show", "display_digits_show");
+    show.fields = {{"CLK_PIN", "6"}, {"DIO_PIN", "7"}};
+    show.inputs["VALUE"].value = "41.6";
+    Block clear = block("clear", "display_digits_clear");
+    clear.fields = {{"CLK_PIN", "6"}, {"DIO_PIN", "7"}};
+    Interpreter interpreter(withScript({block("hat", "events_when_program_starts"), show, clear}), BlockCatalog::builtin(), uno(), pins);
+    interpreter.step(milliseconds(0));
+    EXPECT_EQ(pins.take(), (std::vector<std::string>{"F6,7=42", "F6,7=-"}));
 }
 
 TEST(Interpreter, TurnsAStepperMotorByDegrees) {
