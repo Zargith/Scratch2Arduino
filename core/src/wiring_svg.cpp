@@ -273,6 +273,9 @@ std::pair<double, double> moduleSize(const std::string& kind, std::size_t pins) 
     if (kind == "joystick") {
         return {std::max(minimum, 120.0), 140};
     }
+    if (kind == "stepper") {
+        return {std::max(minimum, 170.0), 150};
+    }
     if (kind == "pir") {
         return {std::max(minimum, 110.0), 130};
     }
@@ -350,6 +353,20 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.line({{at.x + 22, at.y + 34}, {at.x + w - 30, at.y + 34}}, "#4FC3F7", 3);
         svg.line({{at.x + 22, at.y + 50}, {at.x + w - 50, at.y + 50}}, "#4FC3F7", 3);
         svg.text({at.x + w / 2, at.y + 94}, "OLED", 10, "#FFFFFF", "middle", true);
+    } else if (kind == "stepper") {
+        // ULN2003 board (its chip and four LEDs) and the 28BYJ-48 motor plugged into its socket.
+        svg.rect(at.x + 12, at.y + 14, 52, 34, "#212121", {}, 2);
+        svg.text({at.x + 38, at.y + 35}, "ULN2003", 8, "#FFFFFF", "middle", true);
+        for (int led = 0; led < 4; ++led) {
+            svg.circle(at.x + 18 + led * 13, at.y + 62, 4, "#E53935", "#B71C1C", 1);
+        }
+        svg.rect(at.x + 14, at.y + 76, 48, 12, "#ECEFF1", "#B0BEC5", 2, 1); // the white socket
+        const Point motor{at.x + w - 46, at.y + 52};
+        svg.line({{at.x + 62, at.y + 82}, {motor.x - 26, motor.y + 20}}, "#FB8C00", 3); // its five wires
+        svg.circle(motor.x, motor.y, 34, "#CFD8DC", "#78909C", 2);
+        svg.circle(motor.x, motor.y - 12, 9, "#ECEFF1", "#90A4AE", 2);
+        svg.rect(motor.x - 2.5, motor.y - 20, 5, 16, "#FFD54F", "#F9A825", 1); // its shaft
+        svg.text({motor.x, motor.y + 22}, "28BYJ-48", 8, "#37474F", "middle", true);
     } else if (kind == "joystick") {
         // KY-023: the square base of the stick and its round grey thumb cap.
         const Point mid{at.x + w / 2, at.y + 52};
@@ -385,6 +402,9 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
 }
 
 std::string moduleColour(const std::string& kind) {
+    if (kind == "stepper") {
+        return "#2E7D32";
+    }
     if (kind == "joystick" || kind == "obstacle_sensor") {
         return kind == "joystick" ? "#1565C0" : "#283593";
     }

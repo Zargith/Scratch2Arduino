@@ -111,7 +111,7 @@ cliques sur **Vérifier**, **Téléverser** ou **Live**.
 | Capteurs | Lire le monde | le bouton de la broche 2 est appuyé, position du potentiomètre (0 à 100), lumière mesurée, distance en cm (HC-SR04), température et humidité (DHT11, DHT22), joystick (position, direction, enfoncé), mouvement vu par un capteur PIR, obstacle devant un capteur infrarouge |
 | Lumières | LED de couleur | LED RGB, ruban NeoPixel, matrice de LED 8x8 (MAX7219) |
 | Son | Le buzzer | jouer 440 Hz pendant 1 secondes, faire sonner / arrêter le buzzer, note do 4 |
-| Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D) |
+| Moteurs | Faire bouger | servomoteur (0 à 180°), moteur à courant continu par un pont en H (L298N, L293D), moteur pas à pas 28BYJ-48 (carte ULN2003) tourné d'un angle |
 | Écrans | Afficher du texte | écran LCD 16x2 (module I2C ou 16 broches), écran OLED SSD1306 |
 | Opérateurs | Calculer, comparer | + − x /, nombre aléatoire, convertir, <, >, =, et, ou, non |
 | Variables | Retenir des valeurs | *Créer une variable*, mettre ... à ..., ajouter ... à ... |

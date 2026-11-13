@@ -788,6 +788,13 @@ private:
             const char* direction = !run ? "0" : (field(block, "DIRECTION") == "BACKWARD" ? "-1" : "1");
             body.add(depth, "s2a_motor(" + en + ", " + in1 + ", " + in2 + ", " + direction + ", " +
                                 (run ? number(block, "SPEED") : std::string("0")) + ");");
+        } else if (type == "motors_stepper_turn") {
+            helpers_.insert("stepper");
+            std::string pins;
+            for (const char* coil : {"IN1_PIN", "IN2_PIN", "IN3_PIN", "IN4_PIN"}) {
+                pins += pin(block, coil, PinMode::Output) + ", ";
+            }
+            body.add(depth, "s2a_stepper(" + pins + number(block, "DEGREES") + ", " + number(block, "RPM") + ");");
         } else if (type == "control_wait_until") {
             if (tasks_) {
                 body.add(depth, "S2A_WAIT_UNTIL(task, " + condition(block, "CONDITION") + ");");
@@ -962,6 +969,26 @@ private:
                {"void s2a_motor(int en, int in1, int in2, int direction, double speed) {",
                 "  digitalWrite(in1, direction > 0 ? HIGH : LOW);", "  digitalWrite(in2, direction < 0 ? HIGH : LOW);",
                 "  analogWrite(en, direction == 0 ? 0 : constrain((int)(speed * 2.55), 0, 255));", "}"});
+        // Same steps as the Live firmware (stepMotor in firmware/s2a_live): two coils on at a time.
+        helper(out, "stepper",
+               {"void s2a_stepper(int in1, int in2, int in3, int in4, double degrees, double rpm) {",
+                "  static const byte phases[4] = {0b1100, 0b0110, 0b0011, 0b1001};",
+                "  const int pins[4] = {in1, in2, in3, in4};",
+                "  const long steps = lround(degrees * 2048.0 / 360.0);",
+                "  const unsigned long pause = 60000000UL / ((unsigned long)constrain(rpm, 1.0, 15.0) * 2048UL);",
+                "  int phase = 0;",
+                "  for (long done = 0; done < labs(steps); done++) {",
+                "    phase = (phase + (steps > 0 ? 1 : 3)) % 4;",
+                "    for (int i = 0; i < 4; i++) {",
+                "      digitalWrite(pins[i], (phases[phase] >> (3 - i)) & 1 ? HIGH : LOW);",
+                "    }",
+                "    delay(pause / 1000);",
+                "    delayMicroseconds(pause % 1000);",
+                "  }",
+                "  for (int i = 0; i < 4; i++) {",
+                "    digitalWrite(pins[i], LOW); // coils off",
+                "  }",
+                "}"});
         helper(out, "text",
                {"String s2a_text(double value) {",
                 "  if (value == floor(value) && fabs(value) < 2000000000.0) {", "    return String((long)value);",

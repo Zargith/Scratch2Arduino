@@ -93,6 +93,15 @@ describe("simulation", () => {
 		expect(simParts(null, null)).toEqual([]);
 	});
 
+	it("shows the angle a stepper motor turned", () => {
+		const plan: WiringPlan = {
+			components: [component("stepper", "Stepper", { IN1_PIN: "8", IN2_PIN: "9", IN3_PIN: "10", IN4_PIN: "11" })],
+			warnings: [],
+		};
+		expect(simParts(plan, state({ steppers: { "8": -90 } }))).toMatchObject([{ kind: "stepper", pin: "8", angle: -90 }]);
+		expect(simParts(plan, state({}))).toMatchObject([{ kind: "stepper", angle: 0 }]); // older host: no steppers
+	});
+
 	it("gives a joystick two sliders and a button, and the PIR and obstacle sensors a button", () => {
 		const plan: WiringPlan = {
 			components: [

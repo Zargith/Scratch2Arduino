@@ -136,6 +136,19 @@
       ],
       "note": { "fr": "Le moteur se branche sur OUT1 et OUT2, et le pont a sa propre pile (bornier +12V et GND).", "en": "The motor goes on OUT1 and OUT2, and the bridge has its own battery (+12V and GND terminal)." }
     },
+    "stepper": {
+      "name": { "fr": "Moteur pas à pas 28BYJ-48 (carte ULN2003)", "en": "28BYJ-48 stepper motor (ULN2003 board)" },
+      "current": 240,
+      "connections": [
+        { "pin": { "fr": "IN1", "en": "IN1" }, "to": "IN1_PIN" },
+        { "pin": { "fr": "IN2", "en": "IN2" }, "to": "IN2_PIN" },
+        { "pin": { "fr": "IN3", "en": "IN3" }, "to": "IN3_PIN" },
+        { "pin": { "fr": "IN4", "en": "IN4" }, "to": "IN4_PIN" },
+        { "pin": { "fr": "+", "en": "+" }, "to": "5V" },
+        { "pin": { "fr": "-", "en": "-" }, "to": "GND" }
+      ],
+      "note": { "fr": "Le moteur se branche sur la prise blanche de la carte ULN2003. Il tire beaucoup de courant : avec d'autres composants, alimente la carte par une pile ou un bloc secteur.", "en": "The motor plugs into the white socket of the ULN2003 board. It draws a lot of current: with other parts, power the board from a battery or a mains adapter." }
+    },
     "bluetooth_module": {
       "name": { "fr": "Module Bluetooth HC-05 / HC-06", "en": "HC-05 / HC-06 Bluetooth module" },
       "current": 40,

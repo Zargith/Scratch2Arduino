@@ -57,6 +57,27 @@
         { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "7" },
         { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "4" }
       ]
+    },
+    {
+      "type": "motors_stepper_turn",
+      "shape": "statement",
+      "component": "stepper",
+      "message": {
+        "fr": "tourner le moteur pas à pas de %1 degrés\nà %2 tours par minute\nbroches IN1 %3 IN2 %4 IN3 %5 IN4 %6",
+        "en": "turn the stepper motor by %1 degrees\nat %2 turns a minute\npins IN1 %3 IN2 %4 IN3 %5 IN4 %6"
+      },
+      "tooltip": {
+        "fr": "Fait tourner un moteur pas à pas 28BYJ-48 (avec sa carte ULN2003) de cet angle : 360 pour un tour, un nombre négatif pour l'autre sens. Le programme attend la fin du mouvement. Vitesse de 1 à 15 tours par minute.",
+        "en": "Turns a 28BYJ-48 stepper motor (with its ULN2003 board) by this angle: 360 for a turn, a negative number for the other way. The program waits until the move is over. Speed from 1 to 15 turns a minute."
+      },
+      "args": [
+        { "name": "DEGREES", "kind": "number", "default": 90 },
+        { "name": "RPM", "kind": "number", "default": 10, "min": 1, "max": 15 },
+        { "name": "IN1_PIN", "kind": "pin", "capability": "digital", "default": "8" },
+        { "name": "IN2_PIN", "kind": "pin", "capability": "digital", "default": "9" },
+        { "name": "IN3_PIN", "kind": "pin", "capability": "digital", "default": "10" },
+        { "name": "IN4_PIN", "kind": "pin", "capability": "digital", "default": "11" }
+      ]
     }
   ]
 }

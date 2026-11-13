@@ -138,6 +138,18 @@
       }
     },
     {
+      "id": "parking-barrier",
+      "title": { "fr": "Barrière de parking", "en": "Parking barrier" },
+      "description": {
+        "fr": "Appuie sur le bouton : le moteur pas à pas lève la barrière d'un quart de tour, la LED jaune s'allume 3 secondes, puis la barrière redescend et la LED rouge revient.",
+        "en": "Press the button: the stepper motor lifts the barrier by a quarter turn, the yellow LED lights up for 3 seconds, then the barrier comes down and the red LED is back."
+      },
+      "parts": {
+        "fr": "moteur pas à pas 28BYJ-48 et sa carte ULN2003, bouton, LED rouge et LED jaune, 2 résistances de 220 Ω",
+        "en": "28BYJ-48 stepper motor and its ULN2003 board, button, red LED and yellow LED, 2 220 Ω resistors"
+      }
+    },
+    {
       "id": "thermometer",
       "title": { "fr": "Thermomètre", "en": "Thermometer" },
       "description": {

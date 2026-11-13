@@ -32,7 +32,9 @@ struct ScriptError;
 namespace s2a::live {
 
 inline constexpr int kBaud = 115200;
-inline constexpr std::string_view kHello = "S2A 9"; ///< Changes with the protocol: an older firmware is uploaded again.
+inline constexpr std::string_view kHello = "S2A 10";
+/// Steps of a turn of a 28BYJ-48 stepper motor driven two coils at a time (blocks give degrees).
+inline constexpr long kStepsPerTurn = 2048; ///< Changes with the protocol: an older firmware is uploaded again.
 
 enum class PinMode { Input, InputPullup, Output };
 
@@ -55,6 +57,9 @@ public:
     virtual void tone(int pin, int frequency, int milliseconds) = 0;
     /// Angle (0-180) of a servo.
     virtual void servoWrite(int pin, int angle) = 0;
+    /// Turns a 28BYJ-48 stepper motor on a ULN2003 board (pins IN1-IN4) by `steps` (2048 a turn,
+    /// negative: the other way) at `rpm` turns a minute; returns once the move is done.
+    virtual void stepper(const std::array<int, 4>& pins, long steps, int rpm) = 0;
     /// Distance in centimetres measured by an HC-SR04 ultrasonic sensor (400 when nothing answers).
     [[nodiscard]] virtual double distance(int trigPin, int echoPin) = 0;
     /// Temperature (°C) and humidity (%) of a DHT11 (model 11) or DHT22 (22); nullopt when it does not answer.
@@ -135,6 +140,7 @@ public:
     [[nodiscard]] int analogRead(int pin) override;
     void tone(int pin, int frequency, int milliseconds) override;
     void servoWrite(int pin, int angle) override;
+    void stepper(const std::array<int, 4>& pins, long steps, int rpm) override;
     [[nodiscard]] double distance(int trigPin, int echoPin) override;
     [[nodiscard]] std::optional<std::pair<double, double>> dht(int pin, int model) override;
     void lcdLine(int row, const std::string& text) override;

@@ -43,6 +43,8 @@ export interface SimState {
 	/** level 0-255 (0 or 255 for a digital pin); pwm: set by "analogWrite". */
 	outputs: Record<string, { level: number; pwm: boolean }>;
 	servos: Record<string, number>;
+	/** IN1 pin of a stepper motor -> angle turned since Live started (degrees). Left out by older hosts. */
+	steppers?: Record<string, number>;
 	/** Frequency now sounding (Hz). */
 	tones: Record<string, number>;
 	lcd: string[];

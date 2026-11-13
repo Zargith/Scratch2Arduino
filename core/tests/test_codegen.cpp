@@ -400,6 +400,17 @@ TEST(Codegen, ReadsTheJoystickAndTheMotionAndObstacleSensors) {
     }
 }
 
+TEST(Codegen, TurnsAStepperMotorWithTheSameStepsAsTheFirmware) {
+    Block turn = block("turn", "motors_stepper_turn");
+    turn.inputs["DEGREES"].value = "360";
+    const auto source = generate(withScript({block("hat", "events_when_program_starts"), turn})).source;
+    for (const char* expected : {"void s2a_stepper(int in1, int in2, int in3, int in4, double degrees, double rpm) {",
+                                 "static const byte phases[4] = {0b1100, 0b0110, 0b0011, 0b1001};",
+                                 "s2a_stepper(8, 9, 10, 11, 360, 10);", "pinMode(8, OUTPUT);", "pinMode(11, OUTPUT);"}) {
+        EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
+    }
+}
+
 TEST(Codegen, UsesComponentLibraries) {
     Block temperature = block("t", "sensors_temperature");
     temperature.fields = {{"MODEL", "DHT22"}, {"PIN", "3"}};

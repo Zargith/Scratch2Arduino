@@ -24,6 +24,9 @@
 //   N <pin> <count> <index> <r> <g> <b>  colour of LED <index> (1-<count>, 0: all) of a
 //                   NeoPixel strip                                       -> "ok"
 //   G <din> <clk> <cs> <row> <bits>  row <row> (1-8) of a MAX7219 8x8 LED matrix -> "ok"
+//   Q <in1> <in2> <in3> <in4> <steps> <rpm>  turns a 28BYJ-48 stepper motor (ULN2003 board) by
+//                   <steps> (2048 a turn, negative: the other way) at <rpm> turns a minute (1-15),
+//                   then switches its coils off; answers once the move is done   -> "ok"
 //   X               every output LOW, no sound, servos released, strip, matrix and
 //                   screens cleared                                      -> "ok"
 //
@@ -88,7 +91,7 @@
 #endif
 
 const long kBaud = 115200;
-const char* const kHello = "S2A 9";
+const char* const kHello = "S2A 10";
 #if defined(S2A_WIFI)
 const int kMaxLine = 120; // room for a Wi-Fi name and password
 #else
@@ -385,6 +388,31 @@ void reply(char kind, int pin, long value) {
 }
 
 // Reads the next integer of `text` starting at `*position`; false when there is none.
+// 28BYJ-48 stepper motor through a ULN2003 board: two coils on at a time, one phase further at each
+// step (the same steps as the uploaded programs, s2a_stepper in core/src/codegen.cpp).
+void stepMotor(const int pins[4], long steps, long rpm) {
+  static const byte kPhases[4] = {0b1100, 0b0110, 0b0011, 0b1001};
+  rpm = constrain(rpm, 1L, 15L);
+  const unsigned long pause = 60000000UL / ((unsigned long)rpm * 2048UL); // microseconds a step
+  for (int i = 0; i < 4; i++) {
+    releaseServo(pins[i]);
+    pinMode(pins[i], OUTPUT);
+    output[pins[i]] = true;
+  }
+  int phase = 0;
+  for (long done = 0; done < labs(steps); done++) {
+    phase = (phase + (steps > 0 ? 1 : 3)) % 4;
+    for (int i = 0; i < 4; i++) {
+      digitalWrite(pins[i], (kPhases[phase] >> (3 - i)) & 1 ? HIGH : LOW);
+    }
+    delay(pause / 1000);
+    delayMicroseconds(pause % 1000);
+  }
+  for (int i = 0; i < 4; i++) {
+    digitalWrite(pins[i], LOW); // coils off: the motor and the ULN2003 stay cool
+  }
+}
+
 bool readNumber(const char* text, int* position, long* value) {
   while (text[*position] == ' ') {
     (*position)++;
@@ -795,6 +823,22 @@ void execute(const char* command) {
       return;
     }
     break;
+  case 'Q': {
+    int pins[4];
+    long number = 0;
+    long steps = 0;
+    bool valid = true;
+    for (int i = 0; i < 4 && valid; i++) {
+      valid = readNumber(command, &position, &number) && validPin(number);
+      pins[i] = (int)number;
+    }
+    if (valid && readNumber(command, &position, &steps) && readNumber(command, &position, &value)) {
+      stepMotor(pins, steps, value);
+      reply("ok");
+      return;
+    }
+    break;
+  }
   case 'P':
     if (readNumber(command, &position, &pin) && validPin(pin) && readNumber(command, &position, &value)) {
       analogWrite(pin, constrain(value, 0, 255));

@@ -105,7 +105,7 @@ While you build, the editor never interrupts you: errors are only looked for whe
 | Sensors | Read the world | button of pin 2 is pressed, position of the potentiometer (0 to 100), light measured, distance in cm (HC-SR04), temperature and humidity (DHT11, DHT22), joystick (position, direction, pressed down), motion seen by a PIR sensor, obstacle in front of an infrared sensor |
 | Lights | Coloured LEDs | RGB LED, NeoPixel strip, 8x8 LED matrix (MAX7219) |
 | Sound | The buzzer | play 440 Hz for 1 seconds, start / stop the buzzer, note C4 |
-| Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D) |
+| Motors | Make things move | servo (0 to 180°), DC motor through an H-bridge (L298N, L293D), 28BYJ-48 stepper motor (ULN2003 board) turned by an angle |
 | Screens | Show text | 16x2 LCD screen (I2C module or 16 pins), SSD1306 OLED screen |
 | Operators | Compute, compare | + − x /, pick random, map, <, >, =, and, or, not |
 | Variables | Remember values | *Make a variable*, set ... to ..., change ... by ... |

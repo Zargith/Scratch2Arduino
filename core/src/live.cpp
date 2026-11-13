@@ -318,6 +318,17 @@ void LiveLink::servoWrite(int pin, int angle) {
     (void)request("S " + std::to_string(pin) + " " + std::to_string(std::clamp(angle, 0, 180)));
 }
 
+void LiveLink::stepper(const std::array<int, 4>& pins, long steps, int rpm) {
+    // The firmware answers once the motor has turned: wait for the move (plus some margin).
+    rpm = std::clamp(rpm, 1, 15);
+    const auto move = milliseconds(std::abs(steps) * 60000 / (static_cast<long>(rpm) * kStepsPerTurn));
+    std::string command = "Q";
+    for (const int pin : pins) {
+        command += " " + std::to_string(pin);
+    }
+    (void)request(command + " " + std::to_string(steps) + " " + std::to_string(rpm), move + milliseconds(2000));
+}
+
 double LiveLink::distance(int trigPin, int echoPin) {
     // The firmware answers in millimetres: "u <trig> <mm>".
     const auto reply = request("U " + std::to_string(trigPin) + " " + std::to_string(echoPin));
@@ -1246,6 +1257,22 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
                 pins_.digitalWrite(in1, run && !backward);
                 pins_.digitalWrite(in2, run && backward);
                 pins_.analogWrite(en, static_cast<int>(speed * 2.55));
+            }
+        } else if (type == "motors_stepper_turn") {
+            std::array<int, 4> coils{};
+            bool wired = true;
+            const char* names[] = {"IN1_PIN", "IN2_PIN", "IN3_PIN", "IN4_PIN"};
+            for (std::size_t i = 0; i < coils.size(); ++i) {
+                coils[i] = pinNumber(block, names[i]);
+                wired = wired && coils[i] >= 0;
+                if (coils[i] >= 0) {
+                    modes_[coils[i]] = PinMode::Output; // the firmware sets the coils itself
+                }
+            }
+            if (wired) {
+                const double degrees = number(block, "DEGREES");
+                const auto steps = std::lround(degrees * static_cast<double>(kStepsPerTurn) / 360.0);
+                pins_.stepper(coils, steps, static_cast<int>(std::lround(number(block, "RPM"))));
             }
         } else if (type == "control_wait_until") {
             if (!condition(block, "CONDITION")) {
