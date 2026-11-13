@@ -376,9 +376,18 @@ def buzzer(c: Canvas, board: Breadboard, column: int, row: str = "c"):
 def button(c: Canvas, board: Breadboard, column: int):
     """Push button across the middle channel: pressing joins `column` and `column` + 2."""
     holes = [board.hole(column, "e"), board.hole(column + 2, "e"), board.hole(column, "f"), board.hole(column + 2, "f")]
-    c.rect(holes[0][0] - 8, holes[0][1] - 6, 56, holes[2][1] - holes[0][1] + 12, "#90A4AE", outline="#607D8B",
-           radius=4, width=2)
-    c.circle(holes[0][0] + 20, (holes[0][1] + holes[2][1]) / 2, 13, "#263238")
+    # A 4-leg tactile switch as in the kits: one leg in each hole, the body over the channel.
+    middle = (holes[0][1] + holes[2][1]) / 2
+    for hx, hy in holes:
+        toward = 9 if hy < middle else -9
+        c.line([(hx, hy), (hx, hy + toward)], "#B0BEC5", 4)
+        c.circle(hx, hy, 3.5, "#CFD8DC", outline="#78909C", width=1)
+    left, top = holes[0][0] + 3, holes[0][1] + 6
+    width, height = holes[3][0] - holes[0][0] - 6, holes[3][1] - holes[0][1] - 12
+    c.rect(left, top, width, height, "#37474F", outline="#263238", radius=3, width=2)
+    cx = (holes[0][0] + holes[3][0]) / 2
+    c.circle(cx, middle, min(width, height) * 0.36, "#212121", outline="#000000", width=2)
+    c.circle(cx - 3, middle - 3, min(width, height) * 0.12, "#424242")
     return holes
 
 
