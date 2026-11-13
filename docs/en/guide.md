@@ -225,6 +225,13 @@ A function gives a name to a group of blocks to reuse it (like Scratch's "My Blo
 many times as you like. A function does not run on its own at start-up, and it cannot call itself.
 Right-click *define* to rename or delete it. Example: the [traffic light](tutorials/02-traffic-light.md).
 
+A function can also have **inputs** (up to 4): numbers that each *call* gives it. For instance a
+*beep* function with the inputs *times* and *length* can beep 3 times quickly or once for a long time.
+In the window of **Make a function** (or right-click *define* -> **Edit the function**), click **Add an
+input** and give it a name. The *call* block then has a slot for each input, and the *Functions* category
+has a block named after each input: put it inside the function (for instance in "repeat ... times") to use
+the number of the call. Outside its function, this block has no number: *Check* tells you.
+
 ### My blocks
 
 To keep a group of blocks **for all your projects**: right-click its first block -> **Save to My

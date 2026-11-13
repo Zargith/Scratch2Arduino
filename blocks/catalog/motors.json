@@ -25,7 +25,7 @@
       "type": "motors_dc_run",
       "shape": "statement",
       "component": "dc_motor",
-      "message": { "fr": "faire tourner le moteur (EN %1, IN1 %2, IN2 %3) %4 à la vitesse %5", "en": "run the motor (EN %1, IN1 %2, IN2 %3) %4 at speed %5" },
+      "message": { "fr": "faire tourner le moteur %4 à la vitesse %5\nbroches EN %1 IN1 %2 IN2 %3", "en": "run the motor %4 at speed %5\npins EN %1 IN1 %2 IN2 %3" },
       "tooltip": {
         "fr": "Fait tourner un moteur branché sur un pont en H (L298N, L293D...). EN règle la vitesse (broche PWM ~), IN1 et IN2 choisissent le sens. La vitesse va de 0 à 100 %.",
         "en": "Runs a motor wired to an H-bridge (L298N, L293D...). EN sets the speed (PWM pin ~), IN1 and IN2 choose the direction. The speed goes from 0 to 100 %."
@@ -50,7 +50,7 @@
       "type": "motors_dc_stop",
       "shape": "statement",
       "component": "dc_motor",
-      "message": { "fr": "arrêter le moteur (EN %1, IN1 %2, IN2 %3)", "en": "stop the motor (EN %1, IN1 %2, IN2 %3)" },
+      "message": { "fr": "arrêter le moteur\nbroches EN %1 IN1 %2 IN2 %3", "en": "stop the motor\npins EN %1 IN1 %2 IN2 %3" },
       "tooltip": { "fr": "Arrête le moteur branché sur le pont en H.", "en": "Stops the motor wired to the H-bridge." },
       "args": [
         { "name": "EN_PIN", "kind": "pin", "capability": "pwm", "default": "6" },

@@ -325,6 +325,14 @@ own at start-up, and it cannot call itself (Check explains why). In the Arduino 
 becomes a C++ function. Example: [`traffic-light`](examples/projects/traffic-light/project.json), with the
 functions *feu vert*, *feu orange* and *feu rouge*.
 
+A function can have up to 4 **inputs**: numbers given by each call (for instance *biper (fois) (durée)*,
+"beep (times) (length)"). Add them in the function window (**Make a function**, or right-click *define* or
+*call* -> **Edit the function**); renaming, reordering or removing an input updates every *call* and the
+input blocks inside the function. The *call* block gets one slot per input (one line each when there are
+several), and the Functions category lists an input block for each input, to use inside its function only
+(Check explains it otherwise). They are saved in `project.json` as `functions[].parameters`, and become C++
+parameters (`void s2a_function_biper(double arg_fois, double arg_duree)`).
+
 ### Serial monitor
 
 The **serial monitor** button (top bar) opens a panel showing what the board writes. Use the block

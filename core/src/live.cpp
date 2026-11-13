@@ -736,7 +736,7 @@ void Interpreter::start() {
         }
         Thread thread;
         thread.hat = script.blocks.front().id;
-        thread.frames.push_back({&script.blocks, 1, {}, {}, {}, 0});
+        thread.frames.push_back({&script.blocks, 1, {}, {}, {}, 0, {}});
         threads_.push_back(std::move(thread));
     }
 }
@@ -1000,10 +1000,20 @@ double Interpreter::evaluate(const Block& block) {
         const auto found = variables_.find(field(block, "VARIABLE"));
         return found != variables_.end() ? found->second : 0;
     }
+    if (type == "functions_parameter" && running_ != nullptr) {
+        // The innermost function being run; outside a function (refused by the validator): 0.
+        for (auto frame = running_->frames.rbegin(); frame != running_->frames.rend(); ++frame) {
+            if (frame->slot == kFunctionSlot) {
+                const auto found = frame->arguments.find(field(block, "NAME"));
+                return found != frame->arguments.end() ? found->second : 0;
+            }
+        }
+    }
     return 0;
 }
 
 void Interpreter::run(Thread& thread, Clock now, int limit) {
+    running_ = &thread;
     // Each turn runs one block; the turns that only leave a finished stack are not counted.
     for (int budget = kStepBudget; budget > 0; --budget) {
         if (thread.frames.empty()) {
@@ -1034,7 +1044,7 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
             if (inner->empty() && !loop) {
                 return;
             }
-            thread.frames.push_back({inner, 0, loop ? block.id : std::string(), block.id, name, turns});
+            thread.frames.push_back({inner, 0, loop ? block.id : std::string(), block.id, name, turns, {}});
         };
 
         if (type == "pins_builtin_led") {
@@ -1215,7 +1225,18 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
                     // Like the mouth of an if: the blocks of the function, then back after the call.
                     // The validator refuses recursion; the limit only protects from a mistake.
                     if (thread.frames.size() < kMaxFrames) {
-                        thread.frames.push_back({&script.blocks, 1, {}, script.blocks.front().id, kFunctionSlot, 0});
+                        // The numbers of its inputs, worked out before entering it (ARG1 -> 1st input...).
+                        std::map<std::string, double> arguments;
+                        for (const project::Function& function : project_.functions) {
+                            if (function.id != id) {
+                                continue;
+                            }
+                            for (std::size_t i = 0; i < function.parameters.size() && i < project::kMaxFunctionParameters; ++i) {
+                                arguments.emplace(function.parameters[i], number(block, "ARG" + std::to_string(i + 1)));
+                            }
+                        }
+                        thread.frames.push_back(
+                            {&script.blocks, 1, {}, script.blocks.front().id, kFunctionSlot, 0, std::move(arguments)});
                     }
                     break;
                 }

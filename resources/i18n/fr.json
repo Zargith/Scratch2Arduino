@@ -117,6 +117,8 @@
     "function_defined_twice_hint": "Garde un seul bloc \"définir {function}\" : regroupe les blocs dessous, ou renomme l'une des fonctions.",
     "recursive_function": "La fonction \"{function}\" finit par s'appeler elle-même : elle ne s'arrêterait jamais.",
     "recursive_function_hint": "Une fonction ne peut pas s'appeler elle-même, même en passant par une autre fonction. Utilise plutôt \"répéter\" ou \"répéter indéfiniment\".",
+    "parameter_outside_function": "Le bloc \"{name}\" est l'entrée d'une fonction : il ne marche que dans les blocs de cette fonction.",
+    "parameter_outside_function_hint": "Place-le sous le bloc \"définir\" de la fonction qui a l'entrée \"{name}\", ou ajoute cette entrée à la fonction (clic droit sur \"définir\", puis Modifier la fonction).",
     "capability_digital": "numérique",
     "capability_analog": "lecture analogique",
     "capability_pwm": "sortie PWM",

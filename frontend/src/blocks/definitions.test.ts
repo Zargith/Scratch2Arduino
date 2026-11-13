@@ -41,7 +41,7 @@ describe("block definitions", () => {
 		const field = define.getField("FUNCTION") as Blockly.FieldDropdown;
 		field.setValue("f1");
 		const labels = field.getOptions(false).map((option) => (option as unknown[])[0]);
-		expect(labels).toContain("Renommer la fonction");
+		expect(labels).toContain("Modifier la fonction");
 		expect(labels).toContain("Supprimer la fonction \"clignoter\"");
 		expect(labels.some((label) => String(label).includes("variable"))).toBe(false);
 		workspace.dispose();
