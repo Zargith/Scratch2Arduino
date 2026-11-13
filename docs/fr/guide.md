@@ -6,6 +6,10 @@ Ce guide présente tout le logiciel. Pour apprendre pas à pas, suis plutôt les
 [tutoriels](README.md#tutoriels), en commençant par le [Clignotant](tutorials/01-blink.md). Ils sont aussi
 dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à côté du moniteur série.
 
+Pour un tout premier essai, sans matériel, ce même panneau propose le **tutoriel interactif "Ma sonnette"** :
+un cadre te guide étape par étape (blocs, schéma de câblage, carte virtuelle, un peu de code C++ traduit en
+Python) et voit tout seul quand chaque étape est faite.
+
 *To read it in English, change the language in the settings.*
 
 ## Sommaire

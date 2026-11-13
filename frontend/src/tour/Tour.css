@@ -1,0 +1,36 @@
+/* Interactive tutorial: its card (top right, under the toolbar) and the ring around what to use. */
+.s2a-tour-card {
+	position: fixed;
+	top: 72px;
+	right: 16px;
+	width: min(380px, calc(100vw - 32px));
+	max-height: calc(100dvh - 96px);
+	overflow-y: auto;
+	z-index: 300;
+}
+
+.s2a-tour-ring {
+	position: fixed;
+	z-index: 299;
+	pointer-events: none;
+	border: 3px solid var(--mantine-color-orange-6);
+	border-radius: 10px;
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--mantine-color-orange-6) 30%, transparent);
+	animation: s2a-tour-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes s2a-tour-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--mantine-color-orange-6) 30%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 10px color-mix(in srgb, var(--mantine-color-orange-6) 10%, transparent);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.s2a-tour-ring {
+		animation: none;
+	}
+}
