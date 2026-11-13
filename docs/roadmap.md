@@ -26,18 +26,44 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 
 ## Beyond the phases
 
-Features asked during development, in the order they were released:
+The first plan (Phases 0 to 12) did not foresee everything. These features were added along the way, at the
+user's request or because using the application showed they were missing, in the order they were released.
+Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the plan during development.
 
-| Version | Feature |
-|---|---|
-| 0.11.0 | **Arduino library manager**: search, install, update and uninstall libraries; libraries saved in the project and installed by Check on any computer; missing headers explained with suggested libraries (`s2a-cli lib`) |
-| 0.11.0 | **HC-05 / HC-06 Bluetooth modules** on Uno, Nano and Mega: Live mode and Phone blocks through the module, Uno + HC-05 remote robot example |
-| 0.12.0 | **Step-by-step Live mode**: Pause (F9) and Next block (F10), the next block lit, variables and pins followed |
-| 0.12.0 | **Wiring check in Live mode**: inputs read for a second at start-up, "Check the wiring" card for a button always pressed, a floating input or a silent sensor (`live::checkWiring`) |
-| 0.12.0 | **Wiring from code**: the wiring diagram of programs written as text |
-| 0.13.0 | **Simulation without a board**: "Virtual board (no hardware)" port, Live mode on `sim::VirtualBoard` (blocks, step-by-step, Python and JavaScript), outputs drawn and inputs changed with the mouse |
-| 0.14.0 | **Interactive virtual board**: the project's wiring diagram comes alive in simulation (buttons pressed and sensors moved on the diagram, every pin used shown on the board); foldable Live panels |
-| 0.14.0 | **Functions with inputs**, push buttons drawn as 4-leg switches, new components (joystick, PIR, obstacle sensor, stepper motor, TM1637), interactive tutorial, Linux and macOS packages, issue forms |
+| Version | Feature | Why / what it brings |
+|---|---|---|
+| 0.2.0 | **`s2a-cli`** command-line tool | Planned only as a test tool for Phase 2; it grew into a real tool to check a classroom computer before a workshop: `boards`, `ports`, `setup`, `compile`, `upload`, then `generate`, `live`, `wiring`, `convert`, `lib`, `bluetooth` |
+| 0.5.0 | **Incremental updates** of the Windows installer | Installing a new version over an old one only rebuilds what changed |
+| 0.5.0 | Blocks **read a pin as HIGH / LOW** and **input with pull-up** | A button wired to GND without a resistor, the simplest wiring for beginners |
+| 0.5.0 | **Logo** of the application | |
+| 0.6.4 | **Loose blocks greyed like comments** | Blocks not attached to a start block are no longer reported as errors: they wait, as in Scratch |
+| 0.6.4 | **Functions** (define a group of blocks once, call it anywhere) | Not in the first block list; needed by the Traffic light and Remote robot examples |
+| 0.6.4 | **Keyboard shortcuts** (save, copy, cut, paste, undo, redo) | |
+| 0.6.4 | **Musical notes** (37 notes, do 3 to do 6) instead of raw frequencies | Easier for children than hertz |
+| 0.6.4 | Installer **progress window**, check that the program is closed, **projects opened by drag and drop** on the icon and by double-click on a `.s2a` file | |
+| 0.7.0 | **16-pin LCD without I2C module** and example variants (thermometer with an I2C or a 16-pin screen) | Many kits ship the bare screen |
+| 0.8.0 | **ESP32 dimmer** example | A first project to try an ESP32 board |
+| 0.8.0 | **Phone blocks** (messages to and from a Bluetooth terminal app) and the Phone lamp example | Phase 8 only planned the computer talking to the board |
+| 0.9.0 | **Zoom** into the wiring diagrams; **breadboard-style** diagram like a breadboard simulator; examples open on their hand-drawn layout | Readable diagrams for crowded projects |
+| 0.9.0 | **"My code"**: functions and variables written in C++, Python or JavaScript beside the blocks, which become blocks; Blocks / Code views with autocompletion | Phase 9 only planned whole programs as text; "My code" is a gentler step from blocks to text |
+| 0.9.0 | **Novice and advanced levels** of the progression examples (blocks only, or with "My code"), shown as variants of one gallery card | Same project for mixed groups |
+| 0.9.0 | **Tutorials and guide inside the editor** ("Tutorials and help" panel, opened at the first start) | Phase 10 planned documents only |
+| 0.10.0 | **Settings window** (language, check for new versions) | |
+| 0.10.0 | **Code conversion** between C++, Python and JavaScript (`s2a-cli convert`) | Changing language keeps the work done |
+| 0.10.0 | **Dark theme**, and the program's output and errors in a **Live console** | |
+| 0.11.0 | **HC-05 / HC-06 Bluetooth modules** on Uno, Nano and Mega: Live mode and Phone blocks through the module, Uno + HC-05 remote robot | Wireless without buying an ESP32 |
+| 0.11.0 | **Arduino library manager**: search, install, update, uninstall; libraries saved in the project and installed by Check on any computer; missing headers explained (`s2a-cli lib`) | "Extensive library support" for "My code" and C++ projects |
+| 0.12.0 | **Step-by-step Live mode**: Pause (F9) and Next block (F10), the next block lit, variables and pins followed | Real-time debugging |
+| 0.12.0 | **Wiring check in Live mode**: inputs read for a second at start-up, "Check the wiring" card for a button always pressed, a floating input or a silent sensor (`live::checkWiring`) | Most beginner problems are wiring mistakes |
+| 0.12.0 | **Wiring from code**: the wiring diagram of programs written as text (`wiring::componentsInCode`) | |
+| 0.12.0 | **Save before update**: save, ignore or cancel before the update installer closes the program | No work lost on update |
+| 0.13.0 | **Simulation without a board**: "Virtual board (no hardware)" port, Live mode on `sim::VirtualBoard` (blocks, step-by-step, Python and JavaScript), outputs drawn and inputs changed with the mouse | Try at home or before the parts arrive |
+| 0.14.0 | **Interactive virtual board**: the project's wiring diagram comes alive in simulation (buttons pressed and sensors moved on the diagram, every pin used shown on the board); **foldable Live panels** | |
+| 0.14.0 | **Functions with inputs** (up to 4 numbers), wide blocks on several lines | |
+| 0.14.0 | **New components**: KY-023 joystick, HC-SR501 PIR sensor, FC-51 / KY-032 obstacle sensor, 28BYJ-48 stepper motor, TM1637 display, with their examples; push buttons drawn as **4-leg tactile switches** | Parts found in the usual kits |
+| 0.14.0 | **Interactive tutorial** "My doorbell": a box guides each step (blocks, wiring, virtual board, a little code) and checks it by itself | Learning without a teacher at hand |
+| 0.14.0 | **Linux and macOS packages** (`.deb`, `.rpm`, `.dmg`) checked by CI | Phase 11 planned an installer script only |
+| 0.14.0 | **Issue forms** and a **Report a problem** button (filled with the version, system and board) | Easier feedback from users |
 
 ## Remaining work
 
