@@ -3,6 +3,7 @@
 #include "s2a/i18n.hpp"
 #include "s2a/live.hpp"
 #include "s2a/serial.hpp"
+#include "s2a/simulator.hpp"
 #include "s2a/userdata.hpp"
 
 #include <atomic>
@@ -58,6 +59,8 @@ private:
     std::list<Worker> workers_; ///< Finished ones are joined when the next call starts.
     std::mutex liveMutex_;
     std::unique_ptr<live::Session> live_; ///< Live mode, when started.
+    /// Virtual board of the simulation (Live mode on a "sim:" port), kept after Stop to show it off.
+    std::shared_ptr<sim::VirtualBoard> simBoard_; ///< Guarded by liveMutex_.
     std::mutex monitorMutex_;
     std::unique_ptr<serial::Monitor> monitor_; ///< Serial monitor, when open.
     std::mutex userMutex_;

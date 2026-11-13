@@ -22,6 +22,7 @@ add_executable(s2a_core_tests
     test_diagnostics.cpp
     test_i18n.cpp
     test_live.cpp
+    test_simulator.cpp
     test_network.cpp
     test_wiring.cpp
     test_process.cpp

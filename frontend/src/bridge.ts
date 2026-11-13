@@ -27,7 +27,8 @@ export interface WiringPlan {
 	components: {
 		kind: string;
 		name: string;
-		connections: { componentPin: string; boardPin: string; via: string }[];
+		/** role: what the board pin is for, "PIN", "TRIG_PIN", "RED_PIN"... or the power ("GND", "5V"). */
+		connections: { componentPin: string; boardPin: string; via: string; role?: string }[];
 		note: string;
 		blockIds: string[];
 	}[];
@@ -35,6 +36,38 @@ export interface WiringPlan {
 	/** The diagram drawn by the core (SVG), absent for an unknown board. */
 	svg?: string;
 }
+
+/** What the virtual board of the simulation shows (core sim::VirtualBoard::State), by pin label. */
+export interface SimState {
+	modes: Record<string, "input" | "pullup" | "output">;
+	/** level 0-255 (0 or 255 for a digital pin); pwm: set by "analogWrite". */
+	outputs: Record<string, { level: number; pwm: boolean }>;
+	servos: Record<string, number>;
+	/** Frequency now sounding (Hz). */
+	tones: Record<string, number>;
+	lcd: string[];
+	lcd16: string[];
+	oled: string[];
+	/** NeoPixel pin -> [red, green, blue] of each LED. */
+	pixels: Record<string, number[][]>;
+	/** MAX7219 DIN pin -> 8 rows, left column = high bit. */
+	matrices: Record<string, number[]>;
+	/** Lines the program sent to the phone. */
+	phone: string[];
+	pressed: Record<string, boolean>;
+	analog: Record<string, number>;
+	distances: Record<string, number>;
+	/** DHT pin -> [°C, %]. */
+	climates: Record<string, number[]>;
+}
+
+/** An input changed on the virtual board. */
+export type SimInput =
+	| ["press", string, boolean]
+	| ["analog", string, number]
+	| ["distance", string, number]
+	| ["climate", string, number, number]
+	| ["phone", string];
 
 export interface Port {
 	address: string;
@@ -243,6 +276,8 @@ interface HostFunctions {
 	s2a_live_pause(paused: boolean): Promise<void>;
 	s2a_live_step(): Promise<void>;
 	s2a_live_state(): Promise<LiveSnapshot>;
+	s2a_sim_state(): Promise<SimState | null>;
+	s2a_sim_input(...input: SimInput): Promise<void>;
 	s2a_monitor_open(port: string, baud: number, language: Language): Promise<{ ok: boolean; message?: string; details?: string }>;
 	s2a_monitor_send(line: string): Promise<void>;
 	s2a_monitor_close(): Promise<void>;
@@ -333,6 +368,10 @@ export const bridge = {
 	/** Paused: runs one more block. */
 	liveStep: () => host("s2a_live_step")(),
 	liveState: () => host("s2a_live_state")(),
+	/** The virtual board of the simulation (Live mode on the "sim:" port), null before the first start. */
+	simState: () => host("s2a_sim_state")(),
+	/** A button pressed, a slider moved, a phone message on the virtual board. */
+	simInput: (...input: SimInput) => host("s2a_sim_input")(...input),
 	monitorOpen: (port: string, baud: number, language: Language) => host("s2a_monitor_open")(port, baud, language),
 	monitorSend: (line: string) => host("s2a_monitor_send")(line),
 	monitorClose: () => host("s2a_monitor_close")(),

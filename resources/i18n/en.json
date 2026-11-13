@@ -187,6 +187,8 @@
     "wifi_forgotten": "The board forgot the home network: it can still be reached on its own network \"{access_point}\".",
     "wifi_upload": "A program is sent with the USB cable: choose the board's USB port (Wi-Fi and Bluetooth are for the Live mode).",
     "wifi_monitor": "The serial monitor uses the USB cable: choose the board's USB port. In Live mode over Wi-Fi or Bluetooth, what the blocks write is shown in the Live panel.",
+    "sim_upload": "The virtual board takes no program: click Live to run your blocks on it, or choose the USB port of a real board to send it.",
+    "sim_monitor": "The virtual board has no serial monitor: in Live mode, what the blocks write is shown in the Live panel.",
     "bluetooth_no_firmware": "The board does not answer over Bluetooth. Check that it is switched on and near the computer. The first time, plug it in with the USB cable and start the Live mode: the Live program is installed on it, with Bluetooth.",
     "bluetooth_off": "Bluetooth boards cannot be searched for: the computer's Bluetooth may be off. Switch it on, then try again.",
     "phone_bluetooth": "The Phone blocks need the board's Bluetooth for the phone: start the Live mode over the USB cable or Wi-Fi.",
