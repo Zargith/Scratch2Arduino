@@ -1,0 +1,15 @@
+# Scratch2Arduino: the person logged in may use the USB serial port of Arduino and ESP boards, without
+# joining the "dialout" group (uaccess, applied by systemd-logind). Installed by the .deb and .rpm
+# packages in /usr/lib/udev/rules.d; numbered below 73 so that uaccess is still applied.
+
+# Arduino (Uno, Mega, Leonardo...)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2a03", TAG+="uaccess"
+# CH340 / CH341 (Nano clones, many ESP32 and ESP8266 boards)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", TAG+="uaccess"
+# Silicon Labs CP210x (ESP32 DevKit, NodeMCU)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", TAG+="uaccess"
+# FTDI (older Nano and Mega boards)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", TAG+="uaccess"
+# Espressif (boards with USB built into the chip)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", TAG+="uaccess"

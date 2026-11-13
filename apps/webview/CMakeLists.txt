@@ -74,6 +74,11 @@ if(WIN32)
 endif()
 s2a_set_warnings(scratch2arduino)
 
+if(APPLE)
+    # Scratch2Arduino.app in the Applications folder (the file systems of macOS ignore the case: an
+    # older scratch2arduino.app is the same folder and is updated in place).
+    set_target_properties(scratch2arduino PROPERTIES OUTPUT_NAME "Scratch2Arduino")
+endif()
 set_target_properties(scratch2arduino PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Scratch2Arduino"
     MACOSX_BUNDLE_ICON_FILE scratch2arduino.icns
