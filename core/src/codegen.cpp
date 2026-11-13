@@ -788,6 +788,15 @@ private:
             const char* direction = !run ? "0" : (field(block, "DIRECTION") == "BACKWARD" ? "-1" : "1");
             body.add(depth, "s2a_motor(" + en + ", " + in1 + ", " + in2 + ", " + direction + ", " +
                                 (run ? number(block, "SPEED") : std::string("0")) + ");");
+        } else if (type == "display_digits_show" || type == "display_digits_clear") {
+            helpers_.insert("digits");
+            const std::string clk = pinLabel(block, "CLK_PIN");
+            const std::string dio = pinLabel(block, "DIO_PIN");
+            ownedPins_.insert(clk); // set by s2a_tm_show at each use
+            ownedPins_.insert(dio);
+            body.add(depth, type == "display_digits_clear"
+                                ? "s2a_tm_show(" + clk + ", " + dio + ", false, 0);"
+                                : "s2a_tm_show(" + clk + ", " + dio + ", true, lround(" + number(block, "VALUE") + "));");
         } else if (type == "motors_stepper_turn") {
             helpers_.insert("stepper");
             std::string pins;
@@ -969,6 +978,76 @@ private:
                {"void s2a_motor(int en, int in1, int in2, int direction, double speed) {",
                 "  digitalWrite(in1, direction > 0 ? HIGH : LOW);", "  digitalWrite(in2, direction < 0 ? HIGH : LOW);",
                 "  analogWrite(en, direction == 0 ? 0 : constrain((int)(speed * 2.55), 0, 255));", "}"});
+        // TM1637 4-digit display: the same code as the Live firmware (s2a_tm_show in firmware/s2a_live).
+        helper(out, "digits",
+               {"void s2a_tm_bit(int pin, bool high) {",
+                "  if (high) {",
+                "    pinMode(pin, INPUT);",
+                "  } else {",
+                "    pinMode(pin, OUTPUT);",
+                "    digitalWrite(pin, LOW);",
+                "  }",
+                "  delayMicroseconds(5);",
+                "}",
+                "",
+                "void s2a_tm_start(int clk, int dio) {",
+                "  s2a_tm_bit(clk, true);",
+                "  s2a_tm_bit(dio, true);",
+                "  s2a_tm_bit(dio, false);",
+                "}",
+                "",
+                "void s2a_tm_stop(int clk, int dio) {",
+                "  s2a_tm_bit(clk, false);",
+                "  s2a_tm_bit(dio, false);",
+                "  s2a_tm_bit(clk, true);",
+                "  s2a_tm_bit(dio, true);",
+                "}",
+                "",
+                "void s2a_tm_byte(int clk, int dio, byte value) {",
+                "  for (int i = 0; i < 8; i++) {",
+                "    s2a_tm_bit(clk, false);",
+                "    s2a_tm_bit(dio, value & 1);",
+                "    value >>= 1;",
+                "    s2a_tm_bit(clk, true);",
+                "  }",
+                "  s2a_tm_bit(clk, false); // the display acknowledges",
+                "  s2a_tm_bit(dio, true);",
+                "  s2a_tm_bit(clk, true);",
+                "  s2a_tm_bit(clk, false);",
+                "}",
+                "",
+                "void s2a_tm_show(int clk, int dio, bool show, long value) {",
+                "  static const byte digits[10] = {0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f};",
+                "  byte segments[4] = {0, 0, 0, 0};",
+                "  if (show && (value > 9999 || value < -999)) {",
+                "    for (int i = 0; i < 4; i++) {",
+                "      segments[i] = 0x40;",
+                "    }",
+                "  } else if (show) {",
+                "    const bool negative = value < 0;",
+                "    unsigned long rest = labs(value);",
+                "    int i = 3;",
+                "    do {",
+                "      segments[i--] = digits[rest % 10];",
+                "      rest /= 10;",
+                "    } while (rest > 0 && i >= 0);",
+                "    if (negative && i >= 0) {",
+                "      segments[i] = 0x40;",
+                "    }",
+                "  }",
+                "  s2a_tm_start(clk, dio);",
+                "  s2a_tm_byte(clk, dio, 0x40); // the digits follow one another",
+                "  s2a_tm_stop(clk, dio);",
+                "  s2a_tm_start(clk, dio);",
+                "  s2a_tm_byte(clk, dio, 0xC0); // from the first digit",
+                "  for (int i = 0; i < 4; i++) {",
+                "    s2a_tm_byte(clk, dio, segments[i]);",
+                "  }",
+                "  s2a_tm_stop(clk, dio);",
+                "  s2a_tm_start(clk, dio);",
+                "  s2a_tm_byte(clk, dio, show ? 0x8F : 0x80); // on at full brightness, or off",
+                "  s2a_tm_stop(clk, dio);",
+                "}"});
         // Same steps as the Live firmware (stepMotor in firmware/s2a_live): two coils on at a time.
         helper(out, "stepper",
                {"void s2a_stepper(int in1, int in2, int in3, int in4, double degrees, double rpm) {",

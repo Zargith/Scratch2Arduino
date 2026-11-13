@@ -1,0 +1,155 @@
+{
+  "format": "scratch2arduino-project",
+  "formatVersion": 1,
+  "name": "Compte à rebours",
+  "board": "uno",
+  "variables": [
+    {
+      "id": "secondes",
+      "name": "secondes",
+      "initialValue": 0
+    }
+  ],
+  "scripts": [
+    {
+      "x": 40,
+      "y": 40,
+      "blocks": [
+        {
+          "id": "start",
+          "type": "events_when_program_starts"
+        },
+        {
+          "id": "show_zero",
+          "type": "display_digits_show",
+          "fields": {
+            "CLK_PIN": "4",
+            "DIO_PIN": "5"
+          },
+          "inputs": {
+            "VALUE": {
+              "value": "0"
+            }
+          }
+        },
+        {
+          "id": "forever",
+          "type": "control_forever",
+          "statements": {
+            "SUBSTACK": [
+              {
+                "id": "wait_button",
+                "type": "control_wait_until",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "id": "pressed",
+                      "type": "sensors_button_pressed",
+                      "fields": {
+                        "PIN": "2"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "set",
+                "type": "variables_set",
+                "fields": {
+                  "VARIABLE": "secondes"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "10"
+                  }
+                }
+              },
+              {
+                "id": "count",
+                "type": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "value": "10"
+                  }
+                },
+                "statements": {
+                  "SUBSTACK": [
+                    {
+                      "id": "show",
+                      "type": "display_digits_show",
+                      "fields": {
+                        "CLK_PIN": "4",
+                        "DIO_PIN": "5"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "0",
+                          "block": {
+                            "id": "get",
+                            "type": "variables_get",
+                            "fields": {
+                              "VARIABLE": "secondes"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "second",
+                      "type": "control_wait",
+                      "inputs": {
+                        "SECONDS": {
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "id": "minus_one",
+                      "type": "variables_change",
+                      "fields": {
+                        "VARIABLE": "secondes"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "value": "-1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "show_end",
+                "type": "display_digits_show",
+                "fields": {
+                  "CLK_PIN": "4",
+                  "DIO_PIN": "5"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "value": "0"
+                  }
+                }
+              },
+              {
+                "id": "ring",
+                "type": "sound_play_tone",
+                "fields": {
+                  "PIN": "6"
+                },
+                "inputs": {
+                  "FREQUENCY": {
+                    "value": "880"
+                  },
+                  "SECONDS": {
+                    "value": "1"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

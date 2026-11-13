@@ -200,6 +200,16 @@
         { "pin": { "fr": "SCL", "en": "SCL" }, "to": "SCL" }
       ]
     },
+    "tm1637": {
+      "name": { "fr": "Afficheur 4 chiffres TM1637", "en": "TM1637 4-digit display" },
+      "current": 30,
+      "connections": [
+        { "pin": { "fr": "CLK", "en": "CLK" }, "to": "CLK_PIN" },
+        { "pin": { "fr": "DIO", "en": "DIO" }, "to": "DIO_PIN" },
+        { "pin": { "fr": "VCC", "en": "VCC" }, "to": "5V" },
+        { "pin": { "fr": "GND", "en": "GND" }, "to": "GND" }
+      ]
+    },
     "oled": {
       "name": { "fr": "Écran OLED SSD1306 I2C", "en": "SSD1306 I2C OLED screen" },
       "current": 20,

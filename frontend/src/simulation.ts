@@ -37,6 +37,8 @@ export type SimPart = Base &
 		| { kind: "servo"; pin: string; angle: number }
 		/** angle: turned since Live started (degrees, may be negative or above 360). */
 		| { kind: "stepper"; pin: string; angle: number }
+		/** text: the 4 characters shown ("" when off). */
+		| { kind: "digits"; pin: string; text: string }
 		/** speed: -255 (backward) to 255 (forward). */
 		| { kind: "motor"; speed: number }
 		| { kind: "strip"; pin: string; colors: number[][] }
@@ -129,6 +131,11 @@ export function simParts(plan: WiringPlan | null, state: SimState | null): SimPa
 			case "servo":
 				parts.push({ ...base, kind: "servo", pin: signal, angle: now.servos[signal] ?? 90 });
 				break;
+			case "tm1637": {
+				const clk = pin("CLK_PIN");
+				parts.push({ ...base, kind: "digits", pin: clk, text: now.digits?.[clk] ?? "" });
+				break;
+			}
 			case "stepper": {
 				const in1 = pin("IN1_PIN");
 				parts.push({ ...base, kind: "stepper", pin: in1, angle: now.steppers?.[in1] ?? 0 });

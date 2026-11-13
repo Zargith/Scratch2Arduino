@@ -221,6 +221,19 @@ export function Simulator({ plan, state, phone, t, onInput }: SimulatorProps) {
 						{part.frequency > 0 ? `${part.frequency} Hz` : t("sim.silent")}
 					</Text>
 				);
+			case "digits":
+				return (
+					<Text
+						ff="monospace"
+						fw={700}
+						size="lg"
+						role="img"
+						aria-label={`${part.name}: ${part.text.trim() || "-"}`}
+						style={{ background: "#212121", color: "#FF1744", padding: "0 8px", borderRadius: 4, letterSpacing: 4, whiteSpace: "pre" }}
+					>
+						{part.text.padStart(4, " ") || "    "}
+					</Text>
+				);
 			case "stepper": {
 				const degrees = Math.round(part.angle);
 				return (

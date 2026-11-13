@@ -150,6 +150,18 @@
       }
     },
     {
+      "id": "countdown",
+      "title": { "fr": "Compte à rebours", "en": "Countdown" },
+      "description": {
+        "fr": "Appuie sur le bouton : l'afficheur compte de 10 à 0, une seconde à la fois, puis le buzzer sonne.",
+        "en": "Press the button: the display counts from 10 to 0, one second at a time, then the buzzer rings."
+      },
+      "parts": {
+        "fr": "afficheur 4 chiffres TM1637, bouton, buzzer passif",
+        "en": "TM1637 4-digit display, button, passive buzzer"
+      }
+    },
+    {
       "id": "thermometer",
       "title": { "fr": "Thermomètre", "en": "Thermometer" },
       "description": {

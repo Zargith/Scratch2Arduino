@@ -329,6 +329,11 @@ void LiveLink::stepper(const std::array<int, 4>& pins, long steps, int rpm) {
     (void)request(command + " " + std::to_string(steps) + " " + std::to_string(rpm), move + milliseconds(2000));
 }
 
+void LiveLink::digits(int clk, int dio, std::optional<long> number) {
+    (void)request("F " + std::to_string(clk) + " " + std::to_string(dio) + " " +
+                  (number ? std::to_string(*number) : std::string("-")));
+}
+
 double LiveLink::distance(int trigPin, int echoPin) {
     // The firmware answers in millimetres: "u <trig> <mm>".
     const auto reply = request("U " + std::to_string(trigPin) + " " + std::to_string(echoPin));
@@ -1257,6 +1262,16 @@ void Interpreter::run(Thread& thread, Clock now, int limit) {
                 pins_.digitalWrite(in1, run && !backward);
                 pins_.digitalWrite(in2, run && backward);
                 pins_.analogWrite(en, static_cast<int>(speed * 2.55));
+            }
+        } else if (type == "display_digits_show" || type == "display_digits_clear") {
+            const int clk = pinNumber(block, "CLK_PIN");
+            const int dio = pinNumber(block, "DIO_PIN");
+            if (clk >= 0 && dio >= 0) {
+                modes_.erase(clk); // the display owns its pins
+                modes_.erase(dio);
+                pins_.digits(clk, dio,
+                             type == "display_digits_clear" ? std::nullopt
+                                                            : std::optional<long>(std::lround(number(block, "VALUE"))));
             }
         } else if (type == "motors_stepper_turn") {
             std::array<int, 4> coils{};
