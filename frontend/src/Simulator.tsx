@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SimInput, SimState, WiringPlan } from "@/bridge";
 import { FoldButton } from "@/FoldButton";
 import type { MessageKey } from "@/i18n";
-import { boardPins, percent, simParts, type BoardPin, type SimPart } from "@/simulation";
+import { boardPins, keptBoardPins, percent, simParts, type BoardPin, type SimPart } from "@/simulation";
 import "./Simulator.css";
 
 interface SimulatorProps {
@@ -129,7 +129,11 @@ function PinState({ pin, label }: { pin: BoardPin; label: string }) {
 		case "output":
 			return <Led level={pin.level} size={12} label={label} />;
 		case "tone":
-			return <IconVolume size={14} color="var(--mantine-color-orange-6)" aria-label={label} />;
+			return pin.frequency > 0 ? (
+				<IconVolume size={14} color="var(--mantine-color-orange-6)" aria-label={label} />
+			) : (
+				<IconVolumeOff size={14} color="var(--mantine-color-gray-5)" aria-label={label} />
+			);
 		case "input":
 			return (
 				<span
@@ -196,7 +200,9 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 	const [folded, setFolded] = useState(false);
 	const [message, setMessage] = useState("");
 	const parts = simParts(plan, state);
-	const pins = boardPins(state);
+	/** Pins used since Live started: they keep their place (see keptBoardPins). */
+	const seenPins = useRef(new Map<string, BoardPin>());
+	const pins = keptBoardPins(boardPins(state), seenPins.current);
 	const sounding = parts.find((part) => part.kind === "buzzer" && part.frequency > 0);
 	useBuzzer(sounding?.kind === "buzzer" ? sounding.frequency : (Object.values(state?.tones ?? {})[0] ?? 0), muted);
 
@@ -207,7 +213,7 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 			case "output":
 				return pin.pwm ? `PWM ${pin.level}` : t(pin.level > 0 ? "sim.high" : "sim.low");
 			case "tone":
-				return `${pin.frequency} Hz`;
+				return pin.frequency > 0 ? `${pin.frequency} Hz` : t("sim.silent");
 			case "input":
 				return t(pin.high ? "sim.high" : "sim.low");
 			case "analog":
