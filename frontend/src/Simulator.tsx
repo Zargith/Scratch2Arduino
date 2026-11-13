@@ -342,9 +342,11 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 				{!controlsOnly && <FoldButton folded={folded} onToggle={() => setFolded(!folded)} t={t} />}
 			</Group>
 			<div style={{ display: folded ? "none" : "block" }}>
-			<Text size="xs" c="dimmed" mb="xs">
-				{t("sim.help")}
-			</Text>
+			{!controlsOnly && (
+				<Text size="xs" c="dimmed" mb="xs">
+					{t("sim.help")}
+				</Text>
+			)}
 			{/* Room around the parts (and the same width taken back): a scrolling area crops the glow of the LEDs. */}
 			<Stack gap="xs" style={{ maxHeight, overflowY: "auto", padding: 14, margin: -14 }}>
 				{controlsOnly && shown.length === 0 && (

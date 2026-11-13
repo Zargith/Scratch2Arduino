@@ -95,3 +95,9 @@
 	right: 8px;
 	z-index: 1;
 }
+
+/* The panel folded to its title bar. */
+.s2a-board-folded {
+	flex: 1;
+	padding: 0 12px;
+}

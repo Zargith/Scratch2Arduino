@@ -455,6 +455,16 @@ void moduleBody(Svg& svg, const std::string& kind, Point at, double w, double /*
         svg.mark(R"(data-sim="indicator")"); // lights up when something is in front
         svg.circle(at.x + w / 2 + 26, at.y + 82, 4, "#5D1F1F");
         svg.text({at.x + w / 2, at.y + 98}, "FC-51", 10, "#FFFFFF", "middle", true);
+    } else if (kind == "input") {
+        // A pin read by "pin ... is HIGH / LOW": most often a button to GND. Drawn as a button,
+        // pressed with the mouse on the virtual board (the pin then reads LOW, as with a real one).
+        svg.open(R"(data-sim="press")");
+        svg.rect(at.x + w / 2 - 18, at.y + 14, 36, 36, "#37474F", "#263238", 4, 2);
+        svg.mark(R"(data-sim="cap")");
+        svg.circle(at.x + w / 2, at.y + 32, 12, "#212121", "#000000", 1.5);
+        svg.close();
+        svg.text({at.x + w / 2, at.y + 66}, name.substr(0, std::min<std::size_t>(name.size(), 14)), 9, "#FFFFFF", "middle",
+                 true);
     } else {
         svg.circle(at.x + w / 2, at.y + 34, 12, "#FFCC80", "#EF6C00", 2);
         svg.text({at.x + w / 2, at.y + 66}, name.substr(0, std::min<std::size_t>(name.size(), 14)), 9, "#FFFFFF", "middle",

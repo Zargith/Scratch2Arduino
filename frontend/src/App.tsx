@@ -211,6 +211,8 @@ export function App() {
 	const [simPlan, setSimPlan] = useState<WiringPlan | null>(null);
 	/** The virtual board's panel (at the bottom) takes most of the window. */
 	const [boardExpanded, setBoardExpanded] = useState(false);
+	/** The virtual board's panel folded to its title bar (the board keeps running). */
+	const [boardFolded, setBoardFolded] = useState(false);
 	/** The live values card folded to its title bar (it stays within reach). */
 	const [valuesFolded, setValuesFolded] = useState(false);
 	/** The blocks use the Phone blocks: the virtual phone is shown. */
@@ -1081,7 +1083,7 @@ export function App() {
 	const boardParts = useMemo(() => simParts(simPlan, simState), [simPlan, simState]);
 	/** The virtual board drawn as the wiring diagram, at the bottom of the work area (the host draws it). */
 	const boardShown = simulated && !!simPlan?.svg;
-	const boardHeight = boardExpanded ? "72%" : "50%";
+	const boardHeight = boardFolded ? "40px" : boardExpanded ? "72%" : "50%";
 	/** The column of panels on the right (virtual board, live values, serial monitor...) is shown. */
 	const sidePanels =
 		(live && liveRows.length > 0) || (simulated && !boardShown) || wiringHints.length > 0 || monitorShown || tutorialPage !== null;
@@ -1404,7 +1406,15 @@ export function App() {
 				</div>
 				{boardShown && simPlan?.svg && (
 					<div className="s2a-board-panel" style={{ height: boardHeight }}>
-						<div className="s2a-board-controls">
+						{boardFolded && (
+							<Group className="s2a-board-folded" justify="space-between" wrap="nowrap">
+								<Text fw={700} size="sm">
+									{t("sim.title")}
+								</Text>
+								<FoldButton folded onToggle={() => setBoardFolded(false)} t={t} />
+							</Group>
+						)}
+						<div className="s2a-board-controls" style={{ display: boardFolded ? "none" : undefined }}>
 							<Simulator
 								controlsOnly
 								plan={simPlan}
@@ -1415,17 +1425,19 @@ export function App() {
 								onInput={(...input) => void bridge.simInput(...input).catch(fail)}
 							/>
 						</div>
-						<div className="s2a-board-drawing">
-							<Tooltip label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}>
-								<ActionIcon
-									className="s2a-board-size"
-									variant="default"
-									aria-label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}
-									onClick={() => setBoardExpanded(!boardExpanded)}
-								>
-									{boardExpanded ? <IconArrowsMinimize size={16} /> : <IconArrowsMaximize size={16} />}
-								</ActionIcon>
-							</Tooltip>
+						<div className="s2a-board-drawing" style={{ display: boardFolded ? "none" : undefined }}>
+							<Group className="s2a-board-size" gap={4} wrap="nowrap">
+								<Tooltip label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}>
+									<ActionIcon
+										variant="default"
+										aria-label={t(boardExpanded ? "sim.shrink" : "sim.enlarge")}
+										onClick={() => setBoardExpanded(!boardExpanded)}
+									>
+										{boardExpanded ? <IconArrowsMinimize size={16} /> : <IconArrowsMaximize size={16} />}
+									</ActionIcon>
+								</Tooltip>
+								<FoldButton folded={false} onToggle={() => setBoardFolded(true)} t={t} />
+							</Group>
 							<SimBoard
 								svg={simPlan.svg}
 								parts={boardParts}
