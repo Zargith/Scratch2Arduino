@@ -1,6 +1,8 @@
 # Scratch2Arduino roadmap
 
 Phased plan from the empty repository to a release. Each phase has a goal, deliverables and "done when" criteria.
+**Every phase is now done or dropped** (version 0.14.0, 2026-11-13): this file keeps the plan as a history, and the
+[remaining work](#remaining-work) lists what is still to check and what may come next.
 
 ## Status
 
@@ -8,64 +10,104 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 |---|---|
 | 0 - Setup and tooling | Done |
 | 1 - Core foundations | Done |
-| 2 - Arduino toolchain | Done (compile checked in CI on the 3 OS; upload to be checked on real boards) |
-| 3a - Variant A MVP (webview) | Done (built and tested in CI on the 3 OS; upload to be checked on real boards) |
+| 2 - Arduino toolchain | Done: compile checked in CI on the 3 OS, upload tested on an Arduino Uno and a Mega 2560 |
+| 3a - Variant A MVP (webview) | Done: built and tested in CI on the 3 OS, used on real boards |
 | 3b - Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
 | 4 - Validation and friendly errors | Done: 10 rules with fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
-| 5 - Live mode and real-time debugging | Done: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block; to be checked on real boards |
-| 6 - Sensors and actuators | Done, to be checked on real hardware: every listed component has blocks in upload and Live modes, with automatic library installation; example projects with wiring diagrams (servo-potentiometer, distance-alarm, thermometer, reaction-game, light-gauge) |
-| 7 - Productivity and sharing | Done: "My blocks" library (right-click a block to save it with the blocks below, palette category to add groups back, rename/delete, export/import as `.s2ablocks`); example gallery with wiring diagrams on New (blank project as template); recent projects menu; autosave every 15 s with recovery at start-up |
-| 8 - Wireless | Done, to be checked on real hardware: ESP32 board (USB upload and Live); Live mode over Wi-Fi (the board's own network or the home network, set up from the editor) and over Bluetooth (board search, macOS pairing); examples ESP32 dimmer and wireless weather station (Wi-Fi / Bluetooth); Phone blocks (Bluetooth terminal app) and the phone-lamp example mixing Wi-Fi and Bluetooth; ESP8266 (NodeMCU) board with Live mode over Wi-Fi; Live mode over an HC-05 / HC-06 module on Uno, Nano and Mega (pins saved on the board from the Bluetooth window, blocks kept off them); Phone blocks through the module ("Bluetooth module" block, upload and Live, wiring diagram), remote robot example in a Uno + HC-05 version |
-| 9 - Text programming languages | Done - official feature since 2026-11-11 (validated by the user; requested on 2026-11-10 with a C/C++ mode): project format 2 (`language`, `code`); C++ projects compiled and uploaded as typed, compiler errors on their lines with friendly fr/en explanations; Python (pocketpy) and JavaScript (QuickJS-ng) run in Live mode with an Arduino API, Stop interrupts endless loops; CodeMirror 6 code editor with errors shown after Check/Upload/Live only. Blink works in blocks, C++, Python and JavaScript (core tests with a fake board). Main way in: a **"My code" file beside the blocks** (C++, Python or JavaScript) whose functions and variables get their own block category, with Blocks / Code views and light autocompletion; the whole-program text modes stay as an expert mode. Code converted between C++, Python and JavaScript when the language changes (core `convert`, `s2a-cli convert`; what it cannot translate is kept as comments with its lines). To check on real boards |
-| 10 - Documentation and education | In progress: examples for every step of the learner progression (Button and LED, Remote robot added); novice / advanced levels of the eight examples of the progression (blocks only, or with "My code" in C++ / Python), shown as variants of one gallery card; user guide and 8 step-by-step tutorials in French and English (`docs/fr`, `docs/en`); teacher / workshop kit (room preparation, parts list, formats, one plan per session, assessment) in both languages; developer guide (architecture and recipes, in English like all developer docs, in the repository only: `docs/developer-guide.md`, not shown in the editor). tutorials and guide inside the editor ("Tutorials and help" panel beside the blocks, opened at the first start, "Open the example" button, "Step-by-step tutorial" in the gallery). Done once a newcomer completes the first tutorial without outside help (to check in a workshop) |
-| 11 - Packaging and release | Dropped for now (maybe later) |
+| 5 - Live mode and real-time debugging | Done, tested on a Uno: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block, program output and errors in a Live console |
+| 6 - Sensors and actuators | Done: every listed component has blocks in upload and Live modes, with automatic library installation, plus joystick, PIR sensor, infrared obstacle sensor, 28BYJ-48 stepper motor and TM1637 display; example projects with wiring diagrams. Part of the components is tested on real hardware (see the README) |
+| 7 - Productivity and sharing | Done: "My blocks" library (export/import as `.s2ablocks`); example gallery with wiring diagrams on New; recent projects menu; autosave every 15 s with recovery at start-up; functions with up to 4 number inputs |
+| 8 - Wireless | Done, to be checked on real hardware: ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266 (Live over Wi-Fi), Live mode and Phone blocks through an HC-05 / HC-06 module on Uno, Nano and Mega; wireless examples |
+| 9 - Text programming languages | Done (official feature since 2026-11-11): "My code" file beside the blocks (C++, Python or JavaScript) whose functions and variables become blocks, Blocks / Code views; expert mode for whole programs in C++ (compiled and uploaded), Python (pocketpy) and JavaScript (QuickJS-ng) in Live mode; CodeMirror 6 editor, friendly errors on their lines; conversion between the three languages (`s2a-cli convert`) |
+| 10 - Documentation and education | Done: user guide, 8 step-by-step tutorials and teacher / workshop kit in French and English (`docs/fr`, `docs/en`), shown in the editor ("Tutorials and help" panel); novice / advanced variants of the progression examples; interactive tutorial "My doorbell" checking each step by itself; developer guide (`docs/developer-guide.md`). A workshop with newcomers is still to run (see [remaining work](#remaining-work)) |
+| 11 - Packaging and release | Done (no code signing yet): every green push to `main` publishes a GitHub release with the Windows installer (`.exe`, incremental updates), `.deb` and `.rpm` packages (udev rule for the serial ports) and a macOS `.dmg`, each installed and checked by CI; release notes with install steps; check for new versions in the Settings, with "save before update"; issue forms and a *Report a problem* button |
 | 12 - Variant comparison | Dropped (only the webview application is kept) |
-| 13 - Automatic wiring diagram | Done: part 1 - components and pins computed from the blocks (`resources/components.json`, core `wiring::plan`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), "Wiring" window for every project; diagrams can be zoomed. Part 2 - diagram drawn by the core (SVG) for every project and board (Uno, Nano, Mega, ESP32, ESP8266): board headers as printed, numbered component cards, + / GND rails, one routed wire per leg with its resistor, PNG export. Decision (user, 2026-11-10): examples keep their hand-drawn breadboard pictures (shown first), projects made from scratch use the generated diagram. Done |
+| 13 - Automatic wiring diagram | Done: components and pins computed from the blocks and from code (`wiring::plan`, `wiring::componentsInCode`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), SVG diagram drawn by the core for every board (Uno, Nano, Mega, ESP32, ESP8266) with PNG export. Examples keep their hand-drawn breadboard pictures, shown first (decision of 2026-11-10) |
 
-## Remaining work (2026-11-11)
+## Beyond the phases
+
+The first plan (Phases 0 to 12) did not foresee everything. These features were added along the way, at the
+user's request or because using the application showed they were missing, in the order they were released.
+Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the plan during development.
+
+| Version | Feature | Why / what it brings |
+|---|---|---|
+| 0.2.0 | **`s2a-cli`** command-line tool | Planned only as a test tool for Phase 2; it grew into a real tool to check a classroom computer before a workshop: `boards`, `ports`, `setup`, `compile`, `upload`, then `generate`, `live`, `wiring`, `convert`, `lib`, `bluetooth` |
+| 0.5.0 | **Incremental updates** of the Windows installer | Installing a new version over an old one only rebuilds what changed |
+| 0.5.0 | Blocks **read a pin as HIGH / LOW** and **input with pull-up** | A button wired to GND without a resistor, the simplest wiring for beginners |
+| 0.5.0 | **Logo** of the application | |
+| 0.6.4 | **Loose blocks greyed like comments** | Blocks not attached to a start block are no longer reported as errors: they wait, as in Scratch |
+| 0.6.4 | **Functions** (define a group of blocks once, call it anywhere) | Not in the first block list; needed by the Traffic light and Remote robot examples |
+| 0.6.4 | **Keyboard shortcuts** (save, copy, cut, paste, undo, redo) | |
+| 0.6.4 | **Musical notes** (37 notes, do 3 to do 6) instead of raw frequencies | Easier for children than hertz |
+| 0.6.4 | Installer **progress window**, check that the program is closed, **projects opened by drag and drop** on the icon and by double-click on a `.s2a` file | |
+| 0.7.0 | **16-pin LCD without I2C module** and example variants (thermometer with an I2C or a 16-pin screen) | Many kits ship the bare screen |
+| 0.8.0 | **ESP32 dimmer** example | A first project to try an ESP32 board |
+| 0.8.0 | **Phone blocks** (messages to and from a Bluetooth terminal app) and the Phone lamp example | Phase 8 only planned the computer talking to the board |
+| 0.9.0 | **Zoom** into the wiring diagrams; **breadboard-style** diagram like a breadboard simulator; examples open on their hand-drawn layout | Readable diagrams for crowded projects |
+| 0.9.0 | **"My code"**: functions and variables written in C++, Python or JavaScript beside the blocks, which become blocks; Blocks / Code views with autocompletion | Phase 9 only planned whole programs as text; "My code" is a gentler step from blocks to text |
+| 0.9.0 | **Novice and advanced levels** of the progression examples (blocks only, or with "My code"), shown as variants of one gallery card | Same project for mixed groups |
+| 0.9.0 | **Tutorials and guide inside the editor** ("Tutorials and help" panel, opened at the first start) | Phase 10 planned documents only |
+| 0.10.0 | **Settings window** (language, check for new versions) | |
+| 0.10.0 | **Code conversion** between C++, Python and JavaScript (`s2a-cli convert`) | Changing language keeps the work done |
+| 0.10.0 | **Dark theme**, and the program's output and errors in a **Live console** | |
+| 0.11.0 | **HC-05 / HC-06 Bluetooth modules** on Uno, Nano and Mega: Live mode and Phone blocks through the module, Uno + HC-05 remote robot | Wireless without buying an ESP32 |
+| 0.11.0 | **Arduino library manager**: search, install, update, uninstall; libraries saved in the project and installed by Check on any computer; missing headers explained (`s2a-cli lib`) | "Extensive library support" for "My code" and C++ projects |
+| 0.12.0 | **Step-by-step Live mode**: Pause (F9) and Next block (F10), the next block lit, variables and pins followed | Real-time debugging |
+| 0.12.0 | **Wiring check in Live mode**: inputs read for a second at start-up, "Check the wiring" card for a button always pressed, a floating input or a silent sensor (`live::checkWiring`) | Most beginner problems are wiring mistakes |
+| 0.12.0 | **Wiring from code**: the wiring diagram of programs written as text (`wiring::componentsInCode`) | |
+| 0.12.0 | **Save before update**: save, ignore or cancel before the update installer closes the program | No work lost on update |
+| 0.13.0 | **Simulation without a board**: "Virtual board (no hardware)" port, Live mode on `sim::VirtualBoard` (blocks, step-by-step, Python and JavaScript), outputs drawn and inputs changed with the mouse | Try at home or before the parts arrive |
+| 0.14.0 | **Interactive virtual board**: the project's wiring diagram comes alive in simulation (buttons pressed and sensors moved on the diagram, every pin used shown on the board); **foldable Live panels** | |
+| 0.14.0 | **Functions with inputs** (up to 4 numbers), wide blocks on several lines | |
+| 0.14.0 | **New components**: KY-023 joystick, HC-SR501 PIR sensor, FC-51 / KY-032 obstacle sensor, 28BYJ-48 stepper motor, TM1637 display, with their examples; push buttons drawn as **4-leg tactile switches** | Parts found in the usual kits |
+| 0.14.0 | **Interactive tutorial** "My doorbell": a box guides each step (blocks, wiring, virtual board, a little code) and checks it by itself | Learning without a teacher at hand |
+| 0.14.0 | **Linux and macOS packages** (`.deb`, `.rpm`, `.dmg`) checked by CI | Phase 11 planned an installer script only |
+| 0.14.0 | **Issue forms** and a **Report a problem** button (filled with the version, system and board) | Easier feedback from users |
+
+## Remaining work
 
 Everything the phases plan is built. What is left:
 
 ### Checks on real hardware
 
-Tested by the user on an Arduino Uno (Windows): upload, Live mode over USB, LEDs, buttons, passive buzzer, servo and
-potentiometer, HC-SR04, DHT11, 16-pin LCD, MAX7219 matrix, and the examples Blink, Traffic light, Potentiometer and
-servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. Also tested on an Arduino Mega 2560. The README keeps the up-to-date list
-("Tested on real hardware"). Still to run on a real board:
+Tested by the user on an Arduino Uno and an Arduino Mega 2560 (Windows): upload, Live mode over USB, LEDs, buttons,
+passive buzzer, servo and potentiometer, HC-SR04, DHT11, 16-pin LCD, MAX7219 matrix, and the examples Blink, Traffic
+light, Potentiometer and servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. The README keeps the
+up-to-date list ("Tested on real hardware"). Still to run on a real board:
 
 - Nano; Linux and macOS with a real board;
-- NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor;
+- NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor, joystick, PIR,
+  infrared obstacle sensor, 28BYJ-48 stepper motor, TM1637 display;
 - ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
 - ESP8266 (NodeMCU): Live over Wi-Fi;
-- HC-05 / HC-06 on Uno, Nano and Mega: pins saved from the Bluetooth window, Live mode through the module, "Bluetooth module" block in upload and Live, the Uno + HC-05 remote robot (no module at hand yet);
-- the examples added after the first hardware tests (Button and LED, Joystick and LEDs, Motion alarm, Obstacle detector, Remote robot, Phone lamp, Wireless station, ESP32 dimmer, advanced variants) and their components (joystick, PIR, infrared obstacle sensor);
-- functions with inputs on a board;
-- step-by-step Live mode and the Live wiring check;
-- Python and JavaScript in Live mode, and C++ projects, on a real board (Phase 9).
+- HC-05 / HC-06 on Uno, Nano and Mega (pins saved from the Bluetooth window, Live mode and "Bluetooth module" block,
+  the Uno + HC-05 remote robot);
+- the examples added after the first hardware tests (Button and LED, Joystick and LEDs, Motion alarm, Obstacle
+  detector, Parking barrier, Countdown, Remote robot, Phone lamp, Wireless station, ESP32 dimmer, advanced variants);
+- functions with inputs, step-by-step Live mode and the Live wiring check on a board;
+- Python and JavaScript in Live mode, C++ projects, and the library manager with a real C++ project on a board.
 
-### Phase 10: workshop
+### Workshop
 
-- Run a workshop (or a test with a newcomer) on the first tutorial to close the phase.
+- Run a workshop (or a test with a newcomer) on the first tutorial and on the interactive tutorial.
 - Fix the guide, tutorials and teacher kit from what the workshop shows.
 
 ### Known limits
 
 - On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
+- The Windows installer and the macOS application are not signed with a certificate: Windows SmartScreen and macOS Gatekeeper ask for a confirmation the first time.
+- No package for Intel Macs, Arch Linux or Raspberry Pi: they build from the sources with `Scratch2Arduino_installer.sh`.
 - The CI fallback for the apt mirror (`.github/actions/setup-apt`, switch to `archive.ubuntu.com` when the Azure mirror does not answer) has not run for real yet: check it the next time the Azure mirror fails.
 
-### Next features (to choose)
+### Ideas for later
 
-Goals of the project not yet covered, in the suggested order:
+Not planned yet, to choose from the users' feedback:
 
-1. **Step-by-step mode in Live mode** ("real-time debugging"): done on 2026-11-12 (chosen by the user), for 0.12.0. Pause (F9) and "Next block" (F10) buttons in Live mode: the block that runs next is lit, each click runs one block (scripts take turns, waits are skipped), the variables and pins panel follows; block programs, with or without "My code". To check on a real board.
-2. **Arduino library manager** ("extensive library support"): done on 2026-11-12 (chosen by the user), for 0.11.0. "Arduino libraries" window (search the registry, install a chosen version, update, uninstall), libraries saved in the project (`libraries` in `project.json`) and installed by Check on any computer, missing headers explained with suggested libraries, `s2a-cli lib`. To check with a real C++ project on a board.
-3. **Wiring check in Live mode**: done on 2026-11-12 (chosen by the user), for 0.12.0. When Live mode starts, the inputs of the blocks are read for about a second (core `live::checkWiring`): a button always pressed, a floating digital or analog input, a distance sensor without echo or a DHT that does not answer give a "Check the wiring" card with what to check and the blocks concerned (hints only, the program runs). To check on real boards.
-
-4. **Wiring from code** (asked by the user on 2026-11-12): the wiring diagram of a program written as text (expert mode, "My code"): core `wiring::componentsInCode` finds the components from the calls of the code (library objects, `pinMode` / `digitalRead` / `digitalWrite` / `analogRead` / `tone` / `pulseIn`..., simple pin constants; Python and JavaScript converted to C++ first) and gives blocks standing for them to `wiring::plan`; the table tells the line of each. For 0.12.0.
-
-5. **Simulation without a board** (chosen by the user on 2026-11-12), for 0.13.0: a "Virtual board (no hardware)" port, chosen by itself when no board is plugged in. Live mode then runs on core `sim::VirtualBoard`, which answers the commands like the *S2A live* firmware (blocks, step-by-step mode, Python and JavaScript unchanged). The "Virtual board" panel draws the components of the wiring plan (`wiring::Connection::role` tells which board pin is which): LEDs, RGB LED, buzzer with sound, servo, DC motor, LCD / OLED screens, NeoPixel strip, LED matrix, the board's output pins; buttons, potentiometers, light, distance and DHT sensors and the phone are changed with the mouse. Upload and serial monitor refuse the virtual board with a clear message.
-
-Phase 11 (packaging and release) stays dropped for now and may come back later.
+- signed installers (Windows certificate, Apple notarization);
+- more boards (Arduino Leonardo, Raspberry Pi Pico...) and more components;
+- more interface languages (contributions welcome);
+- more interactive tutorials.
 
 Branches: `main` holds released states, `dev` integrates the work, each feature lives on its own
 `feature/...` (or `fix/...`, `docs/...`) branch merged into `dev` through a pull request once CI is green.
@@ -86,7 +128,7 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
 - **Text languages**: read-only view of generated C++ first, then a C++ mode (sketch typed by the user, same toolchain as the blocks), Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS-ng`) driving the board through the live protocol. A project stores its language and code (format version 2, written only for text projects so that block projects stay readable by older versions).
-- **Install**: Windows `Scratch2Arduino_installer.exe` (Inno Setup or NSIS, `installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
+- **Install**: release packages made by CI (`.deb` and `.rpm` with CPack, macOS `.dmg`, `cmake/S2APackaging.cmake`); Windows `Scratch2Arduino_installer.exe` (`installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
 ## Roadmap
@@ -145,7 +187,7 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 - **Done when**: live mode works over Bluetooth and Wi-Fi with the same blocks as over USB.
 
 ### Phase 9 - Text programming languages
-- **Requested again on 2026-11-10** by the user, with a C/C++ mode for those who already know it (developed on its own branch for now).
+- **Requested again on 2026-11-10** by the user, with a C/C++ mode for those who already know it.
 - **Goal**: a path from blocks to text code.
 - **Deliverables**: read-only Arduino C++ view synced with blocks; C++ mode (a sketch typed by the user, compiled and uploaded with `arduino-cli`, starting from the code of the blocks); Python mode (embedded `pocketpy`) and JavaScript mode (embedded `QuickJS-ng`) with an `arduino` API over the live protocol; editor with syntax highlighting, errors shown on their line after Check/Upload/Live; language and code stored in the project (format version 2).
 - **Done when**: the same Blink program can be written in blocks, Python and JavaScript.
