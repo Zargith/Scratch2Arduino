@@ -6,7 +6,7 @@
 
 > Program real Arduino boards with Scratch-style blocks - no coding experience required.
 
-**Status: pre-alpha - Phase 5 in progress (Live mode).** The block editor builds, checks and uploads programs through the bundled `arduino-cli`, and Live mode drives a connected board in real time. See the [roadmap](docs/roadmap.md).
+**Status: every phase of the [roadmap](docs/roadmap.md) is done.** Blocks, Live mode, simulation without a board, wiring diagrams, wireless boards, C++ / Python / JavaScript, tutorials and installers for the three systems are all in place. Uno and Mega 2560 are tested on real hardware; other boards and components are checked by CI and still waiting for a real-board test (see [Tested on real hardware](#tested-on-real-hardware)).
 
 ---
 
@@ -27,17 +27,19 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 
 | Area | What you get |
 |---|---|
-| Programming | Drag-and-drop blocks; read-only view of the generated Arduino C++; programs typed in Arduino C++, Python or JavaScript for those who move on to text |
-| Boards | Arduino Uno, Nano, Mega, ESP32 (DevKit), ESP8266 (NodeMCU) |
-| Hardware | LEDs, buttons, potentiometers, servos, DC motors, ultrasonic & temperature sensors, LCD/OLED displays, NeoPixels, buzzers... |
-| Live mode | Control the board in real time, watch sensor values, see which block is running |
-| Simulation | No board at hand: run the blocks on a virtual board drawn on the screen (LEDs, screens, servos, sounds...), press its buttons and move its sensors with the mouse |
-| Debugging | Serial monitor, live variable/sensor view, block highlighting, friendly build errors |
-| Wireless | Bluetooth (HC-05/HC-06) and Wi-Fi (ESP boards) |
-| Reuse | Save groups of blocks to **My blocks** and reuse them in any project (new block types cannot be created) |
-| Projects | Save, export and re-import projects as a single `.s2a` file; gallery of example projects |
-| Libraries | Access to the Arduino library ecosystem through `arduino-cli` |
-| Languages | French (default) and English, more to come |
+| Programming | Drag-and-drop blocks; **Code** view with the Arduino C++ made from the blocks; **My code**: functions written in C++, Python or JavaScript that become blocks; expert mode for a whole program as text; conversion between the three languages |
+| Boards | Arduino Uno, Nano, Mega 2560, ESP32 (DevKit), ESP8266 (NodeMCU) |
+| Hardware | LEDs, RGB LED, buttons, potentiometers, light sensor, joystick, PIR and infrared obstacle sensors, ultrasonic & temperature sensors, servos, DC and stepper motors, LCD / OLED / TM1637 displays, NeoPixels, LED matrix, buzzers... |
+| Live mode | Control the board in real time, watch sensor values, see which block is running; **step by step** (Pause / Next block); a wiring check at start-up |
+| Simulation | No board at hand: run the program on a virtual board, the project's wiring diagram brought to life (LEDs, screens, servos, sounds...); press its buttons and move its sensors with the mouse |
+| Wiring | Wiring diagram drawn for every project (from the blocks or from the code), parts table, warnings, PNG export |
+| Debugging | Serial monitor, live variable/sensor view with graphs, block highlighting, friendly build errors pointing to the block or the line |
+| Wireless | Live mode over Wi-Fi and Bluetooth (ESP32, ESP8266) or through an HC-05 / HC-06 module (Uno, Nano, Mega); Phone blocks talking to a Bluetooth terminal app |
+| Reuse | Functions with inputs; save groups of blocks to **My blocks** and reuse them in any project |
+| Projects | Save, export and re-import projects as a single `.s2a` file; gallery of example projects (beginner and advanced levels); autosave and recovery |
+| Libraries | **Arduino libraries** window: search, install, update the libraries of the Arduino registry, saved with the project |
+| Learning | User guide, 8 step-by-step tutorials, an interactive tutorial inside the editor and a teacher / workshop kit, in French and English |
+| Settings | French (default) or English, light or dark appearance, check for new versions, *Report a problem* |
 
 ## How it is built
 
@@ -100,7 +102,7 @@ Scratch2Arduino/
 │   └── windows/            # Scratch2Arduino_installer.exe script (Inno Setup / NSIS)
 ├── resources/              # boards, translations (fr/en), icons, Linux .desktop template
 ├── examples/               # sketches (Blink); example projects with their wiring diagrams
-└── docs/                   # roadmap, block catalog guide; later user guide, tutorials
+└── docs/                   # user guide, tutorials and teacher kit (fr, en), roadmap, developer guide
 ```
 
 ## Getting started
@@ -208,7 +210,7 @@ little C++ code translated into Python, and checks each step by itself.
 2. Start **Scratch2Arduino**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).
 3. Under **when the program starts**, drag **forever**, then inside it **turn the built-in LED on**, **wait 1 seconds**, **turn the built-in LED off**, **wait 1 seconds**.
 4. Click **Check** to compile, then **Upload**. The on-board LED blinks!
-5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); **Show code** displays the Arduino code made from the blocks.
+5. **Save** writes a `.s2a` project (in `Documents/Scratch2Arduino` by default); the **Code** view (at the top, next to *Blocks*) displays the Arduino code made from the blocks.
 
 ### Opening a project
 
@@ -243,15 +245,20 @@ outputs follow the blocks, and its buttons, potentiometers and sensors are chang
 
 ### Writing the program as text: C++, Python, JavaScript
 
-The **language** list of the top bar (next to the project name) switches a project from blocks to text:
+Switch the **View** (at the top) from *Blocks* to **Code**. The *Code of the blocks* tab shows the Arduino C++ made
+from the blocks (read-only). The **My code** tab holds your own functions and variables in C++, Python or
+JavaScript: back in the Blocks view, the *My code* category has a block for each of them, used like the other
+blocks. The **expert mode** goes further: the whole program is written as text.
 
 | Language | How it runs | Buttons |
 |---|---|---|
-| **C++** | A real Arduino sketch (`setup()` and `loop()`), compiled and uploaded like the blocks. It starts with the code of the current blocks. Libraries included with `#include` (Servo, DHT, LiquidCrystal, U8g2, Adafruit NeoPixel) are installed automatically. | Check, Upload |
-| **Python** (pocketpy) | Runs on the computer and drives the board through the Live mode, like the blocks in Live mode. | Check (reads the program), Live |
-| **JavaScript** (QuickJS-ng) | Same as Python. | Check (reads the program), Live |
+| **C++** | A real Arduino sketch, compiled and uploaded with the blocks. Libraries included with `#include` (Servo, DHT, LiquidCrystal, U8g2, Adafruit NeoPixel) are installed automatically; others are added with the **Arduino libraries** window. | Check, Upload |
+| **Python** (pocketpy) | Runs on the computer and drives the board through the Live mode. In *My code*, *Upload* also works: the code is translated to C++ and compiled with the blocks. | Check, Live (and Upload for *My code*) |
+| **JavaScript** (QuickJS-ng) | Same as Python. | Check, Live (and Upload for *My code*) |
 
-The code editor colours the code and numbers its lines. Mistakes are shown only after **Check**, **Upload** or
+Changing the language **converts** the code (C++, Python and JavaScript in every direction; what cannot be
+translated is kept as comments with its line numbers). The code editor colours the code, numbers its lines and
+suggests completions. Mistakes are shown only after **Check**, **Upload** or
 **Live**: the faulty line is underlined, with a friendly explanation in French or English ("`led` is unknown: check
 the spelling..."). **Stop** stops a Python or JavaScript program at once, even an endless loop.
 
@@ -305,7 +312,7 @@ the wiring:
 | Sound | play a frequency (or a note) for some seconds on a buzzer, start and stop a buzzer |
 | Motors | servo angle (0 to 180°), DC motor through an H-bridge (L298N, L293D...) forward/backward at 0-100 %, stop, 28BYJ-48 stepper motor (ULN2003 board) turned by an angle at 1-15 turns a minute |
 | Screens | write a text or a value on a line of a 16x2 LCD - with an I2C module (address 0x27 or 0x3F, found automatically) or with 16 pins (RS, E, D4-D7 on the chosen pins, contrast set with a potentiometer on V0) - or of an I2C SSD1306 OLED, clear them (accents are removed: the screens cannot show them); a whole number (-999 to 9999) on a TM1637 4-digit display |
-| Phone (ESP32) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone - over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"...) connected to the board "S2A-xxxx" |
+| Phone (ESP32, or a board with an HC-05 / HC-06 module) | the phone sent a message (true once, capital letters and accents ignored), number received from the phone, send a text or a value to the phone - over Bluetooth, with a terminal app on the phone ("Serial Bluetooth Terminal"...) connected to the board "S2A-xxxx" or to the module |
 
 They work in upload and Live modes. Libraries they need (*Servo*, *DHT sensor library*, *LiquidCrystal I2C*,
 *U8g2*, *Adafruit NeoPixel*) are downloaded automatically the first time. Example projects, each with a

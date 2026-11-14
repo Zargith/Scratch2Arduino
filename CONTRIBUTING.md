@@ -1,7 +1,7 @@
 # Contributing to Scratch2Arduino
 
-Thanks for helping! The project is in its early phases (see [`docs/roadmap.md`](docs/roadmap.md)),
-so this guide is a draft and will grow with the code.
+Thanks for helping! Every phase of the [roadmap](docs/roadmap.md) is done: help is most welcome on testing with
+real boards and components, workshops, translations and new examples (see its "Remaining work").
 
 The [developer guide](docs/developer-guide.md) explains the architecture and gives step-by-step
 recipes (add a block, a component, a board, a translation, an example, a tutorial).
@@ -14,7 +14,7 @@ recipes (add a block, a component, a board, a translation, an example, a tutoria
   filled with the version, OS, board and, after a crash, the error (`frontend/src/report.ts`).
 - **Translations**: the interface is French first, English second; other languages are welcome.
 - **Example projects and tutorials**: especially for classrooms and workshops.
-- **Code**: pick an item of the current roadmap phase and open a pull request.
+- **Code**: pick an item of the roadmap's remaining work or an open issue and open a pull request.
 
 ## Development setup
 
@@ -45,7 +45,7 @@ cmake --build --preset core-only && ctest --preset core-only
 - `main`: stable states only, updated from `dev`.
 - `dev`: integration branch; open pull requests against it.
 - One branch per change: `feature/...`, `fix/...`, `docs/...`, `ci/...`, merged into `dev`.
-- `dev` is merged into `main` when its CI is green (typically at the end of a roadmap phase).
+- `dev` is merged into `main` when its CI is green, for each release.
 
 ## Releases
 
