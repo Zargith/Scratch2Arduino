@@ -388,9 +388,12 @@ son nom et propose des bibliothèques qui pourraient la contenir.
 - **Enregistrer** (Ctrl+S) écrit un fichier **`.s2a`**, rangé par défaut dans
   `Documents/Scratch2Arduino`. Ce fichier contient tout le projet : c'est lui qu'on envoie à quelqu'un,
   qu'on met sur une clé USB ou qu'on rend à son professeur.
+  C'est une archive zip : renommé en `.zip`, il montre `project.json` (les blocs) et le code tapé
+  ("Mon code" dans `my_code.cpp`, `.py` ou `.js` ; un programme écrit en texte dans `program.cpp`,
+  `.py` ou `.js`).
 - **Ouvrir** relit un `.s2a`. Sous Windows, un double-clic sur un `.s2a` l'ouvre aussi, et on peut
   déposer un projet sur l'icône de Scratch2Arduino.
-- **Projets récents** (l'horloge) rouvre les derniers projets.
+- **Projets récents** (l'horloge) rouvre les derniers projets, chacun avec une image de ses blocs ou de son code.
 - **Sauvegarde automatique** : toutes les 15 secondes, une copie de secours est gardée. Si le logiciel
   ou l'ordinateur s'arrête, Scratch2Arduino propose au démarrage suivant de **récupérer** le projet.
 

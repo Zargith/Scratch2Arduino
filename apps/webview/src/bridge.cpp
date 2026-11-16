@@ -93,6 +93,24 @@ std::string base64Decode(std::string_view text) {
     return bytes;
 }
 
+/// Base64 text of some bytes (with padding).
+std::string base64Encode(std::string_view bytes) {
+    static constexpr std::string_view kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string text;
+    text.reserve((bytes.size() + 2) / 3 * 4);
+    for (std::size_t i = 0; i < bytes.size(); i += 3) {
+        const std::size_t count = std::min<std::size_t>(3, bytes.size() - i);
+        unsigned int chunk = 0;
+        for (std::size_t j = 0; j < 3; ++j) {
+            chunk = (chunk << 8) | (j < count ? static_cast<unsigned char>(bytes[i + j]) : 0U);
+        }
+        for (std::size_t j = 0; j < 4; ++j) {
+            text.push_back(j <= count ? kAlphabet[(chunk >> (18 - 6 * j)) & 0x3F] : '=');
+        }
+    }
+    return text;
+}
+
 std::string stringArg(const Json& args, std::size_t index) {
     return index < args.size() && args[index].is_string() ? args[index].get<std::string>() : std::string{};
 }
@@ -540,7 +558,14 @@ void Bridge::bind() {
             async(id, [request, this]() -> std::string {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 2, language_);
-                const project::Project project = projectArg(args, 0, language);
+                project::Project project = projectArg(args, 0, language);
+                // Optional picture of the project (PNG data URL); one that is too big is left out.
+                if (args.size() > 3 && args[3].is_string()) {
+                    std::string thumbnail = base64Decode(args[3].get<std::string>());
+                    if (thumbnail.size() <= project::kMaxThumbnailSize) {
+                        project.thumbnail = std::move(thumbnail);
+                    }
+                }
                 fs::path path = fs::u8path(stringArg(args, 1));
                 if (path.empty()) {
                     const fs::path suggestion =
@@ -639,7 +664,7 @@ void Bridge::bind() {
         },
         nullptr);
 
-    // Recent projects, newest first: [{path, name}].
+    // Recent projects, newest first: [{path, name, thumbnail?}] (thumbnail: PNG data URL).
     window_.bind(
         "s2a_recent",
         [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
@@ -651,7 +676,11 @@ void Bridge::bind() {
                 }
                 Json list = Json::array();
                 for (const fs::path& path : paths) {
-                    list.push_back({{"path", path.u8string()}, {"name", path.stem().u8string()}});
+                    Json entry{{"path", path.u8string()}, {"name", path.stem().u8string()}};
+                    if (const std::string thumbnail = project::thumbnailOf(path); !thumbnail.empty()) {
+                        entry["thumbnail"] = "data:image/png;base64," + base64Encode(thumbnail);
+                    }
+                    list.push_back(std::move(entry));
                 }
                 return list.dump();
             });

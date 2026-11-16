@@ -1,5 +1,8 @@
 #include "s2a/project.hpp"
 
+#include "project_format.hpp"
+#include "s2a/version.hpp"
+
 #include <array>
 #include <nlohmann/json.hpp>
 #include <random>
@@ -10,6 +13,13 @@ namespace s2a::project {
 namespace {
 
 using Json = nlohmann::json;
+using Files = std::map<std::string, std::string>;
+
+/// Where the code of a text project or of "My code" goes.
+enum class CodeStorage {
+    Inline,    ///< In project.json (bare project.json, editor bridge, examples): versions 1 and 2.
+    InArchive, ///< In its own file beside project.json in a .s2a archive: version 3.
+};
 
 /// Thrown while reading project.json; carries the JSON path of the problem.
 class FormatError : public std::runtime_error {
@@ -107,6 +117,18 @@ const Json& arrayAt(const Json& object, const char* key, const std::string& path
     return value;
 }
 
+/// Text of a code file named in project.json, looked up in the archive entries.
+std::string fileContent(const std::string& name, const std::string& path, const Files* files) {
+    if (files == nullptr) {
+        throw FormatError(path, "the code file '" + name + "' can only be read from a .s2a archive");
+    }
+    const auto found = files->find(name);
+    if (found == files->end()) {
+        throw FormatError(path, "the code file '" + name + "' is missing from the archive");
+    }
+    return found->second;
+}
+
 Block blockFromJson(const Json& json, const std::string& path, int depth);
 
 Stack stackFromJson(const Json& array, const std::string& path, int depth) {
@@ -170,7 +192,7 @@ void migrate(Json& json, int fromVersion) {
     }
 }
 
-Project projectFromJson(Json json) {
+Project projectFromJson(Json json, const Files* files) {
     // Named root path: passing a temporary to the reference-returning helpers trips
     // GCC's -Wdangling-reference false positive.
     const std::string root = "$";
@@ -232,7 +254,12 @@ Project projectFromJson(Json json) {
         project.language = *language;
     }
     if (json.contains("code") && project.language != ProgramLanguage::Blocks) {
-        project.code = stringAt(json, "code", root);
+        const Json& code = json.at("code");
+        if (code.is_object()) { // version 3: {"file": "program.py"}
+            project.code = fileContent(stringAt(code, "file", "$.code"), "$.code.file", files);
+        } else {
+            project.code = stringAt(json, "code", root);
+        }
     }
     if (json.contains("userCode")) {
         const Json& node = json.at("userCode");
@@ -244,7 +271,10 @@ Project projectFromJson(Json json) {
         if (!language || *language == ProgramLanguage::Blocks) {
             throw FormatError("$.userCode.language", "unknown language '" + id + "'");
         }
-        project.userCode = UserCode{*language, stringAt(node, "code", "$.userCode")};
+        project.userCode = UserCode{*language, node.contains("file") // version 3: in its own file
+                                                   ? fileContent(stringAt(node, "file", "$.userCode"),
+                                                                 "$.userCode.file", files)
+                                                   : stringAt(node, "code", "$.userCode")};
     }
 
     if (json.contains("libraries")) { // optional, like "functions"
@@ -258,6 +288,10 @@ Project projectFromJson(Json json) {
             project.libraries.push_back(
                 {stringAt(node, "name", path), node.contains("version") ? stringAt(node, "version", path) : std::string{}});
         }
+    }
+
+    if (json.contains("savedWith")) {
+        project.savedWith = stringAt(json, "savedWith", root);
     }
 
     const Json& scripts = arrayAt(json, "scripts", root);
@@ -325,7 +359,10 @@ Project newProject(Language language) {
     return project;
 }
 
-std::string toJson(const Project& project) {
+namespace {
+
+/// project.json as a JSON document. With CodeStorage::InArchive, the code goes to `files`.
+Json projectDocument(const Project& project, CodeStorage storage, Files* files) {
     Json variables = Json::array();
     for (const Variable& variable : project.variables) {
         variables.push_back({{"id", variable.id}, {"name", variable.name}, {"initialValue", variable.initialValue}});
@@ -338,7 +375,7 @@ std::string toJson(const Project& project) {
     const bool userCode = project.userCode.has_value();
     Json json{
         {"format", std::string(kFormatName)},
-        {"formatVersion", text || userCode ? 2 : 1}, // see kFormatVersion
+        {"formatVersion", !text && !userCode ? 1 : storage == CodeStorage::Inline ? 2 : 3}, // see kFormatVersion
         {"name", project.name},
         {"board", project.boardId},
         {"variables", std::move(variables)},
@@ -366,18 +403,36 @@ std::string toJson(const Project& project) {
         }
         json["libraries"] = std::move(libraries);
     }
+    const bool inArchive = storage == CodeStorage::InArchive;
     if (text) { // left out for blocks: block projects keep the bytes of version 1
         json["language"] = std::string(programLanguageId(project.language));
-        json["code"] = project.code;
+        if (inArchive) {
+            const std::string name = codeFileName(CodeFile::Program, project.language);
+            (*files)[name] = project.code;
+            json["code"] = {{"file", name}};
+        } else {
+            json["code"] = project.code;
+        }
     }
-    if (userCode) { // older versions would drop it silently: hence version 2
-        json["userCode"] = {{"language", std::string(programLanguageId(project.userCode->language))},
-                            {"code", project.userCode->code}};
+    if (userCode) { // older versions would drop it silently: hence version 2 (or 3)
+        Json node{{"language", std::string(programLanguageId(project.userCode->language))}};
+        if (inArchive) {
+            const std::string name = codeFileName(CodeFile::MyCode, project.userCode->language);
+            (*files)[name] = project.userCode->code;
+            node["file"] = name;
+        } else {
+            node["code"] = project.userCode->code;
+        }
+        json["userCode"] = std::move(node);
     }
-    return json.dump(2) + "\n";
+    if (inArchive) { // ignored by older versions: block projects stay readable by them
+        json["savedWith"] = std::string(version::kString);
+    }
+    return json;
 }
 
-Result<Project> fromJson(std::string_view text) {
+/// Parses project.json; `files` are the archive entries (nullptr for a bare project.json).
+Result<Project> parse(std::string_view text, const Files* files) {
     Json json = Json::parse(text, nullptr, /*allow_exceptions=*/false);
     if (json.is_discarded()) {
         return Error{ErrorCode::InvalidJson, "project.json is not valid JSON"};
@@ -389,12 +444,52 @@ Result<Project> fromJson(std::string_view text) {
                          std::to_string(kFormatVersion)};
     }
     try {
-        return projectFromJson(std::move(json));
+        return projectFromJson(std::move(json), files);
     } catch (const FormatError& error) {
         return Error{ErrorCode::InvalidFormat, error.what()};
     } catch (const Json::exception& error) {
         return Error{ErrorCode::InvalidFormat, error.what()};
     }
+}
+
+} // namespace
+
+std::string codeFileName(CodeFile file, ProgramLanguage language) {
+    std::string_view extension;
+    switch (language) {
+    case ProgramLanguage::Blocks:
+        return {};
+    case ProgramLanguage::Cpp:
+        extension = ".cpp";
+        break;
+    case ProgramLanguage::Python:
+        extension = ".py";
+        break;
+    case ProgramLanguage::JavaScript:
+        extension = ".js";
+        break;
+    }
+    return std::string(file == CodeFile::MyCode ? "my_code" : "program") + std::string(extension);
+}
+
+std::string toJson(const Project& project) {
+    return projectDocument(project, CodeStorage::Inline, nullptr).dump(2) + "\n";
+}
+
+detail::ArchiveDocument detail::toArchiveDocument(const Project& project) {
+    ArchiveDocument document;
+    document.json = projectDocument(project, CodeStorage::InArchive, &document.files).dump(2) + "\n";
+    return document;
+}
+
+Result<Project> detail::fromArchiveDocument(std::string_view json, const Files& files) {
+    return parse(json, &files);
+}
+
+
+
+Result<Project> fromJson(std::string_view text) {
+    return parse(text, nullptr);
 }
 
 } // namespace s2a::project

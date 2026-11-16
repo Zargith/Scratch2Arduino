@@ -166,6 +166,8 @@ export interface RecentProject {
 	path: string;
 	/** File name without its extension. */
 	name: string;
+	/** Picture of the project (PNG data URL), left out when the file has none. */
+	thumbnail?: string;
 }
 
 export interface AutosavedProject {
@@ -241,7 +243,7 @@ interface HostFunctions {
 	s2a_save_image(name: string, png: string, language: Language): Promise<string | null>;
 	s2a_open(language: Language): Promise<OpenedProject | null>;
 	s2a_startup_project?(language: Language): Promise<OpenedProject | null>;
-	s2a_save(project: Project, path: string, language: Language): Promise<string | null>;
+	s2a_save(project: Project, path: string, language: Language, thumbnail: string | null): Promise<string | null>;
 	s2a_recent(): Promise<RecentProject[]>;
 	s2a_settings(): Promise<Settings>;
 	s2a_save_settings(settings: Settings): Promise<boolean>;
@@ -330,7 +332,8 @@ export const bridge = {
 	startupProject: async (language: Language): Promise<OpenedProject | null> =>
 		typeof window.s2a_startup_project === "function" ? window.s2a_startup_project(language) : null,
 	/** Empty path: ask where to save. Resolves to the saved path, or null when cancelled. */
-	save: (project: Project, path: string, language: Language) => host("s2a_save")(project, path, language),
+	save: (project: Project, path: string, language: Language, thumbnail: string | null = null) =>
+		host("s2a_save")(project, path, language, thumbnail),
 	recent: () => host("s2a_recent")(),
 	openRecent: (path: string, language: Language) => host("s2a_open_recent")(path, language),
 	/** Keeps a copy of the project until it is saved (path: where it was saved, or empty). */

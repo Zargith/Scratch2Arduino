@@ -28,6 +28,7 @@ import type { Board, Language } from "@/catalog";
 import { FunctionDialog, type FunctionDraft } from "@/FunctionDialog";
 import { translate } from "@/i18n";
 import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
+import { blocksThumbnail } from "@/thumbnail";
 import type { BlockState, Project, WorkspaceState } from "@/project/convert";
 
 const noDeclarations: UserDeclaration[] = [];
@@ -36,6 +37,8 @@ type WorkspaceLoadState = Parameters<typeof Blockly.serialization.workspaces.loa
 
 export interface EditorHandle {
 	save(): WorkspaceState;
+	/** Picture of the blocks for the thumbnail of the saved file (PNG data URL), null when none. */
+	thumbnail(): Promise<string | null>;
 	/** Highlights blocks reported by Check/Upload and scrolls to the first; cleared by the next edit. */
 	highlight(blockIds: string[]): void;
 	/** Live mode: the scripts holding these blocks glow, as in Scratch. */
@@ -219,6 +222,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
 	useImperativeHandle(ref, () => ({
 		save: () => (workspace.current ? (Blockly.serialization.workspaces.save(workspace.current) as WorkspaceState) : {}),
+		thumbnail: async () => (workspace.current ? blocksThumbnail(workspace.current) : null),
 		insert: (group) => {
 			if (workspace.current) insertGroup(workspace.current, group);
 		},
