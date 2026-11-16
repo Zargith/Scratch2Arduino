@@ -368,9 +368,11 @@ libraries that may contain it.
   copy: save it to keep your changes.
 - **Save** (Ctrl+S) writes a **`.s2a`** file, stored by default in `Documents/Scratch2Arduino`. That file
   holds the whole project: it is what you send to someone, copy to a USB stick or hand in to your teacher.
+  It is a zip archive: renamed to `.zip`, it shows `project.json` (the blocks) and the code you typed
+  ("My code" in `my_code.cpp`, `.py` or `.js`; a program written as text in `program.cpp`, `.py` or `.js`).
 - **Open** reads a `.s2a` back. On Windows, double-clicking a `.s2a` opens it too, and a project can be
   dropped on the Scratch2Arduino icon.
-- **Recent projects** (the clock) reopens the latest projects.
+- **Recent projects** (the clock) reopens the latest projects, each with a picture of its blocks or code.
 - **Autosave**: every 15 seconds a backup copy is kept. If the application or the computer stops,
   Scratch2Arduino offers to **recover** the project at the next start.
 

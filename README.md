@@ -382,7 +382,7 @@ once installed, or in the folder given by the `S2A_FRONTEND_DIR` environment var
 
 ## Project files
 
-A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version) and any assets under `assets/`. It can be exported, shared and re-imported. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** live in the user's data folder (`library.json`, next to the recent projects list and the autosaved copy of the project being edited) and can be exported to a `.s2ablocks` file and imported on another computer. That folder is `%APPDATA%\Scratch2Arduino` on Windows, `~/Library/Application Support/Scratch2Arduino` on macOS and `~/.config/scratch2arduino` on Linux (`S2A_USER_DIR` replaces it).
+A project is a single **`.s2a`** file (a zip archive) containing `project.json` (blocks, board, variables, format version, version of Scratch2Arduino that saved it), the code typed by the user in its own files (`my_code.cpp`, `.py` or `.js` for "My code" beside the blocks, `program.cpp`, `.py` or `.js` for a program written as text), a `thumbnail.png` shown in the recent projects list, and any assets under `assets/`. It can be exported, shared and re-imported. Saving the same project twice gives identical bytes, and newer format versions are refused with a clear message instead of being misread. Saved **My blocks** live in the user's data folder (`library.json`, next to the recent projects list and the autosaved copy of the project being edited) and can be exported to a `.s2ablocks` file and imported on another computer. That folder is `%APPDATA%\Scratch2Arduino` on Windows, `~/Library/Application Support/Scratch2Arduino` on macOS and `~/.config/scratch2arduino` on Linux (`S2A_USER_DIR` replaces it).
 
 ```json
 {
@@ -402,6 +402,10 @@ A project is a single **`.s2a`** file (a zip archive) containing `project.json` 
   ]
 }
 ```
+
+Code files are named in `project.json` (format version 3): `"userCode": { "language": "python", "file": "my_code.py" }`
+or `"code": { "file": "program.cpp" }`. Projects saved by older versions (code inside `project.json`) still open,
+and are saved in the new layout. A bare `project.json` (the examples) keeps the code inline.
 
 ## Boards and blocks
 
