@@ -18,14 +18,19 @@ namespace s2a::project {
 /// Identifies project.json files and their format version.
 inline constexpr std::string_view kFormatName = "scratch2arduino-project";
 /// Newest format this version reads. A project is written with the oldest version able to hold
-/// it: block projects stay at 1 (older Scratch2Arduino versions open them), projects written as
-/// text (version 2) are refused by those versions with a clear "update" message instead of
-/// being opened as an empty block project.
-inline constexpr int kFormatVersion = 2;
+/// it: block projects stay at 1 (older Scratch2Arduino versions open them). Projects with code
+/// are version 2 in a bare project.json (code inline) and version 3 in a .s2a archive (code in
+/// its own file beside project.json): older versions refuse them with a clear "update" message
+/// instead of opening them without their code.
+inline constexpr int kFormatVersion = 3;
 /// Name of the JSON document inside a .s2a archive.
 inline constexpr std::string_view kProjectEntry = "project.json";
 /// Prefix of the asset entries inside a .s2a archive (images, sounds, saved blocks...).
 inline constexpr std::string_view kAssetsPrefix = "assets/";
+/// Picture of the project shown in the recent projects list (PNG, optional).
+inline constexpr std::string_view kThumbnailEntry = "thumbnail.png";
+/// Largest thumbnail kept: a bigger one is refused on save and ignored on open.
+inline constexpr std::size_t kMaxThumbnailSize = 512U * 1024U;
 
 /// Nullable owning pointer with value semantics (deep copy). Lets Block contain blocks.
 template <typename T> class Box {
@@ -113,6 +118,15 @@ enum class ProgramLanguage {
 /// The language of an id of programLanguageId(); nullopt when unknown.
 [[nodiscard]] std::optional<ProgramLanguage> programLanguageFromId(std::string_view id) noexcept;
 
+/// The code files of a project inside a .s2a archive.
+enum class CodeFile {
+    MyCode,  ///< "My code" beside the blocks: my_code.cpp / .py / .js
+    Program, ///< Whole program of a text project: program.cpp / .py / .js
+};
+
+/// Name of a code file in a .s2a archive, e.g. "my_code.py" ("" for ProgramLanguage::Blocks).
+[[nodiscard]] std::string codeFileName(CodeFile file, ProgramLanguage language);
+
 /// Code written by the user beside the blocks (the "My code" file): its functions and global
 /// variables become blocks of the "My code" category. C++ is compiled with the blocks (Upload);
 /// Python and JavaScript run on the computer with the blocks (Live mode).
@@ -146,6 +160,11 @@ struct Project {
     std::vector<Library> libraries;
     /// Extra files stored in the archive under assets/ (path without the prefix -> bytes).
     std::map<std::string, std::string> assets;
+    /// PNG picture of the project (thumbnail.png in the archive), empty when there is none.
+    std::string thumbnail;
+    /// Version of Scratch2Arduino that saved the .s2a archive ("" when unknown). Written by
+    /// toArchive(), read by fromArchive(); not part of toJson().
+    std::string savedWith;
 };
 
 /// A new project: default board and a "when the program starts" block, named in `language`.
@@ -192,7 +211,12 @@ template <typename Visitor> void forEachBlock(const Project& project, Visitor&& 
 
 // --- .s2a archives ---------------------------------------------------------------------
 
-/// Builds the bytes of a .s2a archive (zip: project.json + assets/). Deterministic.
+/// Builds the bytes of a .s2a archive. Deterministic. Layout:
+///   project.json    blocks and settings; code is referenced by file name ({"file": "my_code.py"})
+///   my_code.<ext>   "My code" file beside the blocks (when there is one)
+///   program.<ext>   whole program of a text project (C++, Python or JavaScript)
+///   thumbnail.png   picture of the project (when there is one)
+///   assets/...      extra files
 [[nodiscard]] Result<std::string> toArchive(const Project& project);
 
 /// Reads a .s2a archive from memory.
@@ -201,6 +225,10 @@ template <typename Visitor> void forEachBlock(const Project& project, Visitor&& 
 /// Saves a .s2a file. Writes a temporary file first, so an existing project is never left
 /// half-written.
 [[nodiscard]] Status save(const Project& project, const std::filesystem::path& path);
+
+/// The thumbnail of a .s2a file without reading the whole project ("" when it has none, or when
+/// the file cannot be read: it is only a picture).
+[[nodiscard]] std::string thumbnailOf(const std::filesystem::path& path);
 
 /// Opens a .s2a file.
 /// Reads a .s2a archive, or a bare project.json (as in examples/projects).

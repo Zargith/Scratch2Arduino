@@ -64,6 +64,7 @@ Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the
 | 0.14.0 | **Interactive tutorial** "My doorbell": a box guides each step (blocks, wiring, virtual board, a little code) and checks it by itself | Learning without a teacher at hand |
 | 0.14.0 | **Linux and macOS packages** (`.deb`, `.rpm`, `.dmg`) checked by CI | Phase 11 planned an installer script only |
 | 0.14.0 | **Issue forms** and a **Report a problem** button (filled with the version, system and board) | Easier feedback from users |
+| 1.1.0 | **Code files in the `.s2a`**: "My code" and text programs saved as `my_code.*` / `program.*` beside `project.json` (format 3); **thumbnail** of the project in the recent projects list; version of the app that saved the file (`savedWith`) | Readable archives and diffs; older files still open |
 
 ## Remaining work
 

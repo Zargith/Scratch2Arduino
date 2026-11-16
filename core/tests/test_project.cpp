@@ -3,7 +3,9 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <map>
 #include <miniz.h>
+#include <optional>
 #include <string>
 
 namespace {
@@ -68,10 +70,12 @@ private:
     fs::path path_;
 };
 
-std::string zipWith(const std::string& name, const std::string& content) {
+std::string zipOf(const std::map<std::string, std::string>& entries) {
     mz_zip_archive zip{};
     EXPECT_TRUE(mz_zip_writer_init_heap(&zip, 0, 0));
-    EXPECT_TRUE(mz_zip_writer_add_mem(&zip, name.c_str(), content.data(), content.size(), MZ_DEFAULT_LEVEL));
+    for (const auto& [name, content] : entries) {
+        EXPECT_TRUE(mz_zip_writer_add_mem(&zip, name.c_str(), content.data(), content.size(), MZ_DEFAULT_LEVEL));
+    }
     void* buffer = nullptr;
     std::size_t size = 0;
     EXPECT_TRUE(mz_zip_writer_finalize_heap_archive(&zip, &buffer, &size));
@@ -79,6 +83,26 @@ std::string zipWith(const std::string& name, const std::string& content) {
     mz_free(buffer);
     mz_zip_writer_end(&zip);
     return bytes;
+}
+
+std::string zipWith(const std::string& name, const std::string& content) {
+    return zipOf({{name, content}});
+}
+
+/// Content of one entry of a zip archive, nullopt when it has no such entry.
+std::optional<std::string> entryOf(const std::string& bytes, const std::string& name) {
+    mz_zip_archive zip{};
+    if (!mz_zip_reader_init_mem(&zip, bytes.data(), bytes.size(), 0)) {
+        return std::nullopt;
+    }
+    std::optional<std::string> content;
+    std::size_t size = 0;
+    if (void* data = mz_zip_reader_extract_file_to_heap(&zip, name.c_str(), &size, 0)) {
+        content = std::string(static_cast<const char*>(data), size);
+        mz_free(data);
+    }
+    mz_zip_reader_end(&zip);
+    return content;
 }
 
 // --- Model -------------------------------------------------------------------------------
@@ -276,6 +300,112 @@ TEST(Archive, KeepsTheTextProgram) {
     EXPECT_EQ(reopened.value().language, ProgramLanguage::Python);
     EXPECT_EQ(reopened.value().code, project.code);
     EXPECT_EQ(toArchive(reopened.value()).value(), bytes.value());
+}
+
+TEST(Archive, StoresTheCodeInItsOwnFiles) {
+    struct Case {
+        ProgramLanguage language;
+        const char* myCode;
+        const char* program;
+    };
+    for (const Case& c : {Case{ProgramLanguage::Cpp, "my_code.cpp", "program.cpp"},
+                          Case{ProgramLanguage::Python, "my_code.py", "program.py"},
+                          Case{ProgramLanguage::JavaScript, "my_code.js", "program.js"}}) {
+        Project withMyCode = blink();
+        withMyCode.userCode = UserCode{c.language, "// mon code été\nint vitesse = 3;\n"};
+        const auto bytes = toArchive(withMyCode);
+        ASSERT_TRUE(bytes.ok()) << bytes.error().detail;
+        EXPECT_EQ(entryOf(bytes.value(), c.myCode), withMyCode.userCode->code);
+        const std::string json = entryOf(bytes.value(), "project.json").value();
+        EXPECT_NE(json.find(std::string("\"file\": \"") + c.myCode + "\""), std::string::npos) << json;
+        EXPECT_EQ(json.find("vitesse"), std::string::npos) << "the code is not in project.json";
+        EXPECT_NE(json.find("\"formatVersion\": 3"), std::string::npos);
+        const auto reopened = fromArchive(bytes.value());
+        ASSERT_TRUE(reopened.ok()) << reopened.error().detail;
+        EXPECT_EQ(reopened.value().userCode->language, c.language);
+        EXPECT_EQ(reopened.value().userCode->code, withMyCode.userCode->code);
+        EXPECT_EQ(toArchive(reopened.value()).value(), bytes.value());
+
+        Project text = blink();
+        text.language = c.language;
+        text.code = "boucle();\n";
+        const auto textBytes = toArchive(text);
+        ASSERT_TRUE(textBytes.ok());
+        EXPECT_EQ(entryOf(textBytes.value(), c.program), text.code);
+        EXPECT_FALSE(entryOf(textBytes.value(), c.myCode)) << "no My code file without My code";
+        const auto textReopened = fromArchive(textBytes.value());
+        ASSERT_TRUE(textReopened.ok()) << textReopened.error().detail;
+        EXPECT_EQ(textReopened.value().code, text.code);
+    }
+}
+
+TEST(Archive, BlockProjectsStayInVersion1WithTheAppVersion) {
+    const auto bytes = toArchive(blink());
+    ASSERT_TRUE(bytes.ok());
+    const std::string json = entryOf(bytes.value(), "project.json").value();
+    EXPECT_NE(json.find("\"formatVersion\": 1"), std::string::npos) << "older versions still open them";
+    EXPECT_NE(json.find("\"savedWith\": \""), std::string::npos);
+    const auto reopened = fromArchive(bytes.value());
+    ASSERT_TRUE(reopened.ok());
+    EXPECT_FALSE(reopened.value().savedWith.empty());
+    EXPECT_EQ(toJson(reopened.value()).find("savedWith"), std::string::npos) << "only in archives";
+}
+
+TEST(Archive, OpensVersion2ArchivesWithTheCodeInline) {
+    Project project = blink();
+    project.userCode = UserCode{ProgramLanguage::Cpp, "int x = 1;\n"};
+    const auto reopened = fromArchive(zipWith("project.json", toJson(project))); // as saved by 1.0
+    ASSERT_TRUE(reopened.ok()) << reopened.error().detail;
+    EXPECT_EQ(reopened.value().userCode->code, project.userCode->code);
+    EXPECT_TRUE(reopened.value().savedWith.empty());
+}
+
+TEST(Archive, ReportsAMissingCodeFile) {
+    const std::string json = R"({"format": "scratch2arduino-project", "formatVersion": 3, "board": "uno",
+        "userCode": {"language": "python", "file": "my_code.py"}})";
+    const auto missing = fromArchive(zipWith("project.json", json));
+    ASSERT_FALSE(missing.ok());
+    EXPECT_EQ(missing.error().code, ErrorCode::InvalidFormat);
+    EXPECT_NE(missing.error().detail.find("my_code.py"), std::string::npos);
+    EXPECT_FALSE(fromArchive(zipOf({{"project.json", json}, {"assets/my_code.py", "x"}})).ok());
+    EXPECT_TRUE(fromArchive(zipOf({{"project.json", json}, {"my_code.py", "x = 1\n"}})).ok());
+    EXPECT_EQ(fromJson(json).error().code, ErrorCode::InvalidFormat) << "a bare project.json has no files";
+}
+
+TEST(Archive, KeepsTheThumbnail) {
+    Project project = blink();
+    project.thumbnail = std::string("\x89PNG\r\n\x1a\n\0data", 13);
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok()) << bytes.error().detail;
+    EXPECT_EQ(entryOf(bytes.value(), "thumbnail.png"), project.thumbnail);
+    const auto reopened = fromArchive(bytes.value());
+    ASSERT_TRUE(reopened.ok());
+    EXPECT_EQ(reopened.value().thumbnail, project.thumbnail);
+    EXPECT_EQ(toArchive(reopened.value()).value(), bytes.value());
+    EXPECT_FALSE(entryOf(toArchive(blink()).value(), "thumbnail.png")) << "no thumbnail, no entry";
+
+    project.thumbnail = std::string(kMaxThumbnailSize + 1, 'x');
+    EXPECT_EQ(toArchive(project).error().code, ErrorCode::WriteFailed);
+    const auto tooBig = fromArchive(zipOf({{"project.json", toJson(blink())}, {"thumbnail.png", project.thumbnail}}));
+    ASSERT_TRUE(tooBig.ok()) << "only a picture: ignored";
+    EXPECT_TRUE(tooBig.value().thumbnail.empty());
+}
+
+TEST(ProjectFile, ReadsOnlyTheThumbnail) {
+    const TempDir dir;
+    Project project = blink();
+    project.thumbnail = "png bytes";
+    ASSERT_TRUE(save(project, dir.path() / "a.s2a").ok());
+    ASSERT_TRUE(save(blink(), dir.path() / "b.s2a").ok());
+    EXPECT_EQ(thumbnailOf(dir.path() / "a.s2a"), "png bytes");
+    EXPECT_EQ(thumbnailOf(dir.path() / "b.s2a"), "");
+    EXPECT_EQ(thumbnailOf(dir.path() / "missing.s2a"), "");
+}
+
+TEST(CodeFileName, FollowsTheLanguage) {
+    EXPECT_EQ(codeFileName(CodeFile::MyCode, ProgramLanguage::Python), "my_code.py");
+    EXPECT_EQ(codeFileName(CodeFile::Program, ProgramLanguage::Cpp), "program.cpp");
+    EXPECT_EQ(codeFileName(CodeFile::Program, ProgramLanguage::Blocks), "");
 }
 
 // Editing must never be blocked: incomplete projects and unknown blocks load fine.

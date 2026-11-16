@@ -25,6 +25,7 @@ import {
 	IconBluetooth,
 	IconCheck,
 	IconDeviceFloppy,
+	IconFile,
 	IconFilePlus,
 	IconFolderOpen,
 	IconHelp,
@@ -97,6 +98,7 @@ import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
+import { codeThumbnail } from "@/thumbnail";
 import {
 	isScript,
 	isStarterCode,
@@ -533,7 +535,9 @@ export function App() {
 			const project = currentProject();
 			const savedEdits = edits.current;
 			await autosaving.current; // an older autosave must not land after the save
-			const saved = await bridge.save(project, path, language);
+			const thumbnail =
+				program === "blocks" ? await editor.current?.thumbnail().catch(() => null) : codeThumbnail(project.code ?? "");
+			const saved = await bridge.save(project, path, language, thumbnail ?? null);
 			if (!saved) return false;
 			setPath(saved);
 			autosavedEdits.current = savedEdits; // the host dropped the autosave
@@ -1128,7 +1132,17 @@ export function App() {
 								<Menu.Label>{t("toolbar.recent")}</Menu.Label>
 								{recent.length === 0 && <Menu.Item disabled>{t("recent.none")}</Menu.Item>}
 								{recent.map((entry) => (
-									<Menu.Item key={entry.path} onClick={() => void openRecent(entry.path)}>
+									<Menu.Item
+										key={entry.path}
+										onClick={() => void openRecent(entry.path)}
+										leftSection={
+											entry.thumbnail ? (
+												<img src={entry.thumbnail} alt="" width={64} height={40} style={{ objectFit: "contain" }} />
+											) : (
+												<IconFile size={20} />
+											)
+										}
+									>
 										<Text size="sm" fw={600} truncate>
 											{entry.name}
 										</Text>

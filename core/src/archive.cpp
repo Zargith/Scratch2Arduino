@@ -1,5 +1,7 @@
-// .s2a archives: a zip file holding project.json and the project assets.
+// .s2a archives: a zip file holding project.json, the code files, a thumbnail and the assets.
 #include "s2a/project.hpp"
+
+#include "project_format.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -75,10 +77,20 @@ Result<std::string> toArchive(const Project& project) {
                                         MZ_DEFAULT_LEVEL, 0, 0) != 0;
     };
     // Enforce the limits fromArchive() applies, so a saved project can always be reopened.
-    const std::string json = toJson(project);
-    std::uint64_t total = json.size();
+    const detail::ArchiveDocument document = detail::toArchiveDocument(project);
+    const std::string& json = document.json;
+    std::uint64_t total = json.size() + project.thumbnail.size();
     if (json.size() > kMaxEntrySize) {
         return Error{ErrorCode::WriteFailed, "project.json is too large"};
+    }
+    if (project.thumbnail.size() > kMaxThumbnailSize) {
+        return Error{ErrorCode::WriteFailed, "the thumbnail is too large"};
+    }
+    for (const auto& [name, code] : document.files) {
+        total += code.size();
+        if (code.size() > kMaxEntrySize) {
+            return Error{ErrorCode::WriteFailed, "the code file '" + name + "' is too large"};
+        }
     }
     for (const auto& [name, data] : project.assets) {
         total += data.size();
@@ -88,6 +100,14 @@ Result<std::string> toArchive(const Project& project) {
     }
     if (!add(std::string(kProjectEntry), json)) {
         return Error{ErrorCode::WriteFailed, "cannot add project.json: " + zip.lastError()};
+    }
+    for (const auto& [name, code] : document.files) {
+        if (!add(name, code)) {
+            return Error{ErrorCode::WriteFailed, "cannot add '" + name + "': " + zip.lastError()};
+        }
+    }
+    if (!project.thumbnail.empty() && !add(std::string(kThumbnailEntry), project.thumbnail)) {
+        return Error{ErrorCode::WriteFailed, "cannot add the thumbnail: " + zip.lastError()};
     }
     for (const auto& [name, data] : project.assets) {
         if (!isSafeAssetName(name)) {
@@ -120,6 +140,7 @@ Result<Project> fromArchive(std::string_view bytes) {
     std::string json;
     bool foundProject = false;
     std::map<std::string, std::string> assets;
+    std::map<std::string, std::string> rootFiles; // code files named in project.json, thumbnail...
     std::uint64_t total = 0;
     const mz_uint count = mz_zip_reader_get_num_files(zip.get());
     for (mz_uint index = 0; index < count; ++index) {
@@ -139,7 +160,8 @@ Result<Project> fromArchive(std::string_view bytes) {
         name.pop_back(); // terminating NUL
         const bool isProject = name == kProjectEntry;
         const bool isAsset = name.rfind(std::string(kAssetsPrefix), 0) == 0;
-        if (!isProject && !isAsset) {
+        const bool isRootFile = name.find('/') == std::string::npos && name.find('\\') == std::string::npos;
+        if (!isProject && !isAsset && !isRootFile) {
             continue; // Unknown entries are ignored, for forward compatibility.
         }
         total += stat.m_uncomp_size;
@@ -153,6 +175,8 @@ Result<Project> fromArchive(std::string_view bytes) {
         if (isProject) {
             json = std::move(content);
             foundProject = true;
+        } else if (isRootFile) {
+            rootFiles[name] = std::move(content);
         } else {
             const std::string assetName = name.substr(kAssetsPrefix.size());
             if (!isSafeAssetName(assetName)) {
@@ -165,11 +189,40 @@ Result<Project> fromArchive(std::string_view bytes) {
         return Error{ErrorCode::InvalidArchive, "the archive has no project.json"};
     }
 
-    auto project = fromJson(json);
+    auto project = detail::fromArchiveDocument(json, rootFiles);
     if (project.ok()) {
         project.value().assets = std::move(assets);
+        const auto thumbnail = rootFiles.find(std::string(kThumbnailEntry));
+        if (thumbnail != rootFiles.end() && thumbnail->second.size() <= kMaxThumbnailSize) {
+            project.value().thumbnail = thumbnail->second; // a bigger one is ignored: it is only a picture
+        }
     }
     return project;
+}
+
+std::string thumbnailOf(const std::filesystem::path& path) {
+    std::error_code error;
+    const auto size = std::filesystem::file_size(path, error);
+    if (error || size > kMaxFileSize) {
+        return {};
+    }
+    std::ifstream in(path, std::ios::binary);
+    const std::string bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    Zip zip;
+    if (!in || !mz_zip_reader_init_mem(zip.get(), bytes.data(), bytes.size(), 0)) {
+        return {};
+    }
+    const int index = mz_zip_reader_locate_file(zip.get(), std::string(kThumbnailEntry).c_str(), nullptr, 0);
+    mz_zip_archive_file_stat stat{};
+    if (index < 0 || !mz_zip_reader_file_stat(zip.get(), static_cast<mz_uint>(index), &stat) ||
+        stat.m_uncomp_size > kMaxThumbnailSize) {
+        return {};
+    }
+    std::string content(static_cast<std::size_t>(stat.m_uncomp_size), '\0');
+    if (!mz_zip_reader_extract_to_mem(zip.get(), static_cast<mz_uint>(index), content.data(), content.size(), 0)) {
+        return {};
+    }
+    return content;
 }
 
 Status save(const Project& project, const std::filesystem::path& path) {
