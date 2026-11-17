@@ -28,7 +28,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Area | What you get |
 |---|---|
 | Programming | Drag-and-drop blocks; **Code** view with the Arduino C++ made from the blocks; **My code**: functions written in C++, Python or JavaScript that become blocks; expert mode for a whole program as text; conversion between the three languages |
-| Boards | Arduino Uno, Nano, Mega 2560, ESP32 (DevKit), ESP8266 (NodeMCU) |
+| Boards | Arduino Uno, Nano, Mega 2560 (included); optional board packages, downloaded only when wanted (installer, Settings, or when such a board is chosen) with their size shown, and removable: ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, RGB LED, buttons, potentiometers, light sensor, joystick, PIR and infrared obstacle sensors, ultrasonic & temperature sensors, servos, DC and stepper motors, LCD / OLED / TM1637 displays, NeoPixels, LED matrix, buzzers... |
 | Live mode | Control the board in real time, watch sensor values, see which block is running; **step by step** (Pause / Next block); a wiring check at start-up |
 | Simulation | No board at hand: run the program on a virtual board, the project's wiring diagram brought to life (LEDs, screens, servos, sounds...); press its buttons and move its sensors with the mouse |
@@ -129,13 +129,14 @@ them to check them before attaching them to the release.
 
 ### Windows
 
-**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) installs Scratch2Arduino **prebuilt** by the CI (programs, Visual C++ runtime, block editor, arduino-cli and the Arduino AVR core for Uno / Nano / Mega, so nothing is downloaded on each computer of a classroom), plus Start-menu and desktop shortcuts and an uninstaller. An expert option builds it on the computer instead (installs CMake and the Visual Studio C++ compiler if needed). Details: [`installer/windows/README.md`](installer/windows/README.md).
+**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) installs Scratch2Arduino **prebuilt** by the CI (programs, Visual C++ runtime, block editor, arduino-cli and the Arduino AVR core for Uno / Nano / Mega, so nothing is downloaded on each computer of a classroom), plus Start-menu and desktop shortcuts and an uninstaller. Optional **board packages** (ESP32, ESP8266) can be ticked on the tasks page, each with its size: they are downloaded at the end of the installation; on an update, those already installed show as such, greyed. An expert option builds Scratch2Arduino on the computer instead (installs CMake and the Visual Studio C++ compiler if needed). Details: [`installer/windows/README.md`](installer/windows/README.md).
 
 ### Linux and macOS from the sources
 
 ```bash
 ./Scratch2Arduino_installer.sh            # installs missing dependencies (apt / dnf / pacman / brew), builds and installs
 ./Scratch2Arduino_installer.sh --user     # same, for the current user only (~/.local)
+./Scratch2Arduino_installer.sh --boards esp32,esp8266   # also download optional board packages
 ./Scratch2Arduino_installer.sh --uninstall
 
 # or, with the dependencies already installed:
@@ -164,6 +165,29 @@ cmake --install build/release
 cmake --preset core-only && cmake --build --preset core-only   # core + tests, no GUI dependencies
 ```
 
+### Board packages
+
+The Arduino AVR boards (Uno, Nano, Mega) come with Scratch2Arduino and work without the Internet. The other
+board families are **optional packages** ([`resources/board-packages.json`](resources/board-packages.json)), each
+one an `arduino-cli` platform at a fixed version:
+
+| Package | Boards | To download | On the disk |
+|---|---|---|---|
+| ESP8266 boards | ESP8266 (NodeMCU) | about 125 MB | about 480 MB |
+| ESP32 boards | ESP32 (DevKit) | about 2 GB | about 8 GB |
+
+They are installed:
+
+- in the Windows installer (tasks page, "More boards"), or with `Scratch2Arduino_installer.sh --boards`;
+- in the application: **Settings > More boards** (install, update, remove, with the sizes);
+- when a board whose package is missing is chosen (the board list shows it "(to install)"), when a project
+  using it is opened, or before Check, Upload or Live: the application offers to download it. The virtual
+  board works without the package;
+- with `s2a-cli board install <package>`.
+
+The size to download is read from the board indexes of `arduino-cli` (the estimate above until they are
+downloaded). Removing a package also removes its downloaded archives.
+
 ### Check the toolchain with `s2a-cli`
 
 `s2a-cli` is installed next to the application. It uses the same bundled `arduino-cli` and the same
@@ -172,7 +196,10 @@ friendly messages, and is handy to check a classroom computer before a workshop:
 ```bash
 s2a-cli boards                                        # supported boards
 s2a-cli ports                                         # plugged-in boards (port and board name)
-s2a-cli setup                                         # download the board tools once (Internet needed)
+s2a-cli setup                                         # install the tools of the shipped boards (Uno, Nano, Mega)
+s2a-cli board list                                    # board packages: installed or not, size to download / on the disk
+s2a-cli board install esp32                           # download an optional board package (Internet needed)
+s2a-cli board remove esp32                            # remove it and its downloaded archives
 s2a-cli compile examples/sketches/blink --board uno
 s2a-cli upload examples/sketches/blink --board uno --port /dev/ttyACM0   # COM3 on Windows
 
@@ -409,7 +436,7 @@ and are saved in the new layout. A bare `project.json` (the examples) keeps the 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools (several hundred MB) are downloaded the first time an ESP32 project is built. The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0-D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools are the optional "ESP32 boards" package (about 2 GB to download, 8 GB on the disk), installed only when wanted (see [Board packages](#board-packages)). The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0-D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 

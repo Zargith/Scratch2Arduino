@@ -1,5 +1,7 @@
 #include "s2a/arduino_cli.hpp"
 
+#include "s2a/board_packages.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -150,13 +152,6 @@ fs::path locateArduinoCli() {
 ArduinoCli::ArduinoCli(fs::path executable, Directories directories, process::Runner runner)
     : executable_(std::move(executable)), directories_(std::move(directories)), runner_(std::move(runner)) {}
 
-namespace {
-// Space-separated, as arduino-cli reads lists from the environment.
-constexpr std::string_view kAdditionalBoardIndexes =
-    "https://espressif.github.io/arduino-esp32/package_esp32_index.json "
-    "https://arduino.esp8266.com/stable/package_esp8266com_index.json";
-} // namespace
-
 Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chrono::milliseconds timeout) const {
     process::Command command;
     command.program = executable_;
@@ -168,8 +163,8 @@ Result<process::Output> ArduinoCli::run(std::vector<std::string> args, std::chro
         {"ARDUINO_DIRECTORIES_DOWNLOADS", directories_.downloads.u8string()},
         {"ARDUINO_DIRECTORIES_USER", directories_.user.u8string()},
         {"ARDUINO_UPDATER_ENABLE_NOTIFICATION", "false"},
-        // Where arduino-cli finds the boards that Arduino does not publish (ESP32, ESP8266).
-        {"ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS", std::string(kAdditionalBoardIndexes)},
+        // Where arduino-cli finds the boards that Arduino does not publish (ESP32, ESP8266, Pico).
+        {"ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS", BoardPackages::builtin().additionalIndexUrls()},
     };
     command.timeout = timeout;
     return runner_(command);
@@ -188,7 +183,7 @@ Result<std::string> ArduinoCli::version() const {
     return version;
 }
 
-Result<bool> ArduinoCli::isPlatformInstalled(std::string_view platform) const {
+Result<std::vector<InstalledPlatform>> ArduinoCli::installedPlatforms() const {
     auto output = run({"core", "list"}, kQuickTimeout);
     if (!output.ok()) {
         return output.error();
@@ -196,15 +191,26 @@ Result<bool> ArduinoCli::isPlatformInstalled(std::string_view platform) const {
     if (!output.value().succeeded()) {
         return Error{ErrorCode::ProcessFailed, "arduino-cli core list failed: " + output.value().err};
     }
+    std::vector<InstalledPlatform> platforms;
     const Json json = parseOutput(output.value().out);
     if (json.contains("platforms") && json.at("platforms").is_array()) {
         for (const Json& entry : json.at("platforms")) {
-            if (stringOr(entry, "id") == platform && !stringOr(entry, "installed_version").empty()) {
-                return true;
+            InstalledPlatform platform{stringOr(entry, "id"), stringOr(entry, "installed_version")};
+            if (!platform.id.empty() && !platform.version.empty()) {
+                platforms.push_back(std::move(platform));
             }
         }
     }
-    return false;
+    return platforms;
+}
+
+Result<bool> ArduinoCli::isPlatformInstalled(std::string_view platform) const {
+    auto platforms = installedPlatforms();
+    if (!platforms.ok()) {
+        return platforms.error();
+    }
+    return std::any_of(platforms.value().begin(), platforms.value().end(),
+                       [&](const InstalledPlatform& installed) { return installed.id == platform; });
 }
 
 namespace {
@@ -264,16 +270,19 @@ std::string ArduinoCli::seededVersion(std::string_view platform) const {
     return {};
 }
 
-Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) const {
+Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform, std::string_view version) const {
     seedFromBundle();
     std::error_code error;
     const bool haveIndex = fs::is_regular_file(directories_.data / "package_index.json", error);
     std::string target(platform);
-    if (const std::string version = seededVersion(platform); !version.empty() && haveIndex) {
+    if (const std::string seeded = seededVersion(platform); !seeded.empty() && haveIndex) {
         // Shipped by the installer: this exact version is in the downloads folder, so nothing is
         // downloaded (a whole classroom on the same Wi-Fi installs in seconds).
-        target += "@" + version;
+        target += "@" + seeded;
     } else {
+        if (!version.empty()) {
+            target += "@" + std::string(version);
+        }
         auto index = run({"core", "update-index"}, kInstallTimeout);
         if (!index.ok()) {
             return index.error();
@@ -288,6 +297,14 @@ Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) co
         return install.error();
     }
     return commandOutcome(install.value());
+}
+
+Result<CommandOutcome> ArduinoCli::uninstallPlatform(std::string_view platform) const {
+    auto output = run({"core", "uninstall", std::string(platform)}, kInstallTimeout);
+    if (!output.ok()) {
+        return output.error();
+    }
+    return commandOutcome(output.value());
 }
 
 Result<std::vector<std::string>> ArduinoCli::installedLibraries() const {

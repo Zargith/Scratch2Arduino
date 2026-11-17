@@ -3,6 +3,7 @@
 #include "s2a/script.hpp"
 #include "s2a/usercode.hpp"
 
+#include "s2a/board_packages.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/network.hpp"
@@ -1840,7 +1841,7 @@ Status uploadFirmware(const toolchain::ArduinoCli& cli, const Board& board, cons
         }
     }
     if (auto installed = cli.isPlatformInstalled(board.platform); installed.ok() && !installed.value()) {
-        if (auto outcome = cli.installPlatform(board.platform); !outcome.ok()) {
+        if (auto outcome = toolchain::installPackageOf(cli, board); !outcome.ok()) {
             return outcome.error();
         }
     }

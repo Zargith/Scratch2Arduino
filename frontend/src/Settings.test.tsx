@@ -44,6 +44,9 @@ describe("settings window", () => {
 						version="0.9.0"
 						board="Arduino Uno"
 						settings={{ language: "", checkUpdates: true, theme: "" }}
+						boardPackages={null}
+						onBoardPackagesChanged={async () => undefined}
+						hasHost={false}
 						onLanguage={onLanguage}
 						onSettings={onSettings}
 						onUpdate={() => undefined}
@@ -92,6 +95,9 @@ describe("settings window", () => {
 						version="0.9.0"
 						board="Arduino Uno"
 						settings={{ language: "", checkUpdates: true, theme: "" }}
+						boardPackages={null}
+						onBoardPackagesChanged={async () => undefined}
+						hasHost={false}
 						onLanguage={() => undefined}
 						onSettings={() => undefined}
 						onUpdate={() => undefined}

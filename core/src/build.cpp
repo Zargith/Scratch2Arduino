@@ -1,6 +1,7 @@
 #include "s2a/build.hpp"
 
 #include "s2a/blocks.hpp"
+#include "s2a/board_packages.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/diagnostics.hpp"
 #include "s2a/script.hpp"
@@ -238,7 +239,7 @@ BuildResult buildProject(const ArduinoCli& cli, const project::Project& input, L
     }
     if (!installed.value()) {
         notify(options, BuildStep::InstallingTools);
-        const auto outcome = cli.installPlatform(board->platform);
+        const auto outcome = toolchain::installPackageOf(cli, *board);
         if (!outcome.ok()) {
             return failure(tr(errorMessageKey(outcome.error().code), language), outcome.error().detail);
         }

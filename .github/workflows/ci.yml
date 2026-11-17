@@ -121,6 +121,19 @@ jobs:
             "$cli" setup --board esp8266
             "$cli" compile examples/sketches/blink --board esp8266 --lang en --verbose
             "$cli" compile firmware/s2a_live --board esp8266 --lang en --verbose
+            # Optional board packages: listed with their size, removed with their archives.
+            "$cli" board list --lang en
+            data="$HOME/.local/share/Scratch2Arduino/arduino"
+            "$cli" board remove esp8266 --lang en
+            if ls "$data/data/packages/esp8266/hardware/esp8266/"* >/dev/null 2>&1; then
+              echo "::error::the ESP8266 boards are still installed"; exit 1
+            fi
+            if ls "$data/downloads/packages/" | grep -q '^esp8266-'; then
+              echo "::error::the ESP8266 archive was not removed"; exit 1
+            fi
+            if "$cli" board remove arduino-avr --lang en; then
+              echo "::error::the shipped boards were removed"; exit 1
+            fi
           fi
 
       - name: Packages (.deb and .rpm on Linux, .dmg on macOS)
@@ -305,6 +318,9 @@ jobs:
 
       - name: Build Scratch2Arduino_installer.exe
         run: |
+          # The optional board packages (resources/board-packages.json) become tasks of the installer.
+          cmake -P installer\windows\board-packages.cmake
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # Scratch2Arduino_installer.exe takes its version from CMakeLists.txt.
           $version = (Select-String -Path CMakeLists.txt -Pattern '^\s*VERSION ([0-9.]+)$' | Select-Object -First 1).Matches[0].Groups[1].Value
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DPrebuiltDir=$PWD\installer\windows\prebuilt" installer\windows\scratch2arduino.iss
@@ -352,6 +368,25 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing after the update' }
+
+      - name: A board package chosen in the installer is downloaded for the user
+        run: |
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-boards.log" -Tasks board_esp8266
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
+          Select-String -Path "$env:RUNNER_TEMP\setup-boards.log" -Pattern 'Board package' | ForEach-Object { $_.Line }
+          $hardware = Join-Path $env:LOCALAPPDATA 'Scratch2Arduino\arduino\data\packages\esp8266\hardware\esp8266'
+          if (-not (Get-ChildItem $hardware -Directory -ErrorAction SilentlyContinue)) { throw 'the ESP8266 boards were not installed' }
+          & "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" board list --lang en
+          # Updating: the package is found installed, so it is not downloaded again.
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-boards-update.log" -Tasks board_esp8266
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
+          if (-not (Select-String -Path "$env:RUNNER_TEMP\setup-boards-update.log" -Pattern 'Board package already installed: esp8266' -Quiet)) {
+            throw 'the update did not see that the ESP8266 boards are installed'
+          }
+          if (Select-String -Path "$env:RUNNER_TEMP\setup-boards-update.log" -Pattern 'Board packages to install' -Quiet) {
+            throw 'the update downloaded the ESP8266 boards again'
+          }
+          if (Test-Path "$env:ProgramData\Scratch2Arduino\setup\boards-output.txt") { throw 'boards-output.txt was not removed' }
 
       - name: The installer refuses to update while Scratch2Arduino is open
         run: |

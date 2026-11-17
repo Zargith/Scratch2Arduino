@@ -1,5 +1,6 @@
 // Core headers first: webview.h (via bridge.hpp) brings X11 macros on Linux.
 #include "s2a/arduino_cli.hpp"
+#include "s2a/board_packages.hpp"
 #include "s2a/boards.hpp"
 #include "s2a/build.hpp"
 #include "s2a/codegen.hpp"
@@ -1006,6 +1007,75 @@ void Bridge::bind() {
         "s2a_library_uninstall",
         [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
             libraryChange(id, request, false);
+        },
+        nullptr);
+
+    // Optional board packages (ESP32, ESP8266...): listed with their size, installed and removed
+    // from the settings or when a board that needs one is chosen.
+    window_.bind(
+        "s2a_board_packages",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const auto cli = arduinoCli(language);
+                const auto states = toolchain::packageStates(cli);
+                if (!states.ok()) {
+                    throw UserError{tr(errorMessageKey(states.error().code), language)};
+                }
+                Json list = Json::array();
+                for (const auto& state : states.value()) {
+                    const auto& package = *state.package;
+                    list.push_back({{"id", package.id},
+                                    {"name", package.name(language)},
+                                    {"boards", package.boards},
+                                    {"shipped", package.shipped},
+                                    {"version", package.version},
+                                    {"installedVersion", state.installedVersion},
+                                    {"downloadBytes", state.downloadBytes},
+                                    {"diskBytes", state.diskBytes}});
+                }
+                return list.dump();
+            });
+        },
+        nullptr);
+    const auto packageChange = [this](const std::string& id, const std::string& request, bool install) {
+        async(id, [request, install, this]() {
+            const Json args = Json::parse(request);
+            const Language language = languageArg(args, 1, language_);
+            const auto* package = toolchain::BoardPackages::builtin().find(stringArg(args, 0));
+            if (package == nullptr) {
+                throw UserError{tr("error.unknown_board", language)};
+            }
+            const auto cli = arduinoCli(language);
+            const std::lock_guard<std::mutex> lock(packagesMutex_);
+            const auto outcome =
+                install ? toolchain::installBoardPackage(cli, *package) : toolchain::removeBoardPackage(cli, *package);
+            if (!outcome.ok()) {
+                throw UserError{tr(errorMessageKey(outcome.error().code), language)};
+            }
+            if (const auto diagnosis = toolchain::diagnoseInstall(outcome.value());
+                diagnosis.problem != toolchain::Problem::None) {
+                return Json{{"ok", false},
+                            {"message", toolchain::describe(diagnosis, language)},
+                            {"details", diagnosis.technical}}
+                    .dump();
+            }
+            return Json{{"ok", outcome.value().success},
+                        {"message", outcome.value().success ? std::string{} : outcome.value().error},
+                        {"details", outcome.value().out + outcome.value().err}}
+                .dump();
+        });
+    };
+    window_.bind(
+        "s2a_board_package_install",
+        [packageChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            packageChange(id, request, true);
+        },
+        nullptr);
+    window_.bind(
+        "s2a_board_package_remove",
+        [packageChange](const std::string& id, const std::string& request, void* /*arg*/) {
+            packageChange(id, request, false);
         },
         nullptr);
 

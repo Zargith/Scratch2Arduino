@@ -12,6 +12,7 @@
 // A project is a .s2a file or a project.json; its board is used unless --board is given.
 //   options: --lang fr|en, --verbose
 #include "s2a/arduino_cli.hpp"
+#include "s2a/board_packages.hpp"
 #include "s2a/boards.hpp"
 #include "s2a/codegen.hpp"
 #include "s2a/convert.hpp"
@@ -149,6 +150,8 @@ private:
     int liveCommand() const;
     /// lib list | search <words> | install <name>[@<version>] | remove <name>
     int libCommand() const;
+    /// board list | install <package>... | remove <package>
+    int boardCommand() const;
     /// Python and JavaScript projects in Live mode.
     int runScript(const s2a::project::Project& project, const s2a::Board& selected, s2a::live::LiveLink& link) const;
     int version() const;
@@ -191,7 +194,7 @@ int Cli::ensurePlatform(const ArduinoCli& cli, const s2a::Board& board) const {
         return kSuccess;
     }
     print("cli.installing_platform", {{"board", board.name}});
-    const auto outcome = cli.installPlatform(board.platform);
+    const auto outcome = s2a::toolchain::installPackageOf(cli, board);
     if (!outcome.ok()) {
         std::cerr << tr(s2a::errorMessageKey(outcome.error().code)) << '\n';
         return kFailure;
@@ -506,10 +509,11 @@ int Cli::setup() const {
         }
         boards.push_back(selected);
     } else {
-        std::set<std::string> platforms;
-        for (const auto& known : s2a::BoardDatabase::builtin().boards()) {
-            if (platforms.insert(known.platform).second) {
-                boards.push_back(&known);
+        // The boards shipped with the application; the others are installed on request
+        // (s2a-cli board install).
+        for (const auto& package : s2a::toolchain::BoardPackages::builtin().packages()) {
+            if (package.shipped && !package.boards.empty()) {
+                boards.push_back(s2a::BoardDatabase::builtin().find(package.boards.front()));
             }
         }
     }
@@ -788,6 +792,128 @@ int Cli::libCommand() const {
     return outcome(cli->uninstallLibrary(args[1]));
 }
 
+int Cli::boardCommand() const {
+    using s2a::toolchain::BoardPackage;
+    using s2a::toolchain::BoardPackages;
+    using s2a::toolchain::formatSize;
+    const auto& args = options_.positional;
+    const std::string action = args.empty() ? std::string{} : args[0];
+    const bool valid = action == "list" ? args.size() == 1
+                       : action == "install" ? args.size() >= 2
+                       : action == "remove" ? args.size() == 2
+                                            : false;
+    if (!valid) {
+        print("cli.usage");
+        return kUsage;
+    }
+    const BoardPackages& packages = BoardPackages::builtin();
+    std::vector<const BoardPackage*> selected;
+    for (std::size_t index = 1; index < args.size(); ++index) {
+        const BoardPackage* package = packages.find(args[index]);
+        if (package == nullptr) {
+            std::string ids;
+            for (const auto& known : packages.packages()) {
+                ids += (ids.empty() ? "" : ", ") + known.id;
+            }
+            fail("cli.unknown_package", {{"package", args[index]}, {"packages", ids}});
+            return kUsage;
+        }
+        selected.push_back(package);
+    }
+    const auto cli = arduinoCli();
+    if (!cli) {
+        return kFailure;
+    }
+    const auto error = [&](const s2a::Error& failed) {
+        std::cerr << tr(s2a::errorMessageKey(failed.code)) << '\n';
+        if (options_.verbose) {
+            std::cerr << failed.detail << '\n';
+        }
+        return kFailure;
+    };
+    const auto outcome = [&](const s2a::Result<s2a::toolchain::CommandOutcome>& result) {
+        if (!result.ok()) {
+            return error(result.error());
+        }
+        if (const auto diagnosis = s2a::toolchain::diagnoseInstall(result.value());
+            diagnosis.problem != s2a::toolchain::Problem::None) {
+            return report(diagnosis);
+        }
+        if (!result.value().success) {
+            std::cerr << result.value().error << '\n';
+            return kFailure;
+        }
+        return kSuccess;
+    };
+    const auto states = s2a::toolchain::packageStates(*cli, packages);
+    if (!states.ok()) {
+        return error(states.error());
+    }
+    const auto stateOf = [&](const BoardPackage& package) {
+        return *std::find_if(states.value().begin(), states.value().end(),
+                             [&](const auto& state) { return state.package == &package; });
+    };
+    const s2a::Language language = options_.language;
+    if (action == "list") {
+        for (const auto& state : states.value()) {
+            const BoardPackage& package = *state.package;
+            std::string boards;
+            for (const auto& id : package.boards) {
+                const auto* known = s2a::BoardDatabase::builtin().find(id);
+                boards += (boards.empty() ? "" : ", ") + (known != nullptr ? known->name : id);
+            }
+            std::string status;
+            if (!state.installedVersion.empty()) {
+                status = tr("cli.package_installed",
+                            {{"version", state.installedVersion}, {"size", formatSize(state.diskBytes, language)}});
+                if (state.downloadBytes > 0) {
+                    status += " " + tr("cli.package_update", {{"version", package.version},
+                                                               {"size", formatSize(state.downloadBytes, language)}});
+                }
+            } else if (package.shipped) {
+                status = tr("cli.package_shipped");
+            } else {
+                status = tr("cli.package_available", {{"download", formatSize(state.downloadBytes, language)},
+                                                      {"disk", formatSize(state.diskBytes, language)}});
+            }
+            std::cout << package.id << "\t" << package.name(language) << " (" << boards << ")\t" << status << '\n';
+        }
+        return kSuccess;
+    }
+    if (action == "install") {
+        for (const BoardPackage* package : selected) {
+            const auto state = stateOf(*package);
+            if (!state.installedVersion.empty() && state.downloadBytes == 0) {
+                print("cli.package_already", {{"package", package->name(language)}});
+                continue;
+            }
+            print("cli.installing_package",
+                  {{"package", package->name(language)}, {"size", formatSize(state.downloadBytes, language)}});
+            if (const int status = outcome(s2a::toolchain::installBoardPackage(*cli, *package)); status != kSuccess) {
+                return status;
+            }
+        }
+        print("cli.done");
+        return kSuccess;
+    }
+    const BoardPackage& package = *selected.front();
+    if (package.shipped) {
+        fail("cli.package_kept", {{"package", package.name(language)}});
+        return kFailure;
+    }
+    const auto state = stateOf(package);
+    if (state.installedVersion.empty()) {
+        print("cli.package_absent", {{"package", package.name(language)}});
+        return kSuccess;
+    }
+    print("cli.removing_package", {{"package", package.name(language)}, {"size", formatSize(state.diskBytes, language)}});
+    if (const int status = outcome(s2a::toolchain::removeBoardPackage(*cli, package)); status != kSuccess) {
+        return status;
+    }
+    print("cli.done");
+    return kSuccess;
+}
+
 int Cli::version() const {
     std::cout << s2a::version::kAppName << ' ' << s2a::version::kString << '\n';
     const fs::path executable = s2a::toolchain::locateArduinoCli();
@@ -834,6 +960,9 @@ int Cli::run() {
     }
     if (options_.command == "lib") {
         return libCommand();
+    }
+    if (options_.command == "board") {
+        return boardCommand();
     }
     if (options_.command == "version" || options_.command == "--version") {
         return version();

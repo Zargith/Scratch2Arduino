@@ -5,6 +5,7 @@ configure_file(include/s2a/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated
 
 add_library(s2a_core STATIC
     src/arduino_cli.cpp
+    src/board_packages.cpp
     src/blocks.cpp
     src/build.cpp
     src/validator.cpp
@@ -49,6 +50,7 @@ file(GLOB S2A_CORE_RESOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/resources/i18n/*.json"
     "${PROJECT_SOURCE_DIR}/resources/boards/*.json"
     "${PROJECT_SOURCE_DIR}/resources/components.json"
+    "${PROJECT_SOURCE_DIR}/resources/board-packages.json"
     "${PROJECT_SOURCE_DIR}/blocks/catalog/*.json"
     "${PROJECT_SOURCE_DIR}/firmware/s2a_live/s2a_live.ino"
 )
