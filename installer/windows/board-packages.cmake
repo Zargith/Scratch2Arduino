@@ -1,5 +1,6 @@
 # Writes the optional board packages of resources/board-packages.json as Inno Setup snippets,
-# included by scratch2arduino.iss (one task per package, with its size, under "More boards"):
+# included by scratch2arduino.iss (one task per package under "More boards"; its sizes are shown
+# beside it by the installer code):
 #   cmake -P installer/windows/board-packages.cmake
 # Output, next to this script (not in git): board-tasks.isi, board-messages.isi, board-code.isi.
 # Without them, the installer is built without the board tasks.
@@ -8,31 +9,6 @@ cmake_minimum_required(VERSION 3.25)
 get_filename_component(here "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 get_filename_component(root "${here}/../.." ABSOLUTE)
 file(READ "${root}/resources/board-packages.json" json)
-
-# Sizes as the application writes them (decimal units): "1,9 Go" / "1.9 GB", "125 Mo" / "125 MB".
-function(format_size bytes language out)
-    if(bytes GREATER_EQUAL 1000000000)
-        set(unit 1000000000)
-        set(name_fr "Go")
-        set(name_en "GB")
-    else()
-        set(unit 1000000)
-        set(name_fr "Mo")
-        set(name_en "MB")
-    endif()
-    math(EXPR tenths "(${bytes} * 10 + ${unit} / 2) / ${unit}")
-    math(EXPR whole "${tenths} / 10")
-    math(EXPR decimal "${tenths} % 10")
-    set(text "${whole}")
-    if(tenths LESS 100 AND NOT decimal EQUAL 0)
-        if(language STREQUAL "fr")
-            set(text "${whole},${decimal}")
-        else()
-            set(text "${whole}.${decimal}")
-        endif()
-    endif()
-    set(${out} "${text} ${name_${language}}" PARENT_SCOPE)
-endfunction()
 
 # Board names, by platform ("ESP32 (DevKit)").
 file(GLOB board_files "${root}/resources/boards/*.json")
@@ -50,6 +26,8 @@ set(messages "")
 set(names_case "")
 set(ids_case "")
 set(dirs_case "")
+set(download_case "")
+set(disk_case "")
 set(count 0)
 string(JSON package_count LENGTH "${json}" packages)
 math(EXPR last "${package_count} - 1")
@@ -71,17 +49,18 @@ foreach(i RANGE ${last})
     string(REPLACE ":" ";" parts "${platform}")
     list(GET parts 0 vendor)
     list(GET parts 1 arch)
-    format_size(${download} fr download_fr)
-    format_size(${disk} fr disk_fr)
-    format_size(${download} en download_en)
-    format_size(${disk} en disk_en)
+    # Megabytes (rounded): the sizes go into Integer values of the installer code.
+    math(EXPR download_mb "(${download} + 500000) / 1000000")
+    math(EXPR disk_mb "(${disk} + 500000) / 1000000")
 
     string(APPEND tasks "Name: \"${task}\"; Description: \"{cm:${task}}\"; GroupDescription: \"{cm:BoardPackages}\"; Flags: unchecked\n")
-    string(APPEND messages "french.${task}=${name_fr} (${board_names}) : environ ${download_fr} à télécharger, ${disk_fr} sur le disque\n")
-    string(APPEND messages "english.${task}=${name_en} (${board_names}): about ${download_en} to download, ${disk_en} on the disk\n")
+    string(APPEND messages "french.${task}=${name_fr} : ${board_names}\n")
+    string(APPEND messages "english.${task}=${name_en}: ${board_names}\n")
     string(APPEND names_case "    ${count}: Result := '${task}';\n")
     string(APPEND ids_case "    ${count}: Result := '${id}';\n")
     string(APPEND dirs_case "    ${count}: Result := '${vendor}\\hardware\\${arch}';\n")
+    string(APPEND download_case "    ${count}: Result := ${download_mb};\n")
+    string(APPEND disk_case "    ${count}: Result := ${disk_mb};\n")
     math(EXPR count "${count} + 1")
 endforeach()
 
@@ -119,6 +98,22 @@ function BoardPackageDir(I: Integer): String;
 begin
   case I of
 ${dirs_case}  else Result := '';
+  end;
+end;
+
+// Estimated download of package I, in megabytes.
+function BoardDownloadMB(I: Integer): Integer;
+begin
+  case I of
+${download_case}  else Result := 0;
+  end;
+end;
+
+// Estimated room on the disk of package I once installed, in megabytes.
+function BoardDiskMB(I: Integer): Integer;
+begin
+  case I of
+${disk_case}  else Result := 0;
   end;
 end;
 ")

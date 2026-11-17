@@ -1,0 +1,46 @@
+{
+  "id": "micro",
+  "name": "Arduino Micro",
+  "fqbn": "arduino:avr:micro",
+  "platform": "arduino:avr",
+  "mcu": "ATmega32U4",
+  "voltage": 5,
+  "flashBytes": 28672,
+  "ramBytes": 2560,
+  "bluetoothModule": true,
+  "builtinLed": "13",
+  "digitalPins": 17,
+  "analogPins": {
+    "count": 6,
+    "firstNumber": 18,
+    "inputOnly": []
+  },
+  "pwmPins": ["3", "5", "6", "9", "10", "11", "13"],
+  "interruptPins": ["0", "1", "2", "3", "7"],
+  "i2c": { "sda": "2", "scl": "3" },
+  "spi": { "mosi": "16", "miso": "14", "sck": "15" },
+  "softwareSerialRx": ["8", "9", "10", "11", "14", "15", "16"],
+  "usb": ["2341:8037", "2341:0037", "2A03:8037", "2A03:0037"],
+  "drawing": {
+    "width": 380,
+    "height": 130,
+    "colour": "#00708A",
+    "title": "MICRO",
+    "headers": [
+      {
+        "side": "top",
+        "x": 45,
+        "y": 14,
+        "pitch": 17,
+        "pins": ["D12|12", "D11|11", "D10|10", "D9|9", "D8|8", "D7|7", "D6|6", "D5|5", "D4|4", "D3 SCL|3", "D2 SDA|2", "GND", "RST|-", "RX 0|0", "TX 1|1", "SS|-", "MOSI 16|16"]
+      },
+      {
+        "side": "bottom",
+        "x": 45,
+        "y": 116,
+        "pitch": 17,
+        "pins": ["D13|13", "3V3", "AREF|-", "A0", "A1", "A2", "A3", "A4", "A5", "NC|-", "NC|-", "5V", "RST|-", "GND", "VIN", "MISO 14|14", "SCK 15|15"]
+      }
+    ]
+  }
+}

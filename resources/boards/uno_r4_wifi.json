@@ -1,0 +1,45 @@
+{
+  "id": "uno_r4_wifi",
+  "name": "Arduino Uno R4 WiFi",
+  "fqbn": "arduino:renesas_uno:unor4wifi",
+  "platform": "arduino:renesas_uno",
+  "mcu": "RA4M1",
+  "voltage": 5,
+  "flashBytes": 262144,
+  "ramBytes": 32768,
+  "bluetoothModule": false,
+  "builtinLed": "13",
+  "digitalPins": 14,
+  "analogPins": {
+    "count": 6,
+    "firstNumber": 14,
+    "inputOnly": []
+  },
+  "pwmPins": ["3", "5", "6", "9", "10", "11"],
+  "interruptPins": ["2", "3"],
+  "i2c": { "sda": "A4", "scl": "A5" },
+  "spi": { "mosi": "11", "miso": "12", "sck": "13", "ss": "10" },
+  "usb": ["2341:1002", "2341:006D"],
+  "drawing": {
+    "width": 520,
+    "height": 400,
+    "colour": "#00878F",
+    "title": "UNO R4 WIFI",
+    "headers": [
+      {
+        "side": "top",
+        "x": 160,
+        "y": 18,
+        "pitch": 17,
+        "pins": ["SCL", "SDA", "AREF", "GND", "13", "12", "11", "10", "9", "8", null, "7", "6", "5", "4", "3", "2", "TX 1|1", "RX 0|0"]
+      },
+      {
+        "side": "bottom",
+        "x": 186,
+        "y": 382,
+        "pitch": 17,
+        "pins": ["IOREF", "RESET", "3.3V", "5V", "GND", "GND", "VIN", null, "A0", "A1", "A2", "A3", "A4", "A5"]
+      }
+    ]
+  }
+}

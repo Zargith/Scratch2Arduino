@@ -1,0 +1,45 @@
+{
+  "id": "leonardo",
+  "name": "Arduino Leonardo",
+  "fqbn": "arduino:avr:leonardo",
+  "platform": "arduino:avr",
+  "mcu": "ATmega32U4",
+  "voltage": 5,
+  "flashBytes": 28672,
+  "ramBytes": 2560,
+  "bluetoothModule": true,
+  "builtinLed": "13",
+  "digitalPins": 14,
+  "analogPins": {
+    "count": 6,
+    "firstNumber": 18,
+    "inputOnly": []
+  },
+  "pwmPins": ["3", "5", "6", "9", "10", "11", "13"],
+  "interruptPins": ["0", "1", "2", "3", "7"],
+  "i2c": { "sda": "2", "scl": "3" },
+  "softwareSerialRx": ["8", "9", "10", "11"],
+  "usb": ["2341:8036", "2341:0036", "2A03:8036", "2A03:0036"],
+  "drawing": {
+    "width": 520,
+    "height": 400,
+    "colour": "#00878F",
+    "title": "LEONARDO",
+    "headers": [
+      {
+        "side": "top",
+        "x": 160,
+        "y": 18,
+        "pitch": 17,
+        "pins": ["SCL", "SDA", "AREF", "GND", "13", "12", "11", "10", "9", "8", null, "7", "6", "5", "4", "3", "2", "TX 1|1", "RX 0|0"]
+      },
+      {
+        "side": "bottom",
+        "x": 186,
+        "y": 382,
+        "pitch": 17,
+        "pins": ["IOREF", "RESET", "3.3V", "5V", "GND", "GND", "VIN", null, "A0", "A1", "A2", "A3", "A4", "A5"]
+      }
+    ]
+  }
+}

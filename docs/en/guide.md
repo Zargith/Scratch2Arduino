@@ -40,14 +40,20 @@ page, in the *Assets* part of the latest version.
 1. Download `Scratch2Arduino_installer.exe` and run it.
 2. If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
    signed yet).
-3. The installer copies Scratch2Arduino, ready to use, with shortcuts on the desktop and in the Start menu.
+3. Choose the language of the installer (French or English), then the kind of installation: **simple**
+   (advised: the usual folder, nothing else to choose) or **advanced** (choose the folder, and the expert
+   option to build Scratch2Arduino on the computer). An update suggests the kind chosen last time.
+4. The installer copies Scratch2Arduino, ready to use, with shortcuts on the desktop and in the Start menu.
    It takes about a minute and needs no internet (except on an old Windows 10 without Microsoft WebView2,
    which it then installs). The tools for the Uno, Nano and Mega are included: no download at the first
    upload either, handy for a whole classroom on the same Wi-Fi.
-4. On the tasks page, *More boards* lists the optional board packages (ESP32, ESP8266) with their size: tick
-   those you want, they are downloaded at the end of the installation (Internet needed). When updating, the
-   packages already installed show "(already installed)", greyed. You can also install them later in
-   Scratch2Arduino (see [The boards' tools](#the-boards-tools)).
+5. The tasks page shows, from top to bottom: *More boards*, the optional board packages (Nano Every, Uno R4,
+   Raspberry Pi Pico, ESP32, ESP8266) with their size to download and on the disk in a column on the right;
+   above the list, the total of the ticked boards and the free room on the disk. Ticked boards are downloaded
+   at the end of the installation (Internet needed). When updating, the packages already installed show
+   "already installed", greyed. You can also install them later in Scratch2Arduino (see
+   [The boards' tools](#the-boards-tools)). Then, in advanced mode only, the expert option to build
+   Scratch2Arduino on the computer, and last the desktop icon.
 
 To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
 
@@ -115,11 +121,14 @@ this check off.
 
 ### The boards' tools
 
-The tools for the Arduino Uno, Nano and Mega come with Scratch2Arduino. The other boards are **optional
+The tools for the Arduino Uno, Nano, Mega, Leonardo and Micro come with Scratch2Arduino. The other boards are **optional
 packages**, downloaded only if you want them (Internet needed that time, then never again):
 
 | Package | Boards | To download | On the disk |
 |---|---|---|---|
+| Arduino megaAVR boards | Arduino Nano Every | about 40 MB | about 290 MB |
+| Arduino Uno R4 boards | Arduino Uno R4 Minima, Uno R4 WiFi | about 125 MB | about 730 MB |
+| Raspberry Pi Pico boards | Raspberry Pi Pico, Pico W | about 450 MB | about 2.1 GB |
 | ESP8266 boards | ESP8266 (NodeMCU) | about 125 MB | about 480 MB |
 | ESP32 boards | ESP32 (DevKit) | about 2 GB | about 8 GB |
 
@@ -136,8 +145,12 @@ computer.
 
 1. Plug the board in with a **data** USB cable (some cables only charge: if the board never shows up,
    try another cable).
-2. In the top bar, choose the **Board** (Arduino Uno, Nano, Mega 2560, ESP32 DevKit or ESP8266 NodeMCU; the
-   ESP boards first need their package, see [The boards' tools](#the-boards-tools)).
+2. In the top bar, choose the **Board**: Arduino Uno, Nano, Mega 2560, Leonardo, Micro, Nano Every, Uno R4
+   Minima or WiFi, Raspberry Pi Pico or Pico W, ESP32 DevKit or ESP8266 NodeMCU (all but the first five first
+   need their package, see [The boards' tools](#the-boards-tools)). The **first upload to a new Raspberry Pi
+   Pico**: unplug it, hold its **BOOTSEL** button while plugging it back in, release it (it shows up as a USB
+   drive), then click Upload; later uploads work without the button. On a Pico the pins are named GP0 to
+   GP28 (as printed on the board) and the on-board LED is the pin "LED".
 3. Choose the **Port**: the list shows the plugged-in boards. If it is empty, click
    **Look for plugged-in boards** (the circular arrow next to it).
 

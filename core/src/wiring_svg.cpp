@@ -860,7 +860,7 @@ private:
         const double w = boardWidth();
         const double h = boardHeight();
         const std::string colour = board_.drawing.colour.empty() ? "#00878F" : board_.drawing.colour;
-        const bool arduino = board_.architecture == "avr";
+        const bool arduino = board_.fqbn.rfind("arduino:", 0) == 0; // Uno, Nano, Mega, Leonardo, R4, Nano Every
         svg.rect(o.x + 4, o.y + 6, w, h, "#B0BEC5", {}, 14);
         svg.rect(o.x, o.y, w, h, colour, darker(colour), 14, 2);
         if (arduino) {
@@ -895,11 +895,13 @@ private:
             svg.text({o.x + w * 0.42, o.y + h * 0.42 + std::min(46.0, h / 4) * 0.6}, "ARDUINO", std::min(16.0, h / 9),
                      "#B2EBF2", "middle", true);
         } else {
-            // USB plug on the right, the metal shield of the radio module on the left.
+            // USB plug on the right, the metal shield of the radio module on the left (ESP32, ESP8266).
             svg.rect(o.x + w - 30, o.y + h / 2 - 25, 56, 50, "#B0BEC5", "#78909C", 4, 2);
-            svg.rect(o.x + 12, o.y + h / 2 - 50, 52, 100, "#455A64", {}, 2);
-            for (int i = 0; i < 5; ++i) {
-                svg.line({{o.x + 20 + i * 9, o.y + h / 2 - 42}, {o.x + 20 + i * 9, o.y + h / 2 + 42}}, "#D4AF37", 2);
+            if (board_.wifi || board_.bluetooth) {
+                svg.rect(o.x + 12, o.y + h / 2 - 50, 52, 100, "#455A64", {}, 2);
+                for (int i = 0; i < 5; ++i) {
+                    svg.line({{o.x + 20 + i * 9, o.y + h / 2 - 42}, {o.x + 20 + i * 9, o.y + h / 2 + 42}}, "#D4AF37", 2);
+                }
             }
             svg.rect(o.x + 70, o.y + h / 2 - 50, 150, 100, "#B0BEC5", "#90A4AE", 3, 2);
             svg.text({o.x + 145, o.y + h / 2 + 8}, board_.mcu, 22, "#455A64", "middle", true);

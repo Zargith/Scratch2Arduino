@@ -9,6 +9,28 @@
       "estimate": { "download": 60000000, "disk": 260000000 }
     },
     {
+      "id": "arduino-megaavr",
+      "name": { "fr": "Cartes Arduino megaAVR", "en": "Arduino megaAVR boards" },
+      "platform": "arduino:megaavr",
+      "version": "1.8.8",
+      "estimate": { "download": 40000000, "disk": 290000000 }
+    },
+    {
+      "id": "arduino-renesas",
+      "name": { "fr": "Cartes Arduino Uno R4", "en": "Arduino Uno R4 boards" },
+      "platform": "arduino:renesas_uno",
+      "version": "1.6.0",
+      "estimate": { "download": 125000000, "disk": 730000000 }
+    },
+    {
+      "id": "rp2040",
+      "name": { "fr": "Cartes Raspberry Pi Pico", "en": "Raspberry Pi Pico boards" },
+      "platform": "rp2040:rp2040",
+      "version": "6.3.2",
+      "indexUrl": "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json",
+      "estimate": { "download": 450000000, "disk": 2100000000 }
+    },
+    {
       "id": "esp8266",
       "name": { "fr": "Cartes ESP8266", "en": "ESP8266 boards" },
       "platform": "esp8266:esp8266",

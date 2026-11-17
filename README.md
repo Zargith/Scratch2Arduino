@@ -28,7 +28,7 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Area | What you get |
 |---|---|
 | Programming | Drag-and-drop blocks; **Code** view with the Arduino C++ made from the blocks; **My code**: functions written in C++, Python or JavaScript that become blocks; expert mode for a whole program as text; conversion between the three languages |
-| Boards | Arduino Uno, Nano, Mega 2560 (included); optional board packages, downloaded only when wanted (installer, Settings, or when such a board is chosen) with their size shown, and removable: ESP32 (DevKit), ESP8266 (NodeMCU) |
+| Boards | Arduino Uno, Nano, Mega 2560, Leonardo, Micro (included); optional board packages, downloaded only when wanted (installer, Settings, or when such a board is chosen) with their size shown, and removable: Arduino Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W, ESP32 (DevKit), ESP8266 (NodeMCU) |
 | Hardware | LEDs, RGB LED, buttons, potentiometers, light sensor, joystick, PIR and infrared obstacle sensors, ultrasonic & temperature sensors, servos, DC and stepper motors, LCD / OLED / TM1637 displays, NeoPixels, LED matrix, buzzers... |
 | Live mode | Control the board in real time, watch sensor values, see which block is running; **step by step** (Pause / Next block); a wiring check at start-up |
 | Simulation | No board at hand: run the program on a virtual board, the project's wiring diagram brought to life (LEDs, screens, servos, sounds...); press its buttons and move its sensors with the mouse |
@@ -129,7 +129,7 @@ them to check them before attaching them to the release.
 
 ### Windows
 
-**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) installs Scratch2Arduino **prebuilt** by the CI (programs, Visual C++ runtime, block editor, arduino-cli and the Arduino AVR core for Uno / Nano / Mega, so nothing is downloaded on each computer of a classroom), plus Start-menu and desktop shortcuts and an uninstaller. Optional **board packages** (ESP32, ESP8266) can be ticked on the tasks page, each with its size: they are downloaded at the end of the installation; on an update, those already installed show as such, greyed. An expert option builds Scratch2Arduino on the computer instead (installs CMake and the Visual Studio C++ compiler if needed). Details: [`installer/windows/README.md`](installer/windows/README.md).
+**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) installs Scratch2Arduino **prebuilt** by the CI (programs, Visual C++ runtime, block editor, arduino-cli and the Arduino AVR core for Uno / Nano / Mega / Leonardo / Micro, so nothing is downloaded on each computer of a classroom), plus Start-menu and desktop shortcuts and an uninstaller. It first asks for its language (French or English), then for a **simple** (advised) or **advanced** installation (choice of the folder, expert option). Optional **board packages** (Nano Every, Uno R4, Raspberry Pi Pico, ESP32, ESP8266) can be ticked on the tasks page, each with its size: they are downloaded at the end of the installation; on an update, those already installed show as such, greyed. An expert option builds Scratch2Arduino on the computer instead (installs CMake and the Visual Studio C++ compiler if needed). Details: [`installer/windows/README.md`](installer/windows/README.md).
 
 ### Linux and macOS from the sources
 
@@ -167,12 +167,15 @@ cmake --preset core-only && cmake --build --preset core-only   # core + tests, n
 
 ### Board packages
 
-The Arduino AVR boards (Uno, Nano, Mega) come with Scratch2Arduino and work without the Internet. The other
+The Arduino AVR boards (Uno, Nano, Mega, Leonardo, Micro) come with Scratch2Arduino and work without the Internet. The other
 board families are **optional packages** ([`resources/board-packages.json`](resources/board-packages.json)), each
 one an `arduino-cli` platform at a fixed version:
 
 | Package | Boards | To download | On the disk |
 |---|---|---|---|
+| Arduino megaAVR boards | Arduino Nano Every | about 40 MB | about 290 MB |
+| Arduino Uno R4 boards | Arduino Uno R4 Minima, Uno R4 WiFi | about 125 MB | about 730 MB |
+| Raspberry Pi Pico boards | Raspberry Pi Pico, Pico W | about 450 MB | about 2.1 GB |
 | ESP8266 boards | ESP8266 (NodeMCU) | about 125 MB | about 480 MB |
 | ESP32 boards | ESP32 (DevKit) | about 2 GB | about 8 GB |
 
@@ -436,7 +439,7 @@ and are saved in the new layout. A bare `project.json` (the examples) keeps the 
 
 ## Boards and blocks
 
-- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano and Mega 2560, ESP32 DevKit, ESP8266 NodeMCU. An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools are the optional "ESP32 boards" package (about 2 GB to download, 8 GB on the disk), installed only when wanted (see [Board packages](#board-packages)). The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0-D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
+- Boards are described in [`resources/boards/`](resources/boards) (pins and their capabilities, buses, `arduino-cli` FQBN, USB ids): Arduino Uno, Nano, Mega 2560, Leonardo, Micro, Nano Every, Uno R4 Minima and WiFi, Raspberry Pi Pico and Pico W, ESP32 DevKit, ESP8266 NodeMCU. The Leonardo and the Micro (ATmega32U4) number A0 as 18, have I2C on pins 2 and 3, and an HC-05 / HC-06 module receives only on the pins where SoftwareSerial can (8 to 11, and 14 to 16 on the Micro). The Nano Every and the Uno R4 keep the pins of the Nano and the Uno (the R4 at 5 V too). The Pico and the Pico W (3.3 V, core of Earle Philhower) use the GPIO names printed on the board (GP0 to GP28, analog inputs GP26 to GP28); their on-board LED is the pin "LED". The first upload to a new Pico needs its BOOTSEL button held while plugging it in (it then shows up as a USB drive); later uploads work like on an Arduino. On these boards the Live mode works over USB (no Wi-Fi Live on the Pico W and the Uno R4 WiFi yet). An ESP32 is programmed at 3.3 V: its usable GPIO numbers are listed (flash, serial and boot pins left out), analog inputs are those that still work with Wi-Fi on (32-36, 39). It uses the "Huge APP" partition scheme (3 MB of program space: the Live firmware with Wi-Fi and Bluetooth needs 1.7 MB). Its tools are the optional "ESP32 boards" package (about 2 GB to download, 8 GB on the disk), installed only when wanted (see [Board packages](#board-packages)). The ESP8266 (NodeMCU 1.0) uses the names printed on the board (D0-D8, A0; D1 is GPIO 5); its on-board LED (D4) lights when the pin is LOW, which the blocks take care of; it has Wi-Fi (Live mode over Wi-Fi, like the ESP32) but no Bluetooth.
 - Blocks are described in [`blocks/catalog/`](blocks/catalog): see the [block catalog guide](docs/block-catalog.md).
 - Interface texts are in [`resources/i18n/`](resources/i18n) (`fr.json`, `en.json`).
 
@@ -460,7 +463,8 @@ example and of the Live firmware for each board), but only part of it has run on
 **Not tested yet** (help welcome: [report a problem](https://github.com/Zargith/Scratch2Arduino/issues/new/choose)
 or tell us it works):
 
-- boards: Arduino Nano, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266;
+- boards: Arduino Nano, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266, and the boards added in 1.3.0
+  (Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W: upload and Live over USB);
 - Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
 - components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
   light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
