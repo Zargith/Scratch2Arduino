@@ -2,7 +2,8 @@
 # the CI step does not stay silent for many minutes. Exits with the installer exit code.
 param(
     [Parameter(Mandatory = $true)][string]$SetupLog,
-    # Installer tasks, e.g. "buildfromsource" (default: the prebuilt installation).
+    # Tasks to check or uncheck ("buildfromsource", "!buildfromsource"), merged with those of the
+    # previous installation, which the installer remembers. Default: the remembered ones.
     [string]$Tasks = ''
 )
 
@@ -10,7 +11,7 @@ $installer = 'installer\windows\Output\Scratch2Arduino_installer.exe'
 $buildLog = Join-Path $env:ProgramFiles 'Scratch2Arduino\install-log.txt'
 $watch = [Diagnostics.Stopwatch]::StartNew()
 $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$SetupLog")
-if ($Tasks) { $arguments += "/TASKS=$Tasks" }
+if ($Tasks) { $arguments += "/MERGETASKS=$Tasks" }
 $process = Start-Process -FilePath $installer -PassThru -ArgumentList $arguments
 $null = $process.Handle # without it, ExitCode stays empty once the process has exited
 

@@ -39,7 +39,9 @@ Without `/DPrebuiltDir`, the installer can only build from the sources (below).
    (double-click, or a file dropped on the icon), and an uninstaller.
 
 Silent installation (a classroom deployment, for example): `Scratch2Arduino_installer.exe /VERYSILENT /SUPPRESSMSGBOXES`;
-add `/TASKS=buildfromsource` to build from the sources.
+add `/MERGETASKS=buildfromsource` to build from the sources. The choice is remembered: an installation built
+from the sources is built again on update (uncheck the option, or `/MERGETASKS=!buildfromsource`, to go back
+to the prebuilt one). Installations made before 1.2.0 become prebuilt.
 
 ## The shipped Arduino AVR core
 

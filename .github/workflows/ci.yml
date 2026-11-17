@@ -392,10 +392,11 @@ jobs:
 
       - name: Back to the prebuilt installation (the sources and build tree are removed)
         run: |
-          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-back.log"
+          # The installer remembers the task of the previous installation: uncheck it.
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-back.log" -Tasks '!buildfromsource'
           if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
-          foreach ($folder in 'src', 'build', 'tools') {
+          foreach ($folder in 'src', 'build', 'tools', 'install-log.txt') {
             if (Test-Path (Join-Path $app $folder)) { throw "$folder was not removed" }
           }
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing' }
