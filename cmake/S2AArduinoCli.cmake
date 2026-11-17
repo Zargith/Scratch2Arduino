@@ -87,3 +87,40 @@ function(s2a_bundle_arduino_cli target)
         install(PROGRAMS "${S2A_ARDUINO_CLI_EXECUTABLE}" DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/scratch2arduino)
     endif()
 endfunction()
+
+# Board cores shipped with the installation ("seed"), so that a classroom does not download them
+# on every computer: e.g. -DS2A_BUNDLE_ARDUINO_CORES=arduino:avr (Uno, Nano, Mega). The bundled
+# arduino-cli installs them at build time into a scratch folder; its downloaded archives and board
+# indexes are installed in <arduino-cli folder>/arduino-seed, where ArduinoCli::installPlatform()
+# (core/src/arduino_cli.cpp) takes them instead of downloading. Needs the internet at build time.
+set(S2A_BUNDLE_ARDUINO_CORES "" CACHE STRING "Board platforms shipped with the installation (e.g. arduino:avr), empty = downloaded when first needed")
+if(S2A_BUNDLE_ARDUINO_CORES)
+    if(NOT S2A_ARDUINO_CLI_EXECUTABLE)
+        message(FATAL_ERROR "S2A_BUNDLE_ARDUINO_CORES needs the bundled arduino-cli (S2A_BUNDLE_ARDUINO_CLI=ON)")
+    endif()
+    if(APPLE)
+        message(WARNING "S2A_BUNDLE_ARDUINO_CORES is not supported in the macOS bundle: cores are downloaded when first needed.")
+    else()
+        include(GNUInstallDirs)
+        set(_s2a_seed "${CMAKE_BINARY_DIR}/arduino-seed")
+        string(REPLACE ";" "," _s2a_platforms "${S2A_BUNDLE_ARDUINO_CORES}")
+        add_custom_command(
+            OUTPUT "${_s2a_seed}/platforms.txt"
+            COMMAND "${CMAKE_COMMAND}"
+                    "-DCLI=${S2A_ARDUINO_CLI_EXECUTABLE}"
+                    "-DPLATFORMS=${_s2a_platforms}"
+                    "-DWORK=${CMAKE_BINARY_DIR}/arduino-seed-work"
+                    "-DSEED=${_s2a_seed}"
+                    -P "${PROJECT_SOURCE_DIR}/cmake/S2AArduinoSeed.cmake"
+            DEPENDS "${PROJECT_SOURCE_DIR}/cmake/S2AArduinoSeed.cmake" "${S2A_ARDUINO_CLI_EXECUTABLE}"
+            COMMENT "Downloading the board cores shipped with Scratch2Arduino: ${S2A_BUNDLE_ARDUINO_CORES}"
+            VERBATIM)
+        add_custom_target(s2a_arduino_seed ALL DEPENDS "${_s2a_seed}/platforms.txt")
+        if(WIN32)
+            set(_s2a_seed_destination "${CMAKE_INSTALL_BINDIR}")
+        else()
+            set(_s2a_seed_destination "${CMAKE_INSTALL_LIBEXECDIR}/scratch2arduino")
+        endif()
+        install(DIRECTORY "${_s2a_seed}" DESTINATION "${_s2a_seed_destination}")
+    endif()
+endif()

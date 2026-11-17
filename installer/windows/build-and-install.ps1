@@ -22,6 +22,13 @@ param(
     [string]$InstallDir = (Join-Path $env:ProgramFiles 'Scratch2Arduino'),
     [string]$BuildDir = '',
     [string]$LogFile = '',
+    # Used by Scratch2Arduino_installer.exe, which runs this script without waiting for it so that
+    # its window keeps responding: it watches the process written in -PidFile (and stops it, with
+    # the programs it started, on Cancel), shows the lines written to -DisplayFile and reads the
+    # exit code from -ExitFile when it cannot get it from the process.
+    [string]$PidFile = '',
+    [string]$DisplayFile = '',
+    [string]$ExitFile = '',
     [switch]$NoDeps,
     [switch]$CleanBuild,
     [ValidateSet('french', 'english', 'fr', 'en')]
@@ -73,17 +80,51 @@ function Write-Log([string]$Line, [switch]$Reset) {
     }
 }
 
+# The lines shown to the user: the console, and -DisplayFile for the installer window (UTF-8
+# with a BOM, which the installer needs to read the accents). Never throws.
+$script:DisplayWriter = $null
+if ($DisplayFile) {
+    try {
+        $stream = New-Object IO.FileStream($DisplayFile, [IO.FileMode]::Create, [IO.FileAccess]::Write,
+                                           ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        $script:DisplayWriter = New-Object IO.StreamWriter($stream, (New-Object Text.UTF8Encoding($true)))
+        $script:DisplayWriter.AutoFlush = $true
+    } catch { }
+}
+
+function Show([string]$Line, [string]$Color = '') {
+    if ($Color) { Write-Host $Line -ForegroundColor $Color } else { Write-Host $Line }
+    try { if ($script:DisplayWriter) { $script:DisplayWriter.WriteLine($Line) } } catch { }
+}
+
+function Finish([int]$Code) {
+    if ($ExitFile) { try { Set-Content -LiteralPath $ExitFile -Value $Code -Encoding ASCII } catch { } }
+    try { if ($script:DisplayWriter) { $script:DisplayWriter.Dispose() } } catch { }
+    exit $Code
+}
+
 function Say([string]$Fr, [string]$En) {
     $text = if ($French) { $Fr } else { $En }
-    Write-Host "==> $text" -ForegroundColor Cyan
+    Show "==> $text" 'Cyan'
     Write-Log "==> $text"
 }
 
 function Fail([string]$Fr, [string]$En) {
     $text = if ($French) { $Fr } else { $En }
-    Write-Host $text -ForegroundColor Red
+    Show $text 'Red'
     Write-Log "ERROR: $text"
-    exit 1
+    Finish 1
+}
+
+# Progress output (winget spinners and bars, download percentages): kept in the log, not shown,
+# since thousands of such lines made the installer window slow.
+function Test-ProgressLine([string]$Line) {
+    $text = $Line.Trim()
+    if ($text.Length -eq 0) { return $false }
+    if ($text -match '^[-\\|/]$') { return $true }
+    if ($text -match '[\u2580-\u259F]') { return $true }
+    if ($text -match '^[\d.,]+\s*(%|[KMG]?i?B\s*/\s*[\d.,]+\s*[KMG]?i?B)$') { return $true }
+    return $false
 }
 
 # Runs a native command, mirrors its output to the log and stops on a non-zero exit code.
@@ -91,11 +132,15 @@ function Invoke-Native([string]$Exe, [string[]]$Arguments) {
     Write-Log "> $Exe $($Arguments -join ' ')"
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
+    $script:lastShown = $null
     # Not Tee-Object: in Windows PowerShell 5.1 it writes UTF-16, which would mix encodings in the log.
     & $Exe @Arguments 2>&1 | ForEach-Object {
         $line = "$_"
-        Write-Host $line
         Write-Log $line
+        if (-not (Test-ProgressLine $line) -and $line -ne $script:lastShown) {
+            Show $line
+            $script:lastShown = $line
+        }
     }
     $code = $LASTEXITCODE
     $ErrorActionPreference = $previous
@@ -206,6 +251,7 @@ function Read-Manifest([string]$Path) {
 
 try {
     Write-Log "Scratch2Arduino build - $(Get-Date -Format s)" -Reset
+    if ($PidFile) { Set-Content -LiteralPath $PidFile -Value $PID -Encoding ASCII }
 
     if (Get-Process -Name 'scratch2arduino' -ErrorAction SilentlyContinue) {
         Fail 'Scratch2Arduino est ouvert : ferme-le puis relance l''installation.' `
@@ -228,8 +274,10 @@ try {
         Say 'Compilateur C++ (Visual Studio) déjà installé' 'C++ compiler (Visual Studio) already installed'
     } else {
         if ($NoDeps) { Fail 'Le compilateur C++ de Visual Studio est introuvable.' 'Visual Studio C++ compiler not found.' }
+        # Only the C++ compiler and the Windows SDK (about 2 GB), not the whole workload.
         Install-WithWinget 'Microsoft.VisualStudio.2022.BuildTools' @('--override',
-            '--wait --quiet --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended')
+            ('--wait --quiet --norestart --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ' +
+             '--add Microsoft.VisualStudio.Component.Windows11SDK.22621'))
         if (-not (Test-VisualStudio)) { Fail "L'installation de Visual Studio Build Tools a échoué." 'Visual Studio Build Tools installation failed.' }
     }
 
@@ -306,10 +354,10 @@ try {
     }
 
     Say 'Scratch2Arduino est installé !' 'Scratch2Arduino is installed!'
-    exit 0
+    Finish 0
 }
 catch {
     Write-Log "ERROR: $_"
-    Write-Host $_ -ForegroundColor Red
+    Show "$_" 'Red'
     Fail "La compilation a échoué. Journal : $LogFile" "The build failed. Log: $LogFile"
 }

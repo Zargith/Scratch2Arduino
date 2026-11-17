@@ -129,7 +129,7 @@ them to check them before attaching them to the release.
 
 ### Windows
 
-**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) checks for (and installs if needed) CMake and a C++ toolchain, builds and installs Scratch2Arduino with CMake, and adds Start-menu and desktop shortcuts plus an uninstaller.
+**`Scratch2Arduino_installer.exe`** (built by CI, artifact `installer-windows`) installs Scratch2Arduino **prebuilt** by the CI (programs, Visual C++ runtime, block editor, arduino-cli and the Arduino AVR core for Uno / Nano / Mega, so nothing is downloaded on each computer of a classroom), plus Start-menu and desktop shortcuts and an uninstaller. An expert option builds it on the computer instead (installs CMake and the Visual Studio C++ compiler if needed). Details: [`installer/windows/README.md`](installer/windows/README.md).
 
 ### Linux and macOS from the sources
 
