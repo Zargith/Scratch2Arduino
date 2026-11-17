@@ -382,7 +382,9 @@ Blocks install their own by themselves; for your own code, use the **Arduino lib
 icon, top right):
 
 1. **Search** tab: type a name or a keyword (for example `json`), then *Search*. The first time, the list
-   of libraries is downloaded (Internet needed). Descriptions are in English.
+   of libraries is downloaded (Internet needed). It is Arduino's official list (Library Manager), the same as
+   on [docs.arduino.cc/libraries](https://docs.arduino.cc/libraries/): the link is given under the search.
+   Descriptions are in English.
 2. *Add to the project* installs the library (its latest version, or the one chosen in the list) and adds
    it to the project.
 3. **This project** tab: shows the `#include <...>` line to write at the top of "My code".

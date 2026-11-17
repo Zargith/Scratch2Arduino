@@ -3,8 +3,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { addLibrary, ArduinoLibraries, includeLines } from "@/ArduinoLibraries";
-import type { InstalledLibrary, LibraryChange, RegistryLibrary } from "@/bridge";
+import { addLibrary, ArduinoLibraries, includeLines, LIBRARIES_SOURCE_URL } from "@/ArduinoLibraries";
+import { bridge, type InstalledLibrary, type LibraryChange, type RegistryLibrary } from "@/bridge";
 import { translate, type MessageKey } from "@/i18n";
 
 const servo: InstalledLibrary = {
@@ -91,6 +91,14 @@ describe("library manager window", () => {
 		expect(install).toHaveBeenCalledWith("ArduinoJson", "", "fr");
 		expect(onChange).toHaveBeenCalledWith([{ name: "ArduinoJson" }]);
 		expect(document.body.textContent).toContain(t("libraries.added", { name: "ArduinoJson" }));
+		// The source of the list, opened in the browser.
+		expect(document.body.textContent).toContain(t("libraries.source"));
+		const source = document.querySelector<HTMLAnchorElement>(`a[href="${LIBRARIES_SOURCE_URL}"]`);
+		expect(source).not.toBeNull();
+		const openUrl = vi.spyOn(bridge, "openUrl").mockResolvedValue(true);
+		await act(async () => source?.click());
+		expect(openUrl).toHaveBeenCalledWith(LIBRARIES_SOURCE_URL);
+		openUrl.mockRestore();
 		await act(async () => root.unmount());
 	}, 30000); // renders a whole Mantine window: slow on a busy machine
 });
