@@ -8,6 +8,7 @@
   "flashBytes": 2093056,
   "ramBytes": 262144,
   "builtinLed": "LED",
+  "sketchPinNames": false,
   "digitalPins": {
     "GP0": 0,
     "GP1": 1,

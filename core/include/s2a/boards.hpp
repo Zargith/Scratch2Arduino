@@ -87,6 +87,9 @@ struct Board {
     /// An HC-05 / HC-06 Bluetooth module can be wired to it for the Live mode (Arduino boards).
     bool bluetoothModule = false;
     bool builtinLedActiveLow = false; ///< The on-board LED lights when its pin is LOW (ESP8266).
+    /// Pins are written in sketches by their label ("D5", "A0"); false: by their number, when
+    /// the labels are not names of the board's core (Raspberry Pi Pico: "GP13" is pin 13).
+    bool sketchPinNames = true;
     BoardDrawing drawing;
     std::vector<Pin> pins; ///< Sorted by number.
     std::vector<BusPin> i2c;

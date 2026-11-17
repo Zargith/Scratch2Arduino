@@ -115,6 +115,7 @@ Board parseBoard(const Json& json) {
     board.wifi = json.value("wifi", false);
     board.bluetoothModule = json.value("bluetoothModule", false);
     board.builtinLedActiveLow = json.value("builtinLedActiveLow", false);
+    board.sketchPinNames = json.value("sketchPinNames", true);
 
     // Either a count (pins 0..n-1, as on Arduino boards), the list of usable GPIO numbers
     // (ESP32: numbers with gaps, the flash and boot pins left out), or the names printed on the

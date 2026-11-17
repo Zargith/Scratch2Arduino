@@ -116,7 +116,9 @@ The editor needs no change: the palette, the menus and the tooltips are built fr
    (`{ "port": 1, "rx": "19", "tx": "18" }` on the Mega) and `softwareSerialRx` the pins where SoftwareSerial
    can receive (left out when every pin can, as on the Uno). GPIO boards name their pins with an object
    (`{ "GP0": 0, ... }`, Pico; `{ "D1": 5, ... }`, NodeMCU); an on-board LED on no header gets its own pin
-   (`"LED"`, Pico).
+   (`"LED"`, Pico). The sketches use these names (`D1` is defined by the NodeMCU core), except with
+   `"sketchPinNames": false`, when the core does not know them: the pin numbers are written instead (Pico:
+   `GP13` becomes `13`).
 2. Give it a package in `resources/board-packages.json` (every board must belong to one, the unit tests
    check it): an existing one when the board uses the same `platform`, else a new entry with its `id`, its
    `name` (fr, en), the `platform`, the `version` installed (pinned, so that every computer gets the same

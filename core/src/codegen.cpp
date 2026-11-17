@@ -231,7 +231,7 @@ private:
     std::string pinLabel(const Block& block, const std::string& name) const {
         std::string label = field(block, name);
         if (const Pin* found = board_ != nullptr ? board_->findPin(label) : nullptr) {
-            label = found->label;
+            label = board_->sketchPinNames ? found->label : std::to_string(found->number);
         }
         const bool valid = !label.empty() && std::all_of(label.begin(), label.end(), [](char c) {
             return std::isalnum(static_cast<unsigned char>(c)) != 0;

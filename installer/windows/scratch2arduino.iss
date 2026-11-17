@@ -390,8 +390,8 @@ begin
       Text := FmtMessage(CustomMessage('BoardsChosen'), [FormatMB(DownloadMB), FormatMB(DiskMB), '?'])
     else
     begin
-      Text := FmtMessage(CustomMessage('BoardsChosen'),
-        [FormatMB(DownloadMB), FormatMB(DiskMB), FormatMB(FreeBytes div 1000000)]);
+      // One line: Inno Setup reads a line starting with "[" as a section, even in [Code].
+      Text := FmtMessage(CustomMessage('BoardsChosen'), [FormatMB(DownloadMB), FormatMB(DiskMB), FormatMB(FreeBytes div 1000000)]);
       if FreeBytes div 1000000 < DiskMB + DownloadMB then
         Text := Text + #13#10 + CustomMessage('BoardsNoRoom');
     end;
