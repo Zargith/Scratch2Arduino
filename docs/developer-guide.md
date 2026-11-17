@@ -112,6 +112,11 @@ The editor needs no change: the palette, the menus and the tooltips are built fr
    `voltage`, flash and RAM sizes, `builtinLed`, `digitalPins`, `analogPins`, `pwmPins`,
    `interruptPins`, `i2c`, `spi`, `usb` vendor:product ids (port detection) and a `drawing` (size,
    colour, headers in the order printed on the board; `"name|-"` marks a pin that must not be used).
+   For an HC-05 / HC-06 module (`bluetoothModule`): `serialPorts` lists the hardware serial ports on two pins
+   (`{ "port": 1, "rx": "19", "tx": "18" }` on the Mega) and `softwareSerialRx` the pins where SoftwareSerial
+   can receive (left out when every pin can, as on the Uno). GPIO boards name their pins with an object
+   (`{ "GP0": 0, ... }`, Pico; `{ "D1": 5, ... }`, NodeMCU); an on-board LED on no header gets its own pin
+   (`"LED"`, Pico).
 2. Give it a package in `resources/board-packages.json` (every board must belong to one, the unit tests
    check it): an existing one when the board uses the same `platform`, else a new entry with its `id`, its
    `name` (fr, en), the `platform`, the `version` installed (pinned, so that every computer gets the same

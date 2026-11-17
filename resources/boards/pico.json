@@ -1,0 +1,71 @@
+{
+  "id": "pico",
+  "name": "Raspberry Pi Pico",
+  "fqbn": "rp2040:rp2040:rpipico",
+  "platform": "rp2040:rp2040",
+  "mcu": "RP2040",
+  "voltage": 3.3,
+  "flashBytes": 2093056,
+  "ramBytes": 262144,
+  "builtinLed": "LED",
+  "digitalPins": {
+    "GP0": 0,
+    "GP1": 1,
+    "GP2": 2,
+    "GP3": 3,
+    "GP4": 4,
+    "GP5": 5,
+    "GP6": 6,
+    "GP7": 7,
+    "GP8": 8,
+    "GP9": 9,
+    "GP10": 10,
+    "GP11": 11,
+    "GP12": 12,
+    "GP13": 13,
+    "GP14": 14,
+    "GP15": 15,
+    "GP16": 16,
+    "GP17": 17,
+    "GP18": 18,
+    "GP19": 19,
+    "GP20": 20,
+    "GP21": 21,
+    "GP22": 22,
+    "GP26": 26,
+    "GP27": 27,
+    "GP28": 28,
+    "LED": 25
+  },
+  "analogPins": {
+    "pins": ["GP26", "GP27", "GP28"],
+    "inputOnly": []
+  },
+  "pwmPins": ["GP0", "GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7", "GP8", "GP9", "GP10", "GP11", "GP12", "GP13", "GP14", "GP15", "GP16", "GP17", "GP18", "GP19", "GP20", "GP21", "GP22", "GP26", "GP27", "GP28"],
+  "interruptPins": ["GP0", "GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7", "GP8", "GP9", "GP10", "GP11", "GP12", "GP13", "GP14", "GP15", "GP16", "GP17", "GP18", "GP19", "GP20", "GP21", "GP22", "GP26", "GP27", "GP28"],
+  "i2c": { "sda": "GP4", "scl": "GP5" },
+  "spi": { "mosi": "GP19", "miso": "GP16", "sck": "GP18", "ss": "GP17" },
+  "usb": ["2E8A:000A", "2E8A:0003"],
+  "drawing": {
+    "width": 560,
+    "height": 250,
+    "colour": "#2E7D32",
+    "title": "Raspberry Pi Pico",
+    "headers": [
+      {
+        "side": "top",
+        "x": 40,
+        "y": 14,
+        "pitch": 25,
+        "pins": ["GP15", "GP14", "GND", "GP13", "GP12", "GP11", "GP10", "GND", "GP9", "GP8", "GP7", "GP6", "GND", "GP5", "GP4", "GP3", "GP2", "GND", "GP1", "GP0"]
+      },
+      {
+        "side": "bottom",
+        "x": 40,
+        "y": 234,
+        "pitch": 25,
+        "pins": ["GP16", "GP17", "GND", "GP18", "GP19", "GP20", "GP21", "GND", "GP22", "RUN|-", "GP26", "GP27", "AGND|GND", "GP28", "ADC_VREF|-", "3V3 OUT|3V3", "3V3_EN|-", "GND", "VSYS|-", "VBUS|VIN"]
+      }
+    ]
+  }
+}

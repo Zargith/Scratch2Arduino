@@ -77,7 +77,8 @@
     "package_absent": "{package} : pas installées, rien à supprimer.",
     "package_kept": "{package} : fournies avec Scratch2Arduino, elles ne peuvent pas être supprimées.",
     "installing_package": "{package} : installation (environ {size} à télécharger, cela peut prendre longtemps)...",
-    "removing_package": "{package} : suppression ({size} libérés)..."
+    "removing_package": "{package} : suppression ({size} libérés)...",
+    "installing_package_downloaded": "{package} : installation (déjà téléchargées)..."
   },
   "build": {
     "unknown_board": "La carte \"{board}\" n'est pas connue. Choisis une carte dans la liste.",

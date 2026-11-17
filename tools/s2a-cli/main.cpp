@@ -887,8 +887,12 @@ int Cli::boardCommand() const {
                 print("cli.package_already", {{"package", package->name(language)}});
                 continue;
             }
-            print("cli.installing_package",
-                  {{"package", package->name(language)}, {"size", formatSize(state.downloadBytes, language)}});
+            if (state.downloadBytes > 0) {
+                print("cli.installing_package",
+                      {{"package", package->name(language)}, {"size", formatSize(state.downloadBytes, language)}});
+            } else {
+                print("cli.installing_package_downloaded", {{"package", package->name(language)}});
+            }
             if (const int status = outcome(s2a::toolchain::installBoardPackage(*cli, *package)); status != kSuccess) {
                 return status;
             }

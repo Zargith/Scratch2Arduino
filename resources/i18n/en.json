@@ -77,7 +77,8 @@
     "package_absent": "{package}: not installed, nothing to remove.",
     "package_kept": "{package}: they come with Scratch2Arduino and cannot be removed.",
     "installing_package": "{package}: installing (about {size} to download, this can take a long time)...",
-    "removing_package": "{package}: removing ({size} freed)..."
+    "removing_package": "{package}: removing ({size} freed)...",
+    "installing_package_downloaded": "{package}: installing (already downloaded)..."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",

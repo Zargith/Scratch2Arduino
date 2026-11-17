@@ -121,6 +121,13 @@ jobs:
             "$cli" setup --board esp8266
             "$cli" compile examples/sketches/blink --board esp8266 --lang en --verbose
             "$cli" compile firmware/s2a_live --board esp8266 --lang en --verbose
+            # The boards added in 1.3.0: Blink, the Live firmware and the example that uses every block.
+            for board in leonardo micro nano_every uno_r4_minima uno_r4_wifi pico pico_w; do
+              "$cli" setup --board "$board"
+              compile examples/sketches/blink --board "$board"
+              compile firmware/s2a_live --board "$board"
+              compile examples/projects/all-blocks/project.json --board "$board"
+            done
             # Optional board packages: listed with their size, removed with their archives.
             "$cli" board list --lang en
             data="$HOME/.local/share/Scratch2Arduino/arduino"

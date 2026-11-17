@@ -247,6 +247,9 @@ TEST(WiringDiagram, DrawsEveryPinOfEveryBoard) {
             }
         }
         for (const auto& pin : board.pins) {
+            if (pin.label == "LED") {
+                continue; // the on-board LED of the Pico: on no header, never wired
+            }
             EXPECT_EQ(drawn.count(pin.label), 1U) << board.id << ": pin " << pin.label << " is not drawn";
         }
         EXPECT_EQ(drawn.count(board.voltage >= 4.5 ? "5V" : "3V3"), 1U) << board.id;

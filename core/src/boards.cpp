@@ -186,6 +186,14 @@ Board parseBoard(const Json& json) {
     if (json.contains("spi")) {
         board.spi = parseBus(board, json.at("spi"), "spi");
     }
+    for (const Json& port : json.value("serialPorts", Json::array())) {
+        board.serialPorts.push_back({port.at("port").get<int>(),
+                                     pinRef(board, port.at("rx").get<std::string>(), "serialPorts.rx").number,
+                                     pinRef(board, port.at("tx").get<std::string>(), "serialPorts.tx").number});
+    }
+    for (const Json& reference : json.value("softwareSerialRx", Json::array())) {
+        board.softwareSerialRx.push_back(pinRef(board, reference.get<std::string>(), "softwareSerialRx").number);
+    }
     if (json.contains("drawing")) {
         const Json& drawing = json.at("drawing");
         board.drawing.width = drawing.at("width").get<double>();
@@ -336,10 +344,9 @@ std::string bluetoothModuleProblem(const Board& board, int rx, int tx, int baud)
     if (baud != 9600 && baud != 19200 && baud != 38400 && baud != 57600 && baud != 115200) {
         return "speed";
     }
-    if (board.mcu == "ATmega2560" && moduleSerialPort(board, rx, tx) == 0) {
-        // Otherwise SoftwareSerial, which receives only on some pins of the Mega.
-        constexpr std::array<int, 18> kReceive{10, 11, 12, 13, 14, 15, 50, 51, 52, 53, 62, 63, 64, 65, 66, 67, 68, 69};
-        if (std::find(kReceive.begin(), kReceive.end(), rx) == kReceive.end()) {
+    if (!board.softwareSerialRx.empty() && moduleSerialPort(board, rx, tx) == 0) {
+        // Otherwise SoftwareSerial, which receives only on some pins of the Mega, Leonardo, Micro.
+        if (std::find(board.softwareSerialRx.begin(), board.softwareSerialRx.end(), rx) == board.softwareSerialRx.end()) {
             return "pin_receive";
         }
     }
@@ -347,13 +354,9 @@ std::string bluetoothModuleProblem(const Board& board, int rx, int tx, int baud)
 }
 
 int moduleSerialPort(const Board& board, int rx, int tx) {
-    if (board.mcu != "ATmega2560") {
-        return 0;
-    }
-    constexpr std::array<std::pair<int, int>, 3> kSerialPorts{{{19, 18}, {17, 16}, {15, 14}}};
-    for (std::size_t i = 0; i < kSerialPorts.size(); ++i) {
-        if (kSerialPorts[i] == std::pair{rx, tx}) {
-            return static_cast<int>(i) + 1;
+    for (const SerialPortPins& port : board.serialPorts) {
+        if (port.rx == rx && port.tx == tx) {
+            return port.port;
         }
     }
     return 0;

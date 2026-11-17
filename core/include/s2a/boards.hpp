@@ -39,6 +39,13 @@ struct BusPin {
     int number = 0;
 };
 
+/// A hardware serial port of a board on two pins (pin numbers), besides the USB one.
+struct SerialPortPins {
+    int port = 0; ///< 1 for Serial1...
+    int rx = 0;
+    int tx = 0;
+};
+
 /// A row of header pins on the drawing of a board (wiring diagram).
 struct BoardHeader {
     enum class Side { Top, Bottom, Right }; ///< Where the wires leave the board.
@@ -84,6 +91,10 @@ struct Board {
     std::vector<Pin> pins; ///< Sorted by number.
     std::vector<BusPin> i2c;
     std::vector<BusPin> spi;
+    /// Hardware serial ports an HC-05 / HC-06 module can use (Mega: 19/18, 17/16, 15/14).
+    std::vector<SerialPortPins> serialPorts;
+    /// Pins on which SoftwareSerial can receive (pin numbers); empty: every pin (Uno, Nano).
+    std::vector<int> softwareSerialRx;
     /// USB identifiers seen when the board is plugged in. Generic USB-serial chips (CH340, FTDI)
     /// are shared by many boards, so a match is only a suggestion.
     std::vector<UsbId> usbIds;
