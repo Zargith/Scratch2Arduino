@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(Scratch2Arduino
-    VERSION 1.1.0
+    VERSION 1.2.0
     DESCRIPTION "Program Arduino boards with Scratch-style blocks"
     HOMEPAGE_URL "https://github.com/Zargith/Scratch2Arduino"
     LANGUAGES C CXX)
@@ -57,6 +57,14 @@ if(UNIX AND NOT APPLE AND S2A_BUILD_WEBVIEW)
     if(S2A_INSTALL_UDEV_RULES)
         install(FILES resources/linux/60-scratch2arduino.rules DESTINATION lib/udev/rules.d)
     endif()
+endif()
+
+# Windows: the Visual C++ runtime DLLs are installed next to the programs, so a computer without
+# Visual Studio runs the prebuilt Scratch2Arduino_installer.exe without installing vc_redist.
+if(MSVC AND (S2A_BUILD_WEBVIEW OR S2A_BUILD_CLI))
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_INSTALL_UCRT_LIBRARIES OFF) # part of Windows 10 and 11
+    include(InstallRequiredSystemLibraries)
 endif()
 
 # `cmake -P <build>/cmake_uninstall.cmake` (used by `make uninstall` and `Scratch2Arduino_installer.sh --uninstall`).

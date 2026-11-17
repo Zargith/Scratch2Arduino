@@ -22,3 +22,5 @@ Thumbs.db
 # Python bytecode (tools/wiring)
 __pycache__/
 *.pyc
+/build-*/
+/installer/windows/prebuilt/

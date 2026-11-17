@@ -285,6 +285,21 @@ jobs:
           pnpm --dir frontend install --frozen-lockfile
           pnpm --dir frontend build
 
+      - name: Build the prebuilt programs (shipped in Scratch2Arduino_installer.exe)
+        run: |
+          # The Arduino AVR core (Uno, Nano, Mega) is shipped too: a classroom does not download it on every computer.
+          cmake -S . -B build-win -DS2A_BUILD_TESTS=OFF "-DS2A_FRONTEND_DIST=$PWD\frontend\dist" -DS2A_BUNDLE_ARDUINO_CORES=arduino:avr
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build-win --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --install build-win --config Release --prefix installer\windows\prebuilt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($file in 'bin\Scratch2Arduino.exe', 'bin\s2a-cli.exe', 'bin\arduino-cli.exe', 'bin\vcruntime140.dll',
+                            'bin\msvcp140.dll', 'bin\frontend\index.html', 'bin\arduino-seed\platforms.txt') {
+            if (-not (Test-Path (Join-Path installer\windows\prebuilt $file))) { throw "missing in the prebuilt folder: $file" }
+          }
+          Get-Content installer\windows\prebuilt\bin\arduino-seed\platforms.txt
+
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
@@ -292,8 +307,10 @@ jobs:
         run: |
           # Scratch2Arduino_installer.exe takes its version from CMakeLists.txt.
           $version = (Select-String -Path CMakeLists.txt -Pattern '^\s*VERSION ([0-9.]+)$' | Select-Object -First 1).Matches[0].Groups[1].Value
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer\windows\scratch2arduino.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DPrebuiltDir=$PWD\installer\windows\prebuilt" installer\windows\scratch2arduino.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $size = (Get-Item installer\windows\Output\Scratch2Arduino_installer.exe).Length / 1MB
+          "Scratch2Arduino_installer.exe: {0:N1} MB" -f $size | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
 
       - name: Sign Scratch2Arduino_installer.exe
         if: env.HAS_CERTIFICATE == 'true'
@@ -311,24 +328,30 @@ jobs:
           Remove-Item $pfx
           if ($code -ne 0) { exit $code }
 
-      - name: Run Scratch2Arduino_installer.exe silently
+      - name: Run Scratch2Arduino_installer.exe silently (prebuilt)
         run: |
-          # The build log is shown while the installer runs.
           & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup.log"
           if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe was not installed' }
+          if (Test-Path (Join-Path $app 'src')) { throw 'the prebuilt installation shipped the sources' }
 
-      - name: Run Scratch2Arduino_installer.exe again (incremental update)
+      - name: The shipped AVR core installs and compiles without the internet
+        shell: bash
+        run: |
+          cli="$PROGRAMFILES/Scratch2Arduino/bin/s2a-cli.exe"
+          "$cli" version
+          # A proxy that refuses every connection: arduino-cli cannot download anything.
+          export HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9
+          "$cli" setup --board uno
+          "$cli" compile examples/sketches/blink --board uno --lang en --verbose
+
+      - name: Run Scratch2Arduino_installer.exe again (prebuilt update)
         run: |
           & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-update.log"
           if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
-          $log = Get-Content (Join-Path $app 'install-log.txt')
-          if (-not ($log -match 'Previous build found|Compilation précédente trouvée')) { throw 'the update rebuilt everything' }
-          if (-not ($log -match '^==> 0 (file|fichier)')) { throw 'unchanged sources were copied again' }
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing after the update' }
-          if (Test-Path (Join-Path $app 'staging')) { throw 'the staging folder was not removed' }
 
       - name: The installer refuses to update while Scratch2Arduino is open
         run: |
@@ -345,6 +368,38 @@ jobs:
           Get-Content "$env:RUNNER_TEMP\setup-running.log" -Tail 15
           if ($process.ExitCode -eq 0) { throw 'the installer ran while Scratch2Arduino was open' }
 
+      - name: Run Scratch2Arduino_installer.exe built from the sources
+        run: |
+          # The build log is shown while the installer runs.
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-source.log" -Tasks buildfromsource
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
+          if (-not (Test-Path (Join-Path $app 'build\CMakeCache.txt'))) { throw 'Scratch2Arduino was not built from the sources' }
+          if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe was not installed' }
+          if (Test-Path (Join-Path $app 'build.pid')) { throw 'build.pid was not removed' }
+
+      - name: Run Scratch2Arduino_installer.exe built from the sources again (incremental update)
+        run: |
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-source-update.log" -Tasks buildfromsource
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
+          $log = Get-Content (Join-Path $app 'install-log.txt')
+          if (-not ($log -match 'Previous build found|Compilation précédente trouvée')) { throw 'the update rebuilt everything' }
+          if (-not ($log -match '^==> 0 (file|fichier)')) { throw 'unchanged sources were copied again' }
+          if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing after the update' }
+          if (Test-Path (Join-Path $app 'staging')) { throw 'the staging folder was not removed' }
+          Copy-Item (Join-Path $app 'install-log.txt') "$env:RUNNER_TEMP\install-log-source.txt"
+
+      - name: Back to the prebuilt installation (the sources and build tree are removed)
+        run: |
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-back.log"
+          if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
+          foreach ($folder in 'src', 'build', 'tools') {
+            if (Test-Path (Join-Path $app $folder)) { throw "$folder was not removed" }
+          }
+          if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing' }
+
       - name: Upload Scratch2Arduino_installer.exe
         uses: actions/upload-artifact@v7
         with:
@@ -357,6 +412,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path installer-logs | Out-Null
           Copy-Item "$env:RUNNER_TEMP\setup*.log" installer-logs -ErrorAction SilentlyContinue
           Copy-Item "$env:ProgramFiles\Scratch2Arduino\install-log.txt" installer-logs -ErrorAction SilentlyContinue
+          Copy-Item "$env:RUNNER_TEMP\install-log-source.txt" installer-logs -ErrorAction SilentlyContinue
 
       - name: Upload logs
         if: always()

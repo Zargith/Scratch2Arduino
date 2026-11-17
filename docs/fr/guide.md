@@ -40,8 +40,10 @@ dans la partie *Assets* de la dernière version.
 1. Télécharge `Scratch2Arduino_installer.exe` et lance-le.
 2. Si Windows affiche "Windows a protégé votre ordinateur", clique sur *Informations complémentaires* puis
    *Exécuter quand même* (le programme n'est pas encore signé).
-3. L'installeur installe ce qui manque, puis Scratch2Arduino, avec un raccourci sur le bureau et dans le
-   menu Démarrer. Il faut Internet pendant l'installation.
+3. L'installeur copie Scratch2Arduino, prêt à l'emploi, avec un raccourci sur le bureau et dans le menu
+   Démarrer. Cela prend environ une minute, sans Internet (sauf sur un ancien Windows 10 sans Microsoft
+   WebView2, qu'il installe alors). Les outils pour Uno, Nano et Mega sont inclus : rien à télécharger non
+   plus au premier téléversement, pratique pour toute une classe sur le même wifi.
 
 Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
 

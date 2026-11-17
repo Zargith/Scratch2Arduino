@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 #include <set>
 #include <nlohmann/json.hpp>
 
@@ -206,15 +207,83 @@ Result<bool> ArduinoCli::isPlatformInstalled(std::string_view platform) const {
     return false;
 }
 
+namespace {
+
+/// Copies the files of `from` that `to` does not have yet. Errors are ignored: the seed only
+/// saves a download, arduino-cli downloads whatever is still missing.
+void copyMissingFiles(const fs::path& from, const fs::path& to) {
+    std::error_code error;
+    if (!fs::is_directory(from, error)) {
+        return;
+    }
+    for (fs::recursive_directory_iterator it(from, error), end; !error && it != end; it.increment(error)) {
+        if (!it->is_regular_file(error)) {
+            continue;
+        }
+        const fs::path target = to / fs::relative(it->path(), from, error);
+        if (error || fs::exists(target, error)) {
+            error.clear();
+            continue;
+        }
+        fs::create_directories(target.parent_path(), error);
+        // Copied under a temporary name first: an interrupted copy never looks complete.
+        fs::path partial = target;
+        partial += ".part";
+        error.clear();
+        if (fs::copy_file(it->path(), partial, fs::copy_options::overwrite_existing, error) && !error) {
+            fs::rename(partial, target, error);
+        }
+        if (error) {
+            fs::remove(partial, error);
+        }
+        error.clear();
+    }
+}
+
+} // namespace
+
+void ArduinoCli::seedFromBundle() const {
+    const fs::path seed = executable_.parent_path() / "arduino-seed";
+    copyMissingFiles(seed / "downloads", directories_.downloads);
+    copyMissingFiles(seed / "data", directories_.data);
+}
+
+std::string ArduinoCli::seededVersion(std::string_view platform) const {
+    // platforms.txt, written when the seed is made: one "vendor:arch@version" per line.
+    std::ifstream file(executable_.parent_path() / "arduino-seed" / "platforms.txt");
+    std::string line;
+    while (std::getline(file, line)) {
+        while (!line.empty() && std::isspace(static_cast<unsigned char>(line.back())) != 0) {
+            line.pop_back();
+        }
+        const auto at = line.find('@');
+        if (at != std::string::npos && std::string_view(line).substr(0, at) == platform) {
+            return line.substr(at + 1);
+        }
+    }
+    return {};
+}
+
 Result<CommandOutcome> ArduinoCli::installPlatform(std::string_view platform) const {
-    auto index = run({"core", "update-index"}, kInstallTimeout);
-    if (!index.ok()) {
-        return index.error();
+    seedFromBundle();
+    std::error_code error;
+    const bool haveIndex = fs::is_regular_file(directories_.data / "package_index.json", error);
+    std::string target(platform);
+    if (const std::string version = seededVersion(platform); !version.empty() && haveIndex) {
+        // Shipped by the installer: this exact version is in the downloads folder, so nothing is
+        // downloaded (a whole classroom on the same Wi-Fi installs in seconds).
+        target += "@" + version;
+    } else {
+        auto index = run({"core", "update-index"}, kInstallTimeout);
+        if (!index.ok()) {
+            return index.error();
+        }
+        // Offline with an index already there: the install may still work from the downloads.
+        if (!index.value().succeeded() && !haveIndex) {
+            return commandOutcome(index.value());
+        }
     }
-    if (!index.value().succeeded()) {
-        return commandOutcome(index.value());
-    }
-    auto install = run({"core", "install", std::string(platform)}, kInstallTimeout);
+    auto install = run({"core", "install", target}, kInstallTimeout);
     if (!install.ok()) {
         return install.error();
     }
