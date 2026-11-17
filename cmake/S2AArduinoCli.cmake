@@ -111,8 +111,10 @@ if(S2A_BUNDLE_ARDUINO_CORES)
                     "-DPLATFORMS=${_s2a_platforms}"
                     "-DWORK=${CMAKE_BINARY_DIR}/arduino-seed-work"
                     "-DSEED=${_s2a_seed}"
+                    "-DPACKAGES=${PROJECT_SOURCE_DIR}/resources/board-packages.json"
                     -P "${PROJECT_SOURCE_DIR}/cmake/S2AArduinoSeed.cmake"
             DEPENDS "${PROJECT_SOURCE_DIR}/cmake/S2AArduinoSeed.cmake" "${S2A_ARDUINO_CLI_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/resources/board-packages.json"
             COMMENT "Downloading the board cores shipped with Scratch2Arduino: ${S2A_BUNDLE_ARDUINO_CORES}"
             VERBATIM)
         add_custom_target(s2a_arduino_seed ALL DEPENDS "${_s2a_seed}/platforms.txt")

@@ -1,8 +1,10 @@
-// Settings window (gear button): language, updates. Kept by the host in settings.json.
+// Settings window (gear button): language, theme, updates, optional boards. Kept by the host in
+// settings.json (the boards are what arduino-cli has installed).
 import { Button, Checkbox, Code, Group, Modal, SegmentedControl, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
 
-import { bridge, type Settings as SavedSettings } from "@/bridge";
+import { BoardPackageList } from "@/BoardPackages";
+import { bridge, type BoardPackage, type Settings as SavedSettings } from "@/bridge";
 import type { Language } from "@/catalog";
 import type { MessageKey } from "@/i18n";
 import { reportUrl } from "@/report";
@@ -17,6 +19,12 @@ interface SettingsProps {
 	/** Name of the chosen board, put in a problem report. */
 	board: string;
 	settings: SavedSettings;
+	/** Optional board packages, null while read (or outside the application: the section is hidden). */
+	boardPackages: BoardPackage[] | null;
+	/** A package was installed or removed: read the list again. */
+	onBoardPackagesChanged(): Promise<void>;
+	/** Outside the application there is nothing to install. */
+	hasHost: boolean;
 	onLanguage(language: Language): void;
 	onSettings(settings: SavedSettings): void;
 	/** A newer release was found by "Check now". */
@@ -33,7 +41,22 @@ type Check =
 	| { kind: "failed" }
 	| { kind: "found"; release: Release };
 
-export function Settings({ opened, language, t, version, board, settings, onLanguage, onSettings, onUpdate, readyToClose, onClose }: SettingsProps) {
+export function Settings({
+	opened,
+	language,
+	t,
+	version,
+	board,
+	settings,
+	boardPackages,
+	onBoardPackagesChanged,
+	hasHost,
+	onLanguage,
+	onSettings,
+	onUpdate,
+	readyToClose,
+	onClose,
+}: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
 	/** Downloading the installer (Windows), or why it failed. */
 	const [installing, setInstalling] = useState(false);
@@ -150,6 +173,13 @@ export function Settings({ opened, language, t, version, board, settings, onLang
 						onChange={(event) => onSettings({ ...settings, checkUpdates: event.currentTarget.checked })}
 					/>
 				</Stack>
+				{hasHost && (
+					<Stack gap={6}>
+						<Title order={6}>{t("packages.title")}</Title>
+						<Text size="sm">{t("packages.help")}</Text>
+						<BoardPackageList language={language} t={t} packages={boardPackages} onChanged={onBoardPackagesChanged} />
+					</Stack>
+				)}
 				<Stack gap={6}>
 					<Title order={6}>{t("settings.help")}</Title>
 					<Text size="sm">{t("settings.report_help")}</Text>

@@ -27,7 +27,10 @@ Une semaine avant :
    à côté de l'application ; sous Windows :
    `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" setup` dans PowerShell). Ou téléverse une fois
    l'exemple *Clignotant* sur chaque type de carte utilisé. Les outils sont rangés dans le dossier de
-   l'utilisateur : refais-le pour chaque compte.
+   l'utilisateur : refais-le pour chaque compte. Les outils des Uno, Nano et Mega sont fournis avec
+   Scratch2Arduino ; pour les cartes ESP32 (tutoriel 8), lance aussi `s2a-cli board install esp32` (environ
+   2 Go à télécharger, 8 Go sur le disque), ou coche *Cartes ESP32* dans l'installeur Windows, ou installe-les
+   dans les *Paramètres* de Scratch2Arduino.
 3. **Teste chaque kit** : branche la carte, `s2a-cli ports` (ou le menu *Port*) doit la montrer ; ouvre
    *Nouveau -> Clignotant*, clique sur *Téléverser* ; la LED **L** clignote.
 4. **Prépare des boîtes** numérotées (une par binôme) avec le matériel de la séance, et quelques câbles
@@ -65,7 +68,8 @@ Par binôme, pour les tutoriels 1 à 7 (kit "débutant Arduino" courant) :
 | Écran OLED SSD1306 0,96" I2C | 1 | 7 |
 | Matrice de LED 8x8 MAX7219 (module) | 1 | 7 |
 
-Pour le tutoriel 8 (robot), par groupe : ESP32 DevKit + câble micro-USB, pont en H L298N, 2 moteurs à
+Pour le tutoriel 8 (robot), par groupe (les ordinateurs ont besoin du paquet facultatif *Cartes ESP32*,
+voir l'étape 2 plus haut) : ESP32 DevKit + câble micro-USB, pont en H L298N, 2 moteurs à
 réducteur jaunes avec roues, un châssis avec roue folle (ou du carton), boîtier 4 piles AA + piles,
 batterie USB, un téléphone **Android** avec l'appli "Serial Bluetooth Terminal".
 

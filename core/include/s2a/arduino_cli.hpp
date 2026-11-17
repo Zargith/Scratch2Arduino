@@ -89,6 +89,11 @@ struct InstalledLibrary {
     bool builtIn = false;
 };
 
+/// A platform (board core) installed for arduino-cli (arduino-cli core list).
+struct InstalledPlatform {
+    std::string id;      ///< "arduino:avr"
+    std::string version; ///< "1.8.6"
+};
 
 /// Drives the arduino-cli executable (JSON output).
 class ArduinoCli {
@@ -97,6 +102,7 @@ public:
                process::Runner runner = process::systemRunner());
 
     [[nodiscard]] const std::filesystem::path& executable() const noexcept { return executable_; }
+    [[nodiscard]] const Directories& directories() const noexcept { return directories_; }
 
     /// arduino-cli version, e.g. "1.5.1".
     [[nodiscard]] Result<std::string> version() const;
@@ -104,10 +110,17 @@ public:
     /// True when the platform (core) of a board, e.g. "arduino:avr", is installed.
     [[nodiscard]] Result<bool> isPlatformInstalled(std::string_view platform) const;
 
-    /// Downloads and installs a platform (needs the internet, once per platform). When the
-    /// installer ships the platform (an "arduino-seed" folder next to arduino-cli, see
-    /// seedFromBundle()), its version is installed from the shipped archives, without the internet.
-    [[nodiscard]] Result<CommandOutcome> installPlatform(std::string_view platform) const;
+    /// The installed platforms, with their version.
+    [[nodiscard]] Result<std::vector<InstalledPlatform>> installedPlatforms() const;
+
+    /// Downloads and installs a platform (needs the internet, once per platform), at `version`
+    /// when given, else the latest one. When the installer ships the platform (an "arduino-seed"
+    /// folder next to arduino-cli, see seedFromBundle()), the shipped version is installed from the
+    /// shipped archives, without the internet.
+    [[nodiscard]] Result<CommandOutcome> installPlatform(std::string_view platform, std::string_view version = {}) const;
+
+    /// Removes an installed platform (arduino-cli also removes the tools no other platform needs).
+    [[nodiscard]] Result<CommandOutcome> uninstallPlatform(std::string_view platform) const;
 
     /// Copies the board indexes and archives shipped in <arduino-cli folder>/arduino-seed into
     /// the private folders, only those missing (never replaces a file). Does nothing without a seed.

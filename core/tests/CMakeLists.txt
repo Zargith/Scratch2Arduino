@@ -15,6 +15,7 @@ endif()
 
 add_executable(s2a_core_tests
     test_arduino_cli.cpp
+    test_board_packages.cpp
     test_blocks.cpp
     test_boards.cpp
     test_build.cpp

@@ -10,6 +10,11 @@
 ;    unpacked, then build-and-install.ps1 installs the missing prerequisites (CMake, Visual Studio
 ;    Build Tools, WebView2) and builds Scratch2Arduino with CMake on the user's machine. Updates
 ;    are incremental: only the changed files in {app}\src are recompiled in {app}\build.
+;
+; Optional boards (ESP32, ESP8266...): one task per package of resources/board-packages.json,
+; written by board-packages.cmake (cmake -P installer\windows\board-packages.cmake) before ISCC.
+; The chosen packages are downloaded at the end with s2a-cli, as the user who started the
+; installer (they go in his %LOCALAPPDATA%). Packages already there show as installed, greyed.
 
 #define AppName "Scratch2Arduino"
 #ifndef AppVersion
@@ -22,6 +27,8 @@
     #error PrebuiltDir does not exist (cmake --install <build> --prefix <PrebuiltDir>)
   #endif
 #endif
+
+#define HaveBoards FileExists(AddBackslash(SourcePath) + "board-code.isi")
 
 #if Ver < EncodeVer(6, 3, 0)
   #error Inno Setup 6.3 or later is needed.
@@ -91,12 +98,28 @@ english.BuildCancelled=Setup cancelled.
 french.InstallingWebView2=Installation de Microsoft WebView2 (affichage de l'éditeur)...
 english.InstallingWebView2=Installing Microsoft WebView2 (shows the editor)...
 french.WebView2Failed=Microsoft WebView2 n'a pas pu être installé : Scratch2Arduino en a besoin pour s'afficher.%n%nInstalle-le depuis https://developer.microsoft.com/microsoft-edge/webview2/ puis lance Scratch2Arduino.
+french.BoardPackages=Cartes supplémentaires (téléchargées à la fin de l'installation, il faut une connexion internet ; elles se suppriment ensuite dans les Paramètres de Scratch2Arduino) :
+english.BoardPackages=More boards (downloaded at the end of the installation, an Internet connection is needed; remove them later in the Settings of Scratch2Arduino):
+french.BoardAlreadyInstalled=(déjà installées)
+english.BoardAlreadyInstalled=(already installed)
+french.InstallingBoards=Téléchargement des cartes supplémentaires (cela peut prendre longtemps)...
+english.InstallingBoards=Downloading the extra boards (this can take a long time)...
+french.BoardsFailed=Les cartes supplémentaires n'ont pas pu être installées (pas de connexion internet ?).%n%nScratch2Arduino est bien installé : tu pourras les installer plus tard dans ses Paramètres.
+english.BoardsFailed=The extra boards could not be installed (no Internet connection?).%n%nScratch2Arduino is installed: you can install them later in its Settings.
+french.CancelBoardsConfirm=Arrêter le téléchargement des cartes supplémentaires ?%n%nScratch2Arduino reste installé : tu pourras les installer plus tard dans ses Paramètres.
+english.CancelBoardsConfirm=Stop downloading the extra boards?%n%nScratch2Arduino stays installed: you can install them later in its Settings.
+#if HaveBoards
+  #include "board-messages.isi"
+#endif
 english.WebView2Failed=Microsoft WebView2 could not be installed: Scratch2Arduino needs it to show its window.%n%nInstall it from https://developer.microsoft.com/microsoft-edge/webview2/ then start Scratch2Arduino.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 #ifdef PrebuiltDir
 Name: "buildfromsource"; Description: "{cm:BuildFromSource}"; Flags: unchecked
+#endif
+#if HaveBoards
+  #include "board-tasks.isi"
 #endif
 
 [InstallDelete]
@@ -166,6 +189,9 @@ var
   FollowedLine: Integer;     // first visible line the last time the output followed the new lines
   BuildCancelled: Boolean;
   SavedCancelClick: TNotifyEvent;
+  BoardInstalled: array of Boolean; // by package, found when the wizard starts
+  BoardCaptionsMarked: Boolean;
+  BoardsCancelled: Boolean;
 
 function PeekMessage(var Msg: TMsgBuffer; Wnd: HWND; FilterMin, FilterMax, Remove: Cardinal): Integer;
   external 'PeekMessageW@user32.dll stdcall';
@@ -181,6 +207,87 @@ function CloseHandle(Handle: THandle): Integer;
   external 'CloseHandle@kernel32.dll stdcall';
 
 // True when Scratch2Arduino is built on this computer rather than copied prebuilt.
+#if HaveBoards
+  #include "board-code.isi"
+#else
+function BoardTaskCount(): Integer;
+begin
+  Result := 0;
+end;
+
+function BoardTaskName(I: Integer): String;
+begin
+  Result := '';
+end;
+
+function BoardPackageId(I: Integer): String;
+begin
+  Result := '';
+end;
+
+function BoardPackageDir(I: Integer): String;
+begin
+  Result := '';
+end;
+#endif
+
+// True when Dir holds a folder (arduino-cli leaves the empty <arch> folder after an uninstall).
+function HasSubfolder(const Dir: String): Boolean;
+var
+  Found: TFindRec;
+begin
+  Result := False;
+  if FindFirst(AddBackslash(Dir) + '*', Found) then
+  try
+    repeat
+      if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and (Found.Name <> '.') and (Found.Name <> '..') then
+      begin
+        Result := True;
+        Exit;
+      end;
+    until not FindNext(Found);
+  finally
+    FindClose(Found);
+  end;
+end;
+
+// Where Scratch2Arduino's arduino-cli keeps the boards (toolchain::Directories::defaults()).
+function BoardPackagesFolder(): String;
+begin
+  Result := ExpandConstant('{localappdata}\Scratch2Arduino\arduino\data\packages\');
+end;
+
+procedure FindInstalledBoards();
+var
+  I: Integer;
+begin
+  SetArrayLength(BoardInstalled, BoardTaskCount());
+  for I := 0 to BoardTaskCount() - 1 do
+    BoardInstalled[I] := HasSubfolder(BoardPackagesFolder() + BoardPackageDir(I));
+end;
+
+// On the tasks page: a package already installed (an update, or installed from the application)
+// is ticked, greyed and marked as installed.
+procedure MarkInstalledBoards();
+var
+  I, Item: Integer;
+  Caption: String;
+begin
+  for I := 0 to BoardTaskCount() - 1 do
+    if BoardInstalled[I] then
+    begin
+      Caption := ExpandConstant('{cm:' + BoardTaskName(I) + '}');
+      for Item := 0 to WizardForm.TasksList.Items.Count - 1 do
+        if WizardForm.TasksList.ItemCaption[Item] = Caption then
+        begin
+          WizardForm.TasksList.ItemCaption[Item] := Caption + ' ' + CustomMessage('BoardAlreadyInstalled');
+          WizardForm.TasksList.Checked[Item] := True;
+          WizardForm.TasksList.ItemEnabled[Item] := False;
+        end;
+    end;
+  BoardCaptionsMarked := True;
+end;
+
 function BuildFromSource(): Boolean;
 begin
 #ifdef PrebuiltDir
@@ -267,6 +374,7 @@ begin
   BuildOutput.WordWrap := False;
   BuildOutput.Font.Name := 'Consolas';
   BuildOutput.Font.Size := 8;
+  FindInstalledBoards();
   if FindPreviousInstall() then
     CreateOutputMsgPage(wpWelcome, CustomMessage('UpdateTitle'), CustomMessage('UpdateSubtitle'),
       FmtMessage(CustomMessage('UpdateInfo'), [PreviousVersion, PreviousDir, '{#AppVersion}']));
@@ -349,8 +457,10 @@ end;
 
 // Runs a PowerShell command line without waiting for it, then waits for it while the window
 // keeps working. The command writes its PID to PidFile at once, the lines to show to DisplayFile
-// (optional) and its exit code to ExitFile before it ends. Returns False when it could not start.
-function RunWatched(const Params, PidFile, DisplayFile, ExitFile: String; var ExitCode: Integer): Boolean;
+// (optional) and its exit code to ExitFile before it ends. AsUser: runs it as the user who
+// started the installer, not elevated. Returns False when it could not start.
+function RunWatched(const Params, PidFile, DisplayFile, ExitFile: String; const AsUser: Boolean;
+                    var ExitCode: Integer): Boolean;
 var
   Process: THandle;
   Code: Cardinal;
@@ -363,7 +473,12 @@ begin
   DeleteFile(ExitFile);
   if DisplayFile <> '' then
     DeleteFile(DisplayFile);
-  if not Exec('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
+  if AsUser then
+  begin
+    if not ExecAsOriginalUser('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
+      Exit;
+  end
+  else if not Exec('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
     Exit;
   Process := 0;
   Shown := 0;
@@ -460,7 +575,7 @@ begin
   WizardForm.CancelButton.Enabled := True;
   try
     // No console window: the output goes to the memo of the installing page.
-    Succeeded := RunWatched(Params, BuildPidFile(), DisplayFile, ExitFile, ExitCode) and (ExitCode = 0);
+    Succeeded := RunWatched(Params, BuildPidFile(), DisplayFile, ExitFile, False, ExitCode) and (ExitCode = 0);
   finally
     WizardForm.CancelButton.OnClick := SavedCancelClick;
     WizardForm.ProgressGauge.Style := npbstNormal;
@@ -506,7 +621,7 @@ begin
         'Set-Content -LiteralPath ''' + ExpandConstant('{tmp}\webview2.exit') + ''' -Value $p.ExitCode; ' +
         'exit $p.ExitCode"';
       if not RunWatched(Params, ExpandConstant('{tmp}\webview2.pid'), '', ExpandConstant('{tmp}\webview2.exit'),
-                        ResultCode) or not WebView2Installed() then
+                        False, ResultCode) or not WebView2Installed() then
         SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
     except
       SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
@@ -516,9 +631,82 @@ begin
   end;
 end;
 
-// The build output is only shown when Scratch2Arduino is built here.
+// Files of the board download: written by a process of the user (not elevated), read here.
+function BoardsFile(const Name: String): String;
+begin
+  Result := ExpandConstant('{commonappdata}\Scratch2Arduino\setup\') + Name;
+end;
+
+// Cancel while the boards download: only the download stops, Scratch2Arduino stays installed.
+procedure BoardsCancelClick(Sender: TObject);
+var
+  Pid, ResultCode: Integer;
+begin
+  if BoardsCancelled then
+    Exit;
+  if MsgBox(CustomMessage('CancelBoardsConfirm'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
+    Exit;
+  BoardsCancelled := True;
+  WizardForm.CancelButton.Enabled := False;
+  Pid := ReadNumberFile(BoardsFile('boards.pid'));
+  if Pid > 0 then
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/PID ' + IntToStr(Pid) + ' /T /F', '', SW_HIDE,
+         ewNoWait, ResultCode);
+end;
+
+// The chosen board packages that are not installed yet, downloaded with s2a-cli board install.
+procedure InstallBoards();
+var
+  I, ExitCode: Integer;
+  Ids, Params: String;
+  Succeeded: Boolean;
+begin
+  Ids := '';
+  for I := 0 to BoardTaskCount() - 1 do
+    if BoardInstalled[I] then
+      Log('Board package already installed: ' + BoardPackageId(I))
+    else if WizardIsTaskSelected(BoardTaskName(I)) then
+      Ids := Ids + ' ' + BoardPackageId(I);
+  if (Ids = '') or not BinaryExists('s2a-cli.exe') then
+    Exit;
+  Log('Board packages to install:' + Ids);
+  ForceDirectories(ExpandConstant('{commonappdata}\Scratch2Arduino\setup'));
+  WizardForm.StatusLabel.Caption := CustomMessage('InstallingBoards');
+  WizardForm.FilenameLabel.Caption := '';
+  BuildCaption.Visible := True;
+  BuildOutput.Visible := True;
+  WizardForm.ProgressGauge.Style := npbstMarquee;
+  // UTF-8 both ways: the French messages of s2a-cli keep their accents.
+  Params := '-NoProfile -ExecutionPolicy Bypass -Command "' +
+    '[Console]::OutputEncoding = [Text.Encoding]::UTF8; ' +
+    'Set-Content -LiteralPath ''' + BoardsFile('boards.pid') + ''' -Value $PID; ' +
+    '& ''' + ExpandConstant('{app}\bin\s2a-cli.exe') + ''' board install' + Ids + ' --lang ' + Copy(ActiveLanguage(), 1, 2) + ' 2>&1 | ' +
+    'ForEach-Object { Add-Content -LiteralPath ''' + BoardsFile('boards-output.txt') + ''' -Value ([string]$_) -Encoding UTF8 }; ' +
+    '$code = $LASTEXITCODE; ' +
+    'Set-Content -LiteralPath ''' + BoardsFile('boards.exit') + ''' -Value $code; exit $code"';
+  BoardsCancelled := False;
+  FollowedLine := 0;
+  SavedCancelClick := WizardForm.CancelButton.OnClick;
+  WizardForm.CancelButton.OnClick := @BoardsCancelClick;
+  WizardForm.CancelButton.Enabled := True;
+  try
+    Succeeded := RunWatched(Params, BoardsFile('boards.pid'), BoardsFile('boards-output.txt'), BoardsFile('boards.exit'),
+                            True, ExitCode) and (ExitCode = 0);
+  finally
+    WizardForm.CancelButton.OnClick := SavedCancelClick;
+    WizardForm.ProgressGauge.Style := npbstNormal;
+    DeleteFile(BoardsFile('boards-output.txt'));
+  end;
+  Log('Board packages: exit code ' + IntToStr(ExitCode));
+  if not Succeeded and not BoardsCancelled then
+    SuppressibleMsgBox(CustomMessage('BoardsFailed'), mbError, MB_OK, IDOK);
+end;
+
+// The build output is only shown when Scratch2Arduino is built here (and while boards download).
 procedure CurPageChanged(CurPageID: Integer);
 begin
+  if (CurPageID = wpSelectTasks) and not BoardCaptionsMarked then
+    MarkInstalledBoards();
   if CurPageID = wpInstalling then
   begin
     BuildCaption.Visible := BuildFromSource();
@@ -528,6 +716,10 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if (CurStep = ssPostInstall) and not BuildFromSource() then
-    InstallWebView2();
+  if CurStep = ssPostInstall then
+  begin
+    if not BuildFromSource() then
+      InstallWebView2();
+    InstallBoards();
+  end;
 end;

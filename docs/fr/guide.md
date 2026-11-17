@@ -44,6 +44,10 @@ dans la partie *Assets* de la dernière version.
    Démarrer. Cela prend environ une minute, sans Internet (sauf sur un ancien Windows 10 sans Microsoft
    WebView2, qu'il installe alors). Les outils pour Uno, Nano et Mega sont inclus : rien à télécharger non
    plus au premier téléversement, pratique pour toute une classe sur le même wifi.
+4. Sur la page des tâches, *Cartes supplémentaires* liste les paquets de cartes facultatifs (ESP32, ESP8266)
+   avec leur taille : coche ceux que tu veux, ils sont téléchargés à la fin de l'installation (il faut
+   Internet). Lors d'une mise à jour, les paquets déjà installés sont marqués "(déjà installées)" et grisés.
+   Tu peux aussi les installer plus tard dans Scratch2Arduino (voir [Les outils des cartes](#les-outils-des-cartes)).
 
 Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
 
@@ -112,16 +116,33 @@ dans les *Paramètres* (engrenage), ou désactiver cette recherche.
 
 ### Les outils des cartes
 
-Au premier envoi d'un programme, Scratch2Arduino télécharge les outils de la carte (il faut Internet cette
-fois-là, puis plus jamais pour cette carte). Il garde sa propre copie de ces outils : il ne modifie pas un
-Arduino IDE installé sur le même ordinateur.
+Les outils des Arduino Uno, Nano et Mega sont fournis avec Scratch2Arduino. Les autres cartes sont des
+**paquets facultatifs**, téléchargés seulement si tu les veux (il faut Internet cette fois-là, puis plus
+jamais) :
+
+| Paquet | Cartes | À télécharger | Sur le disque |
+|---|---|---|---|
+| Cartes ESP8266 | ESP8266 (NodeMCU) | environ 125 Mo | environ 480 Mo |
+| Cartes ESP32 | ESP32 (DevKit) | environ 2 Go | environ 8 Go |
+
+- Dans les **Paramètres** (roue crantée), *Cartes supplémentaires* les liste avec leur taille : **Installer**,
+  **Mettre à jour** (une version plus récente pour Scratch2Arduino) ou **Supprimer** pour libérer la place
+  (une question est posée avant).
+- Dans la liste **Carte**, une carte dont le paquet manque est marquée "(à installer)". La choisir, ouvrir un
+  projet fait pour elle, ou cliquer sur Vérifier, Téléverser ou Live propose de télécharger son paquet, avec
+  sa taille. Tu peux répondre *Plus tard* : la carte reste choisie, et la **carte virtuelle** marche déjà avec
+  elle.
+
+Scratch2Arduino garde sa propre copie de ces outils : il ne modifie pas un Arduino IDE installé sur le même
+ordinateur.
 
 ## 2. Brancher la carte
 
 1. Branche la carte avec un câble USB **de données** (certains câbles ne servent qu'à recharger : si la
    carte n'apparaît jamais, essaie un autre câble).
 2. Dans la barre du haut, choisis la **Carte** (Arduino Uno, Nano, Mega 2560, ESP32 DevKit ou
-   ESP8266 NodeMCU).
+   ESP8266 NodeMCU ; les cartes ESP demandent d'abord leur paquet, voir
+   [Les outils des cartes](#les-outils-des-cartes)).
 3. Choisis le **Port** : la liste montre les cartes branchées. Si elle est vide, clique sur
    **Chercher les cartes branchées** (la flèche qui tourne, à côté).
 

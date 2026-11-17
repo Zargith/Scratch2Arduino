@@ -29,7 +29,8 @@ power bank.
 
 ## 2. Turn one motor
 
-Plug the ESP32 into the computer, choose the **ESP32 (DevKit)** board, then:
+Plug the ESP32 into the computer, choose the **ESP32 (DevKit)** board (the first time, Scratch2Arduino offers
+to download the *ESP32 boards* package: about 2 GB, see the [guide](../guide.md#the-boards-tools)), then:
 
 ```
 when the program starts

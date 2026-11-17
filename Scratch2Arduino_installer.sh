@@ -4,6 +4,7 @@
 #
 #   ./Scratch2Arduino_installer.sh                    install system-wide (/usr/local on Linux; ~/Applications on macOS)
 #   ./Scratch2Arduino_installer.sh --user             install for the current user only (~/.local on Linux)
+#   ./Scratch2Arduino_installer.sh --boards esp32     also download optional boards (esp32, esp8266...)
 #   ./Scratch2Arduino_installer.sh --uninstall        remove a previous installation
 #   ./Scratch2Arduino_installer.sh --help             all options
 set -euo pipefail
@@ -14,6 +15,7 @@ PREFIX=""
 INSTALL_DEPS=1
 ASSUME_YES=0
 UNINSTALL=0
+BOARDS=""
 BUILD_DIR="$ROOT_DIR/build/install-release"
 CMAKE_MIN="3.25"
 
@@ -34,6 +36,9 @@ usage() {
   --no-deps         do not install system dependencies
   --build-dir DIR   build directory (default: build/install-release)
   -y, --yes         do not ask for confirmation when installing packages
+  --boards LIST     also download these optional board packages, comma-separated
+                    (esp32, esp8266...: see "s2a-cli board list"); the Arduino AVR boards come
+                    with Scratch2Arduino, the others can also be installed in its Settings
   --uninstall       remove a previous installation
   -h, --help        show this help
 USAGE
@@ -47,6 +52,8 @@ while [ $# -gt 0 ]; do
         --no-deps) INSTALL_DEPS=0 ;;
         --build-dir) BUILD_DIR="${2:?--build-dir needs a directory}"; shift ;;
         -y|--yes) ASSUME_YES=1 ;;
+        --boards) BOARDS="${2:?--boards needs a list such as esp32,esp8266}"; shift ;;
+        --boards=*) BOARDS="${1#*=}" ;;
         --uninstall) UNINSTALL=1 ;;
         -h|--help) usage; exit 0 ;;
         *) usage; fail "Option inconnue : $1" "Unknown option: $1" ;;
@@ -180,6 +187,15 @@ done
 
 if [ "$OS" = Linux ] && command -v update-desktop-database >/dev/null 2>&1; then
     as_prefix_owner update-desktop-database -q "$PREFIX/share/applications" 2>/dev/null || true
+fi
+
+# Optional boards, for the user running this script (they go in their own data folder, never root's).
+if [ -n "$BOARDS" ]; then
+    step "Cartes supplémentaires : $BOARDS" "More boards: $BOARDS"
+    IFS=',' read -r -a board_ids <<< "$BOARDS"
+    "$BUILD_DIR/tools/s2a-cli/s2a-cli" board install "${board_ids[@]}" --lang "$LANG_UI" ||
+        say "Les cartes n'ont pas pu être installées : réessaie plus tard dans les Paramètres de Scratch2Arduino." \
+            "The boards could not be installed: try again later in the Settings of Scratch2Arduino."
 fi
 
 step "Terminé !" "Done!"

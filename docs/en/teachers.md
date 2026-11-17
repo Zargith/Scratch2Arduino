@@ -24,7 +24,9 @@ A week before:
    with the account used during the workshop, run `s2a-cli setup` (installed next to the application; on
    Windows: `& "$env:ProgramFiles\Scratch2Arduino\bin\s2a-cli.exe" setup` in PowerShell). Or upload the
    *Blink* example once to each type of board used. The tools are stored in the user's folder: repeat it
-   for each account.
+   for each account. The Uno, Nano and Mega tools come with Scratch2Arduino; for ESP32 boards (tutorial 8),
+   also run `s2a-cli board install esp32` (about 2 GB to download, 8 GB on the disk), or tick *ESP32
+   boards* in the Windows installer, or install them in the *Settings* of Scratch2Arduino.
 3. **Test every kit**: plug the board in, `s2a-cli ports` (or the *Port* menu) must show it; open
    *New -> Blink*, click *Upload*; the **L** LED blinks.
 4. **Prepare numbered boxes** (one per pair) with the parts of the session, plus spare USB cables, LEDs
@@ -62,7 +64,8 @@ Per pair, for tutorials 1 to 7 (a common "Arduino starter kit"):
 | 0.96" SSD1306 I2C OLED screen | 1 | 7 |
 | MAX7219 8x8 LED matrix (module) | 1 | 7 |
 
-For tutorial 8 (robot), per group: ESP32 DevKit + micro-USB cable, L298N H-bridge, 2 yellow gear motors
+For tutorial 8 (robot), per group (the computers need the optional *ESP32 boards* package, see step 2 above):
+ESP32 DevKit + micro-USB cable, L298N H-bridge, 2 yellow gear motors
 with wheels, a chassis with a caster (or cardboard), 4 x AA battery holder + batteries, USB power bank, an
 **Android** phone with the "Serial Bluetooth Terminal" app.
 

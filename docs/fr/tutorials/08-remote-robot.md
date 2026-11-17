@@ -31,7 +31,8 @@ L'ESP32 est alimentée par une batterie USB.
 
 ## 2. Fais tourner un moteur
 
-Branche l'ESP32 à l'ordinateur, choisis la carte **ESP32 (DevKit)**, puis :
+Branche l'ESP32 à l'ordinateur, choisis la carte **ESP32 (DevKit)** (la première fois, Scratch2Arduino propose
+de télécharger le paquet *Cartes ESP32* : environ 2 Go, voir le [guide](../guide.md#les-outils-des-cartes)), puis :
 
 ```
 quand le programme démarre

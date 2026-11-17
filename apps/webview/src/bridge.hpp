@@ -69,6 +69,7 @@ private:
     /// downloaded at the first search of the session.
     std::mutex librariesMutex_;
     bool libraryIndexReady_ = false; ///< Guarded by librariesMutex_.
+    std::mutex packagesMutex_; ///< One board package installed or removed at a time.
 
     /// Frees the board's port for an upload or the Live mode.
     void closeMonitor();
