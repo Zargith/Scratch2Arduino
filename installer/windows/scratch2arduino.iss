@@ -24,7 +24,7 @@
 #endif
 
 #if Ver < EncodeVer(6, 3, 0)
-  #error Inno Setup 6.3 or later is needed (ExecAndLogOutput shows the build in the installer window).
+  #error Inno Setup 6.3 or later is needed.
 #endif
 
 [Setup]
@@ -147,6 +147,17 @@ const
   WM_VSCROLL = $0115;
   SB_BOTTOM = 7;
   MaxBuildLines = 2000; // lines kept in the window; install-log.txt keeps them all
+  PM_REMOVE = 1;
+  PROCESS_QUERY_LIMITED_INFORMATION = $1000;
+  STILL_ACTIVE = 259;
+  WatchStep = 50;          // ms between two looks at the watched process
+  WatchStartTimeout = 120; // s for the watched process to write its PID
+
+type
+  // Room for a Windows MSG (28 bytes in a 32-bit Setup, 48 in a 64-bit one): only Windows reads it.
+  TMsgBuffer = record
+    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12: Longint;
+  end;
 
 var
   PreviousVersion, PreviousDir: String;
@@ -155,6 +166,19 @@ var
   FollowedLine: Integer;     // first visible line the last time the output followed the new lines
   BuildCancelled: Boolean;
   SavedCancelClick: TNotifyEvent;
+
+function PeekMessage(var Msg: TMsgBuffer; Wnd: HWND; FilterMin, FilterMax, Remove: Cardinal): Integer;
+  external 'PeekMessageW@user32.dll stdcall';
+function TranslateMessage(var Msg: TMsgBuffer): Integer;
+  external 'TranslateMessage@user32.dll stdcall';
+function DispatchMessage(var Msg: TMsgBuffer): Longint;
+  external 'DispatchMessageW@user32.dll stdcall';
+function OpenProcess(Access: Cardinal; Inherit: Integer; ProcessId: Cardinal): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function GetExitCodeProcess(Process: THandle; var ExitCode: Cardinal): Integer;
+  external 'GetExitCodeProcess@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): Integer;
+  external 'CloseHandle@kernel32.dll stdcall';
 
 // True when Scratch2Arduino is built on this computer rather than copied prebuilt.
 function BuildFromSource(): Boolean;
@@ -253,10 +277,22 @@ begin
   Result := FileExists(ExpandConstant('{app}\bin\') + Name);
 end;
 
-// Each line written by build-and-install.ps1, while it runs. Never reads the whole text of the
-// memo (that slowed the window down until it froze), and follows the new lines only while the
-// user has not scrolled up to read the older ones.
-procedure ShowBuildLine(const S: String; const Error, FirstLine: Boolean);
+// Lets the window work (move, scroll, Cancel) while a program runs: Inno Setup's own Exec does
+// not, which froze the window during the whole build.
+procedure ProcessWizardMessages();
+var
+  Msg: TMsgBuffer;
+begin
+  while PeekMessage(Msg, 0, 0, 0, PM_REMOVE) <> 0 do
+  begin
+    TranslateMessage(Msg);
+    DispatchMessage(Msg);
+  end;
+end;
+
+// Adds a line written by build-and-install.ps1 to the window. Never reads the whole text of the
+// memo, and follows the new lines only while the user has not scrolled up to read older ones.
+procedure ShowBuildLine(const S: String);
 var
   First: Integer;
   Follow: Boolean;
@@ -283,6 +319,93 @@ begin
     WizardForm.FilenameLabel.Caption := Copy(S, 5, Length(S) - 4); // the current step
 end;
 
+// Shows the lines of DisplayFile not shown yet. While the program runs, its last line may still
+// be incomplete: it waits for the next look (or the end, All).
+procedure ShowNewLines(const DisplayFile: String; var Shown: Integer; const All: Boolean);
+var
+  Lines: TArrayOfString;
+  Count, I: Integer;
+begin
+  if (DisplayFile = '') or not LoadStringsFromLockedFile(DisplayFile, Lines) then
+    Exit;
+  Count := GetArrayLength(Lines);
+  if not All then
+    Count := Count - 1;
+  for I := Shown to Count - 1 do
+    ShowBuildLine(Lines[I]);
+  if Count > Shown then
+    Shown := Count;
+end;
+
+// Number written in a small text file (PID, exit code), or -1.
+function ReadNumberFile(const FileName: String): Integer;
+var
+  Text: AnsiString;
+begin
+  Result := -1;
+  if LoadStringFromLockedFile(FileName, Text) then
+    Result := StrToIntDef(Trim(String(Text)), -1);
+end;
+
+// Runs a PowerShell command line without waiting for it, then waits for it while the window
+// keeps working. The command writes its PID to PidFile at once, the lines to show to DisplayFile
+// (optional) and its exit code to ExitFile before it ends. Returns False when it could not start.
+function RunWatched(const Params, PidFile, DisplayFile, ExitFile: String; var ExitCode: Integer): Boolean;
+var
+  Process: THandle;
+  Code: Cardinal;
+  Pid, Shown, Waited: Integer;
+  Finished: Boolean;
+begin
+  Result := False;
+  ExitCode := -1;
+  DeleteFile(PidFile);
+  DeleteFile(ExitFile);
+  if DisplayFile <> '' then
+    DeleteFile(DisplayFile);
+  if not Exec('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
+    Exit;
+  Process := 0;
+  Shown := 0;
+  Waited := 0;
+  Finished := False;
+  repeat
+    ProcessWizardMessages();
+    Sleep(WatchStep);
+    Waited := Waited + WatchStep;
+    if Process = 0 then
+    begin
+      Pid := ReadNumberFile(PidFile);
+      if Pid > 0 then
+        Process := OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, Pid);
+    end;
+    if Process <> 0 then
+    begin
+      if (GetExitCodeProcess(Process, Code) <> 0) and (Code <> STILL_ACTIVE) then
+      begin
+        ExitCode := Code;
+        Finished := True;
+      end;
+    end
+    else if FileExists(ExitFile) then
+    begin
+      // Ended before it could be opened.
+      ExitCode := ReadNumberFile(ExitFile);
+      Finished := True;
+    end
+    else if Waited > WatchStartTimeout * 1000 then
+      Exit; // never started
+    if Waited mod 250 = 0 then
+      ShowNewLines(DisplayFile, Shown, False);
+  until Finished;
+  if Process <> 0 then
+    CloseHandle(Process);
+  ShowNewLines(DisplayFile, Shown, True);
+  DeleteFile(PidFile);
+  DeleteFile(ExitFile);
+  Result := True;
+end;
+
 function BuildPidFile(): String;
 begin
   Result := ExpandConstant('{app}\build.pid');
@@ -292,8 +415,7 @@ end;
 // so the build (and the programs it started: winget, CMake, the compiler) is stopped here.
 procedure BuildCancelClick(Sender: TObject);
 var
-  Pid: AnsiString;
-  ResultCode: Integer;
+  Pid, ResultCode: Integer;
 begin
   if BuildCancelled then
     Exit;
@@ -302,18 +424,21 @@ begin
   BuildCancelled := True;
   WizardForm.CancelButton.Enabled := False;
   WizardForm.StatusLabel.Caption := CustomMessage('BuildCancelled');
-  if LoadStringFromFile(BuildPidFile(), Pid) and (Trim(String(Pid)) <> '') then
-    Exec(ExpandConstant('{sys}\taskkill.exe'), '/PID ' + Trim(String(Pid)) + ' /T /F', '', SW_HIDE,
+  Pid := ReadNumberFile(BuildPidFile());
+  if Pid > 0 then
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/PID ' + IntToStr(Pid) + ' /T /F', '', SW_HIDE,
          ewNoWait, ResultCode);
 end;
 
 procedure RunBuild();
 var
-  ResultCode: Integer;
-  Params, LogFile: String;
+  ExitCode: Integer;
+  Params, LogFile, DisplayFile, ExitFile: String;
   Succeeded: Boolean;
 begin
   LogFile := ExpandConstant('{app}\install-log.txt');
+  DisplayFile := ExpandConstant('{app}\build-output.txt');
+  ExitFile := ExpandConstant('{app}\build.exit');
   if PreviousDir <> '' then
     WizardForm.StatusLabel.Caption := CustomMessage('Updating')
   else
@@ -324,6 +449,8 @@ begin
             ' -InstallDir "' + ExpandConstant('{app}') + '"' +
             ' -LogFile "' + LogFile + '"' +
             ' -PidFile "' + BuildPidFile() + '"' +
+            ' -DisplayFile "' + DisplayFile + '"' +
+            ' -ExitFile "' + ExitFile + '"' +
             ' -Language ' + ActiveLanguage();
   WizardForm.ProgressGauge.Style := npbstMarquee; // the length of the build is not known
   BuildCancelled := False;
@@ -333,12 +460,11 @@ begin
   WizardForm.CancelButton.Enabled := True;
   try
     // No console window: the output goes to the memo of the installing page.
-    Succeeded := ExecAndLogOutput('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, @ShowBuildLine) and
-                 (ResultCode = 0);
+    Succeeded := RunWatched(Params, BuildPidFile(), DisplayFile, ExitFile, ExitCode) and (ExitCode = 0);
   finally
     WizardForm.CancelButton.OnClick := SavedCancelClick;
     WizardForm.ProgressGauge.Style := npbstNormal;
-    DeleteFile(BuildPidFile());
+    DeleteFile(DisplayFile);
   end;
   if BuildCancelled then
     // Stops the installation: Inno Setup rolls back what it installed.
@@ -363,6 +489,7 @@ end;
 procedure InstallWebView2();
 var
   ResultCode: Integer;
+  Params: String;
 begin
   if WebView2Installed() then
     Exit;
@@ -371,8 +498,15 @@ begin
   try
     try
       DownloadTemporaryFile('https://go.microsoft.com/fwlink/p/?LinkId=2124703', 'MicrosoftEdgeWebview2Setup.exe', '', nil);
-      if not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_HIDE,
-                  ewWaitUntilTerminated, ResultCode) or not WebView2Installed() then
+      // Through PowerShell, so that the window keeps working while it runs (see RunWatched).
+      Params := '-NoProfile -ExecutionPolicy Bypass -Command "' +
+        'Set-Content -LiteralPath ''' + ExpandConstant('{tmp}\webview2.pid') + ''' -Value $PID; ' +
+        '$p = Start-Process -FilePath ''' + ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe') + ''' ' +
+        '-ArgumentList ''/silent'',''/install'' -Wait -PassThru; ' +
+        'Set-Content -LiteralPath ''' + ExpandConstant('{tmp}\webview2.exit') + ''' -Value $p.ExitCode; ' +
+        'exit $p.ExitCode"';
+      if not RunWatched(Params, ExpandConstant('{tmp}\webview2.pid'), '', ExpandConstant('{tmp}\webview2.exit'),
+                        ResultCode) or not WebView2Installed() then
         SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
     except
       SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
