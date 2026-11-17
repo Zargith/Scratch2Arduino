@@ -403,7 +403,9 @@ du JSON...). Les blocs installent les leurs tout seuls ; pour ton propre code, u
 **Bibliothèques Arduino** (icône de livres, en haut à droite) :
 
 1. Onglet **Chercher** : tape un nom ou un mot-clé (par exemple `json`), puis *Chercher*. La première
-   fois, la liste des bibliothèques est téléchargée (il faut Internet). Les descriptions sont en anglais.
+   fois, la liste des bibliothèques est téléchargée (il faut Internet). C'est la liste officielle d'Arduino
+   (Library Manager), la même que sur [docs.arduino.cc/libraries](https://docs.arduino.cc/libraries/) : le
+   lien est rappelé sous la recherche. Les descriptions sont en anglais.
 2. *Ajouter au projet* installe la bibliothèque (sa dernière version, ou celle choisie dans la liste) et
    l'ajoute au projet.
 3. Onglet **Ce projet** : la ligne `#include <...>` à écrire en haut de "Mon code" est indiquée.

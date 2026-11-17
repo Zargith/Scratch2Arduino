@@ -3,6 +3,7 @@
 import {
 	ActionIcon,
 	Alert,
+	Anchor,
 	Badge,
 	Button,
 	Card,
@@ -20,6 +21,9 @@ import {
 } from "@mantine/core";
 import { IconBooks, IconPlus, IconRefresh, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
+
+/** Where the list comes from: the Arduino Library Manager, whose index arduino-cli downloads. */
+export const LIBRARIES_SOURCE_URL = "https://docs.arduino.cc/libraries/";
 
 import { bridge, hasHost, type InstalledLibrary, type RegistryLibrary } from "@/bridge";
 import type { Language } from "@/catalog";
@@ -243,7 +247,19 @@ export function ArduinoLibraries({ opened, language, t, libraries, usesCpp, onCh
 				</Button>
 			</Group>
 			<Text size="xs" c="dimmed">
-				{t("libraries.english_note")}
+				{t("libraries.source")}{" "}
+				<Anchor
+					href={LIBRARIES_SOURCE_URL}
+					size="xs"
+					onClick={(event) => {
+						// In the application, the link opens in the browser, not in the editor's window.
+						event.preventDefault();
+						void bridge.openUrl(LIBRARIES_SOURCE_URL).catch(() => undefined);
+					}}
+				>
+					docs.arduino.cc/libraries
+				</Anchor>
+				. {t("libraries.english_note")}
 			</Text>
 			{searching && (
 				<Group gap="xs">
