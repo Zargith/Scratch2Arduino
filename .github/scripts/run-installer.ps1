@@ -1,14 +1,18 @@
 # Runs Scratch2Arduino_installer.exe silently and shows its build log while it runs, so that
 # the CI step does not stay silent for many minutes. Exits with the installer exit code.
 param(
-    [Parameter(Mandatory = $true)][string]$SetupLog
+    [Parameter(Mandatory = $true)][string]$SetupLog,
+    # Tasks to check or uncheck ("buildfromsource", "!buildfromsource"), merged with those of the
+    # previous installation, which the installer remembers. Default: the remembered ones.
+    [string]$Tasks = ''
 )
 
 $installer = 'installer\windows\Output\Scratch2Arduino_installer.exe'
 $buildLog = Join-Path $env:ProgramFiles 'Scratch2Arduino\install-log.txt'
 $watch = [Diagnostics.Stopwatch]::StartNew()
-$process = Start-Process -FilePath $installer -PassThru `
-    -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$SetupLog"
+$arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$SetupLog")
+if ($Tasks) { $arguments += "/MERGETASKS=$Tasks" }
+$process = Start-Process -FilePath $installer -PassThru -ArgumentList $arguments
 $null = $process.Handle # without it, ExitCode stays empty once the process has exited
 
 $shown = 0      # lines of the build log already printed

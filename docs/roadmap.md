@@ -65,6 +65,7 @@ Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the
 | 0.14.0 | **Linux and macOS packages** (`.deb`, `.rpm`, `.dmg`) checked by CI | Phase 11 planned an installer script only |
 | 0.14.0 | **Issue forms** and a **Report a problem** button (filled with the version, system and board) | Easier feedback from users |
 | 1.1.0 | **Code files in the `.s2a`**: "My code" and text programs saved as `my_code.*` / `program.*` beside `project.json` (format 3); **thumbnail** of the project in the recent projects list; version of the app that saved the file (`savedWith`) | Readable archives and diffs; older files still open |
+| 1.2.0 | **Prebuilt Windows installer**: no Visual Studio or CMake to download, the Arduino AVR core shipped (Uno, Nano, Mega work offline, `S2A_BUNDLE_ARDUINO_CORES`); building from the sources stays an option, with a working Cancel button and a build log that scrolls without freezing the window | A classroom of 30 on the same Wi-Fi: Visual Studio downloads took too long, the installer window froze |
 
 ## Remaining work
 

@@ -1,6 +1,8 @@
 #include "s2a/arduino_cli.hpp"
 
 #include <gtest/gtest.h>
+#include <fstream>
+#include <iterator>
 #include <string>
 
 namespace {
@@ -131,6 +133,94 @@ TEST(ArduinoCli, StopsInstallingWhenTheIndexCannotBeDownloaded) {
     EXPECT_FALSE(outcome.value().success);
     EXPECT_NE(outcome.value().error.find("no such host"), std::string::npos);
     EXPECT_EQ(fake.commands.size(), 1U);
+}
+
+/// A folder laid out like an installation shipping the AVR core: <root>/bin/arduino-cli and
+/// <root>/bin/arduino-seed, plus empty private folders in <root>/user.
+struct SeededInstall {
+    fs::path root;
+    Directories directories;
+
+    explicit SeededInstall(const std::string& name) : root(fs::temp_directory_path() / name) {
+        fs::remove_all(root);
+        const fs::path seed = root / "bin" / "arduino-seed";
+        fs::create_directories(seed / "data");
+        fs::create_directories(seed / "downloads" / "packages");
+        write(seed / "data" / "package_index.json", "{}");
+        write(seed / "downloads" / "packages" / "avr-1.8.6.tar.bz2", "archive");
+        write(seed / "platforms.txt", "arduino:avr@1.8.6\r\n");
+        directories = {root / "user" / "data", root / "user" / "downloads", root / "user" / "sketches"};
+    }
+    ~SeededInstall() {
+        std::error_code error;
+        fs::remove_all(root, error);
+    }
+    SeededInstall(const SeededInstall&) = delete;
+    SeededInstall& operator=(const SeededInstall&) = delete;
+
+    [[nodiscard]] fs::path cli() const { return root / "bin" / "arduino-cli"; }
+
+    static void write(const fs::path& path, const std::string& text) {
+        std::ofstream(path, std::ios::binary) << text;
+    }
+    static std::string read(const fs::path& path) {
+        std::ifstream file(path, std::ios::binary);
+        return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    }
+};
+
+TEST(ArduinoCli, InstallsTheShippedPlatformWithoutDownloadingTheIndex) {
+    const SeededInstall install("s2a-seed-install-test");
+    FakeRunner fake;
+    fake.replies = {reply("{}")};
+    const ArduinoCli cli(install.cli(), install.directories, fake.runner());
+    EXPECT_EQ(cli.seededVersion("arduino:avr"), "1.8.6");
+    EXPECT_EQ(cli.seededVersion("esp32:esp32"), "");
+    const auto outcome = cli.installPlatform("arduino:avr");
+    ASSERT_TRUE(outcome.ok());
+    EXPECT_TRUE(outcome.value().success);
+    ASSERT_EQ(fake.commands.size(), 1U);
+    EXPECT_EQ(fake.commands[0].args.at(1), "install");
+    EXPECT_EQ(fake.commands[0].args.at(2), "arduino:avr@1.8.6");
+    EXPECT_TRUE(fs::is_regular_file(install.directories.data / "package_index.json"));
+    EXPECT_EQ(SeededInstall::read(install.directories.downloads / "packages" / "avr-1.8.6.tar.bz2"), "archive");
+}
+
+TEST(ArduinoCli, SeedingNeverReplacesAFile) {
+    const SeededInstall install("s2a-seed-keep-test");
+    fs::create_directories(install.directories.data);
+    SeededInstall::write(install.directories.data / "package_index.json", "newer");
+    FakeRunner fake;
+    const ArduinoCli cli(install.cli(), install.directories, fake.runner());
+    cli.seedFromBundle();
+    EXPECT_EQ(SeededInstall::read(install.directories.data / "package_index.json"), "newer");
+    EXPECT_TRUE(fs::is_regular_file(install.directories.downloads / "packages" / "avr-1.8.6.tar.bz2"));
+    EXPECT_FALSE(fs::exists(install.directories.downloads / "packages" / "avr-1.8.6.tar.bz2.part"));
+}
+
+TEST(ArduinoCli, UpdatesTheIndexForAPlatformThatIsNotShipped) {
+    const SeededInstall install("s2a-seed-other-test");
+    FakeRunner fake;
+    fake.replies = {reply("{}"), reply("{}")};
+    const ArduinoCli cli(install.cli(), install.directories, fake.runner());
+    const auto outcome = cli.installPlatform("esp32:esp32");
+    ASSERT_TRUE(outcome.ok());
+    ASSERT_EQ(fake.commands.size(), 2U);
+    EXPECT_EQ(fake.commands[0].args.at(1), "update-index");
+    EXPECT_EQ(fake.commands[1].args.at(2), "esp32:esp32");
+}
+
+TEST(ArduinoCli, InstallsOfflineWhenAnIndexIsAlreadyThere) {
+    const SeededInstall install("s2a-seed-offline-test");
+    FakeRunner fake;
+    fake.replies = {reply(R"j({"error": "dial tcp: lookup downloads.arduino.cc: no such host"})j", 1),
+                    reply("{}")};
+    const ArduinoCli cli(install.cli(), install.directories, fake.runner());
+    const auto outcome = cli.installPlatform("esp32:esp32");
+    ASSERT_TRUE(outcome.ok());
+    EXPECT_TRUE(outcome.value().success);
+    ASSERT_EQ(fake.commands.size(), 2U);
+    EXPECT_EQ(fake.commands[1].args.at(1), "install");
 }
 
 TEST(ArduinoCli, DetectsPortsAndBoards) {

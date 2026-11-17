@@ -22,6 +22,8 @@ param(
     [string]$InstallDir = (Join-Path $env:ProgramFiles 'Scratch2Arduino'),
     [string]$BuildDir = '',
     [string]$LogFile = '',
+    # Scratch2Arduino_installer.exe stops this process (and the programs it started) on Cancel.
+    [string]$PidFile = '',
     [switch]$NoDeps,
     [switch]$CleanBuild,
     [ValidateSet('french', 'english', 'fr', 'en')]
@@ -86,16 +88,31 @@ function Fail([string]$Fr, [string]$En) {
     exit 1
 }
 
+# Progress output (winget spinners and bars, download percentages): kept in the log, not shown,
+# since thousands of such lines made the installer window slow.
+function Test-ProgressLine([string]$Line) {
+    $text = $Line.Trim()
+    if ($text.Length -eq 0) { return $false }
+    if ($text -match '^[-\\|/]$') { return $true }
+    if ($text -match '[\u2580-\u259F]') { return $true }
+    if ($text -match '^[\d.,]+\s*(%|[KMG]?i?B\s*/\s*[\d.,]+\s*[KMG]?i?B)$') { return $true }
+    return $false
+}
+
 # Runs a native command, mirrors its output to the log and stops on a non-zero exit code.
 function Invoke-Native([string]$Exe, [string[]]$Arguments) {
     Write-Log "> $Exe $($Arguments -join ' ')"
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
+    $script:lastShown = $null
     # Not Tee-Object: in Windows PowerShell 5.1 it writes UTF-16, which would mix encodings in the log.
     & $Exe @Arguments 2>&1 | ForEach-Object {
         $line = "$_"
-        Write-Host $line
         Write-Log $line
+        if (-not (Test-ProgressLine $line) -and $line -ne $script:lastShown) {
+            Write-Host $line
+            $script:lastShown = $line
+        }
     }
     $code = $LASTEXITCODE
     $ErrorActionPreference = $previous
@@ -206,6 +223,7 @@ function Read-Manifest([string]$Path) {
 
 try {
     Write-Log "Scratch2Arduino build - $(Get-Date -Format s)" -Reset
+    if ($PidFile) { Set-Content -LiteralPath $PidFile -Value $PID -Encoding ASCII }
 
     if (Get-Process -Name 'scratch2arduino' -ErrorAction SilentlyContinue) {
         Fail 'Scratch2Arduino est ouvert : ferme-le puis relance l''installation.' `
@@ -228,8 +246,10 @@ try {
         Say 'Compilateur C++ (Visual Studio) déjà installé' 'C++ compiler (Visual Studio) already installed'
     } else {
         if ($NoDeps) { Fail 'Le compilateur C++ de Visual Studio est introuvable.' 'Visual Studio C++ compiler not found.' }
+        # Only the C++ compiler and the Windows SDK (about 2 GB), not the whole workload.
         Install-WithWinget 'Microsoft.VisualStudio.2022.BuildTools' @('--override',
-            '--wait --quiet --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended')
+            ('--wait --quiet --norestart --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ' +
+             '--add Microsoft.VisualStudio.Component.Windows11SDK.22621'))
         if (-not (Test-VisualStudio)) { Fail "L'installation de Visual Studio Build Tools a échoué." 'Visual Studio Build Tools installation failed.' }
     }
 

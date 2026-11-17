@@ -104,8 +104,17 @@ public:
     /// True when the platform (core) of a board, e.g. "arduino:avr", is installed.
     [[nodiscard]] Result<bool> isPlatformInstalled(std::string_view platform) const;
 
-    /// Downloads and installs a platform (needs the internet, once per platform).
+    /// Downloads and installs a platform (needs the internet, once per platform). When the
+    /// installer ships the platform (an "arduino-seed" folder next to arduino-cli, see
+    /// seedFromBundle()), its version is installed from the shipped archives, without the internet.
     [[nodiscard]] Result<CommandOutcome> installPlatform(std::string_view platform) const;
+
+    /// Copies the board indexes and archives shipped in <arduino-cli folder>/arduino-seed into
+    /// the private folders, only those missing (never replaces a file). Does nothing without a seed.
+    void seedFromBundle() const;
+
+    /// Version of `platform` shipped in the seed ("1.8.6"), empty when it is not shipped.
+    [[nodiscard]] std::string seededVersion(std::string_view platform) const;
 
     /// Names of the Arduino libraries installed in the private folder ("Servo"...).
     [[nodiscard]] Result<std::vector<std::string>> installedLibraries() const;
