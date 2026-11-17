@@ -371,12 +371,15 @@ jobs:
       - name: Run Scratch2Arduino_installer.exe built from the sources
         run: |
           # The build log is shown while the installer runs.
-          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-source.log" -Tasks buildfromsource
+          # With its window shown: it must keep responding while the build runs.
+          & .github\scripts\run-installer.ps1 -SetupLog "$env:RUNNER_TEMP\setup-source.log" -Tasks buildfromsource -CheckResponsive
           if ($LASTEXITCODE -ne 0) { throw "Scratch2Arduino_installer.exe exited with $LASTEXITCODE" }
           $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
           if (-not (Test-Path (Join-Path $app 'build\CMakeCache.txt'))) { throw 'Scratch2Arduino was not built from the sources' }
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe was not installed' }
-          if (Test-Path (Join-Path $app 'build.pid')) { throw 'build.pid was not removed' }
+          foreach ($file in 'build.pid', 'build.exit', 'build-output.txt') {
+            if (Test-Path (Join-Path $app $file)) { throw "$file was not removed" }
+          }
 
       - name: Run Scratch2Arduino_installer.exe built from the sources again (incremental update)
         run: |

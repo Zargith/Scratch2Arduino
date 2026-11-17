@@ -61,8 +61,11 @@ powershell -ExecutionPolicy Bypass -File installer\windows\build-and-install.ps1
 ```
 
 Options: `-NoDeps` (never install prerequisites), `-CleanBuild` (full rebuild), `-Language english`,
-`-StagingDir <folder>` (sync these sources into `-SourceDir` first), `-PidFile <file>` (where the installer
-reads the process to stop on Cancel).
+`-StagingDir <folder>` (sync these sources into `-SourceDir` first). The installer also passes `-PidFile`,
+`-DisplayFile` and `-ExitFile`: it runs the script without waiting for it, so that its window keeps responding
+(Inno Setup's `Exec` and `ExecAndLogOutput` stop handling the window until the program ends), watches the
+process, shows the lines of the display file and stops the process tree on Cancel. The CI runs the build
+from the sources with the window shown and fails if it stops responding.
 
 ## Windows SmartScreen and antivirus warnings
 
