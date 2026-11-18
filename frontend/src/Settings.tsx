@@ -151,6 +151,11 @@ export function Settings({
 										{t("settings.install_update")}
 									</Button>
 								)}
+								{!windows && check.release.download.endsWith(".dmg") && (
+									<Button onClick={() => void bridge.openUrl(check.release.download).catch(() => undefined)}>
+										{t("update.download")}
+									</Button>
+								)}
 								<Button variant="default" onClick={() => void bridge.openUrl(check.release.page).catch(() => undefined)}>
 									{t("update.notes")}
 								</Button>

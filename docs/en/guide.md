@@ -8,7 +8,9 @@ the application: the **Tutorials and help** button (the graduation cap), next to
 
 For a very first try, without hardware, the same panel offers the **interactive tutorial "My doorbell"**: a
 box guides you step by step (blocks, wiring diagram, virtual board, a little C++ code translated into
-Python) and sees by itself when each step is done.
+Python) and sees by itself when each step is done. Once you click *Next*, the blocks of the finished step
+are locked: they cannot be moved, thrown away or changed by mistake, so the next steps stay possible. *Back*
+unlocks them, and they are all unlocked when the tutorial is closed.
 
 *Pour le lire en français, change la langue dans les paramètres.*
 
@@ -54,12 +56,15 @@ page, in the *Assets* part of the latest version.
    "already installed", greyed. You can also install them later in Scratch2Arduino (see
    [The boards' tools](#the-boards-tools)). Then, in advanced mode only, the expert option to build
    Scratch2Arduino on the computer, and last the desktop icon.
+6. The last page has a ticked **Launch Scratch2Arduino** box: click *Finish* and Scratch2Arduino opens.
 
 To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
 
-### macOS (Mac with an Apple chip: M1, M2, M3, M4...)
+### macOS
 
-1. Download `Scratch2Arduino-<version>-macos-arm64.dmg` and open it.
+1. Download the `.dmg` for your Mac and open it (Apple menu > *About This Mac* tells the chip or processor):
+   - Apple chip (M1, M2, M3, M4...): `Scratch2Arduino-<version>-macos-arm64.dmg`;
+   - Intel processor: `Scratch2Arduino-<version>-macos-x86_64.dmg`.
 2. Drag **Scratch2Arduino** onto the **Applications** folder, then eject the disk.
 3. The first time, macOS says the application comes from an "unidentified developer" (it is not signed by
    Apple yet):
@@ -72,9 +77,12 @@ To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
    `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
 4. Genuine Arduino boards are recognised at once. For a board with a CH340 chip (many cheap Nano and ESP32
    boards), install the maker's driver if the board does not show up in the ports.
+5. On a Mac with an Apple chip, the board compilers (made by Arduino for Intel Macs, as for the Arduino IDE)
+   need **Rosetta**, an Apple component. If it is missing, Scratch2Arduino says so at start-up and offers an
+   **Install Rosetta** button: macOS asks for your password, then downloads it from Apple (Internet needed,
+   only once). In the Terminal, it is: `softwareupdate --install-rosetta --agree-to-license`.
 
 To uninstall: drag Scratch2Arduino from Applications to the Bin.
-On a Mac with an Intel processor, install from the sources (see below).
 
 ### Linux
 
@@ -100,7 +108,7 @@ board was already plugged in, unplug it and plug it in again.
 
 To uninstall: `sudo apt remove scratch2arduino` (or `sudo dnf remove scratch2arduino`).
 
-**Other distributions (Arch, Manjaro...), ARM processors (Raspberry Pi) or Intel Macs**: install from the
+**Other distributions (Arch, Manjaro...) or ARM processors (Raspberry Pi)**: install from the
 sources. Download *Source code* (zip or tar.gz), unpack it, then in that folder, in a terminal:
 `./Scratch2Arduino_installer.sh` (or `./Scratch2Arduino_installer.sh --user` to install it for yourself only).
 The script installs what is missing (apt, dnf, pacman or brew), builds and installs Scratch2Arduino.
@@ -115,7 +123,9 @@ this check off.
 
 - Windows: *Download and install* starts the installer of the new version and closes Scratch2Arduino; if
   your project is not saved, a question first offers to save it, ignore the changes or cancel.
-- macOS and Linux: download the new `.dmg`, `.deb` or `.rpm` from the *Releases* page and install it like the
+- macOS: *Download* gets the `.dmg` for your Mac in the browser; open it and drag Scratch2Arduino to
+  Applications like the first time.
+- Linux: *Download* opens the release page: download the new `.deb` or `.rpm` and install it like the
   first time: it replaces the older version, your projects and settings are kept. Installed from the
   sources: the *Settings* give the commands to run.
 
@@ -465,6 +475,8 @@ While typing in a slot (a number, a text, the project name), these keys act on t
 | What happens | What to do |
 |---|---|
 | The port list is empty | Click *Look for plugged-in boards*. Try another cable (some carry no data) or another USB port. On Linux, check the `dialout` group ([install](#1-install-scratch2arduino)). "Compatible" boards with a CH340 chip sometimes need a driver on Windows and macOS. |
+| "This board's tools need Rosetta" (Mac with an Apple chip) | Click *Install Rosetta* in the notice (or type `softwareupdate --install-rosetta --agree-to-license` in the Terminal), then try again. |
+| macOS: the port list shows `/dev/cu.debug-console` or `Bluetooth-Incoming-Port` | These ports belong to macOS, not to a board: update to 1.3.2 or newer, which hides them. With no board plugged in, choose *Virtual board*. |
 | "The board's port cannot be used" | Another program uses the board: close the Arduino IDE or another serial monitor, then try again. |
 | "The board does not answer" | Unplug the board, plug it back in, choose its port again, then try again. Check that the right board is chosen (Uno, Nano...). |
 | The first upload is slow | Normal: the board's tools are downloaded once (Internet needed). |

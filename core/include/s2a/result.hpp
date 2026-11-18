@@ -24,6 +24,7 @@ enum class ErrorCode {
     PortFailed,         ///< The serial port cannot be opened or used.
     BoardNotResponding, ///< The board does not answer the Live protocol.
     NetworkFailed,      ///< The board cannot be reached over Wi-Fi.
+    ToolCannotRun,      ///< A board tool is built for another processor (Rosetta missing on Apple chips).
 };
 
 /// Translation key of the user-facing message for `code` (e.g. "error.file_not_found").

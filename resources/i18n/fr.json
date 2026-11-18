@@ -24,7 +24,9 @@
     "unknown_board": "Cette carte Arduino n'est pas (encore) prise en charge.",
     "port_failed": "Impossible d'utiliser le port de la carte. Vérifie le câble, et qu'aucun autre programme (moniteur série, Arduino IDE) n'utilise la carte.",
     "board_not_responding": "La carte ne répond pas. Débranche-la, rebranche-la, puis réessaie.",
-    "network_failed": "Impossible de joindre la carte par le Wi-Fi. Vérifie que la carte est allumée et que l'ordinateur est sur le même réseau qu'elle (ou sur son propre réseau \"S2A-...\", mot de passe scratch2arduino)."
+    "network_failed": "Impossible de joindre la carte par le Wi-Fi. Vérifie que la carte est allumée et que l'ordinateur est sur le même réseau qu'elle (ou sur son propre réseau \"S2A-...\", mot de passe scratch2arduino).",
+    "rosetta_missing": "Les outils de cette carte ont besoin de Rosetta, un composant d'Apple pour les Mac à puce Apple (M1, M2, M3, M4). Clique sur \"Installer Rosetta\" (macOS demande ton mot de passe), puis réessaie.",
+    "tool_wrong_cpu": "Les outils de cette carte n'existent pas pour le processeur de cet ordinateur. Essaie avec une autre carte ou un autre ordinateur."
   },
   "toolchain": {
     "none": "Tout s'est bien passé.",
@@ -39,7 +41,9 @@
     "board_not_responding": "La carte branchée sur {port} ne répond pas. Vérifie que la bonne carte est choisie, essaie un autre câble USB, ou appuie sur le bouton RESET de la carte.",
     "network_unavailable": "Impossible de télécharger les outils nécessaires. Vérifie ta connexion à Internet, puis réessaie.",
     "timeout": "L'opération a pris trop de temps et a été arrêtée. Réessaie.",
-    "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème."
+    "unknown": "Une erreur inattendue s'est produite. Les détails techniques peuvent aider à trouver le problème.",
+    "rosetta_missing": "Les outils de cette carte ont besoin de Rosetta, un composant d'Apple pour les Mac à puce Apple (M1, M2, M3, M4). Clique sur \"Installer Rosetta\" (macOS demande ton mot de passe), puis réessaie.",
+    "tool_wrong_cpu": "Les outils de cette carte n'existent pas pour le processeur de cet ordinateur. Essaie avec une autre carte ou un autre ordinateur."
   },
   "cli": {
     "done": "Terminé.",
@@ -259,5 +263,12 @@
     "saved": "Enregistré sur la carte : le module est sur les broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appaire maintenant le module avec l'ordinateur, puis cherche-le.",
     "saved_restart": "Enregistré sur la carte : broches {rx} (vers TXD) et {tx} (vers RXD), à {baud} bauds. Appuie sur le bouton reset de la carte (ou débranche-la et rebranche-la) pour qu'elle les utilise.",
     "forgotten": "La carte a oublié le module : ses broches seront libres au prochain démarrage de la carte."
+  },
+  "rosetta": {
+    "installed": "Rosetta est installé. Tu peux réessayer.",
+    "cancelled": "L'installation de Rosetta a été annulée. Les cartes ne pourront pas recevoir de programme tant qu'il manque.",
+    "failed": "Rosetta n'a pas pu être installé. Vérifie ta connexion à Internet et réessaie, ou tape dans le Terminal : {command}",
+    "needed": "Pour compiler et envoyer des programmes aux cartes, ce Mac a besoin de Rosetta (un composant d'Apple). Installe-le avec le bouton \"Installer Rosetta\", ou dans le Terminal : {command}",
+    "needed_cli": "Pour compiler et envoyer des programmes aux cartes, ce Mac a besoin de Rosetta (un composant d'Apple). Installe-le en tapant dans le Terminal : {command}"
   }
 }

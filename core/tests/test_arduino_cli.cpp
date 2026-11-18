@@ -243,6 +243,34 @@ TEST(ArduinoCli, DetectsPortsAndBoards) {
     EXPECT_FALSE(ports.value()[2].usb.has_value());
 }
 
+// A Mac with nothing plugged in still has serial ports: none of them is a board.
+TEST(ArduinoCli, LeavesOutTheSerialPortsOfMacOs) {
+    FakeRunner fake;
+    fake.replies = {reply(R"j({
+  "detected_ports": [
+    {"port": {"address": "/dev/cu.debug-console", "label": "/dev/cu.debug-console", "protocol": "serial"}},
+    {"port": {"address": "/dev/cu.Bluetooth-Incoming-Port", "label": "/dev/cu.Bluetooth-Incoming-Port", "protocol": "serial"}},
+    {"port": {"address": "/dev/cu.wlan-debug", "label": "/dev/cu.wlan-debug", "protocol": "serial"}},
+    {"port": {"address": "/dev/cu.HC-05", "label": "/dev/cu.HC-05", "protocol": "serial"}},
+    {"matching_boards": [{"name": "Arduino Uno", "fqbn": "arduino:avr:uno"}],
+     "port": {"address": "/dev/cu.usbmodem1101", "label": "/dev/cu.usbmodem1101", "protocol": "serial",
+              "properties": {"pid": "0x0043", "vid": "0x2341"}}}
+  ]
+})j")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto ports = cli.detectPorts();
+    ASSERT_TRUE(ports.ok()) << ports.error().detail;
+    ASSERT_EQ(ports.value().size(), 2U);
+    EXPECT_EQ(ports.value()[0].address, "/dev/cu.HC-05"); // a paired Bluetooth module stays
+    EXPECT_EQ(ports.value()[1].address, "/dev/cu.usbmodem1101");
+    EXPECT_EQ(ports.value()[1].boardId, "uno");
+
+    EXPECT_TRUE(s2a::toolchain::isSystemSerialPort("/dev/tty.debug-console"));
+    EXPECT_FALSE(s2a::toolchain::isSystemSerialPort("/dev/ttyS0"));
+    EXPECT_FALSE(s2a::toolchain::isSystemSerialPort("COM3"));
+    EXPECT_FALSE(s2a::toolchain::isSystemSerialPort("/dev/cu.usbserial-1420"));
+}
+
 TEST(ArduinoCli, CompilesWithTheBoardFqbn) {
     FakeRunner fake;
     fake.replies = {reply(std::string(kCompileSuccess))};

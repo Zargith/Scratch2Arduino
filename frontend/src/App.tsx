@@ -92,9 +92,9 @@ import { isSimPort, SIM_PORT, simParts, usesPhone } from "@/simulation";
 import { SimBoard } from "@/SimBoard";
 import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
-import { findUpdate, platform, type Release } from "@/updates";
+import { findUpdate, platform, type Release, setHostSystem } from "@/updates";
 import { Tour } from "@/tour/Tour";
-import { melodyCode, PROJECT_NAME, type TourContext, type TourStep } from "@/tour/steps";
+import { melodyCode, PROJECT_NAME, steps as tourSteps, type TourContext, type TourStep } from "@/tour/steps";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
@@ -250,6 +250,9 @@ export function App() {
 	const [version, setVersion] = useState("");
 	/** A newer release, offered until the user says "Later" (never forced). */
 	const [update, setUpdate] = useState<Release | null>(null);
+	/** Mac with an Apple chip without Rosetta: why the board compilers cannot run (null: hidden). */
+	const [rosetta, setRosetta] = useState<string | null>(null);
+	const [installingRosetta, setInstallingRosetta] = useState(false);
 	/** Page of the Tutorials panel, null when it is closed. */
 	const [tutorialPage, setTutorialPage] = useState<DocPath | null>(null);
 	/** The example being edited: its wiring diagram stays one click away. */
@@ -267,6 +270,9 @@ export function App() {
 	const [tourStep, setTourStep] = useState<number | null>(null);
 	/** Changes of the blocks, counted while the tutorial is open (its steps look at the project). */
 	const [tourEdits, setTourEdits] = useState(0);
+	/** Blocks locked by each step of the tutorial already passed (index = step). */
+	const [tourLocks, setTourLocks] = useState<string[][]>([]);
+	const lockedBlocks = useMemo(() => tourLocks.flat(), [tourLocks]);
 	/** Successful checks and uploads: a step of the tutorial waits for one. */
 	const [checks, setChecks] = useState(0);
 	/** Edits made so far, and how many the last autosave holds. */
@@ -444,6 +450,11 @@ export function App() {
 			.then(async (info) => {
 				switchLanguageRef.current(info.language);
 				setVersion(info.version);
+				setHostSystem(info.system);
+				void bridge
+					.rosettaState(info.language)
+					.then((state) => setRosetta(state.missing ? state.message : null))
+					.catch(() => undefined);
 				const saved = await bridge.settings().catch(() => null);
 				if (!saved) return;
 				setSettings(saved);
@@ -492,7 +503,23 @@ export function App() {
 		reload(projectToWorkspace(starterProject(projectName)));
 		if (view === "code") void showBlocksView();
 		setTourEdits(0);
+		setTourLocks([]);
 		setTourStep(0);
+	};
+
+	/**
+	 * Next: the blocks that made the step right are locked, so that a wrong move cannot undo it
+	 * and block the next steps. Back: the steps from the one shown again are unlocked.
+	 */
+	const changeTourStep = (next: number) => {
+		const current = tourStep ?? 0;
+		const project = next > current ? currentProject() : null;
+		setTourLocks((locks) => {
+			const kept = locks.slice(0, Math.min(next, current));
+			if (project) kept[current] = tourSteps[current]?.locks?.(project) ?? [];
+			return kept;
+		});
+		setTourStep(next);
 	};
 
 	/** The button of a tutorial step: writes the melodie() function in "My code" (C++) and shows it. */
@@ -951,12 +978,35 @@ export function App() {
 				details: outcome.details,
 			});
 			if (outcome.ok) setChecks((count) => count + 1);
+			else checkRosetta();
 			if (program === "blocks") editor.current?.highlight((outcome.ok ? outcome.warningBlockIds : outcome.blockIds) ?? []);
 			showProblems(outcome.problems);
 		} catch (error) {
 			fail(error);
 		} finally {
 			setBusy(false);
+		}
+	};
+
+	/** After a failure: shows the Rosetta notice again when it is still missing (the compiler could not run). */
+	const checkRosetta = () => {
+		void bridge
+			.rosettaState(language)
+			.then((state) => setRosetta(state.missing ? state.message : null))
+			.catch(() => undefined);
+	};
+
+	const installRosetta = async () => {
+		setInstallingRosetta(true);
+		setStatus({ kind: "info", message: t("rosetta.installing") });
+		try {
+			const result = await bridge.installRosetta(language);
+			setStatus({ kind: result.ok ? "success" : "error", message: result.message });
+			if (result.ok) setRosetta(null);
+		} catch (error) {
+			fail(error);
+		} finally {
+			setInstallingRosetta(false);
 		}
 	};
 
@@ -1048,6 +1098,7 @@ export function App() {
 					if (snapshot.state === "failed") {
 						setStatus({ kind: "error", message: snapshot.message ?? "", details: snapshot.details });
 						editor.current?.highlight(snapshot.problems ?? []);
+						checkRosetta();
 						if (snapshot.line) showProblems([{ line: snapshot.line, message: snapshot.message ?? "", file: snapshot.file }]);
 						setLive(false);
 					} else if (snapshot.state === "stopped") {
@@ -1450,6 +1501,7 @@ export function App() {
 							onManageLibrary={() => setLibraryShown(true)}
 							userDeclarations={declarations}
 							onOpenCode={() => void showCodeView("mine")}
+							lockedBlocks={lockedBlocks}
 							onLoadError={(lost) =>
 								setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
 							}
@@ -1636,9 +1688,13 @@ export function App() {
 					language={language}
 					context={tourContext}
 					step={tourStep}
-					onStep={setTourStep}
+					onStep={changeTourStep}
 					onAction={tourAction}
-					onClose={() => setTourStep(null)}
+					locked={lockedBlocks.length > 0}
+					onClose={() => {
+						setTourLocks([]);
+						setTourStep(null);
+					}}
 				/>
 			)}
 			<Settings
@@ -1678,6 +1734,36 @@ export function App() {
 				}}
 			/>
 			<UnsavedChanges opened={unsavedAsked} t={t} onChoice={answerUnsaved} />
+			{rosetta && (
+				<Card
+					withBorder
+					shadow="md"
+					padding="sm"
+					w={460}
+					style={{
+						position: "fixed",
+						top: update ? 236 : 76,
+						left: "50%",
+						transform: "translateX(-50%)",
+						zIndex: 200,
+					}}
+				>
+					<Text size="sm" fw={600}>
+						{t("rosetta.title")}
+					</Text>
+					<Text size="xs" c="dimmed" mt={4}>
+						{rosetta}
+					</Text>
+					<Group gap="xs" mt="sm" justify="flex-end">
+						<Button size="xs" variant="subtle" color="gray" onClick={() => setRosetta(null)}>
+							{t("update.later")}
+						</Button>
+						<Button size="xs" loading={installingRosetta} onClick={() => void installRosetta()}>
+							{t("rosetta.install")}
+						</Button>
+					</Group>
+				</Card>
+			)}
 			{update && (
 				<Card
 					withBorder
@@ -1690,7 +1776,13 @@ export function App() {
 						{t("update.available", { version: update.version, current: version })}
 					</Text>
 					<Text size="xs" c="dimmed" mt={4}>
-						{t("update.help")}
+						{t(
+							update.download.endsWith(".exe")
+								? "update.help"
+								: update.download.endsWith(".dmg")
+									? "update.help_dmg"
+									: "update.help_page"
+						)}
 					</Text>
 					<Group gap="xs" mt="sm" justify="flex-end">
 						<Button size="xs" variant="subtle" color="gray" onClick={() => setUpdate(null)}>
@@ -1703,7 +1795,13 @@ export function App() {
 							size="xs"
 							onClick={() =>
 								void (async () => {
-									if (installCloses(update.download) && !(await readyToClose())) return;
+									// Windows: the installer is downloaded and started by the program. Elsewhere the
+									// browser downloads the .dmg (or shows the release page for a .deb / .rpm).
+									if (!installCloses(update.download)) {
+										await bridge.openUrl(update.download);
+										return;
+									}
+									if (!(await readyToClose())) return;
 									const started = await bridge.installUpdate(update.download, language);
 									if (!started) await bridge.openUrl(update.download);
 								})().catch(fail)

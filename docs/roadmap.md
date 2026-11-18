@@ -68,6 +68,8 @@ Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the
 | 1.2.0 | **Prebuilt Windows installer**: no Visual Studio or CMake to download, the Arduino AVR core shipped (Uno, Nano, Mega work offline, `S2A_BUNDLE_ARDUINO_CORES`); building from the sources stays an option, with a working Cancel button and a build log that scrolls without freezing the window | A classroom of 30 on the same Wi-Fi: Visual Studio downloads took too long, the installer window froze |
 | 1.3.0 | **New boards**: Arduino Leonardo and Micro (shipped), Nano Every, Uno R4 Minima and WiFi, Raspberry Pi Pico and Pico W (optional packages), with their wiring drawings and Live mode over USB | Chosen by the user on 2026-11-17 |
 | 1.3.0 | **Optional board packages**: the boards other than Arduino AVR (ESP32: about 2 GB to download and 8 GB on the disk; ESP8266) are downloaded only when wanted, with their size shown: tasks of the Windows installer ("More boards", those already installed shown greyed), `Scratch2Arduino_installer.sh --boards`, **Settings > More boards** (install, update, remove), an offer when such a board is chosen, and `s2a-cli board`; pinned versions (`resources/board-packages.json`); removing a package also removes its downloaded archives; the Windows installer asks first for its language, then for a simple or advanced installation (folder and expert build option in advanced mode only), and its tasks page lists the boards with their sizes and the total, then the expert option, then the icons | Asked by the user on 2026-11-17: no 6 GB of ESP32 tools on every computer, and a way to free the space |
+| 1.3.2 | **Macs**: a `.dmg` for Intel Macs beside the Apple chip one (both checked by CI); on Apple chips the board compilers (Intel only, from Arduino) need Rosetta: the editor detects when it is missing and offers an **Install Rosetta** button (macOS password prompt), instead of "reinstall the software"; the serial ports of macOS itself (`/dev/cu.debug-console`, `Bluetooth-Incoming-Port`...) are no longer offered as boards, so without a board the virtual board is chosen; the update notice downloads the right `.dmg` (it failed on Mac); the Windows installer ends with a "Launch Scratch2Arduino" box | Reported by Mac testers on 2026-11-18 (M3, M4); launch box asked by the user |
+| 1.3.2 | **Interactive tutorial: finished steps locked**: on *Next*, the blocks that made the step right (start block, forever, if / else, button, LEDs, "melodie" block) cannot be moved, deleted or changed any more, so a wrong move cannot block the next steps; *Back* and closing the tutorial unlock them; blocks can still be added in their free slots | Asked after a tutorial test on 2026-11-18 |
 
 ## Remaining work
 
@@ -80,7 +82,7 @@ passive buzzer, servo and potentiometer, HC-SR04, DHT11, 16-pin LCD, MAX7219 mat
 light, Potentiometer and servo, Distance alarm, Thermometer (16-pin LCD), Reaction game. The README keeps the
 up-to-date list ("Tested on real hardware"). Still to run on a real board:
 
-- Nano; Linux and macOS with a real board;
+- Nano; Linux and macOS with a real board (a tester on a Mac M4 found the missing Rosetta, 1.3.2), the Intel Mac `.dmg`;
 - the boards added in 1.3.0: Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W (upload, Live over USB, the first Pico upload with BOOTSEL), and the board packages installed from the Windows installer and the Settings;
 - NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor, joystick, PIR,
   infrared obstacle sensor, 28BYJ-48 stepper motor, TM1637 display;
@@ -102,7 +104,8 @@ up-to-date list ("Tested on real hardware"). Still to run on a real board:
 
 - On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
 - The Windows installer and the macOS application are not signed with a certificate: Windows SmartScreen and macOS Gatekeeper ask for a confirmation the first time.
-- No package for Intel Macs, Arch Linux or Raspberry Pi: they build from the sources with `Scratch2Arduino_installer.sh`.
+- No package for Arch Linux or Raspberry Pi: they build from the sources with `Scratch2Arduino_installer.sh`.
+- Macs with an Apple chip need Rosetta for the board compilers (Arduino publishes them for Intel Macs only, like for the Arduino IDE); Scratch2Arduino offers to install it.
 - Board packages: the download shows no progress percentage (arduino-cli gives none in JSON mode), only that it runs; the sizes of `resources/board-packages.json` are estimates, replaced by the exact download size once the board indexes are downloaded.
 
 ### Boards added in 1.3.0

@@ -80,6 +80,19 @@ TEST(DiagnoseCompile, MissingPlatform) {
     EXPECT_EQ(diagnosis.problem, Problem::PlatformMissing);
 }
 
+// Mac with an Apple chip without Rosetta (captured on an M4): the AVR tools are x86_64 only.
+TEST(DiagnoseCompile, ToolForAnotherProcessor) {
+    const auto mac = diagnoseCompile(failedCompile(
+        "", "Error during build: fork/exec /Users/x/Library/Application Support/Scratch2Arduino/arduino/data/packages/"
+            "arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++: bad CPU type in executable"));
+    EXPECT_EQ(mac.problem, Problem::ToolWrongProcessor);
+    EXPECT_FALSE(describe(mac, Language::French).empty());
+    EXPECT_EQ(diagnoseInstall(failedUpload("fork/exec /opt/tools/bossac: exec format error")).problem,
+              Problem::ToolWrongProcessor);
+    EXPECT_EQ(diagnoseUpload(failedUpload("fork/exec avrdude: bad CPU type in executable"), "/dev/cu.usbmodem1").problem,
+              Problem::ToolWrongProcessor);
+}
+
 TEST(DiagnoseCompile, MemoryProblems) {
     EXPECT_EQ(diagnoseCompile(failedCompile("", "Sketch too big; see https://support.arduino.cc/... for tips")).problem,
               Problem::SketchTooBig);

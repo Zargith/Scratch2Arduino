@@ -46,6 +46,11 @@ struct DetectedPort {
     std::string boardId; ///< Our board id ("uno"...), empty when unknown.
 };
 
+/// A serial port of macOS itself, never a board ("/dev/cu.debug-console",
+/// "/dev/cu.Bluetooth-Incoming-Port", "/dev/cu.wlan-debug"): left out of the detected ports, so
+/// that with no board plugged in the list is empty (and the virtual board is chosen).
+[[nodiscard]] bool isSystemSerialPort(std::string_view address);
+
 /// Result of an arduino-cli command that ran (successfully or not).
 struct CommandOutcome {
     bool success = false;

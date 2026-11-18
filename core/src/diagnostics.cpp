@@ -43,6 +43,11 @@ Problem commonProblem(const CommandOutcome& outcome, std::string_view text) {
     if (outcome.timedOut) {
         return Problem::Timeout;
     }
+    // macOS: "fork/exec .../avr-g++: bad CPU type in executable" (x86_64 tools without Rosetta on
+    // an Apple chip). Linux: "exec format error" (x86_64 tools on an ARM computer).
+    if (containsAny(text, {"bad CPU type in executable", "exec format error"})) {
+        return Problem::ToolWrongProcessor;
+    }
     if (containsAny(text, {"platform not installed", "Platform '", "platform not found"}) &&
         containsAny(text, {"not installed", "not found"})) {
         return Problem::PlatformMissing;
@@ -203,6 +208,12 @@ std::string_view problemMessageKey(Problem problem) noexcept {
         return "toolchain.network_unavailable";
     case Problem::Timeout:
         return "toolchain.timeout";
+    case Problem::ToolWrongProcessor:
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+        return "toolchain.rosetta_missing";
+#else
+        return "toolchain.tool_wrong_cpu";
+#endif
     case Problem::Unknown:
         return "toolchain.unknown";
     }

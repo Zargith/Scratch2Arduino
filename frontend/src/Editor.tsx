@@ -30,6 +30,7 @@ import { translate } from "@/i18n";
 import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
 import { blocksThumbnail } from "@/thumbnail";
 import type { BlockState, Project, WorkspaceState } from "@/project/convert";
+import { applyLocks } from "@/locks";
 
 const noDeclarations: UserDeclaration[] = [];
 
@@ -62,6 +63,8 @@ interface EditorProps {
 	onManageLibrary(): void;
 	/** Functions and variables of "My code", listed in their palette category. */
 	userDeclarations?: UserDeclaration[];
+	/** Blocks the interactive tutorial validated: they cannot be moved, deleted or changed. */
+	lockedBlocks?: string[];
 	/** The button of an empty "My code" category: go to the code view. */
 	onOpenCode?(): void;
 }
@@ -73,6 +76,8 @@ interface PromptRequest {
 }
 
 const LOOSE = "S2A_LOOSE_BLOCK";
+const noLocks: string[] = [];
+
 const SAVE_TO_LIBRARY = "s2a_save_to_library";
 const EDIT_FUNCTION = "s2a_edit_function";
 
@@ -197,7 +202,7 @@ function markLooseBlocks(workspace: Blockly.WorkspaceSvg) {
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-	{ language, board, initialState, onChange, onLoadError, library, onSaveGroup, onManageLibrary, userDeclarations = noDeclarations, onOpenCode },
+	{ language, board, initialState, onChange, onLoadError, library, onSaveGroup, onManageLibrary, userDeclarations = noDeclarations, onOpenCode, lockedBlocks = noLocks },
 	ref
 ) {
 	const container = useRef<HTMLDivElement>(null);
@@ -426,6 +431,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	useEffect(() => {
 		setCurrentBoard(board);
 	}, [board]);
+
+	// After the effect that creates the workspace: also run when the editor is rebuilt.
+	useEffect(() => {
+		if (!workspace.current) return;
+		Blockly.Events.disable(); // locking is not an edit of the project
+		try {
+			applyLocks(workspace.current, lockedBlocks);
+		} finally {
+			Blockly.Events.enable();
+		}
+	}, [lockedBlocks]);
 
 	useEffect(() => {
 		if (declarationsRef.current === userDeclarations) return;
