@@ -24,7 +24,7 @@ runs:
         if [ -f "$mirrors" ]; then
           runner=$(awk '{print $1}' "$mirrors" | grep -v security)
         else
-          runner=$(grep -hoE 'https?://[^ ]+/ubuntu/?' $sources 2>/dev/null | grep -v security | sort -u)
+          runner=$(grep -hoE 'https?://[^ ]+/ubuntu/?' $sources /dev/null 2>/dev/null | grep -v security | sort -u)
         fi
         candidates=$(printf '%s\n' $runner http://archive.ubuntu.com/ubuntu/ http://azure.archive.ubuntu.com/ubuntu/ \
           | sed 's#/*$#/#' | awk '!seen[$0]++')
