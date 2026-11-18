@@ -57,12 +57,15 @@ dans la partie *Assets* de la dernière version.
    paquets déjà installés sont marqués "déjà installées" et grisés. Tu peux aussi les installer plus tard dans
    Scratch2Arduino (voir [Les outils des cartes](#les-outils-des-cartes)). Ensuite, en mode avancé seulement,
    l'option pour experts qui compile Scratch2Arduino sur l'ordinateur, et en dernier l'icône sur le bureau.
+6. La dernière page a une case **Lancer Scratch2Arduino** cochée : clique sur *Terminer* et Scratch2Arduino s'ouvre.
 
 Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
 
-### macOS (Mac avec puce Apple : M1, M2, M3, M4...)
+### macOS
 
-1. Télécharge `Scratch2Arduino-<version>-macos-arm64.dmg` et ouvre-le.
+1. Télécharge le `.dmg` de ton Mac et ouvre-le (menu Pomme > *À propos de ce Mac* indique la puce ou le processeur) :
+   - puce Apple (M1, M2, M3, M4...) : `Scratch2Arduino-<version>-macos-arm64.dmg` ;
+   - processeur Intel : `Scratch2Arduino-<version>-macos-x86_64.dmg`.
 2. Glisse **Scratch2Arduino** sur le dossier **Applications**, puis éjecte le disque.
 3. Au premier lancement, macOS dit que l'application vient d'un "développeur non identifié" (elle n'est pas
    encore signée par Apple) :
@@ -75,9 +78,13 @@ Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstall
    `xattr -dr com.apple.quarantine /Applications/Scratch2Arduino.app`
 4. Les cartes Arduino d'origine sont reconnues directement. Pour une carte avec une puce CH340 (beaucoup de
    Nano et d'ESP32 bon marché), installe le pilote du fabricant si la carte n'apparaît pas dans les ports.
+5. Sur un Mac à puce Apple, les compilateurs des cartes (faits par Arduino pour les Mac Intel, comme pour
+   l'Arduino IDE) ont besoin de **Rosetta**, un composant d'Apple. S'il manque, Scratch2Arduino le dit au
+   démarrage et propose un bouton **Installer Rosetta** : macOS demande ton mot de passe, puis le télécharge
+   depuis Apple (il faut Internet, une seule fois). Dans le Terminal, c'est :
+   `softwareupdate --install-rosetta --agree-to-license`.
 
 Pour désinstaller : glisse Scratch2Arduino d'Applications vers la Corbeille.
-Sur un Mac avec processeur Intel, installe depuis les sources (voir plus bas).
 
 ### Linux
 
@@ -103,7 +110,7 @@ installe aussi le droit d'utiliser les ports USB des cartes : rien d'autre à fa
 
 Pour désinstaller : `sudo apt remove scratch2arduino` (ou `sudo dnf remove scratch2arduino`).
 
-**Autres distributions (Arch, Manjaro...), processeur ARM (Raspberry Pi) ou Mac Intel** : installe depuis les
+**Autres distributions (Arch, Manjaro...) ou processeur ARM (Raspberry Pi)** : installe depuis les
 sources. Télécharge *Source code* (zip ou tar.gz), décompresse-le, puis dans ce dossier, dans un terminal :
 `./Scratch2Arduino_installer.sh` (ou `./Scratch2Arduino_installer.sh --user` pour l'installer seulement pour
 toi). Le script installe ce qui manque (apt, dnf, pacman ou brew), compile et installe Scratch2Arduino.
@@ -119,7 +126,9 @@ dans les *Paramètres* (engrenage), ou désactiver cette recherche.
 - Windows : *Télécharger et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino ;
   si ton projet n'est pas enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou
   d'annuler.
-- macOS et Linux : télécharge le nouveau `.dmg`, `.deb` ou `.rpm` sur la page *Releases* et installe-le
+- macOS : *Télécharger* récupère le `.dmg` de ton Mac dans le navigateur ; ouvre-le et glisse
+  Scratch2Arduino dans Applications comme la première fois.
+- Linux : *Télécharger* ouvre la page de la version : télécharge le nouveau `.deb` ou `.rpm` et installe-le
   comme la première fois : il remplace l'ancienne version, tes projets et tes réglages sont gardés.
   Installé depuis les sources : les *Paramètres* donnent les commandes à lancer.
 
@@ -495,6 +504,8 @@ Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touche
 | Ce qui se passe | Que faire |
 |---|---|
 | La liste des ports est vide | Clique sur *Chercher les cartes branchées*. Essaie un autre câble (certains ne transportent pas de données) ou un autre port USB. Sur Linux, vérifie le groupe `dialout` ([installation](#1-installer-scratch2arduino)). Les cartes "compatibles" à puce CH340 demandent parfois un pilote sous Windows et macOS. |
+| "Les outils de cette carte ont besoin de Rosetta" (Mac à puce Apple) | Clique sur *Installer Rosetta* dans le message (ou tape `softwareupdate --install-rosetta --agree-to-license` dans le Terminal), puis réessaie. |
+| macOS : la liste des ports montre `/dev/cu.debug-console` ou `Bluetooth-Incoming-Port` | Ces ports appartiennent à macOS, pas à une carte : passe à la version 1.3.2 ou plus récente, qui les cache. Sans carte branchée, choisis *Carte virtuelle*. |
 | "Impossible d'utiliser le port de la carte" | Un autre programme utilise la carte : ferme l'Arduino IDE ou un autre moniteur série, puis réessaie. |
 | "La carte ne répond pas" | Débranche la carte, rebranche-la, choisis de nouveau son port, puis réessaie. Vérifie que la bonne carte est choisie (Uno, Nano...). |
 | Le premier téléversement est long | Normal : les outils de la carte se téléchargent une seule fois (il faut Internet). |

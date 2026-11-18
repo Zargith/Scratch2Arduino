@@ -25,6 +25,7 @@ add_library(s2a_core STATIC
     src/script_python.cpp
     src/resources.cpp
     src/result.cpp
+    src/rosetta.cpp
     src/network.cpp
     src/code_wiring.cpp
     src/wiring.cpp

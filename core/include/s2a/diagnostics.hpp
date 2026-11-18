@@ -23,6 +23,7 @@ enum class Problem {
     BoardNotResponding,   ///< Wrong board selected, bad cable, or the board is stuck.
     NetworkUnavailable,   ///< Downloading a core or library failed.
     Timeout,              ///< The tool took too long and was stopped.
+    ToolWrongProcessor,   ///< A board tool is built for another processor ("bad CPU type": Rosetta missing on Apple chips).
     Unknown,
 };
 
