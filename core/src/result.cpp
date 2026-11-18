@@ -30,6 +30,12 @@ std::string_view errorMessageKey(ErrorCode code) noexcept {
         return "error.board_not_responding";
     case ErrorCode::NetworkFailed:
         return "error.network_failed";
+    case ErrorCode::ToolCannotRun:
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+        return "error.rosetta_missing";
+#else
+        return "error.tool_wrong_cpu";
+#endif
     }
     return "error.unknown";
 }

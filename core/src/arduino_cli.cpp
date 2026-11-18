@@ -99,6 +99,22 @@ CommandOutcome commandOutcome(const process::Output& output) {
 
 } // namespace
 
+bool isSystemSerialPort(std::string_view address) {
+    // Ports macOS always has (debug console, Bluetooth and Wi-Fi debugging), as /dev/cu.* and /dev/tty.*.
+    for (const std::string_view prefix : {std::string_view("/dev/cu."), std::string_view("/dev/tty.")}) {
+        if (address.rfind(prefix, 0) == 0) {
+            const std::string_view name = address.substr(prefix.size());
+            for (const std::string_view system :
+                 {"debug-console", "Bluetooth-Incoming-Port", "wlan-debug", "BLTH", "Bluetooth-Modem"}) {
+                if (name == system) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 fs::path userDataDirectory() {
 #ifdef _WIN32
     fs::path base = environmentPath("LOCALAPPDATA");
@@ -637,7 +653,7 @@ Result<std::vector<DetectedPort>> ArduinoCli::detectPorts(const BoardDatabase& b
                 }
             }
         }
-        if (port.address.empty()) {
+        if (port.address.empty() || isSystemSerialPort(port.address)) {
             continue;
         }
         if (port.label.empty()) {

@@ -1866,6 +1866,9 @@ Status uploadFirmware(const toolchain::ArduinoCli& cli, const Board& board, cons
     if (const auto diagnosis = toolchain::diagnoseCompile(compiled.value());
         diagnosis.problem != toolchain::Problem::None) {
         details = diagnosis.technical;
+        if (diagnosis.problem == toolchain::Problem::ToolWrongProcessor) {
+            return Error{ErrorCode::ToolCannotRun, "the compiler cannot run on this processor"};
+        }
         return Error{ErrorCode::ProcessFailed, "the live firmware does not compile"};
     }
     auto uploaded = cli.upload(sketch, board, build, port);

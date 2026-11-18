@@ -10,6 +10,8 @@ import type { Project } from "@/project/convert";
 export interface HostInfo {
 	language: Language;
 	version: string;
+	/** "windows", "macos-arm64", "macos-x86_64" or "linux" (since 1.3.2): which release file to download. */
+	system?: string;
 }
 
 /** Wi-Fi of an ESP32 after s2a_wifi_setup (see core LiveLink::NetworkState). */
@@ -268,6 +270,8 @@ interface HostFunctions {
 	s2a_save_settings(settings: Settings): Promise<boolean>;
 	s2a_open_url(url: string): Promise<boolean>;
 	s2a_install_update(url: string, language: Language): Promise<boolean>;
+	s2a_rosetta_state?(language: Language): Promise<{ missing: boolean; message: string }>;
+	s2a_rosetta_install?(language: Language): Promise<{ ok: boolean; message: string }>;
 	s2a_convert(code: string, from: string, to: string): Promise<Converted>;
 	s2a_open_recent(path: string, language: Language): Promise<OpenedProject>;
 	s2a_autosave(project: Project, path: string): Promise<null>;
@@ -338,6 +342,17 @@ export const bridge = {
 	openUrl: (url: string) => host("s2a_open_url")(url),
 	/** Windows: downloads and starts the installer of a release, then the program closes. False elsewhere. */
 	installUpdate: (url: string, language: Language) => host("s2a_install_update")(url, language),
+	/** Mac with an Apple chip: Rosetta, needed by the board compilers, is missing (never true elsewhere, or before 1.3.2). */
+	rosettaState: async (language: Language): Promise<{ missing: boolean; message: string }> => {
+		const state = window.s2a_rosetta_state;
+		return typeof state === "function" ? state(language) : { missing: false, message: "" };
+	},
+	/** Installs Rosetta (macOS asks for the administrator password). */
+	installRosetta: async (language: Language): Promise<{ ok: boolean; message: string }> => {
+		const install = window.s2a_rosetta_install;
+		if (typeof install !== "function") throw new HostMissingError();
+		return install(language);
+	},
 	/** Rewrites C++, Python or JavaScript code in another of these languages (never fails). */
 	convert: (code: string, from: string, to: string) => host("s2a_convert")(code, from, to),
 	generate: (project: Project) => host("s2a_generate")(project),
