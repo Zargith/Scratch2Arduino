@@ -21,6 +21,7 @@
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/project.hpp"
+#include "s2a/rosetta.hpp"
 #include "s2a/script.hpp"
 #include "s2a/serial.hpp"
 #include "s2a/validator.hpp"
@@ -117,7 +118,12 @@ private:
         std::cerr << tr(key, params) << '\n';
     }
     int report(const s2a::toolchain::Diagnosis& diagnosis) const {
-        std::cerr << s2a::toolchain::describe(diagnosis, options_.language) << '\n';
+        // No "Install Rosetta" button here: the Terminal command instead.
+        if (diagnosis.problem == s2a::toolchain::Problem::ToolWrongProcessor && s2a::rosetta::missing()) {
+            fail("rosetta.needed_cli", {{"command", std::string(s2a::rosetta::kInstallCommand)}});
+        } else {
+            std::cerr << s2a::toolchain::describe(diagnosis, options_.language) << '\n';
+        }
         for (const auto& message : diagnosis.messages) {
             std::cerr << "  " << fs::u8path(message.file).filename().u8string() << ':' << message.line << ": "
                       << message.text << '\n';

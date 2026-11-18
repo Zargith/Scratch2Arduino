@@ -24,7 +24,9 @@
     "unknown_board": "This Arduino board is not supported (yet).",
     "port_failed": "The board's port cannot be used. Check the cable, and that no other program (serial monitor, Arduino IDE) is using the board.",
     "board_not_responding": "The board does not answer. Unplug it, plug it back in, then try again.",
-    "network_failed": "The board cannot be reached over Wi-Fi. Check that the board is on and that the computer is on the same network (or on the board's own network \"S2A-...\", password scratch2arduino)."
+    "network_failed": "The board cannot be reached over Wi-Fi. Check that the board is on and that the computer is on the same network (or on the board's own network \"S2A-...\", password scratch2arduino).",
+    "rosetta_missing": "This board's tools need Rosetta, an Apple component for Macs with an Apple chip (M1, M2, M3, M4). Click \"Install Rosetta\" (macOS asks for your password), then try again.",
+    "tool_wrong_cpu": "This board's tools do not exist for this computer's processor. Try another board or another computer."
   },
   "toolchain": {
     "none": "Everything went fine.",
@@ -39,7 +41,9 @@
     "board_not_responding": "The board on {port} does not respond. Check that the right board is selected, try another USB cable, or press the board's RESET button.",
     "network_unavailable": "The required tools cannot be downloaded. Check your Internet connection, then try again.",
     "timeout": "The operation took too long and was stopped. Try again.",
-    "unknown": "Something unexpected went wrong. The technical details can help find the problem."
+    "unknown": "Something unexpected went wrong. The technical details can help find the problem.",
+    "rosetta_missing": "This board's tools need Rosetta, an Apple component for Macs with an Apple chip (M1, M2, M3, M4). Click \"Install Rosetta\" (macOS asks for your password), then try again.",
+    "tool_wrong_cpu": "This board's tools do not exist for this computer's processor. Try another board or another computer."
   },
   "cli": {
     "done": "Done.",
@@ -259,5 +263,12 @@
     "saved": "Saved on the board: the module is on pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Now pair the module with the computer, then search for it.",
     "saved_restart": "Saved on the board: pins {rx} (to TXD) and {tx} (to RXD), at {baud} baud. Press the board's reset button (or unplug it and plug it in again) so that it uses them.",
     "forgotten": "The board forgot the module: its pins are free again after the next start of the board."
+  },
+  "rosetta": {
+    "installed": "Rosetta is installed. You can try again.",
+    "cancelled": "The Rosetta installation was cancelled. Boards cannot receive programs while it is missing.",
+    "failed": "Rosetta could not be installed. Check your Internet connection and try again, or type in the Terminal: {command}",
+    "needed": "To compile programs and send them to boards, this Mac needs Rosetta (an Apple component). Install it with the \"Install Rosetta\" button, or in the Terminal: {command}",
+    "needed_cli": "To compile programs and send them to boards, this Mac needs Rosetta (an Apple component). Install it by typing in the Terminal: {command}"
   }
 }

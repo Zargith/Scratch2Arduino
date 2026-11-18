@@ -37,20 +37,57 @@ export function compareVersions(a: string, b: string): number {
 	return 0;
 }
 
-/** "windows" or "unix" (Linux, macOS: the .sh installer). */
+/** "windows" or "unix" (Linux, macOS). */
 export function platform(userAgent: string): "windows" | "unix" {
 	return /windows/i.test(userAgent) ? "windows" : "unix";
 }
 
+/**
+ * The computer, for the file to download: the host tells it (s2a_hello "system"); without it, the
+ * browser's user agent (a Mac always says "Intel" there, so the processor stays unknown).
+ */
+export type System = "windows" | "macos-arm64" | "macos-x86_64" | "macos" | "linux";
+
+const hostSystems: readonly string[] = ["windows", "macos-arm64", "macos-x86_64", "linux"];
+
+export function systemOf(userAgent: string, host?: string): System {
+	if (host && hostSystems.includes(host)) return host as System;
+	if (/windows/i.test(userAgent)) return "windows";
+	return /mac os|macintosh/i.test(userAgent) ? "macos" : "linux";
+}
+
+/** The release file for `system`: the Windows installer, the Mac disk image of its processor. */
+function installerPattern(system: System): RegExp | null {
+	switch (system) {
+		case "windows":
+			return /\.exe$/i;
+		case "macos-arm64":
+			return /-macos-arm64\.dmg$/i;
+		case "macos-x86_64":
+			return /-macos-x86_64\.dmg$/i;
+		default:
+			return null; // .deb or .rpm, or a Mac of unknown processor: the release page tells
+	}
+}
+
+let hostSystem: System | undefined;
+
+/** Called once the host said which computer it runs on (s2a_hello). */
+export function setHostSystem(system: string | undefined): void {
+	hostSystem = system && hostSystems.includes(system) ? (system as System) : undefined;
+}
+
 /** The newest published release of a GitHub release list, with the installer for `system`. */
-export function newestRelease(releases: GithubRelease[], system: "windows" | "unix"): Release | null {
+export function newestRelease(releases: GithubRelease[], system: System): Release | null {
+	const wanted = installerPattern(system);
 	let newest: Release | null = null;
 	for (const release of releases) {
 		if (release.draft || !release.tag_name || !release.html_url) continue;
 		const version = release.tag_name.replace(/^v/i, "");
 		if (newest && compareVersions(version, newest.version) <= 0) continue;
-		const wanted = system === "windows" ? /\.exe$/i : /\.sh$/i;
-		const installer = release.assets?.find((asset) => wanted.test(asset.name ?? ""))?.browser_download_url;
+		const installer = wanted
+			? release.assets?.find((asset) => wanted.test(asset.name ?? ""))?.browser_download_url
+			: undefined;
 		newest = { version, page: release.html_url, download: installer ?? release.html_url };
 	}
 	return newest;
@@ -60,6 +97,7 @@ export function newestRelease(releases: GithubRelease[], system: "windows" | "un
 export async function findUpdate(current: string, fetcher: typeof fetch = fetch): Promise<Release | null> {
 	const response = await fetcher(releasesApi, { headers: { Accept: "application/vnd.github+json" } });
 	if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-	const release = newestRelease((await response.json()) as GithubRelease[], platform(navigator.userAgent));
+	const system = hostSystem ?? systemOf(navigator.userAgent);
+	const release = newestRelease((await response.json()) as GithubRelease[], system);
 	return release && compareVersions(release.version, current) > 0 ? release : null;
 }

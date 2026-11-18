@@ -191,6 +191,11 @@ Name: "{group}\{#AppName}"; Filename: "{app}\bin\scratch2arduino.exe"; Check: Bi
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\bin\scratch2arduino.exe"; Tasks: desktopicon; Check: BinaryExists('scratch2arduino.exe')
 
+[Run]
+; Last page: "Launch Scratch2Arduino" box, ticked (also after an update from the settings). Started
+; as the user who ran the installer, not as the administrator.
+Filename: "{app}\bin\scratch2arduino.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: BinaryExists('scratch2arduino.exe')
+
 [Registry]
 Root: HKA; Subkey: "Software\Classes\.s2a\OpenWithProgids"; ValueType: string; ValueName: "Scratch2Arduino.Project"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project"; ValueType: string; ValueName: ""; ValueData: "Scratch2Arduino project"; Flags: uninsdeletekey

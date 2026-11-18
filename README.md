@@ -117,10 +117,11 @@ system (step by step, with troubleshooting: part 1 of the [guide](docs/en/guide.
 | System | File | How |
 |---|---|---|
 | Windows 10 / 11 | `Scratch2Arduino_installer.exe` | run it (*More info > Run anyway*: not signed yet) |
-| macOS, Apple chip | `Scratch2Arduino-<version>-macos-arm64.dmg` | drag the app to Applications; first time: *System Settings > Privacy & Security > Open Anyway* (signed ad hoc, not by Apple) |
+| macOS, Apple chip (M1 to M4) | `Scratch2Arduino-<version>-macos-arm64.dmg` | drag the app to Applications; first time: *System Settings > Privacy & Security > Open Anyway* (signed ad hoc, not by Apple); the board compilers need Rosetta, the app offers to install it |
+| macOS, Intel processor | `Scratch2Arduino-<version>-macos-x86_64.dmg` | same as above (no Rosetta needed) |
 | Ubuntu 24.04+, Debian 13, Mint 22 | `scratch2arduino_<version>_amd64.deb` | `sudo apt install ./scratch2arduino_*_amd64.deb` |
 | Fedora 40+, openSUSE | `scratch2arduino-<version>-1.x86_64.rpm` | `sudo dnf install ./scratch2arduino-*.rpm` |
-| Others (Intel Mac, Arch, Raspberry Pi...) | *Source code* | `./Scratch2Arduino_installer.sh` (below) |
+| Others (Arch, Raspberry Pi...) | *Source code* | `./Scratch2Arduino_installer.sh` (below) |
 
 The Linux packages install in `/usr` with a menu entry and a udev rule (`/usr/lib/udev/rules.d/60-scratch2arduino.rules`)
 that gives the logged-in user the serial ports of Arduino, CH340, CP210x, FTDI and Espressif boards: no `dialout`
@@ -465,7 +466,8 @@ or tell us it works):
 
 - boards: Arduino Nano, ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266, and the boards added in 1.3.0
   (Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W: upload and Live over USB);
-- Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac);
+- Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac; Mac testers found the
+  missing Rosetta and the macOS system ports offered as boards, fixed in 1.3.2), the Intel Mac `.dmg`;
 - components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
   light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
   obstacle sensor (FC-51 / KY-032);

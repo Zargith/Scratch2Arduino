@@ -68,6 +68,46 @@ describe("application start-up", () => {
 		await act(async () => root.unmount());
 		container.remove();
 	}, 120_000);
+	// Mac with an Apple chip without Rosetta (1.3.2): a notice with an install button at start-up.
+	it("offers to install Rosetta when the Mac needs it", async () => {
+		fakeHost(null);
+		const host = window as unknown as Record<string, unknown>;
+		const installed: string[] = [];
+		host.s2a_rosetta_state = async () => ({ missing: true, message: "Ce Mac a besoin de Rosetta." });
+		host.s2a_rosetta_install = async (language: string) => {
+			installed.push(language);
+			return { ok: true, message: "Rosetta est installé." };
+		};
+		const container = document.createElement("div");
+		document.body.appendChild(container);
+		const root = createRoot(container);
+		await act(async () => {
+			root.render(
+				<MantineProvider>
+					<App />
+				</MantineProvider>
+			);
+		});
+		await act(async () => {
+			await new Promise((done) => setTimeout(done, 300));
+		});
+		expect(container.textContent).toContain("Ce Mac a besoin de Rosetta.");
+		const button = [...container.querySelectorAll("button")].find((candidate) =>
+			candidate.textContent?.includes("Installer Rosetta")
+		);
+		expect(button).toBeDefined();
+		await act(async () => {
+			button?.click();
+			await new Promise((done) => setTimeout(done, 50));
+		});
+		expect(installed).toEqual(["fr"]);
+		expect(container.textContent).not.toContain("Ce Mac a besoin de Rosetta.");
+		delete host.s2a_rosetta_state;
+		delete host.s2a_rosetta_install;
+		await act(async () => root.unmount());
+		container.remove();
+	}, 120_000);
+
 	// Regression: what was typed in "My code" came back as the starter code after going to the
 	// blocks (or to the other tab) and back, until the project was saved and opened again.
 	it("keeps what was typed in My code when switching tabs and views", async () => {

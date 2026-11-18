@@ -10,6 +10,7 @@
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
 #include "s2a/project.hpp"
+#include "s2a/rosetta.hpp"
 #include "s2a/simulator.hpp"
 #include "s2a/usercode.hpp"
 #include "s2a/version.hpp"
@@ -170,6 +171,23 @@ bool openProjectPage(const std::string& url) {
 #endif
 }
 
+/// Which release file suits this computer (frontend/src/updates.ts): "windows", "macos-arm64"...
+std::string_view hostSystemName() {
+    switch (toolchain::currentHost()) {
+    case toolchain::HostSystem::WindowsX64:
+        return "windows";
+    case toolchain::HostSystem::MacArm64:
+        return "macos-arm64";
+    case toolchain::HostSystem::MacX64:
+        return "macos-x86_64";
+    case toolchain::HostSystem::LinuxX64:
+    case toolchain::HostSystem::LinuxArm64:
+        return "linux";
+    }
+    return "linux";
+}
+
+#ifdef _WIN32
 /// An installer of a release of the project ("https://github.com/Zargith/Scratch2Arduino/releases/
 /// download/v0.11.1/Scratch2Arduino_installer.exe"): the only files the update downloads.
 bool isReleaseInstaller(const std::string& url) {
@@ -182,6 +200,7 @@ bool isReleaseInstaller(const std::string& url) {
         return std::isalnum(static_cast<unsigned char>(c)) != 0 || std::string_view("/:.-_").find(c) != std::string_view::npos;
     });
 }
+#endif
 
 /// Wiring check of the Live mode: [{message, blockIds}].
 Json wiringHints(const std::vector<live::WiringHint>& hints) {
@@ -387,7 +406,10 @@ std::string Bridge::openedJson(const fs::path& path, Language language) {
 
 void Bridge::bind() {
     window_.bind("s2a_hello", [this](const std::string& /*request*/) {
-        return Json{{"language", std::string(languageCode(language_))}, {"version", std::string(version::kString)}}.dump();
+        return Json{{"language", std::string(languageCode(language_))},
+                    {"version", std::string(version::kString)},
+                    {"system", std::string(hostSystemName())}}
+            .dump();
     });
 
     window_.bind("s2a_set_title", [this](const std::string& request) {
@@ -624,6 +646,36 @@ void Bridge::bind() {
         },
         nullptr);
 
+    // Rosetta (Mac with an Apple chip): the board compilers need it. State: {missing, message};
+    // install: {ok, message} once macOS's password prompt and Apple's download are done.
+    window_.bind(
+        "s2a_rosetta_state",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const bool missing = rosetta::missing();
+                return Json{{"missing", missing},
+                            {"message", missing ? tr("rosetta.needed", language,
+                                                     {{"command", std::string(rosetta::kInstallCommand)}})
+                                                : std::string{}}}
+                    .dump();
+            });
+        },
+        nullptr);
+    window_.bind(
+        "s2a_rosetta_install",
+        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+            async(id, [request, this]() {
+                const Language language = languageArg(Json::parse(request), 0, language_);
+                const auto result = rosetta::install();
+                return Json{{"ok", result == rosetta::InstallResult::Installed},
+                            {"message", tr(rosetta::messageKey(result), language,
+                                           {{"command", std::string(rosetta::kInstallCommand)}})}}
+                    .dump();
+            });
+        },
+        nullptr);
+
     // Update from the settings (Windows): downloads the installer of a release, starts it and
     // closes the program so that the installer can replace it. Resolves to false elsewhere.
     window_.bind(
@@ -633,10 +685,10 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const std::string url = stringArg(args, 0);
                 const Language language = languageArg(args, 1, language_);
+#ifdef _WIN32
                 if (!isReleaseInstaller(url)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
-#ifdef _WIN32
                 std::error_code error;
                 const fs::path folder = fs::temp_directory_path(error) / "Scratch2Arduino-update";
                 fs::create_directories(folder, error);
@@ -658,6 +710,8 @@ void Bridge::bind() {
                 window_.dispatch([this]() { window_.terminate(); });
                 return Json(true).dump();
 #else
+                // macOS and Linux: the editor opens the .dmg or the release page in the browser.
+                (void)url;
                 (void)language;
                 return Json(false).dump();
 #endif

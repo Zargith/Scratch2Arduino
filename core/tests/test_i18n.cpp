@@ -90,12 +90,23 @@ TEST(DefaultTranslator, CatalogsHaveTheSameKeys) {
     EXPECT_EQ(french, english);
 }
 
+TEST(DefaultTranslator, ProcessorMessagesExistForEveryComputer) {
+    // The key depends on the computer the program is built for: check both everywhere.
+    for (const char* key : {"error.rosetta_missing", "error.tool_wrong_cpu", "toolchain.rosetta_missing",
+                            "toolchain.tool_wrong_cpu"}) {
+        for (const Language language : s2a::kLanguages) {
+            EXPECT_TRUE(s2a::defaultTranslator().has(key, language)) << key;
+        }
+    }
+}
+
 TEST(DefaultTranslator, EveryErrorCodeHasAMessage) {
     using s2a::ErrorCode;
     for (const ErrorCode code :
          {ErrorCode::FileNotFound, ErrorCode::ReadFailed, ErrorCode::WriteFailed,
           ErrorCode::InvalidArchive, ErrorCode::InvalidJson, ErrorCode::InvalidFormat,
-          ErrorCode::UnsupportedVersion, ErrorCode::InvalidCatalog, ErrorCode::UnknownBoard, ErrorCode::ProcessFailed}) {
+          ErrorCode::UnsupportedVersion, ErrorCode::InvalidCatalog, ErrorCode::UnknownBoard, ErrorCode::ProcessFailed,
+          ErrorCode::PortFailed, ErrorCode::BoardNotResponding, ErrorCode::NetworkFailed, ErrorCode::ToolCannotRun}) {
         for (const Language language : s2a::kLanguages) {
             EXPECT_TRUE(s2a::defaultTranslator().has(s2a::errorMessageKey(code), language))
                 << s2a::errorMessageKey(code);
