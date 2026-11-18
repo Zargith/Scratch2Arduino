@@ -8,7 +8,9 @@ the application: the **Tutorials and help** button (the graduation cap), next to
 
 For a very first try, without hardware, the same panel offers the **interactive tutorial "My doorbell"**: a
 box guides you step by step (blocks, wiring diagram, virtual board, a little C++ code translated into
-Python) and sees by itself when each step is done.
+Python) and sees by itself when each step is done. Once you click *Next*, the blocks of the finished step
+are locked: they cannot be moved, thrown away or changed by mistake, so the next steps stay possible. *Back*
+unlocks them, and they are all unlocked when the tutorial is closed.
 
 *Pour le lire en français, change la langue dans les paramètres.*
 

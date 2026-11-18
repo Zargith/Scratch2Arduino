@@ -40,6 +40,12 @@ export interface TourStep {
 	 * seen since it started); `start` is the context when the step started.
 	 */
 	done(context: TourContext, memory: Record<string, unknown>, start: TourContext): boolean;
+	/**
+	 * Blocks that make the step right (their ids), locked once the learner goes to the next step:
+	 * they cannot be moved, deleted or changed by mistake, so the next steps stay possible. A
+	 * block that a later step asks to remove must not be listed.
+	 */
+	locks?(project: Project): string[];
 }
 
 // --- reading the project ------------------------------------------------------------------
@@ -67,13 +73,20 @@ const ifElse = (project: Project) =>
 
 const field = (block: ProjectBlock | undefined, name: string) => block?.fields?.[name] ?? "";
 
+/** Ids of the blocks found (the missing ones left out). */
+const ids = (...blocks: (ProjectBlock | undefined)[]) => blocks.filter((block): block is ProjectBlock => !!block).map((block) => block.id);
+
+/** The first block of `type` in `stack` that satisfies `test`. */
+const find = (stack: ProjectBlock[] | undefined, type: string, test: (block: ProjectBlock) => boolean = () => true) =>
+	[...allBlocks(stack ?? [])].find((block) => block.type === type && test(block));
+
 /** A block of `type` somewhere in `stack` that satisfies `test`. */
 const has = (stack: ProjectBlock[] | undefined, type: string, test: (block: ProjectBlock) => boolean = () => true) =>
 	[...allBlocks(stack ?? [])].some((block) => block.type === type && test(block));
 
 /** The LED block of a mouth: "set pin 8 to HIGH" (or LOW). */
 const ledBlock = (stack: ProjectBlock[] | undefined, state: "HIGH" | "LOW") =>
-	has(stack, "pins_digital_write", (block) => field(block, "PIN") === "8" && (field(block, "STATE") || "HIGH") === state);
+	find(stack, "pins_digital_write", (block) => field(block, "PIN") === "8" && (field(block, "STATE") || "HIGH") === state);
 
 export const MELODY_FUNCTION = "melodie";
 
@@ -119,6 +132,7 @@ export const steps: TourStep[] = [
 		},
 		target: { kind: "category", id: "events" },
 		done: (context) => mainScript(context.project).length > 0,
+		locks: (project) => ids(mainScript(project)[0]),
 	},
 	{
 		id: "forever",
@@ -129,6 +143,7 @@ export const steps: TourStep[] = [
 		},
 		target: { kind: "category", id: "control" },
 		done: (context) => forever(context.project) !== undefined,
+		locks: (project) => ids(forever(project)),
 	},
 	{
 		id: "if",
@@ -139,6 +154,7 @@ export const steps: TourStep[] = [
 		},
 		target: { kind: "category", id: "control" },
 		done: (context) => ifElse(context.project) !== undefined,
+		locks: (project) => ids(ifElse(project)),
 	},
 	{
 		id: "button",
@@ -149,6 +165,7 @@ export const steps: TourStep[] = [
 		},
 		target: { kind: "category", id: "sensors" },
 		done: (context) => ifElse(context.project)?.inputs?.CONDITION?.block?.type === "sensors_button_pressed",
+		locks: (project) => ids(ifElse(project)?.inputs?.CONDITION?.block),
 	},
 	{
 		id: "led",
@@ -160,7 +177,11 @@ export const steps: TourStep[] = [
 		target: { kind: "category", id: "pins" },
 		done: (context) => {
 			const decision = ifElse(context.project);
-			return ledBlock(decision?.statements?.SUBSTACK, "HIGH") && ledBlock(decision?.statements?.SUBSTACK2, "LOW");
+			return !!ledBlock(decision?.statements?.SUBSTACK, "HIGH") && !!ledBlock(decision?.statements?.SUBSTACK2, "LOW");
+		},
+		locks: (project) => {
+			const decision = ifElse(project);
+			return ids(ledBlock(decision?.statements?.SUBSTACK, "HIGH"), ledBlock(decision?.statements?.SUBSTACK2, "LOW"));
 		},
 	},
 	{
@@ -204,6 +225,7 @@ export const steps: TourStep[] = [
 			en: "From the Sound category, drag \"play 440 Hz for 0.5 seconds on the buzzer of pin ...\" into \"then\", below the LED, and choose pin 6. Press the virtual button again: you hear the buzzer (the computer's speaker).",
 		},
 		target: { kind: "category", id: "sound" },
+		// Not locked: the "melodie" block replaces it two steps later.
 		done: (context) => has(ifElse(context.project)?.statements?.SUBSTACK, "sound_play_tone", (block) => field(block, "PIN") === "6"),
 	},
 	{
@@ -227,6 +249,8 @@ export const steps: TourStep[] = [
 		target: { kind: "category", id: "mycode" },
 		done: (context) =>
 			has(ifElse(context.project)?.statements?.SUBSTACK, "mycode_call", (block) => field(block, "NAME") === MELODY_FUNCTION),
+		locks: (project) =>
+			ids(find(ifElse(project)?.statements?.SUBSTACK, "mycode_call", (block) => field(block, "NAME") === MELODY_FUNCTION)),
 	},
 	{
 		id: "check",

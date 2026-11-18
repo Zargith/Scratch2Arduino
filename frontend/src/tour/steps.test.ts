@@ -116,4 +116,22 @@ describe("interactive tutorial", () => {
 		expect(done("python", context(doorbell(), { userCode: python }))).toBe(true);
 		expect(done("live-melody", context(doorbell(), { userCode: python, live: true, pressed: ["2"] }), {})).toBe(true);
 	});
+
+	it("locks the blocks that made each step right, never one that a later step removes", () => {
+		const locks = (id: string, project: Project) => step(id).locks?.(project) ?? [];
+		const beep = { id: "beep", type: "sound_play_tone", fields: { PIN: "6" } };
+		const project = doorbell(beep);
+		expect(locks("start", project)).toEqual(["start"]);
+		expect(locks("forever", project)).toEqual(["forever"]);
+		expect(locks("if", project)).toEqual(["if"]);
+		expect(locks("button", project)).toEqual(["button"]);
+		expect(locks("led", project)).toEqual(["on", "off"]);
+		// The buzzer block is thrown away when the "melodie" block takes its place.
+		expect(locks("buzzer", project)).toEqual([]);
+		expect(locks("melody-block", doorbell({ id: "tune", type: "mycode_call", fields: { NAME: MELODY_FUNCTION } }))).toEqual([
+			"tune",
+		]);
+		// Nothing found, nothing locked.
+		expect(locks("forever", blocks())).toEqual([]);
+	});
 });
