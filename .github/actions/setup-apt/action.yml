@@ -1,12 +1,13 @@
 name: Set up apt
 description: >-
-  Makes apt fail fast and retry, and stops using the Azure Ubuntu mirror of the runner when it does not
-  answer (it hung the Linux jobs for an hour on 2026-11-11: each package waited for a DNS timeout).
+  Makes apt fail fast and retry, and puts the fastest Ubuntu mirror first. The runner mirror can hang
+  (Azure, 2026-11-11: each package waited for a DNS timeout) or answer very slowly (the EC2 mirror on
+  2026-11-18: 94 kB/s, 83 MB of packages did not fit in 15 minutes).
 
 runs:
   using: composite
   steps:
-    - name: Set up apt (timeouts, retries, mirror)
+    - name: Set up apt (timeouts, retries, fastest mirror)
       shell: bash
       run: |
         # Short timeouts and a few retries for every apt-get call of the job (the installer script too).
@@ -16,17 +17,42 @@ runs:
           'Acquire::https::Timeout "15";' \
           | sudo tee /etc/apt/apt.conf.d/99-s2a-ci >/dev/null
 
-        # The runner reads its mirrors from /etc/apt/apt-mirrors.txt, Azure first. When Azure does not
-        # answer, put the main Ubuntu archive first so apt does not wait for Azure on each package.
+        # Mirrors to try: the ones of the runner (its mirror list, or its sources when it has none),
+        # then the main Ubuntu archive and the Azure mirror.
         mirrors=/etc/apt/apt-mirrors.txt
-        azure=http://azure.archive.ubuntu.com/ubuntu/dists/noble/InRelease
-        if curl -fsSI --max-time 10 --retry 2 "$azure" >/dev/null; then
-          echo "The Azure Ubuntu mirror answers: kept."
+        sources=$(ls /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true)
+        if [ -f "$mirrors" ]; then
+          runner=$(awk '{print $1}' "$mirrors" | grep -v security)
         else
-          echo "::warning::The Azure Ubuntu mirror does not answer: using archive.ubuntu.com instead."
-          printf 'http://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://security.ubuntu.com/ubuntu/\tpriority:2\n' \
-            | sudo tee "$mirrors" >/dev/null
-          # Runner images without the mirror list name the Azure mirror in their sources directly.
-          sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' \
-            /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          # Whole URLs ending in /ubuntu only: not packages.microsoft.com/ubuntu/24.04/prod and the like.
+          runner=$(grep -hoE 'https?://[^[:space:]]+' $sources /dev/null 2>/dev/null \
+            | grep -E '/ubuntu/?$' | grep -v security | sort -u)
+        fi
+        candidates=$(printf '%s\n' $runner http://archive.ubuntu.com/ubuntu/ http://azure.archive.ubuntu.com/ubuntu/ \
+          | sed 's#/*$#/#' | awk '!seen[$0]++')
+
+        # Download speed of each mirror on a file of about 1 MB (0 when it does not answer in time).
+        probe=dists/noble/main/binary-amd64/Packages.xz
+        best= best_speed=0
+        for mirror in $candidates; do
+          speed=$(curl -fsS -o /dev/null --max-time 15 -w '%{speed_download}' "$mirror$probe" 2>/dev/null) || speed=0
+          speed=${speed%.*}
+          echo "$mirror: $((speed / 1024)) kB/s"
+          if [ "$speed" -gt "$best_speed" ]; then best=$mirror best_speed=$speed; fi
+        done
+        first=$(printf '%s\n' $candidates | head -n 1)
+        if [ -z "$best" ]; then
+          echo "::warning::No Ubuntu mirror answered the speed test: the runner mirrors are kept."
+        elif [ "$best" = "$first" ]; then
+          echo "The runner mirror is the fastest: kept."
+        else
+          echo "::warning::Using $best ($((best_speed / 1024)) kB/s) instead of the slower runner mirror $first."
+          if [ -f "$mirrors" ]; then
+            printf '%s\tpriority:1\nhttp://security.ubuntu.com/ubuntu/\tpriority:2\n' "$best" | sudo tee "$mirrors" >/dev/null
+          else
+            # Runner images without the mirror list name their mirror in the sources directly.
+            for mirror in $runner; do
+              sudo sed -i "s#${mirror%/}#${best%/}#g" $sources 2>/dev/null || true
+            done
+          fi
         fi
