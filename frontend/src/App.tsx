@@ -94,7 +94,7 @@ import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
 import { findUpdate, platform, type Release } from "@/updates";
 import { Tour } from "@/tour/Tour";
-import { melodyCode, PROJECT_NAME, type TourContext, type TourStep } from "@/tour/steps";
+import { melodyCode, PROJECT_NAME, steps as tourSteps, type TourContext, type TourStep } from "@/tour/steps";
 import { Tutorials } from "@/Tutorials";
 import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
@@ -267,6 +267,9 @@ export function App() {
 	const [tourStep, setTourStep] = useState<number | null>(null);
 	/** Changes of the blocks, counted while the tutorial is open (its steps look at the project). */
 	const [tourEdits, setTourEdits] = useState(0);
+	/** Blocks locked by each step of the tutorial already passed (index = step). */
+	const [tourLocks, setTourLocks] = useState<string[][]>([]);
+	const lockedBlocks = useMemo(() => tourLocks.flat(), [tourLocks]);
 	/** Successful checks and uploads: a step of the tutorial waits for one. */
 	const [checks, setChecks] = useState(0);
 	/** Edits made so far, and how many the last autosave holds. */
@@ -492,7 +495,23 @@ export function App() {
 		reload(projectToWorkspace(starterProject(projectName)));
 		if (view === "code") void showBlocksView();
 		setTourEdits(0);
+		setTourLocks([]);
 		setTourStep(0);
+	};
+
+	/**
+	 * Next: the blocks that made the step right are locked, so that a wrong move cannot undo it
+	 * and block the next steps. Back: the steps from the one shown again are unlocked.
+	 */
+	const changeTourStep = (next: number) => {
+		const current = tourStep ?? 0;
+		const project = next > current ? currentProject() : null;
+		setTourLocks((locks) => {
+			const kept = locks.slice(0, Math.min(next, current));
+			if (project) kept[current] = tourSteps[current]?.locks?.(project) ?? [];
+			return kept;
+		});
+		setTourStep(next);
 	};
 
 	/** The button of a tutorial step: writes the melodie() function in "My code" (C++) and shows it. */
@@ -1450,6 +1469,7 @@ export function App() {
 							onManageLibrary={() => setLibraryShown(true)}
 							userDeclarations={declarations}
 							onOpenCode={() => void showCodeView("mine")}
+							lockedBlocks={lockedBlocks}
 							onLoadError={(lost) =>
 								setStatus({ kind: "error", message: t("status.load_failed", { count: String(lost) }) })
 							}
@@ -1636,9 +1656,13 @@ export function App() {
 					language={language}
 					context={tourContext}
 					step={tourStep}
-					onStep={setTourStep}
+					onStep={changeTourStep}
 					onAction={tourAction}
-					onClose={() => setTourStep(null)}
+					locked={lockedBlocks.length > 0}
+					onClose={() => {
+						setTourLocks([]);
+						setTourStep(null);
+					}}
 				/>
 			)}
 			<Settings

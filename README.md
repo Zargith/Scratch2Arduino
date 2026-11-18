@@ -234,7 +234,8 @@ On Linux, uploading needs access to the serial port: `sudo usermod -aG dialout $
 
 No board yet? Open **Tutorials and help** (the graduation cap) and start the **interactive tutorial** "My
 doorbell": a box guides you step by step through the blocks, the wiring diagram, the virtual board and a
-little C++ code translated into Python, and checks each step by itself.
+little C++ code translated into Python, and checks each step by itself. The blocks of a finished step are
+locked, so that a wrong move cannot break what is already right (*Back* unlocks them).
 
 1. Plug in an Arduino Uno with a USB cable.
 2. Start **Scratch2Arduino**, pick your board and port in the top bar (the refresh button looks for plugged-in boards).

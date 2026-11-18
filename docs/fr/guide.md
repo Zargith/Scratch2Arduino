@@ -8,7 +8,10 @@ dans le logiciel : bouton **Tutoriels et aide** (le chapeau de diplômé), à c�
 
 Pour un tout premier essai, sans matériel, ce même panneau propose le **tutoriel interactif "Ma sonnette"** :
 un cadre te guide étape par étape (blocs, schéma de câblage, carte virtuelle, un peu de code C++ traduit en
-Python) et voit tout seul quand chaque étape est faite.
+Python) et voit tout seul quand chaque étape est faite. Dès que tu cliques sur *Suivant*, les blocs de
+l'étape réussie sont verrouillés : impossible de les déplacer, de les jeter ou de les changer par erreur, et
+les étapes suivantes restent faisables. *Précédent* les déverrouille, et tout est déverrouillé quand le
+tutoriel est fermé.
 
 *To read it in English, change the language in the settings.*
 

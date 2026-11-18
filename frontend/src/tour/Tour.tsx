@@ -1,7 +1,7 @@
 // Card of the interactive tutorial: the current step, a ring around what to use, and the Next
 // button that turns on once the step sees that it is done.
 import { ActionIcon, Badge, Button, Group, Paper, Progress, Stack, Text, Title } from "@mantine/core";
-import { IconCheck, IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
+import { IconCheck, IconChevronDown, IconChevronUp, IconLock, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 
 import { catalog, type Language } from "@/catalog";
@@ -17,6 +17,8 @@ interface TourProps {
 	onStep(step: number): void;
 	/** The card's button of a step (writing the tune in "My code"). */
 	onAction(action: NonNullable<TourStep["action"]>["run"]): void;
+	/** Blocks of the steps already passed are locked (told once in the card). */
+	locked?: boolean;
 	onClose(): void;
 }
 
@@ -55,7 +57,7 @@ function useRing(target: TourTarget | undefined, language: Language): DOMRect | 
 	return rect;
 }
 
-export function Tour({ language, context, step, onStep, onAction, onClose }: TourProps) {
+export function Tour({ language, context, step, onStep, onAction, locked = false, onClose }: TourProps) {
 	const t = (key: MessageKey, params?: Record<string, string>) => translate(language, key, params);
 	const current = steps[Math.min(step, steps.length - 1)]!;
 	const [folded, setFolded] = useState(false);
@@ -97,6 +99,11 @@ export function Tour({ language, context, step, onStep, onAction, onClose }: Tou
 								<Button variant="light" onClick={() => onAction(current.action!.run)} style={{ alignSelf: "flex-start" }}>
 									{current.action.label[language]}
 								</Button>
+							)}
+							{locked && !last && (
+								<Text size="xs" c="dimmed">
+									<IconLock size={12} style={{ verticalAlign: "middle" }} /> {t("tour.locked")}
+								</Text>
 							)}
 							{done && step > 0 && !last && (
 								<Text size="sm" c="green" fw={500}>
