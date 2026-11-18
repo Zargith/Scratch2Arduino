@@ -1,0 +1,45 @@
+{
+  "id": "nano_every",
+  "name": "Arduino Nano Every",
+  "fqbn": "arduino:megaavr:nona4809",
+  "platform": "arduino:megaavr",
+  "mcu": "ATmega4809",
+  "voltage": 5,
+  "flashBytes": 49152,
+  "ramBytes": 6144,
+  "bluetoothModule": false,
+  "builtinLed": "13",
+  "digitalPins": 14,
+  "analogPins": {
+    "count": 8,
+    "firstNumber": 14,
+    "inputOnly": []
+  },
+  "pwmPins": ["3", "5", "6", "9", "10"],
+  "interruptPins": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"],
+  "i2c": { "sda": "A4", "scl": "A5" },
+  "spi": { "mosi": "11", "miso": "12", "sck": "13", "ss": "10" },
+  "usb": ["2341:0058"],
+  "drawing": {
+    "width": 330,
+    "height": 130,
+    "colour": "#00708A",
+    "title": "NANO EVERY",
+    "headers": [
+      {
+        "side": "top",
+        "x": 45,
+        "y": 14,
+        "pitch": 17,
+        "pins": ["D12|12", "D11|11", "D10|10", "D9|9", "D8|8", "D7|7", "D6|6", "D5|5", "D4|4", "D3|3", "D2|2", "GND", "RST", "RX0|0", "TX1|1"]
+      },
+      {
+        "side": "bottom",
+        "x": 45,
+        "y": 116,
+        "pitch": 17,
+        "pins": ["D13|13", "3V3", "REF", "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "5V", "RST", "GND", "VIN"]
+      }
+    ]
+  }
+}

@@ -43,7 +43,7 @@
   },
   "cli": {
     "done": "Done.",
-    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (all by default)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli lib list|search <words>|install <name>[@<version>]|remove <name>  Arduino libraries (* = comes with a board)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
+    "usage": "Usage:\n  s2a-cli boards                                 supported boards\n  s2a-cli ports                                  plugged-in boards\n  s2a-cli bluetooth                              Bluetooth boards around (ESP32), as bt:<address> ports\n  s2a-cli setup [--board <id>]                   install the tools for a board (by default: the shipped boards)\n  s2a-cli board list|install <package>...|remove <package>  optional board packages (ESP32, ESP8266...)\n  s2a-cli generate <project>                     print the Arduino code of a project (.s2a or project.json)\n  s2a-cli wiring <project> [--svg <file>]        components to wire, their pins and the warnings (and the diagram)\n  s2a-cli compile <folder|project> [--board <id>] compile an Arduino sketch or a project\n  s2a-cli upload <folder|project> --port <port> [--board <id>]\n  s2a-cli live <project> --port <port> [--seconds <n>]  run the blocks live (Ctrl+C stops)\n  s2a-cli convert <file> --to cpp|python|javascript  rewrite a .ino/.cpp, .py or .js program in another language\n  s2a-cli lib list|search <words>|install <name>[@<version>]|remove <name>  Arduino libraries (* = comes with a board)\n  s2a-cli version\nOptions: --lang fr|en, --verbose",
     "convert_source": "The file to convert must end with .ino, .cpp, .h, .py or .js.",
     "convert_check": "Lines to convert by hand (kept as comments): {lines}.",
     "unknown_board": "Unknown board \"{board}\". Available boards: {boards}.",
@@ -67,7 +67,18 @@
     "bluetooth_searching": "Looking for Bluetooth boards (8 seconds)...",
     "bluetooth_none": "No \"S2A-...\" Bluetooth board found. The board must have received the Live program once over USB.",
     "compiled_no_size": "Compiled.",
-    "wiring_nothing": "Nothing to wire: the blocks use no component."
+    "wiring_nothing": "Nothing to wire: the blocks use no component.",
+    "unknown_package": "Unknown board package \"{package}\". Packages: {packages}.",
+    "package_installed": "installed ({version}, {size} on the disk)",
+    "package_update": "version {version} available (about {size} to download)",
+    "package_shipped": "comes with Scratch2Arduino",
+    "package_available": "not installed (about {download} to download, {disk} on the disk)",
+    "package_already": "{package}: already installed.",
+    "package_absent": "{package}: not installed, nothing to remove.",
+    "package_kept": "{package}: they come with Scratch2Arduino and cannot be removed.",
+    "installing_package": "{package}: installing (about {size} to download, this can take a long time)...",
+    "removing_package": "{package}: removing ({size} freed)...",
+    "installing_package_downloaded": "{package}: installing (already downloaded)..."
   },
   "build": {
     "unknown_board": "The board \"{board}\" is unknown. Pick a board in the list.",

@@ -52,6 +52,7 @@ import {
 	HostMissingError,
 	type AutosavedProject,
 	type LiveSnapshot,
+	type BoardPackage,
 	type OpenedProject,
 	type Outcome,
 	type Port,
@@ -74,6 +75,7 @@ import { Library } from "@/Library";
 import { LiveWiring } from "@/LiveWiring";
 import { ProjectWiring } from "@/ProjectWiring";
 import { BluetoothDialog } from "@/BluetoothDialog";
+import { BoardPackageDialog, needsPackage } from "@/BoardPackages";
 import {
 	bluetoothPort,
 	bluetoothPorts,
@@ -192,6 +194,14 @@ export function App() {
 
 	const [name, setName] = useState(() => translate(detectLanguage(), "project.untitled"));
 	const [boardId, setBoardId] = useState(defaultBoardId);
+	/** Optional board packages (ESP32...), null until read from the host. */
+	const [boardPackages, setBoardPackages] = useState<BoardPackage[] | null>(null);
+	/** A board whose package is offered for installation (dialog open), or null. */
+	const [packageAsked, setPackageAsked] = useState<string | null>(null);
+	/** Boards already offered once in this session when they were chosen (no nagging). */
+	const offeredBoards = useRef(new Set<string>());
+	/** What to do once the package is installed (Check, Upload or Live clicked before). */
+	const afterPackage = useRef<(() => void) | null>(null);
 	/** Narrow window: the Live, Check and Upload buttons show only their icon so that nothing overflows. */
 	const compact = useMediaQuery("(max-width: 1600px)") ?? false;
 	const [path, setPath] = useState("");
@@ -393,6 +403,39 @@ export function App() {
 
 	// Once, at start-up: the host tells the system language. Later language changes are the
 	// user's (the FR/EN switch) and must not be overridden.
+	/** The latest list, for an action started again right after an install (older renders see the old one). */
+	const boardPackagesRef = useRef(boardPackages);
+	boardPackagesRef.current = boardPackages;
+	const refreshBoardPackages = useCallback(async () => {
+		if (!hasHost()) return;
+		let list: BoardPackage[] = [];
+		try {
+			list = await bridge.boardPackages(language);
+		} catch {
+			// arduino-cli missing: Check explains it
+		}
+		boardPackagesRef.current = list;
+		setBoardPackages(list);
+	}, [language]);
+	useEffect(() => {
+		void refreshBoardPackages();
+	}, [refreshBoardPackages]);
+	// A board chosen (in the list, by an opened project or example, or detected on a port) whose
+	// package is not installed: offer it once, with its size. The board stays chosen either way.
+	useEffect(() => {
+		if (!needsPackage(boardPackages, boardId) || offeredBoards.current.has(boardId)) return;
+		offeredBoards.current.add(boardId);
+		afterPackage.current = null;
+		setPackageAsked(boardId);
+	}, [boardId, boardPackages]);
+	/** True (and the package offered) when the board cannot be used before its package is installed. */
+	const packageMissing = (then: () => void) => {
+		if (!needsPackage(boardPackagesRef.current, boardId)) return false;
+		afterPackage.current = then;
+		setPackageAsked(boardId);
+		return true;
+	};
+
 	const startup = useRef({ fail, refreshPorts });
 	useEffect(() => {
 		if (!hasHost()) return;
@@ -894,6 +937,7 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.no_port") });
 			return;
 		}
+		if (packageMissing(() => void run(kind))) return;
 		setBusy(true);
 		setStatus({ kind: "info", message: t(kind === "build" ? "status.building" : "status.uploading") });
 		try {
@@ -953,6 +997,8 @@ export function App() {
 			setStatus({ kind: "info", message: t("status.no_port") });
 			return;
 		}
+		// The virtual board needs no board tools.
+		if (!isSimPort(port) && packageMissing(() => void toggleLive())) return;
 		showProblems([]);
 		try {
 			const started = await bridge.liveStart(currentProject(), port, language);
@@ -1170,7 +1216,10 @@ export function App() {
 					/>
 					<Select
 						aria-label={t("board.label")}
-						data={boards.map((board) => ({ value: board.id, label: board.name }))}
+						data={boards.map((board) => ({
+							value: board.id,
+							label: needsPackage(boardPackages, board.id) ? `${board.name} ${t("board.to_install")}` : board.name,
+						}))}
 						value={boardId}
 						onChange={(value) => {
 							if (value) {
@@ -1599,6 +1648,9 @@ export function App() {
 				version={version}
 				board={boards.find((candidate) => candidate.id === boardId)?.name ?? boardId}
 				settings={settings}
+				boardPackages={boardPackages}
+				onBoardPackagesChanged={refreshBoardPackages}
+				hasHost={hasHost()}
 				onLanguage={(next) => {
 					switchLanguage(next);
 					changeSettings({ ...settings, language: next });
@@ -1607,6 +1659,23 @@ export function App() {
 				onUpdate={setUpdate}
 				readyToClose={readyToClose}
 				onClose={() => setSettingsShown(false)}
+			/>
+			<BoardPackageDialog
+				language={language}
+				t={t}
+				boardId={packageAsked}
+				packages={boardPackages}
+				onInstalled={async () => {
+					await refreshBoardPackages();
+					setPackageAsked(null);
+					const then = afterPackage.current;
+					afterPackage.current = null;
+					then?.();
+				}}
+				onClose={() => {
+					afterPackage.current = null;
+					setPackageAsked(null);
+				}}
 			/>
 			<UnsavedChanges opened={unsavedAsked} t={t} onChoice={answerUnsaved} />
 			{update && (

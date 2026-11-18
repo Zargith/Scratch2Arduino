@@ -5,6 +5,7 @@
 
 namespace {
 
+using s2a::Board;
 using s2a::BoardDatabase;
 using s2a::PinCapability;
 
@@ -16,16 +17,75 @@ std::vector<int> numbers(const std::vector<const s2a::Pin*>& pins) {
     return result;
 }
 
-TEST(BuiltinBoards, LoadsUnoNanoMegaAndEsp32) {
+TEST(BuiltinBoards, LoadsEveryBoard) {
     const auto& database = BoardDatabase::builtin();
-    ASSERT_EQ(database.boards().size(), 5U);
-    EXPECT_NE(database.find("esp32"), nullptr);
-    EXPECT_NE(database.find("esp8266"), nullptr);
-    EXPECT_NE(database.find("uno"), nullptr);
-    EXPECT_NE(database.find("nano"), nullptr);
-    EXPECT_NE(database.find("mega"), nullptr);
-    EXPECT_EQ(database.find("leonardo"), nullptr);
+    ASSERT_EQ(database.boards().size(), 12U);
+    for (const char* id : {"uno", "nano", "mega", "leonardo", "micro", "nano_every", "uno_r4_minima", "uno_r4_wifi",
+                           "pico", "pico_w", "esp32", "esp8266"}) {
+        EXPECT_NE(database.find(id), nullptr) << id;
+    }
+    EXPECT_EQ(database.find("due"), nullptr);
     EXPECT_NE(database.find(BoardDatabase::kDefaultBoardId), nullptr);
+}
+
+TEST(BuiltinBoards, LeonardoAndMicroNumberTheirAnalogPinsFrom18) {
+    const auto& database = BoardDatabase::builtin();
+    for (const char* id : {"leonardo", "micro"}) {
+        const Board& board = *database.find(id);
+        EXPECT_EQ(board.mcu, "ATmega32U4");
+        ASSERT_NE(board.findPin("A0"), nullptr);
+        EXPECT_EQ(board.findPin("A0")->number, 18);
+        EXPECT_TRUE(board.findPin("13")->has(PinCapability::Pwm));
+        EXPECT_TRUE(board.findPin("7")->has(PinCapability::Interrupt));
+        // I2C on 2 and 3, not on A4 / A5 as on the Uno.
+        ASSERT_EQ(board.i2c.size(), 2U);
+    }
+    EXPECT_NE(database.find("micro")->findPin("16"), nullptr);    // MOSI, on the header
+    EXPECT_EQ(database.find("leonardo")->findPin("16"), nullptr); // only on the ICSP header
+}
+
+TEST(BuiltinBoards, ModuleReceivesOnlyWhereSoftwareSerialCan) {
+    const auto& database = BoardDatabase::builtin();
+    const Board& leonardo = *database.find("leonardo");
+    EXPECT_EQ(bluetoothModuleProblem(leonardo, 8, 9), "");
+    EXPECT_EQ(bluetoothModuleProblem(leonardo, 2, 9), "pin_receive");
+    EXPECT_EQ(bluetoothModuleProblem(*database.find("uno"), 2, 3), ""); // every Uno pin can receive
+    const Board& mega = *database.find("mega");
+    EXPECT_EQ(moduleSerialPort(mega, 19, 18), 1);
+    EXPECT_EQ(moduleSerialPort(mega, 15, 14), 3);
+    EXPECT_EQ(bluetoothModuleProblem(mega, 17, 16), "");          // Serial2
+    EXPECT_EQ(bluetoothModuleProblem(mega, 62, 9), "");           // A8: SoftwareSerial receives there
+    EXPECT_EQ(bluetoothModuleProblem(mega, 2, 3), "pin_receive");
+    EXPECT_EQ(moduleSerialPort(leonardo, 19, 18), 0);
+    EXPECT_EQ(bluetoothModuleProblem(*database.find("nano_every"), 8, 9), "no_module");
+}
+
+TEST(BuiltinBoards, PicoUsesGpioNamesAndItsOnBoardLed) {
+    const auto& database = BoardDatabase::builtin();
+    const Board& pico = *database.find("pico");
+    EXPECT_DOUBLE_EQ(pico.voltage, 3.3);
+    ASSERT_NE(pico.findPin("GP26"), nullptr);
+    EXPECT_EQ(pico.findPin("GP26")->number, 26);
+    EXPECT_TRUE(pico.findPin("GP26")->has(PinCapability::Analog));
+    EXPECT_FALSE(pico.findPin("GP2")->has(PinCapability::Analog));
+    EXPECT_TRUE(pico.findPin("GP2")->has(PinCapability::Pwm));
+    EXPECT_EQ(pico.findPin("GP23"), nullptr); // not on the header
+    EXPECT_EQ(pico.builtinLed, 25);
+    EXPECT_EQ(database.find("pico_w")->builtinLed, 64); // driven through the Wi-Fi chip
+}
+
+TEST(BuiltinBoards, NewArduinoBoardsKeepTheirFormFactor) {
+    const auto& database = BoardDatabase::builtin();
+    for (const char* id : {"uno_r4_minima", "uno_r4_wifi"}) {
+        const Board& board = *database.find(id);
+        EXPECT_EQ(board.architecture, "renesas_uno");
+        EXPECT_EQ(board.findPin("A0")->number, 14);
+        EXPECT_EQ(board.drawing.width, database.find("uno")->drawing.width);
+    }
+    const Board& every = *database.find("nano_every");
+    EXPECT_EQ(every.architecture, "megaavr");
+    EXPECT_TRUE(every.findPin("A7")->has(PinCapability::Digital)); // unlike the Nano
+    EXPECT_FALSE(database.find("nano")->findPin("A7")->has(PinCapability::Digital));
 }
 
 // The embedded descriptions must parse: builtin() silently returns an empty database otherwise.

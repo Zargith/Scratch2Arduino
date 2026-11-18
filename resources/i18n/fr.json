@@ -43,7 +43,7 @@
   },
   "cli": {
     "done": "Terminé.",
-    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (toutes par défaut)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli lib list|search <mots>|install <nom>[@<version>]|remove <nom>  bibliothèques Arduino (* = fournie avec une carte)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
+    "usage": "Utilisation :\n  s2a-cli boards                                 cartes prises en charge\n  s2a-cli ports                                  cartes branchées\n  s2a-cli bluetooth                              cartes Bluetooth à proximité (ESP32), en ports bt:<adresse>\n  s2a-cli setup [--board <id>]                   installe les outils d'une carte (par défaut : les cartes fournies)\n  s2a-cli board list|install <paquet>...|remove <paquet>  paquets de cartes facultatifs (ESP32, ESP8266...)\n  s2a-cli generate <projet>                      affiche le code Arduino d'un projet (.s2a ou project.json)\n  s2a-cli wiring <projet> [--svg <fichier>]      composants à brancher, leurs broches et les alertes (et le schéma)\n  s2a-cli compile <dossier|projet> [--board <id>] compile un programme Arduino ou un projet\n  s2a-cli upload <dossier|projet> --port <port> [--board <id>]\n  s2a-cli live <projet> --port <port> [--seconds <n>]  exécute les blocs en direct (Ctrl+C pour arrêter)\n  s2a-cli convert <fichier> --to cpp|python|javascript  réécrit un programme .ino/.cpp, .py ou .js dans un autre langage\n  s2a-cli lib list|search <mots>|install <nom>[@<version>]|remove <nom>  bibliothèques Arduino (* = fournie avec une carte)\n  s2a-cli version\nOptions : --lang fr|en, --verbose",
     "convert_source": "Le fichier à convertir doit finir par .ino, .cpp, .h, .py ou .js.",
     "convert_check": "Lignes à convertir à la main (gardées en commentaires) : {lines}.",
     "unknown_board": "Carte inconnue \"{board}\". Cartes disponibles : {boards}.",
@@ -67,7 +67,18 @@
     "bluetooth_searching": "Recherche des cartes Bluetooth (8 secondes)...",
     "bluetooth_none": "Aucune carte Bluetooth \"S2A-...\" trouvée. La carte doit avoir reçu le programme Live une fois par USB.",
     "compiled_no_size": "Compilé.",
-    "wiring_nothing": "Rien à brancher : les blocs n'utilisent aucun composant."
+    "wiring_nothing": "Rien à brancher : les blocs n'utilisent aucun composant.",
+    "unknown_package": "Paquet de cartes inconnu \"{package}\". Paquets : {packages}.",
+    "package_installed": "installé ({version}, {size} sur le disque)",
+    "package_update": "version {version} disponible (environ {size} à télécharger)",
+    "package_shipped": "fourni avec Scratch2Arduino",
+    "package_available": "non installé (environ {download} à télécharger, {disk} sur le disque)",
+    "package_already": "{package} : déjà installées.",
+    "package_absent": "{package} : pas installées, rien à supprimer.",
+    "package_kept": "{package} : fournies avec Scratch2Arduino, elles ne peuvent pas être supprimées.",
+    "installing_package": "{package} : installation (environ {size} à télécharger, cela peut prendre longtemps)...",
+    "removing_package": "{package} : suppression ({size} libérés)...",
+    "installing_package_downloaded": "{package} : installation (déjà téléchargées)..."
   },
   "build": {
     "unknown_board": "La carte \"{board}\" n'est pas connue. Choisis une carte dans la liste.",

@@ -37,6 +37,7 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
 | `codegen` | Block tree -> Arduino C++ sketch (`.ino`) |
 | `build` | Check / Upload pipeline: validate -> generate -> compile -> upload |
 | `arduino_cli` | Wrapper around the bundled `arduino-cli`; `requiredLibraries` installs libraries from the `#include`s |
+| `board_packages` | Optional board packages (`resources/board-packages.json`): state, size to download (read from the board indexes), install at the pinned version, removal with the archives only they used |
 | `diagnostics` | Turns compiler / uploader output into friendly messages, mapped back to blocks |
 | `live` | `LiveLink` (protocol client), `Interpreter` (runs the blocks on the computer), `Session` |
 | `serial`, `network` | Serial ports, TCP (Wi-Fi) and Bluetooth sockets |
@@ -111,8 +112,21 @@ The editor needs no change: the palette, the menus and the tooltips are built fr
    `voltage`, flash and RAM sizes, `builtinLed`, `digitalPins`, `analogPins`, `pwmPins`,
    `interruptPins`, `i2c`, `spi`, `usb` vendor:product ids (port detection) and a `drawing` (size,
    colour, headers in the order printed on the board; `"name|-"` marks a pin that must not be used).
-2. If its core is not in the default index, add its URL to the board manager URLs
-   (`ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS`, see `core/src/arduino_cli.cpp`).
+   For an HC-05 / HC-06 module (`bluetoothModule`): `serialPorts` lists the hardware serial ports on two pins
+   (`{ "port": 1, "rx": "19", "tx": "18" }` on the Mega) and `softwareSerialRx` the pins where SoftwareSerial
+   can receive (left out when every pin can, as on the Uno). GPIO boards name their pins with an object
+   (`{ "GP0": 0, ... }`, Pico; `{ "D1": 5, ... }`, NodeMCU); an on-board LED on no header gets its own pin
+   (`"LED"`, Pico). The sketches use these names (`D1` is defined by the NodeMCU core), except with
+   `"sketchPinNames": false`, when the core does not know them: the pin numbers are written instead (Pico:
+   `GP13` becomes `13`).
+2. Give it a package in `resources/board-packages.json` (every board must belong to one, the unit tests
+   check it): an existing one when the board uses the same `platform`, else a new entry with its `id`, its
+   `name` (fr, en), the `platform`, the `version` installed (pinned, so that every computer gets the same
+   tools), the `indexUrl` of a core that Arduino does not publish (it becomes
+   `ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS`) and an `estimate` in bytes (`download` and `disk`, measured by
+   installing it in an empty folder: `s2a-cli board install <id>` then `s2a-cli board list`). The Windows
+   installer offers it as a task (`installer/windows/board-packages.cmake`), the settings and `s2a-cli
+   board` list it. Only the Arduino AVR package is `shipped` (its archives come with the installers).
 3. Make sure `firmware/s2a_live` compiles for it, and add it to the CI compile steps.
 4. Add tests in `core/tests/test_boards.cpp` and, for a new family, an example project.
 

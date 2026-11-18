@@ -1,22 +1,34 @@
 # Makes the board core seed shipped with Scratch2Arduino (see S2A_BUNDLE_ARDUINO_CORES in
 # S2AArduinoCli.cmake). Run at build time:
-#   cmake -DCLI=<arduino-cli> -DPLATFORMS=arduino:avr[,...] -DWORK=<scratch dir> -DSEED=<output dir> -P S2AArduinoSeed.cmake
+#   cmake -DCLI=<arduino-cli> -DPLATFORMS=arduino:avr[,...] -DWORK=<scratch dir> -DSEED=<output dir>
+#         -DPACKAGES=<resources/board-packages.json> -P S2AArduinoSeed.cmake
 # Output: <SEED>/downloads/** (archives), <SEED>/data/package_*index.json (board indexes) and
 # <SEED>/platforms.txt (one "vendor:arch@version" per line, read by ArduinoCli::seededVersion()).
-foreach(variable CLI PLATFORMS WORK SEED)
+foreach(variable CLI PLATFORMS WORK SEED PACKAGES)
     if(NOT ${variable})
         message(FATAL_ERROR "S2AArduinoSeed.cmake: ${variable} is not set")
     endif()
 endforeach()
 string(REPLACE "," ";" PLATFORMS "${PLATFORMS}")
 
-# Same additional board indexes as ArduinoCli::run() (core/src/arduino_cli.cpp).
+# Same additional board indexes as ArduinoCli::run(): the "indexUrl" of the board packages.
+file(READ "${PACKAGES}" packages_json)
+string(JSON package_count LENGTH "${packages_json}" packages)
+set(index_urls "")
+math(EXPR last_package "${package_count} - 1")
+foreach(i RANGE ${last_package})
+    string(JSON url ERROR_VARIABLE no_url GET "${packages_json}" packages ${i} indexUrl)
+    if(NOT no_url AND url)
+        list(APPEND index_urls "${url}")
+    endif()
+endforeach()
+list(JOIN index_urls " " index_urls)
+
 set(ENV{ARDUINO_DIRECTORIES_DATA} "${WORK}/data")
 set(ENV{ARDUINO_DIRECTORIES_DOWNLOADS} "${WORK}/downloads")
 set(ENV{ARDUINO_DIRECTORIES_USER} "${WORK}/user")
 set(ENV{ARDUINO_UPDATER_ENABLE_NOTIFICATION} "false")
-set(ENV{ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS}
-    "https://espressif.github.io/arduino-esp32/package_esp32_index.json https://arduino.esp8266.com/stable/package_esp8266com_index.json")
+set(ENV{ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS} "${index_urls}")
 
 function(run_cli)
     execute_process(COMMAND "${CLI}" ${ARGN} --no-color

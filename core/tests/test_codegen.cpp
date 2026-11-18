@@ -580,6 +580,17 @@ TEST(Codegen, LightsTheEsp8266LedWithLow) {
     EXPECT_EQ(source.find("analogReadResolution"), std::string::npos) << source;
 }
 
+TEST(Codegen, WritesPicoPinsByNumber) {
+    // "GP13" is printed on the Pico but is not a name of its Arduino core: the sketch uses 13.
+    Block level = block("level", "pins_analog_write");
+    level.fields["PIN"] = "GP13";
+    level.inputs["VALUE"].value = "128";
+    const auto source =
+        generate(withScript({block("hat", "events_when_program_starts"), level}, "pico")).source;
+    EXPECT_NE(source.find("analogWrite(13, "), std::string::npos) << source;
+    EXPECT_EQ(source.find("GP13"), std::string::npos) << source;
+}
+
 TEST(Codegen, AsciiText) {
     EXPECT_EQ(s2a::codegen::asciiText("Élève à l'œil ½ 😀"), "Eleve a l'oeil ? ?");
     EXPECT_EQ(s2a::codegen::asciiText("a\tb\nc"), "abc");

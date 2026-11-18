@@ -66,6 +66,8 @@ Phase 13 (automatic wiring diagram, asked on 2026-11-09) was itself added to the
 | 0.14.0 | **Issue forms** and a **Report a problem** button (filled with the version, system and board) | Easier feedback from users |
 | 1.1.0 | **Code files in the `.s2a`**: "My code" and text programs saved as `my_code.*` / `program.*` beside `project.json` (format 3); **thumbnail** of the project in the recent projects list; version of the app that saved the file (`savedWith`) | Readable archives and diffs; older files still open |
 | 1.2.0 | **Prebuilt Windows installer**: no Visual Studio or CMake to download, the Arduino AVR core shipped (Uno, Nano, Mega work offline, `S2A_BUNDLE_ARDUINO_CORES`); building from the sources stays an option, with a working Cancel button and a build log that scrolls without freezing the window | A classroom of 30 on the same Wi-Fi: Visual Studio downloads took too long, the installer window froze |
+| 1.3.0 | **New boards**: Arduino Leonardo and Micro (shipped), Nano Every, Uno R4 Minima and WiFi, Raspberry Pi Pico and Pico W (optional packages), with their wiring drawings and Live mode over USB | Chosen by the user on 2026-11-17 |
+| 1.3.0 | **Optional board packages**: the boards other than Arduino AVR (ESP32: about 2 GB to download and 8 GB on the disk; ESP8266) are downloaded only when wanted, with their size shown: tasks of the Windows installer ("More boards", those already installed shown greyed), `Scratch2Arduino_installer.sh --boards`, **Settings > More boards** (install, update, remove), an offer when such a board is chosen, and `s2a-cli board`; pinned versions (`resources/board-packages.json`); removing a package also removes its downloaded archives; the Windows installer asks first for its language, then for a simple or advanced installation (folder and expert build option in advanced mode only), and its tasks page lists the boards with their sizes and the total, then the expert option, then the icons | Asked by the user on 2026-11-17: no 6 GB of ESP32 tools on every computer, and a way to free the space |
 
 ## Remaining work
 
@@ -79,6 +81,7 @@ light, Potentiometer and servo, Distance alarm, Thermometer (16-pin LCD), Reacti
 up-to-date list ("Tested on real hardware"). Still to run on a real board:
 
 - Nano; Linux and macOS with a real board;
+- the boards added in 1.3.0: Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W (upload, Live over USB, the first Pico upload with BOOTSEL), and the board packages installed from the Windows installer and the Settings;
 - NeoPixel strip (Light gauge), I2C LCD, OLED, RGB LED, DC motors (L298N), light sensor, joystick, PIR,
   infrared obstacle sensor, 28BYJ-48 stepper motor, TM1637 display;
 - ESP32: USB upload, Live over Wi-Fi (board network and home network) and over Bluetooth, macOS pairing;
@@ -100,14 +103,22 @@ up-to-date list ("Tested on real hardware"). Still to run on a real board:
 - On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
 - The Windows installer and the macOS application are not signed with a certificate: Windows SmartScreen and macOS Gatekeeper ask for a confirmation the first time.
 - No package for Intel Macs, Arch Linux or Raspberry Pi: they build from the sources with `Scratch2Arduino_installer.sh`.
-- The CI fallback for the apt mirror (`.github/actions/setup-apt`, switch to `archive.ubuntu.com` when the Azure mirror does not answer) has not run for real yet: check it the next time the Azure mirror fails.
+- Board packages: the download shows no progress percentage (arduino-cli gives none in JSON mode), only that it runs; the sizes of `resources/board-packages.json` are estimates, replaced by the exact download size once the board indexes are downloaded.
+
+### Boards added in 1.3.0
+
+Chosen by the user on 2026-11-17: Arduino Leonardo and Micro (in the shipped AVR package), Nano Every, Uno R4
+Minima and WiFi, Raspberry Pi Pico and Pico W (optional packages). Checked by CI (Blink, the Live firmware and
+the example with every block compile for each), not yet on real boards. Live mode over USB on all of them;
+later: Live over Wi-Fi on the Pico W and the Uno R4 WiFi, the HC-05 / HC-06 module on the Nano Every, the Uno
+R4 and the Pico, the LED matrix of the Uno R4 WiFi.
 
 ### Ideas for later
 
 Not planned yet, to choose from the users' feedback:
 
 - signed installers (Windows certificate, Apple notarization);
-- more boards (Arduino Leonardo, Raspberry Pi Pico...) and more components;
+- more components (more boards: see 1.3.0 above);
 - more interface languages (contributions welcome);
 - more interactive tutorials.
 
@@ -124,13 +135,13 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - validator run **only** on Build/Run, returning kid-friendly localized errors tied to block IDs (the editor never raises errors);
   - code generator (block tree -> Arduino C++ `.ino`);
   - toolchain wrapper around a bundled `arduino-cli` (board detection, compile, upload, library install);
-  - board database (Uno, Nano, Mega, then ESP32 / ESP8266);
+  - board database (Uno, Nano, Mega, then ESP32 / ESP8266, then in 1.3.0 Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W), grouped in board packages (`resources/board-packages.json`, decided on 2026-11-17): Arduino AVR shipped, the other ones optional, downloaded on request at a pinned version and removable;
   - transports: USB serial, Bluetooth (HC-05/HC-06, transparent serial), Wi-Fi (ESP, TCP/WebSocket);
   - live protocol talking to the *S2A live* firmware (`firmware/`, Firmata-like) for real-time control and debugging;
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
 - **Text languages**: read-only view of generated C++ first, then a C++ mode (sketch typed by the user, same toolchain as the blocks), Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS-ng`) driving the board through the live protocol. A project stores its language and code (format version 2, written only for text projects so that block projects stay readable by older versions).
-- **Install**: release packages made by CI (`.deb` and `.rpm` with CPack, macOS `.dmg`, `cmake/S2APackaging.cmake`); Windows `Scratch2Arduino_installer.exe` (`installer/windows/`) that installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
+- **Install**: release packages made by CI (`.deb` and `.rpm` with CPack, macOS `.dmg`, `cmake/S2APackaging.cmake`); Windows `Scratch2Arduino_installer.exe` (`installer/windows/`) that copies the programs prebuilt by the CI with the Arduino AVR core shipped (since 1.2.0, decided on 2026-11-17 after a classroom test with 30 PCs on the same Wi-Fi), offers the optional board packages as tasks (1.3.0), and as an expert option installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
 ## Roadmap

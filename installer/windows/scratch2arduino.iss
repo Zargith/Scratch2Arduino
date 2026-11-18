@@ -1,6 +1,12 @@
 ﻿; Scratch2Arduino - Windows installer (Inno Setup 6).
 ; Builds Scratch2Arduino_installer.exe:  iscc installer\windows\scratch2arduino.iss  (Inno Setup 6.3 or later)
 ;
+; The wizard first asks for its language (French or English), then for the kind of installation:
+;  - simple: the usual folder, nothing else to choose;
+;  - advanced: the folder can be chosen, and the expert option "buildfromsource" is offered.
+; Then the tasks page: the optional boards (with their sizes), the expert option (advanced only),
+; and the desktop icon, last.
+;
 ; Two ways to install:
 ;  - prebuilt (default, when compiled with /DPrebuiltDir=<folder>): the files of
 ;    `cmake --install` made by the CI (programs, Visual C++ runtime, block editor, arduino-cli and
@@ -10,6 +16,11 @@
 ;    unpacked, then build-and-install.ps1 installs the missing prerequisites (CMake, Visual Studio
 ;    Build Tools, WebView2) and builds Scratch2Arduino with CMake on the user's machine. Updates
 ;    are incremental: only the changed files in {app}\src are recompiled in {app}\build.
+;
+; Optional boards (ESP32, ESP8266...): one task per package of resources/board-packages.json,
+; written by board-packages.cmake (cmake -P installer\windows\board-packages.cmake) before ISCC.
+; The chosen packages are downloaded at the end with s2a-cli, as the user who started the
+; installer (they go in his %LOCALAPPDATA%). Packages already there show as installed, greyed.
 
 #define AppName "Scratch2Arduino"
 #ifndef AppVersion
@@ -22,6 +33,8 @@
     #error PrebuiltDir does not exist (cmake --install <build> --prefix <PrebuiltDir>)
   #endif
 #endif
+
+#define HaveBoards FileExists(AddBackslash(SourcePath) + "board-code.isi")
 
 #if Ver < EncodeVer(6, 3, 0)
   #error Inno Setup 6.3 or later is needed.
@@ -38,7 +51,8 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 ; An update goes into the folder of the existing installation.
 UsePreviousAppDir=yes
-DisableDirPage=auto
+; Shown in advanced mode only, and never for an update (ShouldSkipPage).
+DisableDirPage=no
 LicenseFile={#SourceRoot}\LICENSE
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
@@ -48,10 +62,13 @@ OutputBaseFilename=Scratch2Arduino_installer
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+; Bigger than the default: the tasks page lists the boards with their sizes.
+WizardSizePercent=120
 SetupIconFile={#SourceRoot}\resources\icons\scratch2arduino.ico
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\bin\scratch2arduino.exe
-ShowLanguageDialog=auto
+; The language is the first thing asked, even when Windows' own language is French or English.
+ShowLanguageDialog=yes
 ; Created by scratch2arduino.exe (0.6.4 and later) while it runs: setup asks to close it first.
 ; Older versions are found by their process name (IsAppRunning below).
 AppMutex=Scratch2ArduinoRunning
@@ -91,13 +108,57 @@ english.BuildCancelled=Setup cancelled.
 french.InstallingWebView2=Installation de Microsoft WebView2 (affichage de l'éditeur)...
 english.InstallingWebView2=Installing Microsoft WebView2 (shows the editor)...
 french.WebView2Failed=Microsoft WebView2 n'a pas pu être installé : Scratch2Arduino en a besoin pour s'afficher.%n%nInstalle-le depuis https://developer.microsoft.com/microsoft-edge/webview2/ puis lance Scratch2Arduino.
+french.ModeTitle=Type d'installation
+english.ModeTitle=Kind of installation
+french.ModeSubtitle=Choisis comment installer Scratch2Arduino.
+english.ModeSubtitle=Choose how to install Scratch2Arduino.
+french.ModeCaption=En cas de doute, choisis l'installation simple.
+english.ModeCaption=If unsure, choose the simple installation.
+french.ModeSimple=Installation simple (conseillée) : Scratch2Arduino est installé dans le dossier habituel, prêt à l'emploi.
+english.ModeSimple=Simple installation (advised): Scratch2Arduino is installed in the usual folder, ready to use.
+french.ModeAdvanced=Installation avancée : choix du dossier d'installation, et option pour experts pour compiler Scratch2Arduino sur cet ordinateur.
+english.ModeAdvanced=Advanced installation: choose the installation folder, and an option for experts to build Scratch2Arduino on this computer.
+french.ExpertOptions=Option avancée :
+english.ExpertOptions=Advanced option:
+french.BoardPackages=Cartes supplémentaires (téléchargées à la fin de l'installation) :
+english.BoardPackages=More boards (downloaded at the end of the installation):
+french.BoardSizesHeader=téléchargement / disque
+english.BoardSizesHeader=download / disk
+french.BoardAlreadyInstalled=déjà installées
+english.BoardAlreadyInstalled=already installed
+french.BoardsNoneChosen=Les cartes Arduino AVR (Uno, Nano, Mega, Leonardo, Micro) sont toujours installées. Coche ci-dessous les autres cartes à ajouter : elles se suppriment ensuite dans les Paramètres de Scratch2Arduino.
+english.BoardsNoneChosen=The Arduino AVR boards (Uno, Nano, Mega, Leonardo, Micro) are always installed. Tick below the other boards to add: remove them later in the Settings of Scratch2Arduino.
+french.BoardsChosen=Cartes cochées : %1 à télécharger (connexion internet nécessaire), %2 sur le disque (%3 libres). Elles se suppriment ensuite dans les Paramètres de Scratch2Arduino.
+english.BoardsChosen=Ticked boards: %1 to download (an Internet connection is needed), %2 on the disk (%3 free). Remove them later in the Settings of Scratch2Arduino.
+french.BoardsNoRoom=Attention : il n'y a pas assez de place sur le disque pour les cartes cochées.
+english.BoardsNoRoom=Warning: there is not enough room on the disk for the ticked boards.
+french.UnitMB=Mo
+english.UnitMB=MB
+french.UnitGB=Go
+english.UnitGB=GB
+french.DecimalSeparator=,
+english.DecimalSeparator=.
+french.InstallingBoards=Téléchargement des cartes supplémentaires (cela peut prendre longtemps)...
+english.InstallingBoards=Downloading the extra boards (this can take a long time)...
+french.BoardsFailed=Les cartes supplémentaires n'ont pas pu être installées (pas de connexion internet ?).%n%nScratch2Arduino est bien installé : tu pourras les installer plus tard dans ses Paramètres.
+english.BoardsFailed=The extra boards could not be installed (no Internet connection?).%n%nScratch2Arduino is installed: you can install them later in its Settings.
+french.CancelBoardsConfirm=Arrêter le téléchargement des cartes supplémentaires ?%n%nScratch2Arduino reste installé : tu pourras les installer plus tard dans ses Paramètres.
+english.CancelBoardsConfirm=Stop downloading the extra boards?%n%nScratch2Arduino stays installed: you can install them later in its Settings.
+#if HaveBoards
+  #include "board-messages.isi"
+#endif
 english.WebView2Failed=Microsoft WebView2 could not be installed: Scratch2Arduino needs it to show its window.%n%nInstall it from https://developer.microsoft.com/microsoft-edge/webview2/ then start Scratch2Arduino.
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-#ifdef PrebuiltDir
-Name: "buildfromsource"; Description: "{cm:BuildFromSource}"; Flags: unchecked
+; In this order on the page: the optional boards, the expert option (advanced mode only; the list
+; is rebuilt each time the page is shown, so its Check follows the mode), the icons last.
+#if HaveBoards
+  #include "board-tasks.isi"
 #endif
+#ifdef PrebuiltDir
+Name: "buildfromsource"; Description: "{cm:BuildFromSource}"; GroupDescription: "{cm:ExpertOptions}"; Flags: unchecked; Check: ExpertOptionShown
+#endif
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
 ; Shortcuts of versions before 0.4 (two variants).
@@ -166,6 +227,10 @@ var
   FollowedLine: Integer;     // first visible line the last time the output followed the new lines
   BuildCancelled: Boolean;
   SavedCancelClick: TNotifyEvent;
+  BoardInstalled: array of Boolean; // by package, found when the wizard starts
+  BoardsCancelled: Boolean;
+  ModePage: TInputOptionWizardPage;  // simple (0) or advanced (1) installation
+  BoardSummary: TNewStaticText;      // above the tasks list: sizes of the ticked boards
 
 function PeekMessage(var Msg: TMsgBuffer; Wnd: HWND; FilterMin, FilterMax, Remove: Cardinal): Integer;
   external 'PeekMessageW@user32.dll stdcall';
@@ -181,6 +246,194 @@ function CloseHandle(Handle: THandle): Integer;
   external 'CloseHandle@kernel32.dll stdcall';
 
 // True when Scratch2Arduino is built on this computer rather than copied prebuilt.
+#if HaveBoards
+  #include "board-code.isi"
+#else
+function BoardTaskCount(): Integer;
+begin
+  Result := 0;
+end;
+
+function BoardTaskName(I: Integer): String;
+begin
+  Result := '';
+end;
+
+function BoardPackageId(I: Integer): String;
+begin
+  Result := '';
+end;
+
+function BoardPackageDir(I: Integer): String;
+begin
+  Result := '';
+end;
+
+function BoardDownloadMB(I: Integer): Integer;
+begin
+  Result := 0;
+end;
+
+function BoardDiskMB(I: Integer): Integer;
+begin
+  Result := 0;
+end;
+#endif
+
+function AdvancedMode(): Boolean;
+begin
+  Result := (ModePage <> nil) and (ModePage.SelectedValueIndex = 1);
+end;
+
+// Check of the "buildfromsource" task. Silent installations (CI: /MERGETASKS=buildfromsource)
+// have no mode page: the task is always there for them.
+function ExpertOptionShown(): Boolean;
+begin
+  Result := WizardSilent() or AdvancedMode();
+end;
+
+// A size as the application writes it (decimal units): "1,9 Go" / "1.9 GB", "125 Mo" / "125 MB".
+function FormatMB(const MB: Int64): String;
+var
+  Tenths: Int64;
+begin
+  if MB < 1000 then
+    Result := IntToStr(MB) + ' ' + CustomMessage('UnitMB')
+  else
+  begin
+    Tenths := (MB + 50) div 100;
+    Result := IntToStr(Tenths div 10);
+    if (Tenths < 100) and (Tenths mod 10 <> 0) then
+      Result := Result + CustomMessage('DecimalSeparator') + IntToStr(Tenths mod 10);
+    Result := Result + ' ' + CustomMessage('UnitGB');
+  end;
+end;
+
+// True when Dir holds a folder (arduino-cli leaves the empty <arch> folder after an uninstall).
+function HasSubfolder(const Dir: String): Boolean;
+var
+  Found: TFindRec;
+begin
+  Result := False;
+  if FindFirst(AddBackslash(Dir) + '*', Found) then
+  try
+    repeat
+      if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and (Found.Name <> '.') and (Found.Name <> '..') then
+      begin
+        Result := True;
+        Exit;
+      end;
+    until not FindNext(Found);
+  finally
+    FindClose(Found);
+  end;
+end;
+
+// Where Scratch2Arduino's arduino-cli keeps the boards (toolchain::Directories::defaults()).
+function BoardPackagesFolder(): String;
+begin
+  Result := ExpandConstant('{localappdata}\Scratch2Arduino\arduino\data\packages\');
+end;
+
+procedure FindInstalledBoards();
+var
+  I: Integer;
+begin
+  SetArrayLength(BoardInstalled, BoardTaskCount());
+  for I := 0 to BoardTaskCount() - 1 do
+    BoardInstalled[I] := HasSubfolder(BoardPackagesFolder() + BoardPackageDir(I));
+end;
+
+// Index in the tasks list of the item with this caption, or -1.
+function TaskItem(const Caption: String): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to WizardForm.TasksList.Items.Count - 1 do
+    if WizardForm.TasksList.ItemCaption[I] = Caption then
+    begin
+      Result := I;
+      Exit;
+    end;
+end;
+
+// Above the tasks list: what the ticked boards (not installed yet) need.
+procedure UpdateBoardSummary();
+var
+  I, Item: Integer;
+  DownloadMB, DiskMB, FreeBytes, TotalBytes: Int64;
+  Text: String;
+begin
+  if BoardSummary = nil then
+    Exit;
+  DownloadMB := 0;
+  DiskMB := 0;
+  for I := 0 to BoardTaskCount() - 1 do
+    if not BoardInstalled[I] then
+    begin
+      Item := TaskItem(ExpandConstant('{cm:' + BoardTaskName(I) + '}'));
+      if (Item >= 0) and WizardForm.TasksList.Checked[Item] then
+      begin
+        DownloadMB := DownloadMB + BoardDownloadMB(I);
+        DiskMB := DiskMB + BoardDiskMB(I);
+      end;
+    end;
+  if DiskMB = 0 then
+    Text := CustomMessage('BoardsNoneChosen')
+  else
+  begin
+    // The boards go into the user's folder (BoardPackagesFolder), usually on C:.
+    if not GetSpaceOnDisk64(ExpandConstant('{localappdata}'), FreeBytes, TotalBytes) then
+      FreeBytes := -1;
+    if FreeBytes < 0 then
+      Text := FmtMessage(CustomMessage('BoardsChosen'), [FormatMB(DownloadMB), FormatMB(DiskMB), '?'])
+    else
+    begin
+      // One line: Inno Setup reads a line starting with "[" as a section, even in [Code].
+      Text := FmtMessage(CustomMessage('BoardsChosen'), [FormatMB(DownloadMB), FormatMB(DiskMB), FormatMB(FreeBytes div 1000000)]);
+      if FreeBytes div 1000000 < DiskMB + DownloadMB then
+        Text := Text + #13#10 + CustomMessage('BoardsNoRoom');
+    end;
+  end;
+  BoardSummary.Caption := Text;
+end;
+
+procedure TasksListClickCheck(Sender: TObject);
+begin
+  UpdateBoardSummary();
+end;
+
+// On the tasks page (its list is rebuilt each time it is shown): the sizes of each board package
+// in a column on the right; a package already installed (an update, or installed from the
+// application) is ticked, greyed and marked as installed.
+procedure ShowBoardSizes();
+var
+  I, Item: Integer;
+begin
+  if BoardTaskCount() = 0 then
+    Exit;
+  Item := TaskItem(CustomMessage('BoardPackages'));
+  if Item >= 0 then
+    WizardForm.TasksList.ItemSubItem[Item] := CustomMessage('BoardSizesHeader');
+  for I := 0 to BoardTaskCount() - 1 do
+  begin
+    Item := TaskItem(ExpandConstant('{cm:' + BoardTaskName(I) + '}'));
+    if Item < 0 then
+      continue;
+    if BoardInstalled[I] then
+    begin
+      WizardForm.TasksList.ItemSubItem[Item] := CustomMessage('BoardAlreadyInstalled');
+      WizardForm.TasksList.Checked[Item] := True;
+      WizardForm.TasksList.ItemEnabled[Item] := False;
+    end
+    else
+      WizardForm.TasksList.ItemSubItem[Item] :=
+        FormatMB(BoardDownloadMB(I)) + ' / ' + FormatMB(BoardDiskMB(I));
+  end;
+  UpdateBoardSummary();
+end;
+
 function BuildFromSource(): Boolean;
 begin
 #ifdef PrebuiltDir
@@ -248,7 +501,68 @@ begin
   end;
 end;
 
+// The kind of installation of the previous one: remembered since 1.3.0; before, an installation
+// built from the sources was an advanced one.
+function PreviousModeIndex(): Integer;
+var
+  Tasks: String;
+begin
+  Result := 0;
+  if GetPreviousData('InstallMode', '') = 'advanced' then
+    Result := 1
+  else if (GetPreviousData('InstallMode', '') = '') and
+          (RegQueryStringValue(HKLM, UninstallKey(), 'Inno Setup: Selected Tasks', Tasks) or
+           RegQueryStringValue(HKCU, UninstallKey(), 'Inno Setup: Selected Tasks', Tasks)) and
+          (Pos('buildfromsource', Lowercase(Tasks)) > 0) then
+    Result := 1;
+end;
+
+procedure RegisterPreviousData(PreviousDataKey: Integer);
+begin
+  // A silent installation built from the sources (no mode page) counts as an advanced one.
+  if AdvancedMode() or BuildFromSource() then
+    SetPreviousData(PreviousDataKey, 'InstallMode', 'advanced')
+  else
+    SetPreviousData(PreviousDataKey, 'InstallMode', 'simple');
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  // The folder: chosen in advanced mode only, and an update stays in the folder it has.
+  Result := (PageID = wpSelectDir) and (not AdvancedMode() or (PreviousDir <> ''));
+end;
+
+// Room for BoardSummary between the text at the top of the tasks page and the list.
+procedure CreateBoardSummary();
+var
+  I: Integer;
+  Longest: String;
+begin
+  if BoardTaskCount() = 0 then
+    Exit;
+  BoardSummary := TNewStaticText.Create(WizardForm);
+  BoardSummary.Parent := WizardForm.SelectTasksPage;
+  BoardSummary.Left := WizardForm.TasksList.Left;
+  BoardSummary.Top := WizardForm.TasksList.Top;
+  BoardSummary.Width := WizardForm.TasksList.Width;
+  BoardSummary.AutoSize := False;
+  BoardSummary.WordWrap := True;
+  // As high as its longest text: every board ticked, without enough room.
+  Longest := FmtMessage(CustomMessage('BoardsChosen'), ['999,9 MB', '999,9 MB', '999,9 MB']) + #13#10 +
+             CustomMessage('BoardsNoRoom');
+  if Length(CustomMessage('BoardsNoneChosen')) > Length(Longest) then
+    Longest := CustomMessage('BoardsNoneChosen');
+  BoardSummary.Caption := Longest;
+  BoardSummary.AdjustHeight();
+  I := BoardSummary.Height + ScaleY(8);
+  WizardForm.TasksList.Top := WizardForm.TasksList.Top + I;
+  WizardForm.TasksList.Height := WizardForm.TasksList.Height - I;
+  WizardForm.TasksList.OnClickCheck := @TasksListClickCheck;
+end;
+
 procedure InitializeWizard();
+var
+  UpdateAfter: Integer;
 begin
   // The build runs hidden: its output is shown here, below the progress bar.
   BuildCaption := TNewStaticText.Create(WizardForm);
@@ -267,9 +581,22 @@ begin
   BuildOutput.WordWrap := False;
   BuildOutput.Font.Name := 'Consolas';
   BuildOutput.Font.Size := 8;
+  FindInstalledBoards();
+  CreateBoardSummary();
+  // Right after the language: simple or advanced installation.
+  ModePage := CreateInputOptionPage(wpWelcome, CustomMessage('ModeTitle'), CustomMessage('ModeSubtitle'),
+    CustomMessage('ModeCaption'), True, False);
+  ModePage.Add(CustomMessage('ModeSimple'));
+  ModePage.Add(CustomMessage('ModeAdvanced'));
+  UpdateAfter := ModePage.ID;
   if FindPreviousInstall() then
-    CreateOutputMsgPage(wpWelcome, CustomMessage('UpdateTitle'), CustomMessage('UpdateSubtitle'),
+  begin
+    ModePage.SelectedValueIndex := PreviousModeIndex();
+    CreateOutputMsgPage(UpdateAfter, CustomMessage('UpdateTitle'), CustomMessage('UpdateSubtitle'),
       FmtMessage(CustomMessage('UpdateInfo'), [PreviousVersion, PreviousDir, '{#AppVersion}']));
+  end
+  else
+    ModePage.SelectedValueIndex := 0;
 end;
 
 function BinaryExists(Name: String): Boolean;
@@ -349,8 +676,10 @@ end;
 
 // Runs a PowerShell command line without waiting for it, then waits for it while the window
 // keeps working. The command writes its PID to PidFile at once, the lines to show to DisplayFile
-// (optional) and its exit code to ExitFile before it ends. Returns False when it could not start.
-function RunWatched(const Params, PidFile, DisplayFile, ExitFile: String; var ExitCode: Integer): Boolean;
+// (optional) and its exit code to ExitFile before it ends. AsUser: runs it as the user who
+// started the installer, not elevated. Returns False when it could not start.
+function RunWatched(const Params, PidFile, DisplayFile, ExitFile: String; const AsUser: Boolean;
+                    var ExitCode: Integer): Boolean;
 var
   Process: THandle;
   Code: Cardinal;
@@ -363,7 +692,12 @@ begin
   DeleteFile(ExitFile);
   if DisplayFile <> '' then
     DeleteFile(DisplayFile);
-  if not Exec('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
+  if AsUser then
+  begin
+    if not ExecAsOriginalUser('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
+      Exit;
+  end
+  else if not Exec('powershell.exe', Params, '', SW_HIDE, ewNoWait, ExitCode) then
     Exit;
   Process := 0;
   Shown := 0;
@@ -460,7 +794,7 @@ begin
   WizardForm.CancelButton.Enabled := True;
   try
     // No console window: the output goes to the memo of the installing page.
-    Succeeded := RunWatched(Params, BuildPidFile(), DisplayFile, ExitFile, ExitCode) and (ExitCode = 0);
+    Succeeded := RunWatched(Params, BuildPidFile(), DisplayFile, ExitFile, False, ExitCode) and (ExitCode = 0);
   finally
     WizardForm.CancelButton.OnClick := SavedCancelClick;
     WizardForm.ProgressGauge.Style := npbstNormal;
@@ -506,7 +840,7 @@ begin
         'Set-Content -LiteralPath ''' + ExpandConstant('{tmp}\webview2.exit') + ''' -Value $p.ExitCode; ' +
         'exit $p.ExitCode"';
       if not RunWatched(Params, ExpandConstant('{tmp}\webview2.pid'), '', ExpandConstant('{tmp}\webview2.exit'),
-                        ResultCode) or not WebView2Installed() then
+                        False, ResultCode) or not WebView2Installed() then
         SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
     except
       SuppressibleMsgBox(CustomMessage('WebView2Failed'), mbError, MB_OK, IDOK);
@@ -516,9 +850,82 @@ begin
   end;
 end;
 
-// The build output is only shown when Scratch2Arduino is built here.
+// Files of the board download: written by a process of the user (not elevated), read here.
+function BoardsFile(const Name: String): String;
+begin
+  Result := ExpandConstant('{commonappdata}\Scratch2Arduino\setup\') + Name;
+end;
+
+// Cancel while the boards download: only the download stops, Scratch2Arduino stays installed.
+procedure BoardsCancelClick(Sender: TObject);
+var
+  Pid, ResultCode: Integer;
+begin
+  if BoardsCancelled then
+    Exit;
+  if MsgBox(CustomMessage('CancelBoardsConfirm'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
+    Exit;
+  BoardsCancelled := True;
+  WizardForm.CancelButton.Enabled := False;
+  Pid := ReadNumberFile(BoardsFile('boards.pid'));
+  if Pid > 0 then
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/PID ' + IntToStr(Pid) + ' /T /F', '', SW_HIDE,
+         ewNoWait, ResultCode);
+end;
+
+// The chosen board packages that are not installed yet, downloaded with s2a-cli board install.
+procedure InstallBoards();
+var
+  I, ExitCode: Integer;
+  Ids, Params: String;
+  Succeeded: Boolean;
+begin
+  Ids := '';
+  for I := 0 to BoardTaskCount() - 1 do
+    if BoardInstalled[I] then
+      Log('Board package already installed: ' + BoardPackageId(I))
+    else if WizardIsTaskSelected(BoardTaskName(I)) then
+      Ids := Ids + ' ' + BoardPackageId(I);
+  if (Ids = '') or not BinaryExists('s2a-cli.exe') then
+    Exit;
+  Log('Board packages to install:' + Ids);
+  ForceDirectories(ExpandConstant('{commonappdata}\Scratch2Arduino\setup'));
+  WizardForm.StatusLabel.Caption := CustomMessage('InstallingBoards');
+  WizardForm.FilenameLabel.Caption := '';
+  BuildCaption.Visible := True;
+  BuildOutput.Visible := True;
+  WizardForm.ProgressGauge.Style := npbstMarquee;
+  // UTF-8 both ways: the French messages of s2a-cli keep their accents.
+  Params := '-NoProfile -ExecutionPolicy Bypass -Command "' +
+    '[Console]::OutputEncoding = [Text.Encoding]::UTF8; ' +
+    'Set-Content -LiteralPath ''' + BoardsFile('boards.pid') + ''' -Value $PID; ' +
+    '& ''' + ExpandConstant('{app}\bin\s2a-cli.exe') + ''' board install' + Ids + ' --lang ' + Copy(ActiveLanguage(), 1, 2) + ' 2>&1 | ' +
+    'ForEach-Object { Add-Content -LiteralPath ''' + BoardsFile('boards-output.txt') + ''' -Value ([string]$_) -Encoding UTF8 }; ' +
+    '$code = $LASTEXITCODE; ' +
+    'Set-Content -LiteralPath ''' + BoardsFile('boards.exit') + ''' -Value $code; exit $code"';
+  BoardsCancelled := False;
+  FollowedLine := 0;
+  SavedCancelClick := WizardForm.CancelButton.OnClick;
+  WizardForm.CancelButton.OnClick := @BoardsCancelClick;
+  WizardForm.CancelButton.Enabled := True;
+  try
+    Succeeded := RunWatched(Params, BoardsFile('boards.pid'), BoardsFile('boards-output.txt'), BoardsFile('boards.exit'),
+                            True, ExitCode) and (ExitCode = 0);
+  finally
+    WizardForm.CancelButton.OnClick := SavedCancelClick;
+    WizardForm.ProgressGauge.Style := npbstNormal;
+    DeleteFile(BoardsFile('boards-output.txt'));
+  end;
+  Log('Board packages: exit code ' + IntToStr(ExitCode));
+  if not Succeeded and not BoardsCancelled then
+    SuppressibleMsgBox(CustomMessage('BoardsFailed'), mbError, MB_OK, IDOK);
+end;
+
+// The build output is only shown when Scratch2Arduino is built here (and while boards download).
 procedure CurPageChanged(CurPageID: Integer);
 begin
+  if CurPageID = wpSelectTasks then
+    ShowBoardSizes();
   if CurPageID = wpInstalling then
   begin
     BuildCaption.Visible := BuildFromSource();
@@ -528,6 +935,10 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if (CurStep = ssPostInstall) and not BuildFromSource() then
-    InstallWebView2();
+  if CurStep = ssPostInstall then
+  begin
+    if not BuildFromSource() then
+      InstallWebView2();
+    InstallBoards();
+  end;
 end;

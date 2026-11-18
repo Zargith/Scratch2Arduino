@@ -40,10 +40,20 @@ page, in the *Assets* part of the latest version.
 1. Download `Scratch2Arduino_installer.exe` and run it.
 2. If Windows shows "Windows protected your PC", click *More info* then *Run anyway* (the program is not
    signed yet).
-3. The installer copies Scratch2Arduino, ready to use, with shortcuts on the desktop and in the Start menu.
+3. Choose the language of the installer (French or English), then the kind of installation: **simple**
+   (advised: the usual folder, nothing else to choose) or **advanced** (choose the folder, and the expert
+   option to build Scratch2Arduino on the computer). An update suggests the kind chosen last time.
+4. The installer copies Scratch2Arduino, ready to use, with shortcuts on the desktop and in the Start menu.
    It takes about a minute and needs no internet (except on an old Windows 10 without Microsoft WebView2,
    which it then installs). The tools for the Uno, Nano and Mega are included: no download at the first
    upload either, handy for a whole classroom on the same Wi-Fi.
+5. The tasks page shows, from top to bottom: *More boards*, the optional board packages (Nano Every, Uno R4,
+   Raspberry Pi Pico, ESP32, ESP8266) with their size to download and on the disk in a column on the right;
+   above the list, the total of the ticked boards and the free room on the disk. Ticked boards are downloaded
+   at the end of the installation (Internet needed). When updating, the packages already installed show
+   "already installed", greyed. You can also install them later in Scratch2Arduino (see
+   [The boards' tools](#the-boards-tools)). Then, in advanced mode only, the expert option to build
+   Scratch2Arduino on the computer, and last the desktop icon.
 
 To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
 
@@ -111,15 +121,36 @@ this check off.
 
 ### The boards' tools
 
-The first time a program is sent to a board, Scratch2Arduino downloads the tools for that board (Internet is
-needed that time, then never again for that board). It keeps its own copy of those tools: it does not change
-an Arduino IDE installed on the same computer.
+The tools for the Arduino Uno, Nano, Mega, Leonardo and Micro come with Scratch2Arduino. The other boards are **optional
+packages**, downloaded only if you want them (Internet needed that time, then never again):
+
+| Package | Boards | To download | On the disk |
+|---|---|---|---|
+| Arduino megaAVR boards | Arduino Nano Every | about 40 MB | about 290 MB |
+| Arduino Uno R4 boards | Arduino Uno R4 Minima, Uno R4 WiFi | about 125 MB | about 730 MB |
+| Raspberry Pi Pico boards | Raspberry Pi Pico, Pico W | about 450 MB | about 2.1 GB |
+| ESP8266 boards | ESP8266 (NodeMCU) | about 125 MB | about 480 MB |
+| ESP32 boards | ESP32 (DevKit) | about 2 GB | about 8 GB |
+
+- In the **Settings** (gear), *More boards* lists them with their size: **Install**, **Update** (a newer
+  version for Scratch2Arduino) or **Remove** to free the space (removing asks first).
+- In the **Board** list, a board whose package is missing shows "(to install)". Choosing it, opening a project
+  made for it, or clicking Check, Upload or Live offers to download its package, with its size. You can say
+  *Later*: the board stays chosen, and the **virtual board** already works with it.
+
+Scratch2Arduino keeps its own copy of those tools: it does not change an Arduino IDE installed on the same
+computer.
 
 ## 2. Plug in the board
 
 1. Plug the board in with a **data** USB cable (some cables only charge: if the board never shows up,
    try another cable).
-2. In the top bar, choose the **Board** (Arduino Uno, Nano, Mega 2560, ESP32 DevKit or ESP8266 NodeMCU).
+2. In the top bar, choose the **Board**: Arduino Uno, Nano, Mega 2560, Leonardo, Micro, Nano Every, Uno R4
+   Minima or WiFi, Raspberry Pi Pico or Pico W, ESP32 DevKit or ESP8266 NodeMCU (all but the first five first
+   need their package, see [The boards' tools](#the-boards-tools)). The **first upload to a new Raspberry Pi
+   Pico**: unplug it, hold its **BOOTSEL** button while plugging it back in, release it (it shows up as a USB
+   drive), then click Upload; later uploads work without the button. On a Pico the pins are named GP0 to
+   GP28 (as printed on the board) and the on-board LED is the pin "LED".
 3. Choose the **Port**: the list shows the plugged-in boards. If it is empty, click
    **Look for plugged-in boards** (the circular arrow next to it).
 
@@ -129,7 +160,7 @@ an Arduino IDE installed on the same computer.
 
 - **Top bar**, from left to right: the project name; *New*, *Open*, *Save*, *Recent projects*; the
   board and the port; *Tutorials and help*; *Serial monitor*; *Wi-Fi* (only for an ESP32 or an ESP8266) and *Bluetooth* (ESP32, or an Arduino board with an HC-05 / HC-06 module);
-  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version, *Report a problem* which opens a GitHub page already filled with your version, system and board). On a small
+  *Wiring diagram*; **Live**, **Check**, **Upload**; the **Settings** (the gear: language, light or dark appearance, looking for a new version, the optional board packages, *Report a problem* which opens a GitHub page already filled with your version, system and board). On a small
   screen, Live, Check and Upload only show their icon: hover them to read their name.
 - **Palette** (left): the block categories, each with its colour. Click a category to see its blocks.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
@@ -351,7 +382,9 @@ Blocks install their own by themselves; for your own code, use the **Arduino lib
 icon, top right):
 
 1. **Search** tab: type a name or a keyword (for example `json`), then *Search*. The first time, the list
-   of libraries is downloaded (Internet needed). Descriptions are in English.
+   of libraries is downloaded (Internet needed). It is Arduino's official list (Library Manager), the same as
+   on [docs.arduino.cc/libraries](https://docs.arduino.cc/libraries/): the link is given under the search.
+   Descriptions are in English.
 2. *Add to the project* installs the library (its latest version, or the one chosen in the list) and adds
    it to the project.
 3. **This project** tab: shows the `#include <...>` line to write at the top of "My code".

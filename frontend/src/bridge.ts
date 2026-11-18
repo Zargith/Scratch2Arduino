@@ -234,6 +234,25 @@ export interface LibraryChange {
 	details: string;
 }
 
+/** An optional family of boards (core toolchain::BoardPackage and its PackageState). */
+export interface BoardPackage {
+	id: string;
+	/** In the language asked for: "Cartes ESP32". */
+	name: string;
+	/** Ids of the boards it provides. */
+	boards: string[];
+	/** Comes with the application (Arduino AVR): never installed or removed by the user. */
+	shipped: boolean;
+	/** Version the application installs, empty for the shipped package. */
+	version: string;
+	/** Empty when not installed. */
+	installedVersion: string;
+	/** What installing (or updating) it downloads; 0 when there is nothing to download. */
+	downloadBytes: number;
+	/** Space used once installed (measured when installed, else estimated). */
+	diskBytes: number;
+}
+
 interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
@@ -265,6 +284,9 @@ interface HostFunctions {
 	s2a_libraries_search(query: string, language: Language): Promise<RegistryLibrary[]>;
 	s2a_library_install(name: string, version: string, language: Language): Promise<LibraryChange>;
 	s2a_library_uninstall(name: string, language: Language): Promise<LibraryChange>;
+	s2a_board_packages(language: Language): Promise<BoardPackage[]>;
+	s2a_board_package_install(id: string, language: Language): Promise<LibraryChange>;
+	s2a_board_package_remove(id: string, language: Language): Promise<LibraryChange>;
 	s2a_wifi_setup(port: string, name: string, password: string, boardId: string, language: Language): Promise<WifiSetup>;
 	s2a_bluetooth_search(language: Language): Promise<BluetoothSearch>;
 	s2a_bluetooth_module(
@@ -356,6 +378,12 @@ export const bridge = {
 	/** Empty version: the latest one. */
 	libraryInstall: (name: string, version: string, language: Language) => host("s2a_library_install")(name, version, language),
 	libraryUninstall: (name: string, language: Language) => host("s2a_library_uninstall")(name, language),
+	/** The optional board packages, installed or not, with their sizes. */
+	boardPackages: (language: Language) => host("s2a_board_packages")(language),
+	/** Downloads and installs a board package (can take long: about 2 GB for the ESP32). */
+	boardPackageInstall: (id: string, language: Language) => host("s2a_board_package_install")(id, language),
+	/** Removes a board package and the archives only it used. */
+	boardPackageRemove: (id: string, language: Language) => host("s2a_board_package_remove")(id, language),
 	/** Saves the home Wi-Fi on the board over its USB port (empty name: forget it). */
 	wifiSetup: (port: string, name: string, password: string, boardId: string, language: Language) =>
 		host("s2a_wifi_setup")(port, name, password, boardId, language),

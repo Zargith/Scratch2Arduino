@@ -1,0 +1,50 @@
+{
+  "$comment": "Board packages: one arduino-cli platform each. Only the shipped one comes with the application; the others are installed on request (installer, settings of the application, s2a-cli board install). version: the version installed (empty: the shipped or latest one). estimate: bytes to download and bytes on the disk once installed, measured on Windows and Linux, shown while the board index is not downloaded yet (see docs/developer-guide.md).",
+  "packages": [
+    {
+      "id": "arduino-avr",
+      "name": { "fr": "Cartes Arduino AVR", "en": "Arduino AVR boards" },
+      "platform": "arduino:avr",
+      "shipped": true,
+      "estimate": { "download": 60000000, "disk": 260000000 }
+    },
+    {
+      "id": "arduino-megaavr",
+      "name": { "fr": "Cartes Arduino megaAVR", "en": "Arduino megaAVR boards" },
+      "platform": "arduino:megaavr",
+      "version": "1.8.8",
+      "estimate": { "download": 40000000, "disk": 290000000 }
+    },
+    {
+      "id": "arduino-renesas",
+      "name": { "fr": "Cartes Arduino Uno R4", "en": "Arduino Uno R4 boards" },
+      "platform": "arduino:renesas_uno",
+      "version": "1.6.0",
+      "estimate": { "download": 125000000, "disk": 730000000 }
+    },
+    {
+      "id": "rp2040",
+      "name": { "fr": "Cartes Raspberry Pi Pico", "en": "Raspberry Pi Pico boards" },
+      "platform": "rp2040:rp2040",
+      "version": "6.3.2",
+      "indexUrl": "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json",
+      "estimate": { "download": 450000000, "disk": 2100000000 }
+    },
+    {
+      "id": "esp8266",
+      "name": { "fr": "Cartes ESP8266", "en": "ESP8266 boards" },
+      "platform": "esp8266:esp8266",
+      "version": "3.1.2",
+      "indexUrl": "https://arduino.esp8266.com/stable/package_esp8266com_index.json",
+      "estimate": { "download": 125000000, "disk": 480000000 }
+    },
+    {
+      "id": "esp32",
+      "name": { "fr": "Cartes ESP32", "en": "ESP32 boards" },
+      "platform": "esp32:esp32",
+      "version": "3.3.12",
+      "indexUrl": "https://espressif.github.io/arduino-esp32/package_esp32_index.json",
+      "estimate": { "download": 2000000000, "disk": 8000000000 }
+    }
+  ]
+}
