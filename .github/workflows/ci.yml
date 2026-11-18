@@ -15,7 +15,7 @@ jobs:
     name: Build & test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # Usually 10 to 20 minutes: a stuck download fails the job instead of blocking it for hours.
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +28,8 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        timeout-minutes: 15
+        # About 85 MB of packages: 2 minutes on a good mirror (setup-apt puts the fastest first).
+        timeout-minutes: 25
         run: |
           sudo apt-get update
           # rpm: rpmbuild for the .rpm package (the .deb uses dpkg-shlibdeps from dpkg-dev).
