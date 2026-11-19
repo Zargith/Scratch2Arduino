@@ -469,6 +469,7 @@ or tell us it works):
   (Leonardo, Micro, Nano Every, Uno R4 Minima / WiFi, Raspberry Pi Pico / Pico W: upload and Live over USB);
 - Linux and macOS with a real board (serial ports, drivers, Bluetooth pairing on a Mac; Mac testers found the
   missing Rosetta and the macOS system ports offered as boards, fixed in 1.3.2), the Intel Mac `.dmg`;
+- the Windows update from the application with Windows' own downloader (1.3.3; the update from 1.3.1 failed);
 - components: NeoPixel strip (Light gauge example), I2C LCD, OLED SSD1306, RGB LED, DC motors with an L298N driver,
   light sensor, HC-05 / HC-06 Bluetooth modules, joystick (KY-023), PIR motion sensor (HC-SR501), infrared
   obstacle sensor (FC-51 / KY-032);
