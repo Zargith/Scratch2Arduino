@@ -120,12 +120,15 @@ Dans ce cas, sur Linux, pour pouvoir envoyer les programmes sur la carte, tape u
 ### Mises à jour
 
 Au démarrage, Scratch2Arduino regarde en arrière-plan si une nouvelle version existe et la propose
-(*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). On peut aussi vérifier
-dans les *Paramètres* (engrenage), ou désactiver cette recherche.
+(*Télécharger et installer*, *Nouveautés* ou *Plus tard* : rien n'est obligatoire). Après *Plus tard*, les
+*Paramètres* (engrenage) montrent toujours la version trouvée, sans revérifier ; on peut aussi y vérifier,
+ou désactiver cette recherche.
 
 - Windows : *Télécharger et installer* lance l'installeur de la nouvelle version et ferme Scratch2Arduino ;
   si ton projet n'est pas enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou
-  d'annuler.
+  d'annuler. Le bouton tourne pendant le téléchargement de l'installeur. Si le téléchargement échoue
+  (proxy, antivirus, réseau filtré), ton navigateur télécharge l'installeur à la place : lance-le une fois
+  téléchargé.
 - macOS : *Télécharger* récupère le `.dmg` de ton Mac dans le navigateur ; ouvre-le et glisse
   Scratch2Arduino dans Applications comme la première fois.
 - Linux : *Télécharger* ouvre la page de la version : télécharge le nouveau `.deb` ou `.rpm` et installe-le

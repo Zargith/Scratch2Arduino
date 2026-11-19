@@ -118,11 +118,13 @@ In that case, on Linux, to be allowed to send programs to the board, type once
 ### Updates
 
 At start-up, Scratch2Arduino looks in the background for a new version and offers it (*Download and
-install*, *What's new* or *Later*: nothing is forced). You can also check in the *Settings* (gear), or switch
-this check off.
+install*, *What's new* or *Later*: nothing is forced). After *Later*, the *Settings* (gear) still show the
+version found, without checking again; you can also check there, or switch this check off.
 
 - Windows: *Download and install* starts the installer of the new version and closes Scratch2Arduino; if
-  your project is not saved, a question first offers to save it, ignore the changes or cancel.
+  your project is not saved, a question first offers to save it, ignore the changes or cancel. The button
+  turns into a spinner while the installer downloads. If the download fails (proxy, antivirus, filtered
+  network), your browser downloads the installer instead: run it once downloaded.
 - macOS: *Download* gets the `.dmg` for your Mac in the browser; open it and drag Scratch2Arduino to
   Applications like the first time.
 - Linux: *Download* opens the release page: download the new `.deb` or `.rpm` and install it like the

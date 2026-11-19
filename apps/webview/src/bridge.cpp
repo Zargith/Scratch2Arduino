@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <exception>
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -36,8 +37,10 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
-// After windows.h, which it needs.
+// After windows.h, which they need.
+#include <objbase.h>
 #include <shellapi.h>
+#include <urlmon.h>
 #endif
 
 namespace s2a::webview {
@@ -199,6 +202,75 @@ bool isReleaseInstaller(const std::string& url) {
     return std::all_of(url.begin(), url.end(), [](char c) {
         return std::isalnum(static_cast<unsigned char>(c)) != 0 || std::string_view("/:.-_").find(c) != std::string_view::npos;
     });
+}
+#endif
+
+#ifdef _WIN32
+/// COM for the calling thread (the bridge's worker threads), released at the end of the scope.
+struct ComScope {
+    bool ok = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE));
+    ComScope() = default;
+    ComScope(const ComScope&) = delete;
+    ComScope& operator=(const ComScope&) = delete;
+    ~ComScope() {
+        if (ok) {
+            CoUninitialize();
+        }
+    }
+};
+
+/// True when `file` holds a Windows program (starts with "MZ"), not an HTML error page.
+bool isProgramFile(const fs::path& file) {
+    std::ifstream in(file, std::ios::binary);
+    char magic[2] = {};
+    return in.read(magic, 2) && magic[0] == 'M' && magic[1] == 'Z';
+}
+
+/// Downloads a release installer to `target`. First with Windows' own downloader (system proxy,
+/// certificate checks as in the browser), then with curl.exe, which fails on many networks when
+/// the certificate revocation server cannot be reached (hence --ssl-revoke-best-effort).
+bool downloadInstaller(const std::string& url, const fs::path& target) {
+    std::error_code error;
+    fs::remove(target, error);
+    {
+        const ComScope com;
+        const std::wstring wideUrl(url.begin(), url.end()); // ASCII only, checked by isReleaseInstaller
+        if (SUCCEEDED(URLDownloadToFileW(nullptr, wideUrl.c_str(), target.wstring().c_str(), 0, nullptr)) &&
+            isProgramFile(target)) {
+            return true;
+        }
+    }
+    std::cerr << "Scratch2Arduino: URLDownloadToFile failed, trying curl.exe\n";
+    fs::remove(target, error);
+    process::Command download;
+    download.program = "curl.exe"; // part of Windows 10 and 11
+    download.args = {"--location", "--fail", "--silent", "--show-error", "--ssl-revoke-best-effort",
+                     "--retry", "2", "--output", target.u8string(), url};
+    download.timeout = std::chrono::minutes(15);
+    const auto result = process::run(download);
+    if (!result.ok() || !result.value().succeeded()) {
+        std::cerr << "Scratch2Arduino: curl.exe failed: "
+                  << (result.ok() ? result.value().err : result.error().detail) << '\n';
+        return false;
+    }
+    return isProgramFile(target);
+}
+
+/// Starts the downloaded installer (Windows asks for the administrator rights).
+bool startInstaller(const fs::path& installer) {
+    const ComScope com; // ShellExecuteEx needs COM on the calling thread
+    const std::wstring file = installer.wstring();
+    SHELLEXECUTEINFOW info{};
+    info.cbSize = sizeof(info);
+    info.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI;
+    info.lpVerb = L"open";
+    info.lpFile = file.c_str();
+    info.nShow = SW_SHOWNORMAL;
+    if (ShellExecuteExW(&info) == FALSE) {
+        std::cerr << "Scratch2Arduino: cannot start the installer, error " << GetLastError() << '\n';
+        return false;
+    }
+    return true;
 }
 #endif
 
@@ -693,17 +765,10 @@ void Bridge::bind() {
                 const fs::path folder = fs::temp_directory_path(error) / "Scratch2Arduino-update";
                 fs::create_directories(folder, error);
                 const fs::path installer = folder / "Scratch2Arduino_installer.exe";
-                fs::remove(installer, error);
-                process::Command download;
-                download.program = "curl.exe"; // part of Windows 10 and 11
-                download.args = {"--location", "--fail", "--silent", "--show-error", "--output", installer.u8string(), url};
-                download.timeout = std::chrono::minutes(15);
-                const auto result = process::run(download);
-                if (!result.ok() || !result.value().succeeded() || !fs::is_regular_file(installer, error)) {
+                if (!downloadInstaller(url, installer)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
-                const std::wstring file = installer.wstring();
-                if (reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", file.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) <= 32) {
+                if (!startInstaller(installer)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
                 // The installer waits for the program to close (AppMutex): close it.
