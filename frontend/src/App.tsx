@@ -92,6 +92,7 @@ import { isSimPort, SIM_PORT, simParts, usesPhone } from "@/simulation";
 import { SimBoard } from "@/SimBoard";
 import { Simulator } from "@/Simulator";
 import { useSavedColorScheme } from "@/theme/colorScheme";
+import { installRelease } from "@/installUpdate";
 import { findUpdate, platform, type Release, setHostSystem } from "@/updates";
 import { Tour } from "@/tour/Tour";
 import { melodyCode, PROJECT_NAME, steps as tourSteps, type TourContext, type TourStep } from "@/tour/steps";
@@ -250,6 +251,11 @@ export function App() {
 	const [version, setVersion] = useState("");
 	/** A newer release, offered until the user says "Later" (never forced). */
 	const [update, setUpdate] = useState<Release | null>(null);
+	/** "Later" hides the notice; the settings still show the release found (no new check). */
+	const [updateLater, setUpdateLater] = useState(false);
+	/** Windows: the installer is being downloaded, or why it failed. */
+	const [installingUpdate, setInstallingUpdate] = useState(false);
+	const [updateError, setUpdateError] = useState("");
 	/** Mac with an Apple chip without Rosetta: why the board compilers cannot run (null: hidden). */
 	const [rosetta, setRosetta] = useState<string | null>(null);
 	const [installingRosetta, setInstallingRosetta] = useState(false);
@@ -640,6 +646,24 @@ export function App() {
 	};
 	/** Only the Windows installer closes the program; elsewhere the link is just opened. */
 	const installCloses = (download: string) => platform(navigator.userAgent) === "windows" && download.endsWith(".exe");
+	/**
+	 * Windows: the program downloads and starts the installer, then closes (the browser downloads it
+	 * when that fails). Elsewhere the browser downloads the .dmg (or shows the release page).
+	 */
+	const startUpdate = async (release: Release) => {
+		if (!installCloses(release.download)) {
+			await bridge.openUrl(release.download).catch(fail);
+			return;
+		}
+		if (installingUpdate || !(await readyToClose())) return;
+		setInstallingUpdate(true);
+		setUpdateError("");
+		try {
+			setUpdateError(await installRelease(release, language, t));
+		} finally {
+			setInstallingUpdate(false);
+		}
+	};
 
 	// Ctrl+S (Cmd+S on a Mac) saves, wherever the focus is.
 	const saveRef = useRef(saveProject);
@@ -1712,8 +1736,11 @@ export function App() {
 					changeSettings({ ...settings, language: next });
 				}}
 				onSettings={changeSettings}
+				update={update}
 				onUpdate={setUpdate}
-				readyToClose={readyToClose}
+				installing={installingUpdate}
+				installError={updateError}
+				onInstall={(release) => void startUpdate(release)}
 				onClose={() => setSettingsShown(false)}
 			/>
 			<BoardPackageDialog
@@ -1742,7 +1769,7 @@ export function App() {
 					w={460}
 					style={{
 						position: "fixed",
-						top: update ? 236 : 76,
+						top: update && !updateLater ? 236 : 76,
 						left: "50%",
 						transform: "translateX(-50%)",
 						zIndex: 200,
@@ -1764,7 +1791,7 @@ export function App() {
 					</Group>
 				</Card>
 			)}
-			{update && (
+			{update && !updateLater && (
 				<Card
 					withBorder
 					shadow="md"
@@ -1785,31 +1812,26 @@ export function App() {
 						)}
 					</Text>
 					<Group gap="xs" mt="sm" justify="flex-end">
-						<Button size="xs" variant="subtle" color="gray" onClick={() => setUpdate(null)}>
+						<Button size="xs" variant="subtle" color="gray" onClick={() => setUpdateLater(true)}>
 							{t("update.later")}
 						</Button>
 						<Button size="xs" variant="light" onClick={() => void bridge.openUrl(update.page).catch(fail)}>
 							{t("update.notes")}
 						</Button>
-						<Button
-							size="xs"
-							onClick={() =>
-								void (async () => {
-									// Windows: the installer is downloaded and started by the program. Elsewhere the
-									// browser downloads the .dmg (or shows the release page for a .deb / .rpm).
-									if (!installCloses(update.download)) {
-										await bridge.openUrl(update.download);
-										return;
-									}
-									if (!(await readyToClose())) return;
-									const started = await bridge.installUpdate(update.download, language);
-									if (!started) await bridge.openUrl(update.download);
-								})().catch(fail)
-							}
-						>
+						<Button size="xs" loading={installingUpdate} onClick={() => void startUpdate(update)}>
 							{t(update.download.endsWith(".exe") ? "settings.install_update" : "update.download")}
 						</Button>
 					</Group>
+					{installingUpdate && (
+						<Text size="xs" mt="xs">
+							{t("settings.downloading")}
+						</Text>
+					)}
+					{updateError && (
+						<Text size="xs" c="red" mt="xs">
+							{updateError}
+						</Text>
+					)}
 				</Card>
 			)}
 			<Gallery

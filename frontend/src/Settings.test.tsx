@@ -49,8 +49,11 @@ describe("settings window", () => {
 						hasHost={false}
 						onLanguage={onLanguage}
 						onSettings={onSettings}
+						update={null}
 						onUpdate={() => undefined}
-						readyToClose={async () => true}
+						installing={false}
+						installError=""
+						onInstall={() => undefined}
 						onClose={() => undefined}
 					/>
 				</MantineProvider>
@@ -76,11 +79,10 @@ describe("settings window", () => {
 		await act(async () => root.unmount());
 	});
 
-	it("asks before the installer closes the program, and stops when cancelled", async () => {
+	it("installs the release found by Check now", async () => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		const installUpdate = vi.spyOn(bridge, "installUpdate").mockResolvedValue(true);
-		let allowed = false;
-		const readyToClose = vi.fn(async () => allowed);
+		const onInstall = vi.fn();
+		const onUpdate = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
 		const container = document.createElement("div");
 		document.body.append(container);
@@ -100,23 +102,61 @@ describe("settings window", () => {
 						hasHost={false}
 						onLanguage={() => undefined}
 						onSettings={() => undefined}
-						onUpdate={() => undefined}
-						readyToClose={readyToClose}
+						update={null}
+						onUpdate={onUpdate}
+						installing={false}
+						installError=""
+						onInstall={onInstall}
 						onClose={() => undefined}
 					/>
 				</MantineProvider>
 			)
 		);
 		const button = (label: string) => [...document.querySelectorAll("button")].find((item) => item.textContent === label);
+		expect(button("Télécharger et installer")).toBeUndefined();
 		await act(async () => button("Vérifier maintenant")?.click());
+		expect(onUpdate).toHaveBeenCalledWith(release);
 		await act(async () => button("Télécharger et installer")?.click());
-		expect(readyToClose).toHaveBeenCalledTimes(1);
-		expect(installUpdate).not.toHaveBeenCalled();
-
-		allowed = true;
-		await act(async () => button("Télécharger et installer")?.click());
-		expect(installUpdate).toHaveBeenCalledWith(release.download, "fr");
+		expect(onInstall).toHaveBeenCalledWith(release);
 		await act(async () => root.unmount());
-		installUpdate.mockRestore();
+	});
+
+	it("shows the release already found without checking again", async () => {
+		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
+		const container = document.createElement("div");
+		document.body.append(container);
+		const root = createRoot(container);
+		await act(async () =>
+			root.render(
+				<MantineProvider>
+					<Settings
+						opened
+						language="fr"
+						t={t}
+						version="0.9.0"
+						board="Arduino Uno"
+						settings={{ language: "", checkUpdates: true, theme: "" }}
+						boardPackages={null}
+						onBoardPackagesChanged={async () => undefined}
+						hasHost={false}
+						onLanguage={() => undefined}
+						onSettings={() => undefined}
+						update={release}
+						onUpdate={() => undefined}
+						installing
+						installError="Le téléchargement a échoué"
+						onInstall={() => undefined}
+						onClose={() => undefined}
+					/>
+				</MantineProvider>
+			)
+		);
+		expect(document.body.textContent).toContain(t("update.available", { version: "9.0.0", current: "0.9.0" }));
+		expect(document.body.textContent).toContain(t("settings.downloading"));
+		expect(document.body.textContent).toContain("Le téléchargement a échoué");
+		const install = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes("Télécharger et installer"));
+		expect(install?.disabled).toBe(true); // loading: not clickable twice
+		await act(async () => root.unmount());
 	});
 });

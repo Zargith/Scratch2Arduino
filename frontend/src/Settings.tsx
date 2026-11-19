@@ -27,10 +27,15 @@ interface SettingsProps {
 	hasHost: boolean;
 	onLanguage(language: Language): void;
 	onSettings(settings: SavedSettings): void;
+	/** Newer release already found (at start-up, even when its notice was put off with "Later"). */
+	update: Release | null;
 	/** A newer release was found by "Check now". */
 	onUpdate(release: Release): void;
-	/** Before the installer closes the program: false when the user cancels (unsaved project). */
-	readyToClose(): Promise<boolean>;
+	/** Windows: the installer is being downloaded (button loading), or why it failed. */
+	installing: boolean;
+	installError: string;
+	/** Downloads and starts the installer (asks first to save the project). */
+	onInstall(release: Release): void;
 	onClose(): void;
 }
 
@@ -53,29 +58,17 @@ export function Settings({
 	hasHost,
 	onLanguage,
 	onSettings,
+	update,
 	onUpdate,
-	readyToClose,
+	installing,
+	installError,
+	onInstall,
 	onClose,
 }: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
-	/** Downloading the installer (Windows), or why it failed. */
-	const [installing, setInstalling] = useState(false);
-	const [installError, setInstallError] = useState("");
 	const windows = platform(navigator.userAgent) === "windows";
-
-	const install = async (release: Release) => {
-		if (!(await readyToClose())) return;
-		setInstalling(true);
-		setInstallError("");
-		try {
-			// The program closes once the installer starts.
-			if (!(await bridge.installUpdate(release.download, language))) await bridge.openUrl(release.page);
-		} catch (error) {
-			setInstallError(error instanceof Error ? error.message : String(error));
-		} finally {
-			setInstalling(false);
-		}
-	};
+	// The release found by "Check now", else the one already found: no need to check again.
+	const found = check.kind === "found" ? check.release : check.kind === "idle" ? update : null;
 
 	const checkNow = async () => {
 		setCheck({ kind: "checking" });
@@ -137,26 +130,26 @@ export function Settings({
 								{t("settings.check_failed")}
 							</Text>
 						)}
-						{check.kind === "found" && (
+						{found && (
 							<Text size="sm" c="blue">
-								{t("update.available", { version: check.release.version, current: version })}
+								{t("update.available", { version: found.version, current: version })}
 							</Text>
 						)}
 					</Group>
-					{check.kind === "found" && (
+					{found && (
 						<Stack gap={6}>
 							<Group gap="sm">
-								{windows && check.release.download.endsWith(".exe") && (
-									<Button loading={installing} onClick={() => void install(check.release)}>
+								{windows && found.download.endsWith(".exe") && (
+									<Button loading={installing} onClick={() => onInstall(found)}>
 										{t("settings.install_update")}
 									</Button>
 								)}
-								{!windows && check.release.download.endsWith(".dmg") && (
-									<Button onClick={() => void bridge.openUrl(check.release.download).catch(() => undefined)}>
+								{!windows && found.download.endsWith(".dmg") && (
+									<Button onClick={() => void bridge.openUrl(found.download).catch(() => undefined)}>
 										{t("update.download")}
 									</Button>
 								)}
-								<Button variant="default" onClick={() => void bridge.openUrl(check.release.page).catch(() => undefined)}>
+								<Button variant="default" onClick={() => void bridge.openUrl(found.page).catch(() => undefined)}>
 									{t("update.notes")}
 								</Button>
 							</Group>

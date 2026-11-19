@@ -69,8 +69,8 @@ target_include_directories(scratch2arduino SYSTEM PRIVATE "${portable_file_dialo
 target_link_libraries(scratch2arduino PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
 if(WIN32)
     target_compile_definitions(scratch2arduino PRIVATE NOMINMAX)
-    # CommandLineToArgvW: the project dropped on the icon.
-    target_link_libraries(scratch2arduino PRIVATE shell32)
+    # CommandLineToArgvW: the project dropped on the icon; URLDownloadToFileW, COM: the update.
+    target_link_libraries(scratch2arduino PRIVATE shell32 urlmon ole32)
 endif()
 s2a_set_warnings(scratch2arduino)
 
