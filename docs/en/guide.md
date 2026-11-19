@@ -47,6 +47,9 @@ page, in the *Assets* part of the latest version.
 3. Choose the language of the installer (French or English), then the kind of installation: **simple**
    (advised: the usual folder, nothing else to choose) or **advanced** (choose the folder, and the expert
    option to build Scratch2Arduino on the computer). An update suggests the kind chosen last time.
+
+   ![The Kind of installation page: simple installation (advised) or advanced](../images/en/installer-type.png)
+
 4. The installer copies Scratch2Arduino, ready to use, with shortcuts on the desktop and in the Start menu.
    It takes about a minute and needs no internet (except on an old Windows 10 without Microsoft WebView2,
    which it then installs). The tools for the Uno, Nano and Mega are included: no download at the first
@@ -58,6 +61,11 @@ page, in the *Assets* part of the latest version.
    "already installed", greyed. You can also install them later in Scratch2Arduino (see
    [The boards' tools](#the-boards-tools)). Then, in advanced mode only, the expert option to build
    Scratch2Arduino on the computer, and last the desktop icon.
+
+   ![The Select Additional Tasks page: the optional boards to tick with their size to download and on the disk, then the Create a desktop shortcut box](../images/en/installer-tasks.png)
+
+   ![The Ready to Install page: the destination folder and the chosen tasks, before clicking Install](../images/en/installer-ready.png)
+
 6. The last page has a ticked **Launch Scratch2Arduino** box: click *Finish* and Scratch2Arduino opens.
 
 To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.

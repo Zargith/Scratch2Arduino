@@ -48,6 +48,11 @@ dans la partie *Assets* de la dernière version.
 3. Choisis la langue de l'installeur (français ou anglais), puis le type d'installation : **simple**
    (conseillée : le dossier habituel, rien d'autre à choisir) ou **avancée** (choix du dossier, et option pour
    experts pour compiler Scratch2Arduino sur l'ordinateur). Une mise à jour propose le type choisi la dernière fois.
+
+   ![La première fenêtre de l'installeur : choix de la langue, Français sélectionné](../images/fr/installer-language.png)
+
+   ![La page Type d'installation : installation simple (conseillée) ou avancée](../images/fr/installer-type.png)
+
 4. L'installeur copie Scratch2Arduino, prêt à l'emploi, avec un raccourci sur le bureau et dans le menu
    Démarrer. Cela prend environ une minute, sans Internet (sauf sur un ancien Windows 10 sans Microsoft
    WebView2, qu'il installe alors). Les outils pour Uno, Nano et Mega sont inclus : rien à télécharger non
@@ -59,6 +64,11 @@ dans la partie *Assets* de la dernière version.
    paquets déjà installés sont marqués "déjà installées" et grisés. Tu peux aussi les installer plus tard dans
    Scratch2Arduino (voir [Les outils des cartes](#les-outils-des-cartes)). Ensuite, en mode avancé seulement,
    l'option pour experts qui compile Scratch2Arduino sur l'ordinateur, et en dernier l'icône sur le bureau.
+
+   ![La page Tâches supplémentaires : les cartes supplémentaires à cocher avec leur taille à télécharger et sur le disque, puis la case Créer une icône sur le Bureau](../images/fr/installer-tasks.png)
+
+   ![La page Prêt à installer : le dossier de destination et les tâches choisies, avant de cliquer sur Installer](../images/fr/installer-ready.png)
+
 6. La dernière page a une case **Lancer Scratch2Arduino** cochée : clique sur *Terminer* et Scratch2Arduino s'ouvre.
 
 Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
