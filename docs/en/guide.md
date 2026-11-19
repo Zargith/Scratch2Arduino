@@ -12,6 +12,8 @@ Python) and sees by itself when each step is done. Once you click *Next*, the bl
 are locked: they cannot be moved, thrown away or changed by mistake, so the next steps stay possible. *Back*
 unlocks them, and they are all unlocked when the tutorial is closed.
 
+![The interactive tutorial "My doorbell": a box at the top right shows step 2 of 16, circles the Events category in the palette and says the step is done](../images/en/interactive-tutorial.png)
+
 *Pour le lire en français, change la langue dans les paramètres.*
 
 ## Contents
@@ -180,6 +182,16 @@ computer.
 - **Panels** (right, when open): the live values of Live mode, the serial monitor.
 - **Status bar** (bottom): what is going on ("Checking the program...") and the problems to fix.
 
+![The Scratch2Arduino window with the Blink example: the top bar, the palette of block categories on the left and the program in the workspace](../images/en/editor-blink.png)
+
+The **Settings** (the gear):
+
+![The Settings window: language, appearance (like the computer, light or dark), updates and more boards](../images/en/settings.png)
+
+The same window with the **dark** appearance, here in Live mode on the virtual board:
+
+![Scratch2Arduino with the dark appearance: the Button and LED example in Live mode, with the virtual board at the bottom of the window](../images/en/dark-live-virtual-board.png)
+
 ## 4. Build a program with blocks
 
 - **Add a block**: drag it from the palette to the workspace.
@@ -231,6 +243,8 @@ list is in the [block catalog](../block-catalog.md).
 - The **Code** view (at the top, next to *Blocks*) shows the Arduino code made from your blocks: a good
   way to discover the "real" Arduino language.
 
+![The Code view: the Arduino code (C++) made from the blocks of the Blink example, with setup() and loop()](../images/en/code-view.png)
+
 When something is wrong, the status bar explains **what is wrong** and **how to fix it**, and the block
 concerned is highlighted in the workspace. For example:
 
@@ -238,6 +252,8 @@ concerned is highlighted in the workspace. For example:
 - "A condition is missing in the "if ... then" block." -> drag a hexagonal block into the empty slot;
 - "Pin 7 of the Arduino Uno board cannot do "PWM output"." -> choose one of the pins offered (those marked with
   a `~` on the board).
+
+![An error after Check: the condition was pulled out of the "if ... then ... else" block, which is framed in red, and the status bar explains that a condition is missing and how to put one back](../images/en/check-error.png)
 
 ## 7. Live mode
 
@@ -291,6 +307,8 @@ The parts shown are the ones of the wiring diagram, computed from your blocks. T
 works too: step by step, variables, serial monitor, Python and JavaScript. The virtual board takes no
 program: to **Upload**, plug in a real board and choose its port.
 
+![The Button and LED example in Live mode on the virtual board: the push button of the diagram is held down, the red LED is on, the running blocks are lit and the Live values panel plots pin 2](../images/en/live-virtual-board.png)
+
 ## 8. Serial monitor
 
 The **Serial monitor** button opens a panel showing what the board writes with the block
@@ -309,6 +327,8 @@ by your blocks**:
   and what to put in between (for example the 220 Ω resistor of an LED); *Show the blocks* highlights the
   blocks concerned;
 - **Example layout** (for an example): the hand-drawn layout.
+
+![The Wiring diagram tab of the Button and LED example: the Arduino Uno board, a breadboard with the push button, the resistor and the LED, and one coloured wire per connection](../images/en/wiring-diagram.png)
 
 **Program written as code**: in expert mode (whole program in C++, Python or JavaScript) and for "My
 code", the diagram is computed from your code. Scratch2Arduino looks for the components in it:
@@ -353,10 +373,14 @@ blocks** (the blocks attached below are kept too). The group appears in the *My 
 it to add it to your project. **Manage my blocks** renames, deletes, **exports** (a `.s2ablocks` file)
 and **imports** them on another computer.
 
+![The My blocks category: the Manage my blocks button and the group "Button that lights an LED" that was just saved](../images/en/my-blocks.png)
+
 ## 11. Write code: "My code"
 
 When blocks are not enough, write your own functions in **C++**, **Python** or **JavaScript** next to the
 blocks: they become new blocks.
+
+![The Code view with the dark appearance: the Code of the blocks and My code tabs, and the Arduino code (C++) of the Button and LED example](../images/en/dark-code-view.png)
 
 1. At the top, switch the **View** from *Blocks* to **Code**. The **Code of the blocks** tab shows the
    Arduino code made from your blocks (read-only).
@@ -408,6 +432,8 @@ itself. If your code uses a library that is missing, the *Check* message gives i
 libraries that may contain it.
 
 ## 12. Projects: save, open, share
+
+![The New project gallery: the blank project and the examples (Blink, Traffic light, Button and LED...) with their layout, their Beginner or Advanced level, their parts and a link to their tutorial](../images/en/gallery.png)
 
 - **New** opens the gallery: a **blank project** or an **example** (with its parts and its diagram).
   Some examples come in several versions, to choose on the card: other parts (I2C or 16-pin screen), or

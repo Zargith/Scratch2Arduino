@@ -13,6 +13,8 @@ l'étape réussie sont verrouillés : impossible de les déplacer, de les jeter 
 les étapes suivantes restent faisables. *Précédent* les déverrouille, et tout est déverrouillé quand le
 tutoriel est fermé.
 
+![Le tutoriel interactif "Ma sonnette" : un cadre en haut à droite affiche l'étape 2 sur 16, entoure la famille Événements dans la palette et indique que l'étape est réussie](../images/fr/interactive-tutorial.png)
+
 *To read it in English, change the language in the settings.*
 
 ## Sommaire
@@ -191,6 +193,16 @@ ordinateur.
 - **Barre d'état** (en bas) : ce qui se passe ("Vérification du programme...") et les problèmes à
   corriger.
 
+![La fenêtre de Scratch2Arduino avec l'exemple Clignotant : la barre du haut, la palette des familles de blocs à gauche et le programme dans la zone de travail](../images/fr/editor-blink.png)
+
+Les **Paramètres** (l'engrenage) :
+
+![La fenêtre Paramètres : langue, apparence (comme l'ordinateur, clair ou sombre), mises à jour et cartes supplémentaires](../images/fr/settings.png)
+
+La même fenêtre en apparence **sombre**, ici en mode Live sur la carte virtuelle :
+
+![Scratch2Arduino en apparence sombre : l'exemple Bouton et LED en mode Live, avec la carte virtuelle en bas de la fenêtre](../images/fr/dark-live-virtual-board.png)
+
 ## 4. Construire un programme avec des blocs
 
 - **Ajouter un bloc** : fais-le glisser depuis la palette vers la zone de travail.
@@ -244,6 +256,8 @@ composant**. La liste complète est dans le [catalogue des blocs](../block-catal
 - La vue **Code** (en haut, à côté de *Blocs*) montre le code Arduino fabriqué à partir de tes blocs :
   une bonne façon de découvrir le "vrai" langage de l'Arduino.
 
+![La vue Code : le code Arduino (C++) fabriqué à partir des blocs de l'exemple Clignotant, avec setup() et loop()](../images/fr/code-view.png)
+
 Quand il y a un problème, la barre d'état explique **ce qui ne va pas** et **comment le corriger**, et
 le bloc concerné est mis en évidence dans la zone de travail. Exemples :
 
@@ -252,6 +266,8 @@ le bloc concerné est mis en évidence dans la zone de travail. Exemples :
 - "Il manque une condition dans le bloc "si ... alors"." -> glisse un bloc hexagonal dans la case vide ;
 - "La broche 7 de la carte Arduino Uno ne sait pas faire "sortie PWM" (bloc "...")." -> choisis une des broches
   proposées (celles marquées d'un `~` sur la carte).
+
+![Une erreur après Vérifier : la condition a été retirée du bloc "si ... alors ... sinon", qui est encadré en rouge, et la barre d'état explique qu'il manque une condition et comment la remettre](../images/fr/check-error.png)
 
 ## 7. Le mode Live
 
@@ -308,6 +324,8 @@ Les composants affichés sont ceux du schéma de câblage, calculés à partir d
 mode Live marche aussi : pas à pas, variables, moniteur série, Python et JavaScript. La carte virtuelle ne
 reçoit pas de programme : pour **Téléverser**, branche une vraie carte et choisis son port.
 
+![L'exemple Bouton et LED en mode Live sur la carte virtuelle : le bouton poussoir du schéma est maintenu appuyé, la LED rouge est allumée, les blocs qui tournent sont éclairés et le panneau Valeurs en direct trace la broche 2](../images/fr/live-virtual-board.png)
+
 ## 8. Le moniteur série
 
 Le bouton **Moniteur série** ouvre un panneau qui affiche ce que la carte écrit avec le bloc
@@ -327,6 +345,8 @@ composants **utilisés par tes blocs** :
   de la carte où elle va et ce qu'il faut mettre entre les deux (par exemple la résistance de 220 Ω d'une
   LED) ; *Voir les blocs* montre les blocs concernés ;
 - **Montage de l'exemple** (pour un exemple) : le montage dessiné à la main.
+
+![L'onglet Schéma de câblage de l'exemple Bouton et LED : la carte Arduino Uno, une platine d'essai avec le bouton poussoir, la résistance et la LED, et un fil de couleur par branchement](../images/fr/wiring-diagram.png)
 
 **Programme écrit en code** : en mode expert (programme entier en C++, Python ou JavaScript) et pour
 "Mon code", le schéma est calculé à partir de ton code. Scratch2Arduino y cherche les composants :
@@ -376,10 +396,14 @@ la famille *Mes blocs* : clique dessus pour l'ajouter à ton projet. **Gérer me
 renommer, de les supprimer, de les **exporter** (fichier `.s2ablocks`) et de les **importer** sur un autre
 ordinateur.
 
+![La famille Mes blocs : le bouton Gérer mes blocs et le groupe "Bouton qui allume une LED" qui vient d'être enregistré](../images/fr/my-blocks.png)
+
 ## 11. Écrire du code : "Mon code"
 
 Quand les blocs ne suffisent plus, écris tes propres fonctions en **C++**, **Python** ou **JavaScript** à
 côté des blocs : elles deviennent de nouveaux blocs.
+
+![La vue Code en apparence sombre : les onglets Code des blocs et Mon code, et le code Arduino (C++) de l'exemple Bouton et LED](../images/fr/dark-code-view.png)
 
 1. En haut, passe la **Vue** de *Blocs* à **Code**. L'onglet **Code des blocs** montre le code Arduino
    fabriqué à partir de tes blocs (en lecture seule).
@@ -433,6 +457,8 @@ les installe toutes seules. Si ton code utilise une bibliothèque absente, le me
 son nom et propose des bibliothèques qui pourraient la contenir.
 
 ## 12. Projets : enregistrer, ouvrir, partager
+
+![La galerie Nouveau projet : le projet vide et les exemples (Clignotant, Feu tricolore, Bouton et LED...) avec leur montage, leur niveau Novice ou Avancé, leur matériel et un lien vers leur tutoriel](../images/fr/gallery.png)
 
 - **Nouveau** ouvre la galerie : un **projet vide** ou un **exemple** (avec son matériel et son schéma).
   Certains exemples existent en plusieurs versions, au choix sur la carte : un autre montage (écran I2C

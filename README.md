@@ -41,6 +41,25 @@ It bridges the gap between visual programming and physical computing: LEDs blink
 | Learning | User guide, 8 step-by-step tutorials, an interactive tutorial inside the editor and a teacher / workshop kit, in French and English |
 | Settings | French (default) or English, light or dark appearance, check for new versions, *Report a problem* |
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/images/en/editor-blink.png" alt="The block editor with the Blink example: top bar, palette of block categories and the program in the workspace" width="420"><br>The block editor (Blink example)</td>
+    <td><img src="docs/images/en/live-virtual-board.png" alt="Live mode on the virtual board: the push button of the diagram is held down and the LED is on" width="420"><br>Live mode on the virtual board, no hardware needed</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/en/wiring-diagram.png" alt="Wiring diagram drawn from the blocks: Arduino Uno, breadboard, push button, resistor and LED" width="420"><br>Wiring diagram drawn from the blocks</td>
+    <td><img src="docs/images/en/gallery.png" alt="The New project gallery with the blank project and the example projects" width="420"><br>Gallery of example projects</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/en/check-error.png" alt="A Check error: the if block missing its condition is framed in red and the status bar explains how to fix it" width="420"><br>Friendly errors that point to the block</td>
+    <td><img src="docs/images/en/dark-code-view.png" alt="The Code view with the dark appearance, showing the Arduino C++ made from the blocks" width="420"><br>The Arduino C++ made from the blocks (dark appearance)</td>
+  </tr>
+</table>
+
+More screenshots, in English and in French, are in the user guide ([English](docs/en/guide.md), [French](docs/fr/guide.md)).
+
 ## How it is built
 
 Scratch2Arduino is a **native C++ application embedding the system webview** (WebKitGTK on Linux,
