@@ -1,6 +1,7 @@
 // The user documentation of docs/fr and docs/en (guide and tutorials), bundled into the editor so
 // that it can be read offline next to the blocks. Vite inlines the Markdown files; their pictures
-// are the wiring diagrams of the examples, already bundled by examples.ts.
+// are the wiring diagrams of the examples, already bundled by examples.ts, and the screenshots of
+// docs/images.
 import { Marked, type Tokens } from "marked";
 
 import type { Language } from "@/catalog";
@@ -17,6 +18,8 @@ const sources = import.meta.glob<string>(["../../docs/fr/**/*.md", "../../docs/e
 	import: "default",
 	eager: true,
 });
+
+const screenshots = import.meta.glob<string>("../../docs/images/*/*.png", { eager: true, import: "default" });
 
 const sourcePath = (language: Language, path: DocPath) => `../../docs/${language}/${path}`;
 
@@ -85,8 +88,10 @@ export function headingAnchor(text: string): string {
 		.replace(/\s/g, "-");
 }
 
-/** URL of a picture of the documentation: the wiring diagram of an example. */
+/** URL of a picture of the documentation: a screenshot, or the wiring diagram of an example. */
 export function pictureUrl(href: string): string {
+	const screenshot = /(?:^|\/)images\/(fr|en)\/([\w-]+\.png)$/.exec(href);
+	if (screenshot) return screenshots[`../../docs/images/${screenshot[1]}/${screenshot[2]}`] ?? "";
 	const id = /examples\/projects\/([^/]+)\/wiring\.png$/.exec(href)?.[1];
 	return examples.find((example) => example.id === id)?.wiring ?? "";
 }
