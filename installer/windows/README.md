@@ -8,7 +8,7 @@ cmake -S . -B build-win -DS2A_BUILD_TESTS=OFF -DS2A_FRONTEND_DIST="$PWD\frontend
 cmake --build build-win --config Release --parallel
 cmake --install build-win --config Release --prefix installer\windows\prebuilt
 cmake -P installer\windows\board-packages.cmake   # the optional board packages become tasks
-iscc /DAppVersion=1.3.3 /DPrebuiltDir="$PWD\installer\windows\prebuilt" installer\windows\scratch2arduino.iss
+iscc /DAppVersion=1.3.4 /DPrebuiltDir="$PWD\installer\windows\prebuilt" installer\windows\scratch2arduino.iss
 ```
 
 Without `/DPrebuiltDir`, the installer can only build from the sources (below).
