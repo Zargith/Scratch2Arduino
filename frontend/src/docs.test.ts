@@ -32,6 +32,8 @@ describe("bundled documentation", () => {
 			}
 		}
 		expect(renderDoc("fr", "tutorials/02-traffic-light.md")).toMatch(/<img src="[^"]+"/);
+		expect(pictureUrl("../images/en/gallery.png")).not.toBe("");
+		expect(pictureUrl("../images/en/missing.png")).toBe("");
 	});
 
 	it("follows the links between pages, and their headings", () => {
