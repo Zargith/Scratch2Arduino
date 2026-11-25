@@ -249,6 +249,43 @@ TEST(UserData, LibraryImportRejectsOtherFiles) {
     EXPECT_TRUE(store.library().size() == 1U && store.library()[0].name == "ok");
 }
 
+// Audit 2026-11-24 (#169): json::value() threw type_error when a field had another type, and
+// the exception escaped every library call (a corrupt library.json broke each start).
+TEST(UserData, LibraryWithWronglyTypedFieldsDoesNotThrow) {
+    const TempDir dir;
+    Store store(dir.path());
+    write(dir.path() / "text-version.s2ablocks", R"({"format": "scratch2arduino-blocks", "formatVersion": "1", "groups": []})");
+    auto imported = store.importLibrary(dir.path() / "text-version.s2ablocks");
+    ASSERT_FALSE(imported.ok());
+    EXPECT_EQ(imported.error().code, s2a::ErrorCode::UnsupportedVersion);
+    write(dir.path() / "number-format.s2ablocks", R"({"format": 5, "formatVersion": 1, "groups": []})");
+    EXPECT_EQ(store.importLibrary(dir.path() / "number-format.s2ablocks").error().code, s2a::ErrorCode::InvalidFormat);
+
+    // Wrongly typed name and id: the group is kept with a fresh id and an empty name.
+    std::string odd = s2a::userdata::libraryToJson({{"g1", "ok", group()}});
+    odd.replace(odd.find("\"id\": \"g1\""), 10, R"("id": 12)");
+    odd.replace(odd.find("\"name\": \"ok\""), 12, R"("name": 5)");
+    write(dir.path() / "library.json", odd);
+    std::vector<s2a::userdata::SavedBlocks> library;
+    ASSERT_NO_THROW(library = store.library());
+    ASSERT_EQ(library.size(), 1U);
+    EXPECT_FALSE(library[0].id.empty());
+    EXPECT_NO_THROW((void)store.addToLibrary("new", group()));
+}
+
+// Audit 2026-11-24: a file nested very deep overflowed the stack when its blocks were read.
+TEST(UserData, LibraryNestedTooDeepIsRefused) {
+    const TempDir dir;
+    Store store(dir.path());
+    const std::size_t depth = 200000;
+    const std::string deep = R"({"format": "scratch2arduino-blocks", "formatVersion": 1, "groups": [{"blocks": )" +
+                             std::string(depth, '[') + std::string(depth, ']') + "}]}";
+    write(dir.path() / "deep.s2ablocks", deep);
+    EXPECT_EQ(store.importLibrary(dir.path() / "deep.s2ablocks").error().code, s2a::ErrorCode::InvalidJson);
+    write(dir.path() / "library.json", deep);
+    EXPECT_TRUE(store.library().empty());
+}
+
 TEST(UserData, DefaultDirectoryIsNamedAfterTheProgram) {
     const fs::path dir = s2a::userdata::defaultDirectory();
     EXPECT_FALSE(dir.empty());

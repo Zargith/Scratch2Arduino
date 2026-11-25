@@ -527,6 +527,8 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.usercode_read_only";
     case Rule::UserCodeOwned:
         return "validation.usercode_owned";
+    case Rule::Count:
+        break;
     }
     return "validation.unknown_block";
 }

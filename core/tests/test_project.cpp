@@ -145,6 +145,15 @@ TEST(ForEachBlock, VisitsNestedBlocksDepthFirst) {
 
 // --- project.json --------------------------------------------------------------------------
 
+// Audit 2026-11-24: a project nested very deep overflowed the stack instead of being refused.
+TEST(ProjectJson, RefusesJsonNestedTooDeep) {
+    const std::size_t depth = 200000;
+    const auto parsed = fromJson(R"({"format": "scratch2arduino-project", "formatVersion": 1, "x": )" +
+                                 std::string(depth, '[') + std::string(depth, ']') + "}");
+    ASSERT_FALSE(parsed.ok());
+    EXPECT_EQ(parsed.error().code, s2a::ErrorCode::InvalidJson);
+}
+
 TEST(ProjectJson, RoundTripsExactly) {
     const std::string json = toJson(blink());
     const auto parsed = fromJson(json);

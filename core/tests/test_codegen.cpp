@@ -162,6 +162,36 @@ TEST(Codegen, WritesToTheSerialMonitor) {
     EXPECT_NE(sketch.source.find("void s2a_print(double value) {"), std::string::npos);
 }
 
+// Audit 2026-11-24 (#165): an int is 16 bits on AVR boards, so "analog value * 100" wrapped
+// to a negative number on an Uno. Add, subtract and multiply compute in double, like divide.
+TEST(Codegen, ComputesArithmeticInDoubleSoAvrIntsDoNotOverflow) {
+    Block analog = block("a", "pins_analog_read");
+    analog.fields["PIN"] = "A0";
+    Block times = block("times", "operators_multiply");
+    times.inputs["NUM1"].block = analog;
+    times.inputs["NUM2"].value = "100";
+    Block print = block("p", "serial_print");
+    print.inputs["VALUE"].block = times;
+    Block minutes = block("m", "operators_multiply");
+    minutes.inputs["NUM1"].value = "1000";
+    minutes.inputs["NUM2"].value = "60";
+    Block plus = block("plus", "operators_add");
+    plus.inputs["NUM1"].value = "30000";
+    plus.inputs["NUM2"].block = minutes;
+    Block minus = block("minus", "operators_subtract");
+    minus.inputs["NUM1"].value = "-30000";
+    minus.inputs["NUM2"].value = "10000";
+    Block wait = block("w", "control_wait");
+    wait.inputs["SECONDS"].block = plus;
+    Block wait2 = block("w2", "control_wait");
+    wait2.inputs["SECONDS"].block = minus;
+    const auto sketch = generate(withScript({block("hat", "events_when_program_starts"), print, wait, wait2}));
+    for (const char* expected : {"s2a_print(((double)analogRead(A0) * 100));", "s2a_wait(((double)30000 + ((double)1000 * 60)));",
+                                 "s2a_wait(((double)-30000 - 10000));"}) {
+        EXPECT_NE(sketch.source.find(expected), std::string::npos) << expected << "\n" << sketch.source;
+    }
+}
+
 TEST(Codegen, OpensTheSerialPortOnlyWhenUsed) {
     const auto sketch = generate(withScript({block("hat", "events_when_program_starts")}));
     EXPECT_EQ(sketch.source.find("Serial"), std::string::npos) << sketch.source;
@@ -205,7 +235,7 @@ TEST(Codegen, GeneratesExpressionsAndVariables) {
     EXPECT_NE(sketch.source.find("double var_vitesse_max = 2.5; // vitesse max"), std::string::npos);
     EXPECT_NE(sketch.source.find("double var_vitesse_max_2 = 0; // vitesse-max"), std::string::npos);
     EXPECT_NE(sketch.source.find("  for (long i1 = 0; i1 < (long)(3); ++i1) {\n"
-                                 "    var_vitesse_max_2 = (1 + var_vitesse_max);\n  }"),
+                                 "    var_vitesse_max_2 = ((double)1 + var_vitesse_max);\n  }"),
               std::string::npos)
         << sketch.source;
 }
@@ -354,7 +384,7 @@ TEST(Codegen, GivesTheInputsOfAFunctionAsParameters) {
     const auto source = generate(withInputs()).source;
     for (const char* expected : {"void s2a_function_biper(double arg_fois, double arg_duree);\n",
                                  "void s2a_function_biper(double arg_fois, double arg_duree) {\n",
-                                 "  s2a_wait(arg_duree);\n", "s2a_function_biper(3, (0.5 + 0.25));"}) {
+                                 "  s2a_wait(arg_duree);\n", "s2a_function_biper(3, ((double)0.5 + 0.25));"}) {
         EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
     }
 }
@@ -364,7 +394,7 @@ TEST(Codegen, KeepsTheInputsOfFunctionsInGlobalsWhenScriptsRunSideBySide) {
     project.scripts.push_back({600, 0, {block("hat2", "events_when_program_starts"), led("on2", "ON")}});
     const auto source = generate(project).source;
     for (const char* expected : {"double s2a_arg_duree_2 = 0; // input \"durée\" of biper\n",
-                                 "s2a_arg_fois_1 = 3;\n", "s2a_arg_duree_2 = (0.5 + 0.25);\n",
+                                 "s2a_arg_fois_1 = 3;\n", "s2a_arg_duree_2 = ((double)0.5 + 0.25);\n",
                                  "S2A_WAIT(task, s2a_arg_duree_2);"}) {
         EXPECT_NE(source.find(expected), std::string::npos) << expected << "\n" << source;
     }

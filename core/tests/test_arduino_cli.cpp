@@ -290,6 +290,19 @@ TEST(ArduinoCli, CompilesWithTheBoardFqbn) {
     EXPECT_EQ(args.at(4), fs::path("/build/blink").u8string());
 }
 
+// Audit 2026-11-24: json::value() threw out of compile() when a size was not a number.
+TEST(ArduinoCli, IgnoresOddMemorySizes) {
+    FakeRunner fake;
+    fake.replies = {reply(R"({"success": true, "builder_result": {"executable_sections_size": [
+        {"name": "text", "size": "924", "max_size": null}, 3, {"name": "data", "size": 10, "max_size": 2048}]}})")};
+    const ArduinoCli cli("arduino-cli", kDirectories, fake.runner());
+    const auto outcome = cli.compile("/sketches/blink", uno(), "/build/blink");
+    ASSERT_TRUE(outcome.ok());
+    ASSERT_EQ(outcome.value().memory.size(), 2U);
+    EXPECT_EQ(outcome.value().memory[0].size, 0U);
+    EXPECT_EQ(outcome.value().memory[1].max, 2048U);
+}
+
 TEST(ArduinoCli, ReportsCompilationFailures) {
     FakeRunner fake;
     fake.replies = {reply(std::string(kCompileFailure), 1)};

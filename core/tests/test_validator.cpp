@@ -289,7 +289,7 @@ TEST(Validator, ChecksReportersAndNestedStacks) {
 }
 
 TEST(Validator, EveryRuleHasMessagesInBothLanguages) {
-    for (int rule = static_cast<int>(Rule::NoStartBlock); rule <= static_cast<int>(Rule::ButtonWithoutPullUp); ++rule) {
+    for (int rule = static_cast<int>(Rule::NoStartBlock); rule < static_cast<int>(Rule::Count); ++rule) {
         const std::string key(s2a::validation::ruleKey(static_cast<Rule>(rule)));
         for (const Language language : {Language::French, Language::English}) {
             EXPECT_NE(s2a::tr(key, language), key) << key;
@@ -387,6 +387,49 @@ TEST(Validator, RefusesToSetAVariableThatMyCodeChangesItself) {
     EXPECT_EQ(issue.blockId, "set");
     EXPECT_NE(s2a::validation::describe(issue, Language::English).find("\"lampe\" is changed by a function"),
               std::string::npos);
+}
+
+// Audit 2026-11-24 (#172): the three other "My code" rules had no test.
+TEST(Validator, ReportsMyCodeBlocksThatNoLongerMatchTheCode) {
+    Project project = program({block("start", "events_when_program_starts")});
+    project.userCode = UserCode{ProgramLanguage::Cpp,
+                                "const int LIMIT = 3;\nint speed = 2;\nvoid blink() {\n}\nint twice(int x) {\n  return 2 * x;\n}\n"};
+    auto withBlock = [&project](Block added) {
+        Project copy = project;
+        copy.scripts[0].blocks.push_back(std::move(added));
+        return copy;
+    };
+
+    Block missing = block("missing", "mycode_call");
+    missing.fields["NAME"] = "gone";
+    Issue issue = single(check(withBlock(missing)));
+    EXPECT_EQ(issue.rule, Rule::UserCodeMissing);
+    EXPECT_EQ(issue.blockId, "missing");
+
+    Block noValue = block("novalue", "mycode_value");
+    noValue.fields["NAME"] = "blink";
+    Block wait = block("wait", "control_wait");
+    wait.inputs["SECONDS"].block = noValue;
+    issue = single(check(withBlock(wait)));
+    EXPECT_EQ(issue.rule, Rule::UserCodeNoValue);
+    EXPECT_EQ(issue.blockId, "novalue");
+
+    Block readOnly = block("readonly", "mycode_set");
+    readOnly.fields["NAME"] = "LIMIT";
+    readOnly.inputs["VALUE"].value = "5";
+    issue = single(check(withBlock(readOnly)));
+    EXPECT_EQ(issue.rule, Rule::UserCodeReadOnly);
+    EXPECT_EQ(issue.blockId, "readonly");
+
+    // The same blocks are fine when they match the code.
+    Block call = block("call", "mycode_call");
+    call.fields["NAME"] = "blink";
+    Block set = block("set", "mycode_set");
+    set.fields["NAME"] = "speed";
+    set.inputs["VALUE"].value = "5";
+    Project valid = withBlock(call);
+    valid.scripts[0].blocks.push_back(set);
+    EXPECT_TRUE(check(valid).empty());
 }
 
 // No example offers or uses a block that would disturb its own code, and every example is valid.

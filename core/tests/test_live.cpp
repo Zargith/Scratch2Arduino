@@ -900,6 +900,17 @@ TEST(LiveLink, ReportsABoardThatDoesNotAnswer) {
     EXPECT_EQ(error->code, s2a::ErrorCode::BoardNotResponding);
 }
 
+// Audit 2026-11-24 (#166): the first "?" was computed from time_point::min() (overflow, found
+// by UBSan), so a board whose greeting the bootloader swallowed was never asked.
+TEST(LiveLink, AsksASilentBoardAtOnce) {
+    FakeFirmware firmware;
+    firmware.pending.clear(); // greeting lost: the board only answers a "?"
+    s2a::live::LiveLink link(firmware);
+    ASSERT_TRUE(link.handshake(milliseconds(500)).ok());
+    ASSERT_FALSE(firmware.received.empty());
+    EXPECT_EQ(firmware.received.front(), "?");
+}
+
 /// A FakeFirmware owned by the session, whose received lines stay readable by the test.
 struct SharedFirmware final : s2a::serial::LineTransport {
     std::shared_ptr<FakeFirmware> firmware;

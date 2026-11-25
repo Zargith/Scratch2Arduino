@@ -267,18 +267,28 @@ private:
         return "(" + number(block, "NUM1") + " " + op + " " + number(block, "NUM2") + ")";
     }
 
+    /// Add, subtract, multiply: in double, as in Scratch. An int is 16 bits on AVR boards, so
+    /// "analog value * 100" would wrap to a negative number on an Uno.
+    std::string arithmetic(const Block& block, const char* op) {
+        return "((double)" + number(block, "NUM1") + " " + op + " " + number(block, "NUM2") + ")";
+    }
+
     std::string logic(const Block& block, const char* op) {
         return "(" + condition(block, "OPERAND1") + " " + op + " " + condition(block, "OPERAND2") + ")";
     }
 
     std::string expression(const Block& block) {
-        static const std::map<std::string, const char*, std::less<>> kBinary = {
+        static const std::map<std::string, const char*, std::less<>> kArithmetic = {
             {"operators_add", "+"}, {"operators_subtract", "-"}, {"operators_multiply", "*"},
-            {"operators_lt", "<"},     {"operators_gt", ">"},
-            {"operators_equals", "=="},
+        };
+        static const std::map<std::string, const char*, std::less<>> kComparison = {
+            {"operators_lt", "<"}, {"operators_gt", ">"}, {"operators_equals", "=="},
         };
         const std::string& type = block.type;
-        if (auto op = kBinary.find(type); op != kBinary.end()) {
+        if (auto op = kArithmetic.find(type); op != kArithmetic.end()) {
+            return arithmetic(block, op->second);
+        }
+        if (auto op = kComparison.find(type); op != kComparison.end()) {
             return binary(block, op->second);
         }
         if (type == "operators_divide") { // 1 / 2 is 0.5, as in Scratch, not 0

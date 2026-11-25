@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
+#include "json_input.hpp"
+
 #include <nlohmann/json.hpp>
 #include <utility>
 
@@ -78,7 +80,7 @@ std::optional<Json> readJson(const fs::path& path) {
     if (!bytes) {
         return std::nullopt;
     }
-    Json json = Json::parse(*bytes, nullptr, /*allow_exceptions=*/false);
+    Json json = detail::parseUntrustedJson(*bytes);
     if (json.is_discarded() || !json.is_object()) {
         return std::nullopt;
     }
@@ -256,16 +258,32 @@ std::string libraryToJson(const std::vector<SavedBlocks>& groups) {
     return document.dump(2) + "\n";
 }
 
+namespace {
+
+/// The text of `key`, or "" when it is missing or not a text (json::value() would throw).
+std::string textField(const Json& object, const char* key) {
+    const auto found = object.find(key);
+    return found != object.end() && found->is_string() ? found->get<std::string>() : std::string{};
+}
+
+/// The whole number of `key`, or 0 when it is missing or not a whole number.
+long long integerField(const Json& object, const char* key) {
+    const auto found = object.find(key);
+    return found != object.end() && found->is_number_integer() ? found->get<long long>() : 0;
+}
+
+} // namespace
+
 Result<std::vector<SavedBlocks>> libraryFromJson(std::string_view json) {
-    const Json document = Json::parse(json, nullptr, /*allow_exceptions=*/false);
+    const Json document = detail::parseUntrustedJson(json);
     if (document.is_discarded()) {
         return Error{ErrorCode::InvalidJson, "the blocks file is not valid JSON"};
     }
-    if (!document.is_object() || document.value("format", std::string{}) != kLibraryFormatName ||
+    if (!document.is_object() || textField(document, "format") != kLibraryFormatName ||
         !document.contains("groups") || !document["groups"].is_array()) {
         return Error{ErrorCode::InvalidFormat, "not a Scratch2Arduino blocks file"};
     }
-    const auto version = document.value("formatVersion", 0);
+    const auto version = integerField(document, "formatVersion");
     if (version < 1 || version > kLibraryFormatVersion) {
         return Error{ErrorCode::UnsupportedVersion, "blocks file version " + std::to_string(version)};
     }
@@ -278,8 +296,8 @@ Result<std::vector<SavedBlocks>> libraryFromJson(std::string_view json) {
         if (!blocks.ok()) {
             continue; // one damaged group does not hide the others
         }
-        const auto id = item.value("id", std::string{});
-        groups.push_back({id.empty() ? project::newId() : id, cleanName(item.value("name", std::string{})),
+        const auto id = textField(item, "id");
+        groups.push_back({id.empty() ? project::newId() : id, cleanName(textField(item, "name")),
                           std::move(blocks).value()});
     }
     return groups;

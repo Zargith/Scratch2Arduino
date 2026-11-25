@@ -686,9 +686,15 @@ Result<CompileOutcome> ArduinoCli::compile(const fs::path& sketch, const Board& 
     }
     if (json.contains("builder_result") && json.at("builder_result").contains("executable_sections_size") &&
         json.at("builder_result").at("executable_sections_size").is_array()) {
+        // Read without json::value(), which throws when a field has another type.
+        const auto size = [](const Json& section, const char* key) {
+            const auto found = section.find(key);
+            return found != section.end() && found->is_number_unsigned() ? found->get<std::uint64_t>() : std::uint64_t{0};
+        };
         for (const Json& section : json.at("builder_result").at("executable_sections_size")) {
-            outcome.memory.push_back({stringOr(section, "name"), section.value("size", std::uint64_t{0}),
-                                      section.value("max_size", std::uint64_t{0})});
+            if (section.is_object()) {
+                outcome.memory.push_back({stringOr(section, "name"), size(section, "size"), size(section, "max_size")});
+            }
         }
     }
     return outcome;
