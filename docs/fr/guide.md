@@ -142,7 +142,8 @@ ou désactiver cette recherche.
   si ton projet n'est pas enregistré, une question te propose d'abord de l'enregistrer, de l'ignorer ou
   d'annuler. Le bouton tourne pendant le téléchargement de l'installeur. Si le téléchargement échoue
   (proxy, antivirus, réseau filtré), ton navigateur télécharge l'installeur à la place : lance-le une fois
-  téléchargé.
+  téléchargé. Avant de le lancer, Scratch2Arduino vérifie que l'installeur téléchargé est bien celui publié
+  (empreinte SHA-256 de la liste `SHA256SUMS.txt` de la version) ; sinon, il passe aussi par le navigateur.
 - macOS : *Télécharger* récupère le `.dmg` de ton Mac dans le navigateur ; ouvre-le et glisse
   Scratch2Arduino dans Applications comme la première fois.
 - Linux : *Télécharger* ouvre la page de la version : télécharge le nouveau `.deb` ou `.rpm` et installe-le

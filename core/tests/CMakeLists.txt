@@ -20,6 +20,7 @@ add_executable(s2a_core_tests
     test_boards.cpp
     test_build.cpp
     test_codegen.cpp
+    test_integrity.cpp
     test_diagnostics.cpp
     test_i18n.cpp
     test_live.cpp

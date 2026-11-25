@@ -16,6 +16,7 @@ add_library(s2a_core STATIC
     src/diagnostics.cpp
     src/archive.cpp
     src/i18n.cpp
+    src/integrity.cpp
     src/process.cpp
     src/project.cpp
     src/script.cpp
