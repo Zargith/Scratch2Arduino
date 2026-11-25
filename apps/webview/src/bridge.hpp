@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <filesystem>
+#include <future>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -48,6 +49,8 @@ private:
 
     std::filesystem::path startupFile_;
     template <typename Work> void async(const std::string& id, Work work);
+    /// Binds a call that answers at once; any exception rejects its promise instead of ending the program.
+    template <typename Handler> void bindSync(const std::string& name, Handler handler);
 
     ::webview::webview& window_;
     Language language_;
@@ -59,6 +62,9 @@ private:
     std::list<Worker> workers_; ///< Finished ones are joined when the next call starts.
     std::mutex liveMutex_;
     std::unique_ptr<live::Session> live_; ///< Live mode, when started.
+    /// Teardown of the last stopped session (outputs off, port closed), guarded by liveMutex_:
+    /// whatever needs the port again waits for it (audit #167).
+    std::shared_future<void> liveClosing_;
     /// Virtual board of the simulation (Live mode on a "sim:" port), kept after Stop to show it off.
     std::shared_ptr<sim::VirtualBoard> simBoard_; ///< Guarded by liveMutex_.
     std::mutex monitorMutex_;
@@ -73,6 +79,10 @@ private:
 
     /// Frees the board's port for an upload or the Live mode.
     void closeMonitor();
+    /// Stops the Live session off the UI thread (liveMutex_ held). Teardowns run one after the other.
+    void retireLive();
+    /// Waits until the stopped Live sessions have switched off their outputs and closed the port.
+    void waitForLiveClosed();
     /// The board on the USB `port`, running the Live firmware (uploaded first when it does not
     /// answer): for settings saved on the board. Stops the Live mode and the serial monitor.
     [[nodiscard]] std::unique_ptr<serial::SerialPort> openLiveOverUsb(const Board& board, const std::string& port,

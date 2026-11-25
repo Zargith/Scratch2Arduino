@@ -485,6 +485,9 @@ son nom et propose des bibliothèques qui pourraient la contenir.
 - **Projets récents** (l'horloge) rouvre les derniers projets, chacun avec une image de ses blocs ou de son code.
 - **Sauvegarde automatique** : toutes les 15 secondes, une copie de secours est gardée. Si le logiciel
   ou l'ordinateur s'arrête, Scratch2Arduino propose au démarrage suivant de **récupérer** le projet.
+  Si la copie ne peut pas être écrite (disque plein par exemple), elle est retentée, et un message
+  te demande d'enregistrer ton projet après plusieurs échecs. Un projet ouvert en double-cliquant
+  sur son fichier remplace la copie de secours : elle n'est alors plus proposée.
 
 ## 13. Sans fil : Wi-Fi et Bluetooth (ESP32, ESP8266)
 

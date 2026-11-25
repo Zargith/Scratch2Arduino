@@ -102,6 +102,7 @@ import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
 import { codeThumbnail } from "@/thumbnail";
+import { AutosaveTracker } from "@/autosave";
 import {
 	isScript,
 	isStarterCode,
@@ -281,9 +282,9 @@ export function App() {
 	const lockedBlocks = useMemo(() => tourLocks.flat(), [tourLocks]);
 	/** Successful checks and uploads: a step of the tutorial waits for one. */
 	const [checks, setChecks] = useState(0);
-	/** Edits made so far, and how many the last autosave holds. */
+	/** Edits made so far, and which of them the host's autosaved copy holds. */
 	const edits = useRef(0);
-	const autosavedEdits = useRef(0);
+	const autosaved = useRef(new AutosaveTracker());
 	/** Autosave calls run one after the other (a save never races with an older autosave). */
 	const autosaving = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -294,7 +295,7 @@ export function App() {
 
 	/** The project on screen is saved or replaced: its autosaved copy is no longer needed. */
 	const forgetAutosave = useCallback(() => {
-		autosavedEdits.current = edits.current;
+		autosaved.current.forget(edits.current);
 		if (!hasHost()) return;
 		autosaving.current = autosaving.current.then(() => bridge.autosaveClear()).catch(() => undefined);
 	}, []);
@@ -590,15 +591,18 @@ export function App() {
 			.then(() => bridge.startupProject(language))
 			.then((opened) => {
 				if (opened) showOpenedRef.current(opened);
-				return Boolean(opened);
+				return opened ? "opened" : "none";
 			})
 			.catch((error: unknown) => {
 				fail(error);
-				return true;
+				return "failed";
 			})
-			.then(async (projectGiven) => {
+			.then(async (startup) => {
+				const projectGiven = startup !== "none";
 				const saved = await found;
-				if (saved) setRestore(saved);
+				// The project given at start-up replaced the autosave: offering the old copy over it
+				// would let a save destroy the project just opened (audit #170).
+				if (saved && startup !== "opened") setRestore(saved);
 				// First start (no project given, nothing to recover, no recent project): the tutorials.
 				else if (!projectGiven && (await bridge.recent().catch(() => null))?.length === 0) setTutorialPage(docsHome);
 			});
@@ -607,22 +611,27 @@ export function App() {
 	}, []);
 
 	const saveProject = async () => {
+		const savedEdits = edits.current;
+		// No autosave of these edits while the save (and its file dialog) runs: it could land
+		// after the host dropped the autosave, and be offered again at the next start.
+		autosaved.current.started(savedEdits);
 		try {
 			const project = currentProject();
-			const savedEdits = edits.current;
 			await autosaving.current; // an older autosave must not land after the save
 			const thumbnail =
 				program === "blocks" ? await editor.current?.thumbnail().catch(() => null) : codeThumbnail(project.code ?? "");
 			const saved = await bridge.save(project, path, language, thumbnail ?? null);
 			if (!saved) return false;
 			setPath(saved);
-			autosavedEdits.current = savedEdits; // the host dropped the autosave
+			autosaved.current.forget(savedEdits); // the host dropped the autosave
 			if (edits.current === savedEdits) setDirty(false);
 			setStatus({ kind: "success", message: t("status.saved", { path: saved }) });
 			return true;
 		} catch (error) {
 			fail(error);
 			return false;
+		} finally {
+			autosaved.current.released(savedEdits); // saved (forgotten above), cancelled or failed
 		}
 	};
 
@@ -680,18 +689,26 @@ export function App() {
 	}, []);
 
 	// Every few seconds, a modified project is copied aside by the host.
-	const autosaveState = useRef({ currentProject, path });
-	autosaveState.current = { currentProject, path };
+	const autosaveState = useRef({ currentProject, path, t });
+	autosaveState.current = { currentProject, path, t };
 	useEffect(() => {
 		if (!hasHost()) return;
 		const timer = setInterval(() => {
-			if (edits.current === autosavedEdits.current) return;
-			autosavedEdits.current = edits.current;
+			const count = edits.current;
+			const tracker = autosaved.current;
+			if (!tracker.needs(count)) return;
+			tracker.started(count);
 			const { currentProject: snapshot, path: savedPath } = autosaveState.current;
 			const project = snapshot();
+			// Counted as saved only once the host has it: a failed copy is tried again at the next tick.
 			autosaving.current = autosaving.current
 				.then(() => bridge.autosave(project, savedPath))
-				.catch(() => undefined); // best effort: the user's own save still works
+				.then(
+					() => tracker.succeeded(count),
+					() => {
+						if (tracker.failed(count)) setStatus({ kind: "info", message: autosaveState.current.t("status.autosave_failed") });
+					}
+				);
 		}, autosaveInterval);
 		return () => clearInterval(timer);
 	}, []);
