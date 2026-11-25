@@ -72,7 +72,7 @@ describe("library manager window", () => {
 		await act(async () =>
 			root.render(
 				<MantineProvider>
-					<ArduinoLibraries opened language="fr" t={t} libraries={[]} usesCpp onChange={onChange} onClose={() => undefined} />
+					<ArduinoLibraries opened language="fr" t={t} libraries={[]} usesCpp onChange={onChange} onClose={() => undefined} onError={() => undefined} />
 				</MantineProvider>
 			)
 		);

@@ -294,6 +294,8 @@ const fr = {
 	"restore.accept": "Récupérer",
 	"restore.discard": "Non merci",
 	"status.restored": "Projet \"{name}\" récupéré. Pense à l'enregistrer !",
+	"status.port_lost": "La carte branchée sur {port} n'est plus là : vérifie le câble ou choisis un autre port.",
+	"status.board_detected": "Carte {board} détectée : elle remplace {previous} (les broches proposées changent).",
 	"status.autosave_failed":
 		"La copie de secours automatique ne marche pas en ce moment (disque plein ?). Enregistre ton projet pour ne rien perdre.",
 	"library.title": "Mes blocs",
@@ -667,6 +669,8 @@ const en: Record<MessageKey, string> = {
 	"restore.accept": "Recover",
 	"restore.discard": "No thanks",
 	"status.restored": "Project \"{name}\" recovered. Remember to save it!",
+	"status.port_lost": "The board plugged into {port} is gone: check the cable or choose another port.",
+	"status.board_detected": "{board} detected: it replaces the {previous} (the pins offered change).",
 	"status.autosave_failed": "The automatic backup copy is not working right now (disk full?). Save your project so that nothing is lost.",
 	"library.title": "My blocks",
 	"library.save": "Save to My blocks",

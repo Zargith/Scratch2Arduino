@@ -13,6 +13,8 @@ vi.mock("@/updates", () => ({
 	platform: () => "windows",
 }));
 
+const onError = vi.fn();
+
 describe("settings window", () => {
 	it("changes the language and the update check at start-up", async () => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -55,6 +57,7 @@ describe("settings window", () => {
 						installError=""
 						onInstall={() => undefined}
 						onClose={() => undefined}
+						onError={onError}
 					/>
 				</MantineProvider>
 			)
@@ -75,6 +78,10 @@ describe("settings window", () => {
 		const url = new URL(openUrl.mock.calls[0]?.[0] ?? "");
 		expect(url.searchParams.get("body")).toContain("Scratch2Arduino version: 0.9.0");
 		expect(url.searchParams.get("body")).toContain("Board: Arduino Uno");
+		// Audit 2026-11-24 (#190): a link that does not open was silent (a button doing nothing).
+		openUrl.mockRejectedValueOnce("no browser");
+		await act(async () => report?.click());
+		expect(onError).toHaveBeenCalledWith("no browser");
 		openUrl.mockRestore();
 		await act(async () => root.unmount());
 	});
@@ -108,6 +115,7 @@ describe("settings window", () => {
 						installError=""
 						onInstall={onInstall}
 						onClose={() => undefined}
+						onError={onError}
 					/>
 				</MantineProvider>
 			)
@@ -148,6 +156,7 @@ describe("settings window", () => {
 						installError="Le téléchargement a échoué"
 						onInstall={() => undefined}
 						onClose={() => undefined}
+						onError={onError}
 					/>
 				</MantineProvider>
 			)
