@@ -176,15 +176,23 @@ TEST_P(Script, ChecksTheSyntaxWithoutRunning) {
 
 TEST_P(Script, StopsAnEndlessLoopWithoutDelay) {
     host.sleep = nullptr; // real time
-    std::thread stopper([this] {
-        std::this_thread::sleep_for(200ms);
+    // Stopped once the program has really started (it printed), not after a fixed delay (#202).
+    std::atomic<bool> looping{false};
+    host.print = [&looping](const std::string& /*line*/) { looping = true; };
+    std::thread stopper([this, &looping] {
+        const auto deadline = std::chrono::steady_clock::now() + 10s;
+        while (!looping && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(5ms);
+        }
         stop = true;
     });
     const auto started = std::chrono::steady_clock::now();
-    const auto error = run(python() ? "x = 0\nwhile True:\n    x = x + 1\n" : "let x = 0;\nwhile (true) { x++; }\n");
+    const auto error = run(python() ? "print('looping')\nx = 0\nwhile True:\n    x = x + 1\n"
+                                    : "print('looping');\nlet x = 0;\nwhile (true) { x++; }\n");
     stopper.join();
     EXPECT_FALSE(error) << error->message;
-    EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
+    EXPECT_TRUE(looping); // it ran, and was stopped inside the loop
+    EXPECT_LT(std::chrono::steady_clock::now() - started, 10s);
 }
 
 // Audit 2026-11-24 (#183): only delay() noticed a lost board, so a loop without delay spun
