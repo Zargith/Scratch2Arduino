@@ -133,7 +133,9 @@ public:
     explicit LiveLink(serial::LineTransport& transport) : transport_(transport) {}
 
     /// Waits until the firmware greets and answers (after the reset caused by opening the port).
-    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000));
+    /// `cancel`, when given: set by another thread to give up at once (Stop during the wait).
+    [[nodiscard]] Status handshake(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000),
+                                   const std::atomic<bool>* cancel = nullptr);
 
     void setMode(int pin, PinMode mode) override;
     void digitalWrite(int pin, bool high) override;
@@ -310,7 +312,9 @@ public:
     /// Uploads the Live firmware; empty when it cannot be done (Wi-Fi: it needs the USB cable).
     using Flasher = std::function<Status(std::string& details)>;
 
-    enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed };
+    /// NeedsFirmware: the board does not run the Live firmware and the user has not agreed yet to
+    /// replace its program with it (audit #181).
+    enum class State { Connecting, Flashing, Running, Finished, Stopped, Failed, NeedsFirmware };
 
     /// A line of the program's output: printed (standard output) or an error (error output).
     struct OutputLine {
@@ -335,8 +339,10 @@ public:
     };
     static constexpr std::size_t kOutputLines = 200;
 
+    /// `mayUploadFirmware`: the user agreed to replace the board's program with the Live firmware
+    /// when the board does not answer; otherwise the session ends in State::NeedsFirmware.
     Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
-            Flasher flasher);
+            Flasher flasher, bool mayUploadFirmware = false);
     Session(const Session&) = delete;
     Session& operator=(const Session&) = delete;
     Session(Session&&) = delete;
@@ -377,6 +383,7 @@ private:
     Language language_;
     Opener opener_;
     Flasher flasher_;
+    bool mayUploadFirmware_ = false;
     mutable std::mutex mutex_;
     Snapshot snapshot_;
     std::optional<project::Project> pending_;

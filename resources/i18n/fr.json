@@ -198,6 +198,7 @@
     "wiring_dht": "Le capteur {model} de la broche {pin} ne répond pas. Vérifie son fil de données sur la broche {pin}, VCC et GND, et le modèle choisi dans le bloc (DHT11 ou DHT22).",
     "connecting": "Connexion à la carte ({port})...",
     "flashing": "Installation du programme Live sur la carte {board} (une seule fois, quelques secondes)...",
+    "needs_firmware": "La carte {board} ne fait pas encore tourner le programme du mode Live. Pour utiliser le mode Live, il faut l'envoyer sur la carte : le programme qui y est déjà sera remplacé (tu pourras le renvoyer avec Téléverser).",
     "running": "Mode Live : tes blocs s'exécutent sur la carte. Modifie-les, la carte suit !",
     "finished": "Tous les blocs ont été exécutés. Modifie-les pour relancer.",
     "stopped": "Mode Live arrêté.",

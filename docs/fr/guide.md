@@ -314,8 +314,9 @@ Les blocs *attendre* ne font plus attendre en pas à pas. Avec plusieurs scripts
 tour. **Reprendre** (F9) relance le programme à vitesse normale. Le pas à pas marche pour les blocs (même
 avec "Mon code"), pas pour un programme entier écrit en Python ou en JavaScript.
 
-La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
-ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les
+La première fois, Scratch2Arduino propose d'installer sur la carte un petit programme, *S2A live*, qui
+écoute les ordres de l'ordinateur (quelques secondes) : il demande d'abord ton accord, car le programme
+déjà téléversé sur la carte est remplacé (tu pourras le renvoyer avec **Téléverser**). Clique sur **Arrêter** pour quitter le mode Live : les
 sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
 **Téléverser**.
 

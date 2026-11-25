@@ -1111,7 +1111,11 @@ export function App() {
 		return () => clearInterval(timer);
 	}, [simulated]);
 
-	const toggleLive = async () => {
+	/** The board needs the Live firmware: the question asked before replacing its program (audit #181). */
+	const [firmwareAsk, setFirmwareAsk] = useState<string | null>(null);
+	// The agreement is for the board that was asked about: another port or board drops the question.
+	useEffect(() => setFirmwareAsk(null), [port, boardId]);
+	const toggleLive = async (mayUploadFirmware = false) => {
 		if (liveStarting) return;
 		if (live) {
 			cancelLiveUpdate(); // an update sent after Stop would reach no session
@@ -1129,11 +1133,11 @@ export function App() {
 			return;
 		}
 		// The virtual board needs no board tools.
-		if (!isSimPort(port) && packageMissing(() => void toggleLive())) return;
+		if (!isSimPort(port) && packageMissing(() => void toggleLive(mayUploadFirmware))) return;
 		showProblems([]);
 		setLiveStarting(true);
 		try {
-			const started = await bridge.liveStart(currentProject(), port, language);
+			const started = await bridge.liveStart(currentProject(), port, language, mayUploadFirmware);
 			if (!started.ok) {
 				setStatus({ kind: "error", message: started.message ?? "" });
 				return;
@@ -1190,6 +1194,9 @@ export function App() {
 						checkRosetta();
 						if (snapshot.line) showProblems([{ line: snapshot.line, message: snapshot.message ?? "", file: snapshot.file }]);
 						setLive(false);
+					} else if (snapshot.state === "needs_firmware") {
+						setLive(false);
+						setFirmwareAsk(snapshot.message ?? "");
 					} else if (snapshot.state === "stopped") {
 						setLive(false);
 					} else {
@@ -1857,6 +1864,24 @@ export function App() {
 				}}
 			/>
 			<UnsavedChanges opened={unsavedAsked} t={t} onChoice={answerUnsaved} />
+			<Modal opened={firmwareAsk !== null} onClose={() => setFirmwareAsk(null)} title={t("live.firmware_title")} centered>
+				<Text size="sm" mb="md">
+					{firmwareAsk}
+				</Text>
+				<Group justify="flex-end" gap="xs">
+					<Button variant="default" onClick={() => setFirmwareAsk(null)}>
+						{t("dialog.cancel")}
+					</Button>
+					<Button
+						onClick={() => {
+							setFirmwareAsk(null);
+							void toggleLive(true);
+						}}
+					>
+						{t("live.firmware_send")}
+					</Button>
+				</Group>
+			</Modal>
 			{rosetta && (
 				<Card
 					withBorder
