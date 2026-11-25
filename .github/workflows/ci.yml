@@ -465,6 +465,21 @@ jobs:
           }
           if (-not (Test-Path (Join-Path $app 'bin\scratch2arduino.exe'))) { throw 'scratch2arduino.exe is missing' }
 
+      - name: Uninstalling keeps the other files of the folder
+        run: |
+          # Audit #171: the uninstaller removed the whole folder, other programs' files included.
+          $app = Join-Path $env:ProgramFiles 'Scratch2Arduino'
+          $other = Join-Path $app 'not-ours.txt'
+          Set-Content -Path $other -Value 'a file of another program'
+          $uninstaller = Get-ChildItem -Path $app -Filter 'unins*.exe' | Select-Object -First 1
+          if (-not $uninstaller) { throw 'no uninstaller' }
+          $process = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "the uninstaller exited with $($process.ExitCode)" }
+          # The uninstaller copies itself to a temporary folder and finishes from there.
+          for ($i = 0; $i -lt 60 -and (Test-Path (Join-Path $app 'bin')); $i++) { Start-Sleep -Seconds 1 }
+          if (Test-Path (Join-Path $app 'bin')) { throw 'bin was not removed' }
+          if (-not (Test-Path $other)) { throw 'the uninstaller deleted a file that is not ours' }
+
       - name: Upload Scratch2Arduino_installer.exe
         uses: actions/upload-artifact@v7
         with:

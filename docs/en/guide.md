@@ -68,7 +68,8 @@ page, in the *Assets* part of the latest version.
 
 6. The last page has a ticked **Launch Scratch2Arduino** box: click *Finish* and Scratch2Arduino opens.
 
-To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*.
+To uninstall: *Settings > Apps*, Scratch2Arduino, *Uninstall*. Only the files of Scratch2Arduino are
+removed: if you installed it in a folder holding other files, they stay.
 
 ### macOS
 
