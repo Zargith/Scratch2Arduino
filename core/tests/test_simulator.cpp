@@ -105,8 +105,8 @@ TEST(Simulator, AShortToneEndsByItself) {
     VirtualBoard board(uno());
     EXPECT_EQ(board.answer("T 8 880 30"), "ok");
     EXPECT_EQ(board.state().tones.at("8"), 880);
-    std::this_thread::sleep_for(milliseconds(60));
-    EXPECT_TRUE(board.state().tones.empty());
+    // Waits for the end of the tone (30 ms) with a deadline, not a fixed delay (#202).
+    EXPECT_TRUE(waitFor([&board] { return board.state().tones.empty(); }));
 }
 
 TEST(Simulator, ReadsTheInputsTheEditorSets) {
