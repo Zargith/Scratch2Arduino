@@ -71,7 +71,9 @@ dans la partie *Assets* de la dernière version.
 
 6. La dernière page a une case **Lancer Scratch2Arduino** cochée : clique sur *Terminer* et Scratch2Arduino s'ouvre.
 
-Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*.
+Pour désinstaller : *Paramètres > Applications*, Scratch2Arduino, *Désinstaller*. Seuls les fichiers
+de Scratch2Arduino sont supprimés : si tu l'as installé dans un dossier qui contenait d'autres fichiers,
+ils restent.
 
 ### macOS
 

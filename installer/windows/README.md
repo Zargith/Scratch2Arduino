@@ -58,7 +58,9 @@ Without `/DPrebuiltDir`, the installer can only build from the sources (below).
    and the greyed packages are set again in `CurPageChanged`. Unticking a package does not remove it: that is done in the Settings of
    Scratch2Arduino or with `s2a-cli board remove`;
 6. creates the Start-menu (and optional desktop) shortcuts, opens `.s2a` projects with Scratch2Arduino
-   (double-click, or a file dropped on the icon), and an uninstaller.
+   (double-click, or a file dropped on the icon), and an uninstaller. The uninstaller removes only what
+   Scratch2Arduino creates (`bin`, `src`, `build`, `tools`, logs...) and the folder itself when it is then
+   empty: other files of a folder chosen in the advanced mode stay (`[UninstallDelete]`).
 
 Silent installation (a classroom deployment, for example): `Scratch2Arduino_installer.exe /VERYSILENT /SUPPRESSMSGBOXES`;
 add `/MERGETASKS=buildfromsource` to build from the sources, `/MERGETASKS=board_esp32,board_esp8266` to

@@ -203,8 +203,22 @@ Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project\DefaultIcon"; Value
 Root: HKA; Subkey: "Software\Classes\Scratch2Arduino.Project\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\scratch2arduino.exe"" ""%1"""
 
 [UninstallDelete]
-; Files produced by the CMake build are not tracked by Inno Setup.
-Type: filesandordirs; Name: "{app}"
+; Files produced by the CMake build are not tracked by Inno Setup: only the folders and files
+; Scratch2Arduino creates are removed, never the whole folder (the advanced mode lets the user
+; pick an existing folder such as D:\Tools, whose other files must stay, audit #171).
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\share"
+Type: filesandordirs; Name: "{app}\lib"
+Type: filesandordirs; Name: "{app}\libexec"
+Type: filesandordirs; Name: "{app}\src"
+Type: filesandordirs; Name: "{app}\build"
+Type: filesandordirs; Name: "{app}\tools"
+Type: filesandordirs; Name: "{app}\staging"
+Type: files; Name: "{app}\install-log.txt"
+Type: files; Name: "{app}\build-output.txt"
+Type: files; Name: "{app}\build.exit"
+Type: files; Name: "{app}\build.pid"
+Type: dirifempty; Name: "{app}"
 
 [Code]
 const
