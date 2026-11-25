@@ -64,7 +64,7 @@ std::string Api::label(int pin) const {
 }
 
 bool Api::stopRequested() const {
-    return host_.stop != nullptr && host_.stop->load();
+    return (host_.stop != nullptr && host_.stop->load()) || (host_.lost && host_.lost());
 }
 
 void Api::checkStop() const {

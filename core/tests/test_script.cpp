@@ -187,6 +187,34 @@ TEST_P(Script, StopsAnEndlessLoopWithoutDelay) {
     EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
 }
 
+// Audit 2026-11-24 (#183): only delay() noticed a lost board, so a loop without delay spun
+// a CPU core at 100% with the board unplugged, and the panel kept saying "Running".
+TEST_P(Script, StopsALoopWithoutDelayWhenTheBoardIsLost) {
+    host.sleep = nullptr;
+    int calls = 0;
+    host.lost = [&calls] { return ++calls > 5; };
+    const auto started = std::chrono::steady_clock::now();
+    EXPECT_FALSE(run(python() ? "while True:\n    digitalWrite(13, 1)\n" : "while (true) { digitalWrite(13, 1); }\n"));
+    EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
+    EXPECT_LE(pins.log.size(), 10U);
+}
+
+// Audit 2026-11-24 (#182): Check waited on the Python interpreter for as long as a Python
+// program ran in Live mode (hours). It now answers within a few seconds.
+TEST_P(Script, ChecksWhileAProgramRuns) {
+    host.sleep = nullptr;
+    std::thread program([this] { (void)run(python() ? "while True:\n    delay(10)\n" : "while (true) { delay(10); }\n"); });
+    std::this_thread::sleep_for(300ms); // the program holds its interpreter
+    const auto started = std::chrono::steady_clock::now();
+    const auto checked = s2a::script::check(GetParam(), python() ? "x = (\n" : "let x = (;\n", Language::English);
+    const auto waited = std::chrono::steady_clock::now() - started;
+    stop = true;
+    program.join();
+    ASSERT_TRUE(checked.has_value());
+    EXPECT_FALSE(checked->message.empty());
+    EXPECT_LT(waited, 5s);
+}
+
 TEST_P(Script, StopsALongDelay) {
     host.sleep = nullptr;
     std::thread stopper([this] {

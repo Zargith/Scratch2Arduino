@@ -323,7 +323,8 @@ program: to **Upload**, plug in a real board and choose its port.
 ## 8. Serial monitor
 
 The **Serial monitor** button opens a panel showing what the board writes with the block
-*write ... to the serial monitor*. Upload your program, then click **Connect** (speed 9600). A line typed at
+*write ... to the serial monitor*. Upload your program, then click **Connect** (speed 9600; for a program written in C++, choose the speed of its
+`Serial.begin`: 9600, 19200, 57600 or 115200). A line typed at
 the bottom is sent to the board. During an upload the monitor pauses, then reconnects. In Live mode the
 panel shows what the blocks write.
 
@@ -520,6 +521,7 @@ While typing in a slot (a number, a text, the project name), these keys act on t
 | "This board's tools need Rosetta" (Mac with an Apple chip) | Click *Install Rosetta* in the notice (or type `softwareupdate --install-rosetta --agree-to-license` in the Terminal), then try again. |
 | macOS: the port list shows `/dev/cu.debug-console` or `Bluetooth-Incoming-Port` | These ports belong to macOS, not to a board: update to 1.3.2 or newer, which hides them. With no board plugged in, choose *Virtual board*. |
 | "The board's port cannot be used" | Another program uses the board: close the Arduino IDE or another serial monitor, then try again. |
+| "A Python program is already running in Live mode" (Check) | Stop the Live mode (Stop button), then check again. |
 | "The board does not answer" | Unplug the board, plug it back in, choose its port again, then try again. Check that the right board is chosen (Uno, Nano...). |
 | The first upload is slow | Normal: the board's tools are downloaded once (Internet needed). |
 | The program is sent but nothing happens | Open the *Wiring diagram* and compare it with your circuit: an LED the wrong way round (long leg = +), a wire in the wrong breadboard column, a missing GND... |

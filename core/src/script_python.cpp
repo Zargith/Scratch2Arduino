@@ -6,6 +6,7 @@
 #include <cmath>
 #include <ctime>
 #include <limits>
+#include <chrono>
 #include <mutex>
 #include <regex>
 
@@ -36,10 +37,13 @@ constexpr const char* kFileName = "main.py";
 constexpr py_i64 kWatchdogMs = 3600 * 1000;
 
 /// pocketpy has one interpreter per process: one Python program at a time.
-std::mutex& pythonMutex() {
-    static std::mutex mutex;
+std::timed_mutex& pythonMutex() {
+    static std::timed_mutex mutex;
     return mutex;
 }
+
+/// How long Check waits for a Python program to free the interpreter (it may run for hours).
+constexpr std::chrono::seconds kCheckWait{2};
 
 /// The running program's API and output (valid while pythonMutex() is held by run).
 struct Running {
@@ -292,7 +296,10 @@ ScriptError takeError(Language language) {
 } // namespace
 
 std::optional<ScriptError> checkPython(const std::string& code, Language language) {
-    const std::lock_guard<std::mutex> lock(pythonMutex());
+    std::unique_lock<std::timed_mutex> lock(pythonMutex(), std::defer_lock);
+    if (!lock.try_lock_for(kCheckWait)) { // audit #182: Check used to wait until Live was stopped
+        return ScriptError{0, tr("text.python_busy", language), "the Python interpreter is used by a running program"};
+    }
     initialize();
     py_resetvm();
     if (!py_compile(code.c_str(), kFileName, EXEC_MODE, false)) {
@@ -441,7 +448,7 @@ private:
         fail(detail::takeError(language_));
     }
 
-    std::unique_lock<std::mutex> lock_;
+    std::unique_lock<std::timed_mutex> lock_;
     Language language_;
     Running state_;
     py_GlobalRef main_ = nullptr;
@@ -459,7 +466,7 @@ std::unique_ptr<Module> loadPython(const std::string& code, std::unique_ptr<Api>
 }
 
 std::optional<ScriptError> runPython(const std::string& code, Api& api, Language language) {
-    const std::lock_guard<std::mutex> lock(pythonMutex());
+    const std::lock_guard<std::timed_mutex> lock(pythonMutex());
     Running state;
     state.api = &api;
     state.language = language;

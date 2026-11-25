@@ -57,6 +57,9 @@ struct Host {
     std::function<std::chrono::milliseconds()> now;
     /// Set by another thread to stop the program, even in an endless loop.
     const std::atomic<bool>* stop = nullptr;
+    /// True once the board is lost (unplugged): checked before each call to the board, so a loop
+    /// without delay stops too. Not set: never lost.
+    std::function<bool()> lost;
 };
 
 /// True for the languages run by this module (Python and JavaScript).

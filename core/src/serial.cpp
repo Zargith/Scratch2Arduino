@@ -30,21 +30,57 @@ Error portError(const std::string& port, const std::string& detail) {
     return Error{ErrorCode::PortFailed, port + ": " + detail};
 }
 
-/// Takes the first complete line out of `buffer`.
-std::optional<std::string> takeLine(std::string& buffer) {
-    const auto end = buffer.find('\n');
-    if (end == std::string::npos) {
-        return std::nullopt;
+} // namespace
+
+void LineBuffer::append(std::string_view bytes) {
+    if (start_ > 0 && start_ >= data_.size() / 2) {
+        data_.erase(0, start_); // taken lines are dropped in one go, not one by one
+        start_ = 0;
     }
-    std::string line = buffer.substr(0, end);
-    buffer.erase(0, end + 1);
+    data_.append(bytes);
+}
+
+std::optional<std::string> LineBuffer::take() {
+    const auto end = data_.find('\n', start_);
+    if (end == std::string::npos) {
+        if (data_.size() - start_ < kMaxLine) {
+            return std::nullopt;
+        }
+        // A "\r" at the cut stays for the next piece: "\r\n" split here gives no extra empty line.
+        const std::size_t size = data_[start_ + kMaxLine - 1] == '\r' ? kMaxLine - 1 : kMaxLine;
+        std::string piece = data_.substr(start_, size);
+        start_ += size;
+        return piece;
+    }
+    std::string line = data_.substr(start_, end - start_);
+    start_ = end + 1;
+    if (start_ == data_.size()) {
+        data_.clear();
+        start_ = 0;
+    }
     if (!line.empty() && line.back() == '\r') {
         line.pop_back();
     }
     return line;
 }
 
-} // namespace
+bool isSupportedBaud(int baud) noexcept {
+    switch (baud) {
+    case 300:
+    case 1200:
+    case 2400:
+    case 4800:
+    case 9600:
+    case 19200:
+    case 38400:
+    case 57600:
+    case 115200:
+    case 230400:
+        return true;
+    default:
+        return false;
+    }
+}
 
 #ifdef _WIN32
 
@@ -54,6 +90,9 @@ struct SerialPort::Handle {
 };
 
 Result<std::unique_ptr<SerialPort>> SerialPort::open(const std::string& port, int baud) {
+    if (!isSupportedBaud(baud)) {
+        return portError(port, std::to_string(baud) + " bauds is not a standard speed");
+    }
     // "\\.\COM10": COM ports above 9 need the device namespace.
     const std::wstring path = L"\\\\.\\" + std::filesystem::u8path(port).wstring();
     HANDLE handle = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
@@ -111,7 +150,7 @@ Status SerialPort::writeLine(std::string_view line) {
 Result<std::optional<std::string>> SerialPort::readLine(std::chrono::milliseconds timeout) {
     const auto deadline = Clock::now() + timeout;
     for (;;) {
-        if (auto line = takeLine(buffer_)) {
+        if (auto line = buffer_.take()) {
             return line;
         }
         std::array<char, 256> chunk{};
@@ -120,7 +159,7 @@ Result<std::optional<std::string>> SerialPort::readLine(std::chrono::millisecond
             return portError(handle_->name, "read failed, error " + std::to_string(GetLastError()));
         }
         if (received > 0) {
-            buffer_.append(chunk.data(), received);
+            buffer_.append(std::string_view(chunk.data(), received));
             continue;
         }
         if (Clock::now() >= deadline) {
@@ -139,12 +178,27 @@ struct SerialPort::Handle {
 
 namespace {
 
+/// Only called with a speed accepted by isSupportedBaud().
 speed_t speedOf(int baud) {
     switch (baud) {
+    case 300:
+        return B300;
+    case 1200:
+        return B1200;
+    case 2400:
+        return B2400;
+    case 4800:
+        return B4800;
     case 9600:
         return B9600;
+    case 19200:
+        return B19200;
+    case 38400:
+        return B38400;
     case 57600:
         return B57600;
+    case 230400:
+        return B230400;
     default:
         return B115200;
     }
@@ -153,6 +207,9 @@ speed_t speedOf(int baud) {
 } // namespace
 
 Result<std::unique_ptr<SerialPort>> SerialPort::open(const std::string& port, int baud) {
+    if (!isSupportedBaud(baud)) {
+        return portError(port, std::to_string(baud) + " bauds is not a standard speed");
+    }
     const int fd = ::open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0) {
         return portError(port, std::strerror(errno)); // NOLINT(concurrency-mt-unsafe)
@@ -207,7 +264,7 @@ Status SerialPort::writeLine(std::string_view line) {
 Result<std::optional<std::string>> SerialPort::readLine(std::chrono::milliseconds timeout) {
     const auto deadline = Clock::now() + timeout;
     for (;;) {
-        if (auto line = takeLine(buffer_)) {
+        if (auto line = buffer_.take()) {
             return line;
         }
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
@@ -228,7 +285,7 @@ Result<std::optional<std::string>> SerialPort::readLine(std::chrono::millisecond
         std::array<char, 256> chunk{};
         const ssize_t received = ::read(handle_->fd, chunk.data(), chunk.size());
         if (received > 0) {
-            buffer_.append(chunk.data(), static_cast<std::size_t>(received));
+            buffer_.append(std::string_view(chunk.data(), static_cast<std::size_t>(received)));
         } else if (received < 0 && errno != EAGAIN && errno != EINTR) {
             return portError(handle_->name, std::strerror(errno)); // NOLINT(concurrency-mt-unsafe)
         }

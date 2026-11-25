@@ -56,6 +56,66 @@ template <typename Predicate> bool waitFor(Predicate predicate) {
     return false;
 }
 
+// Audit 2026-11-24 (#185): buffers grew until a newline arrived, and erasing from the front
+// of a long buffer made each line cost O(n).
+TEST(LineBuffer, SplitsLinesAndDropsCarriageReturns) {
+    s2a::serial::LineBuffer buffer;
+    buffer.append("hello\r\nwor");
+    EXPECT_EQ(buffer.take(), "hello");
+    EXPECT_FALSE(buffer.take().has_value());
+    buffer.append("ld\n\n");
+    EXPECT_EQ(buffer.take(), "world");
+    EXPECT_EQ(buffer.take(), "");
+    EXPECT_FALSE(buffer.take().has_value());
+}
+
+TEST(LineBuffer, CutsLinesThatNeverEnd) {
+    s2a::serial::LineBuffer buffer;
+    buffer.append(std::string(s2a::serial::LineBuffer::kMaxLine + 10, 'x'));
+    const auto first = buffer.take();
+    ASSERT_TRUE(first.has_value());
+    EXPECT_EQ(first->size(), s2a::serial::LineBuffer::kMaxLine);
+    EXPECT_FALSE(buffer.take().has_value()); // the 10 others wait for more
+    buffer.append("\n");
+    EXPECT_EQ(buffer.take(), std::string(10, 'x'));
+}
+
+TEST(LineBuffer, KeepsACarriageReturnAtTheCutForTheNextPiece) {
+    s2a::serial::LineBuffer buffer;
+    buffer.append(std::string(s2a::serial::LineBuffer::kMaxLine - 1, 'x') + "\r");
+    EXPECT_EQ(buffer.take(), std::string(s2a::serial::LineBuffer::kMaxLine - 1, 'x'));
+    EXPECT_FALSE(buffer.take().has_value());
+    buffer.append("\nnext\n");
+    EXPECT_EQ(buffer.take(), ""); // the end of the long line
+    EXPECT_EQ(buffer.take(), "next");
+}
+
+TEST(LineBuffer, ReadsManyLinesQuickly) {
+    s2a::serial::LineBuffer buffer;
+    std::string many;
+    for (int i = 0; i < 20000; ++i) {
+        many += "line " + std::to_string(i) + "\n";
+    }
+    buffer.append(many);
+    int count = 0;
+    while (buffer.take()) {
+        ++count;
+    }
+    EXPECT_EQ(count, 20000);
+}
+
+TEST(SerialPort, KnowsTheStandardSpeeds) {
+    for (const int baud : {300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400}) {
+        EXPECT_TRUE(s2a::serial::isSupportedBaud(baud)) << baud;
+    }
+    for (const int baud : {0, -9600, 12345, 250000}) {
+        EXPECT_FALSE(s2a::serial::isSupportedBaud(baud)) << baud;
+    }
+    const auto opened = s2a::serial::SerialPort::open("/dev/null-s2a-test", 12345);
+    ASSERT_FALSE(opened.ok());
+    EXPECT_EQ(opened.error().code, s2a::ErrorCode::PortFailed);
+}
+
 TEST(Monitor, ReceivesAndSendsLines) {
     auto board = std::make_shared<FakeBoard>();
     board->toSend = {"bonjour", "512"};

@@ -105,19 +105,6 @@ bool wait(Native socket, bool forWriting, std::chrono::milliseconds timeout) {
     return status > 0;
 }
 
-/// Takes the first complete line out of `buffer`.
-std::optional<std::string> takeLine(std::string& buffer) {
-    const auto end = buffer.find('\n');
-    if (end == std::string::npos) {
-        return std::nullopt;
-    }
-    std::string line = buffer.substr(0, end);
-    buffer.erase(0, end + 1);
-    if (!line.empty() && line.back() == '\r') {
-        line.pop_back();
-    }
-    return line;
-}
 
 /// Connects `native` to `address` before `deadline`; on failure, closes it and explains why.
 bool connectBefore(Native native, const sockaddr* address, int size, Clock::time_point deadline, std::string& failure) {
@@ -480,7 +467,7 @@ Status SocketConnection::writeLine(std::string_view line) {
 Result<std::optional<std::string>> SocketConnection::readLine(std::chrono::milliseconds timeout) {
     const auto deadline = Clock::now() + timeout;
     for (;;) {
-        if (auto line = takeLine(buffer_)) {
+        if (auto line = buffer_.take()) {
             return line;
         }
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now());
@@ -490,7 +477,7 @@ Result<std::optional<std::string>> SocketConnection::readLine(std::chrono::milli
         std::array<char, 256> chunk{};
         const auto received = ::recv(socket_->native, chunk.data(), static_cast<int>(chunk.size()), 0);
         if (received > 0) {
-            buffer_.append(chunk.data(), static_cast<std::size_t>(received));
+            buffer_.append(std::string_view(chunk.data(), static_cast<std::size_t>(received)));
         } else if (received == 0) {
             return networkError(socket_->host, "the board closed the connection");
         } else if (!inProgress(lastError())) {
