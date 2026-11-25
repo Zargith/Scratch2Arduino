@@ -381,6 +381,30 @@ TEST(Archive, ReportsAMissingCodeFile) {
     EXPECT_EQ(fromJson(json).error().code, ErrorCode::InvalidFormat) << "a bare project.json has no files";
 }
 
+// Audit 2026-11-24 (#189): a thumbnail too large made Save (and autosave) fail, although
+// loading ignores it. It is left out instead: the project is what matters.
+TEST(Archive, LeavesOutAThumbnailTooLarge) {
+    Project project = blink();
+    project.thumbnail = std::string(s2a::project::kMaxThumbnailSize + 1, 'x');
+    const auto bytes = toArchive(project);
+    ASSERT_TRUE(bytes.ok()) << bytes.error().detail;
+    EXPECT_FALSE(entryOf(bytes.value(), "thumbnail.png"));
+}
+
+// Audit 2026-11-24 (#189): two variables with the same id became two declarations of the same
+// global, a raw compiler error. The first one is kept.
+TEST(ProjectJson, KeepsTheFirstOfTwoVariablesOrFunctionsWithTheSameId) {
+    const auto parsed = fromJson(R"({"format": "scratch2arduino-project", "formatVersion": 1, "name": "x", "board": "uno",
+        "variables": [{"id": "v", "name": "score", "initialValue": 1}, {"id": "v", "name": "other", "initialValue": 2}],
+        "functions": [{"id": "f", "name": "blink"}, {"id": "f", "name": "again"}],
+        "scripts": []})");
+    ASSERT_TRUE(parsed.ok()) << parsed.error().detail;
+    ASSERT_EQ(parsed.value().variables.size(), 1U);
+    EXPECT_EQ(parsed.value().variables[0].name, "score");
+    ASSERT_EQ(parsed.value().functions.size(), 1U);
+    EXPECT_EQ(parsed.value().functions[0].name, "blink");
+}
+
 TEST(Archive, KeepsTheThumbnail) {
     Project project = blink();
     project.thumbnail = std::string("\x89PNG\r\n\x1a\n\0data", 13);
@@ -394,7 +418,7 @@ TEST(Archive, KeepsTheThumbnail) {
     EXPECT_FALSE(entryOf(toArchive(blink()).value(), "thumbnail.png")) << "no thumbnail, no entry";
 
     project.thumbnail = std::string(kMaxThumbnailSize + 1, 'x');
-    EXPECT_EQ(toArchive(project).error().code, ErrorCode::WriteFailed);
+    EXPECT_FALSE(entryOf(toArchive(project).value(), "thumbnail.png")) << "too large: left out, the save works";
     const auto tooBig = fromArchive(zipOf({{"project.json", toJson(blink())}, {"thumbnail.png", project.thumbnail}}));
     ASSERT_TRUE(tooBig.ok()) << "only a picture: ignored";
     EXPECT_TRUE(tooBig.value().thumbnail.empty());

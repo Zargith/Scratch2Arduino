@@ -3,6 +3,7 @@
 #include "project_format.hpp"
 #include "s2a/version.hpp"
 
+#include <algorithm>
 #include <array>
 #include "json_input.hpp"
 
@@ -221,8 +222,13 @@ Project projectFromJson(Json json, const Files* files) {
         if (!node.is_object()) {
             throw FormatError(path, "a variable must be an object");
         }
-        project.variables.push_back(
-            {stringAt(node, "id", path), stringAt(node, "name", path), numberAt(node, "initialValue", path, 0)});
+        Variable variable{stringAt(node, "id", path), stringAt(node, "name", path), numberAt(node, "initialValue", path, 0)};
+        // A second variable with the same id (a hand-edited file) would become a second
+        // declaration of the same global: the first one is kept (audit #189).
+        if (std::none_of(project.variables.begin(), project.variables.end(),
+                         [&variable](const Variable& kept) { return kept.id == variable.id; })) {
+            project.variables.push_back(std::move(variable));
+        }
     }
 
     if (json.contains("functions")) { // optional: projects without functions do not have it
@@ -243,7 +249,10 @@ Project projectFromJson(Json json, const Files* files) {
                     function.parameters.push_back(parameters.at(i).get<std::string>());
                 }
             }
-            project.functions.push_back(std::move(function));
+            if (std::none_of(project.functions.begin(), project.functions.end(),
+                             [&function](const Function& kept) { return kept.id == function.id; })) {
+                project.functions.push_back(std::move(function));
+            }
         }
     }
 

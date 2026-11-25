@@ -130,6 +130,7 @@ private:
         }
         std::string key = component.kind;
         std::vector<std::pair<std::string, std::string>> signalLegs; ///< Board pin, leg of the component.
+        std::vector<std::string> busPins; ///< SDA and SCL pins it uses.
         for (const Json& connection : description.value("connections", Json::array())) {
             const std::string to = connection.value("to", std::string{});
             Connection wire{localized(connection, "pin", language_), target(to, block, definition),
@@ -141,13 +142,16 @@ private:
                 key += "|" + wire.boardPin;
                 signalLegs.emplace_back(wire.boardPin, wire.componentPin);
             } else if (to == "SDA" || to == "SCL") {
-                i2c_[wire.boardPin] = key;
+                busPins.push_back(wire.boardPin);
             }
             component.connections.push_back(std::move(wire));
         }
         // Recorded with the complete key (the same component used by several blocks is one user).
         for (const auto& [pin, leg] : signalLegs) {
             signals_[pin].insert({key, leg});
+        }
+        for (const std::string& pin : busPins) {
+            i2c_[pin] = key; // a key built halfway would not name any component (audit #189)
         }
         if (const auto found = index_.find(key); found != index_.end()) {
             plan_.components[found->second].blockIds.push_back(block.id);
