@@ -186,3 +186,7 @@ work". Update both languages in the same pull request.
   check, never `json::value()`, which throws when a field has another type.
 - **Every validator rule has a test**: rules loop up to `Rule::Count`, so a new rule without French and
   English messages fails `EveryRuleHasMessagesInBothLanguages`.
+- **No call from the editor may end the program**: a synchronous bind goes through `Bridge::bindSync`
+  (`apps/webview/src/bridge.cpp`), which turns any exception into a rejected promise with a friendly
+  message (details on stderr). A stopped Live session is torn down off the UI thread, and whatever
+  needs its port again (new Live session, upload, serial monitor) waits for that teardown.

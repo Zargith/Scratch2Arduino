@@ -456,7 +456,10 @@ libraries that may contain it.
   dropped on the Scratch2Arduino icon.
 - **Recent projects** (the clock) reopens the latest projects, each with a picture of its blocks or code.
 - **Autosave**: every 15 seconds a backup copy is kept. If the application or the computer stops,
-  Scratch2Arduino offers to **recover** the project at the next start.
+  Scratch2Arduino offers to **recover** the project at the next start. If the copy cannot be written
+  (a full disk, for instance), it is tried again, and after several failures a message asks you to
+  save your project. A project opened by double-clicking its file replaces the backup copy, which is
+  then no longer offered.
 
 ## 13. Wireless: Wi-Fi and Bluetooth (ESP32, ESP8266)
 

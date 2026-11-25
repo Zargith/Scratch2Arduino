@@ -27,6 +27,7 @@
 #include <iostream>
 #include <optional>
 #include <string_view>
+#include <system_error>
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
@@ -57,6 +58,13 @@ constexpr int kReject = 1;
 struct UserError {
     std::string message;
 };
+
+/// Rejection of a call that failed unexpectedly: a friendly message for the child, the
+/// technical details on stderr for whoever helps.
+std::string internalError(const std::exception& error, Language language) {
+    std::cerr << "Scratch2Arduino: unexpected error in a call from the editor: " << error.what() << '\n';
+    return Json(tr("error.unknown", language)).dump();
+}
 
 Language languageArg(const Json& args, std::size_t index, Language fallback) {
     return index < args.size() && args[index].is_string() ? languageFromLocale(args[index].get<std::string>())
@@ -389,12 +397,46 @@ void Bridge::closeMonitor() {
     monitor.reset(); // joins the reading thread (at most one read timeout)
 }
 
+void Bridge::retireLive() {
+    if (!live_) {
+        return;
+    }
+    live_->stop(); // the old blocks stop driving the board at once
+    std::unique_ptr<live::Session> old = std::move(live_);
+    try {
+        std::shared_future<void> previous = liveClosing_;
+        liveClosing_ = std::async(std::launch::async,
+                                  [session = std::move(old), previous]() mutable {
+                                      if (previous.valid()) {
+                                          previous.wait(); // one teardown at a time on the port
+                                          previous = {};   // the chain of stopped sessions is not kept
+                                      }
+                                      session.reset(); // switches the outputs off, closes the port
+                                  })
+                           .share();
+    } catch (const std::system_error&) {
+        old.reset(); // no thread left: stop it here
+    }
+}
+
+void Bridge::waitForLiveClosed() {
+    std::shared_future<void> closing;
+    {
+        const std::lock_guard<std::mutex> lock(liveMutex_);
+        closing = liveClosing_;
+    }
+    if (closing.valid()) {
+        closing.wait();
+    }
+}
+
 Bridge::~Bridge() {
     closeMonitor();
     {
         const std::lock_guard<std::mutex> lock(liveMutex_);
-        live_.reset(); // switches the outputs off
+        retireLive();
     }
+    waitForLiveClosed(); // the outputs are off before the program ends
     std::list<Worker> workers;
     {
         const std::lock_guard<std::mutex> lock(mutex_);
@@ -410,8 +452,9 @@ std::unique_ptr<serial::SerialPort> Bridge::openLiveOverUsb(const Board& board, 
     closeMonitor();
     {
         const std::lock_guard<std::mutex> lock(liveMutex_);
-        live_.reset(); // the port is needed
+        retireLive(); // the port is needed
     }
+    waitForLiveClosed();
     const auto failure = [&](const Error& error) { return UserError{tr(errorMessageKey(error.code), language)}; };
     auto opened = serial::SerialPort::open(port, live::kBaud);
     if (!opened.ok()) {
@@ -454,11 +497,28 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
         } catch (const UserError& error) {
             window_.resolve(id, kReject, Json(error.message).dump());
         } catch (const std::exception& error) {
-            window_.resolve(id, kReject, Json(std::string("internal error: ") + error.what()).dump());
+            window_.resolve(id, kReject, internalError(error, language_));
         }
         done->store(true);
     });
     workers_.push_back({std::move(thread), std::move(done)});
+}
+
+template <typename Handler> void Bridge::bindSync(const std::string& name, Handler handler) {
+    // webview's own synchronous bind lets exceptions escape through its C callback, which ends
+    // the program (std::terminate on GTK and Cocoa): unsaved blocks would be lost (audit #168).
+    window_.bind(
+        name,
+        [this, handler = std::move(handler)](const std::string& id, const std::string& request, void* /*arg*/) {
+            try {
+                window_.resolve(id, kResolve, handler(request));
+            } catch (const UserError& error) {
+                window_.resolve(id, kReject, Json(error.message).dump());
+            } catch (const std::exception& error) {
+                window_.resolve(id, kReject, internalError(error, language_));
+            }
+        },
+        nullptr);
 }
 
 std::string Bridge::openedJson(const fs::path& path, Language language) {
@@ -477,14 +537,14 @@ std::string Bridge::openedJson(const fs::path& path, Language language) {
 }
 
 void Bridge::bind() {
-    window_.bind("s2a_hello", [this](const std::string& /*request*/) {
+    bindSync("s2a_hello", [this](const std::string& /*request*/) {
         return Json{{"language", std::string(languageCode(language_))},
                     {"version", std::string(version::kString)},
                     {"system", std::string(hostSystemName())}}
             .dump();
     });
 
-    window_.bind("s2a_set_title", [this](const std::string& request) {
+    bindSync("s2a_set_title", [this](const std::string& request) {
         window_.set_title(stringArg(Json::parse(request), 0));
         return std::string{};
     });
@@ -516,7 +576,7 @@ void Bridge::bind() {
     // Quick and never failing: called each time the user goes back to the blocks.
     // Rewrites a program in another text language: (code, from, to) -> {code, toCheck: [lines]}.
     // Never fails: what it does not understand comes back as comments, their lines in toCheck.
-    window_.bind("s2a_convert", [](const std::string& request) {
+    bindSync("s2a_convert", [](const std::string& request) {
         const Json args = Json::parse(request);
         const auto from = project::programLanguageFromId(stringArg(args, 1));
         const auto to = project::programLanguageFromId(stringArg(args, 2));
@@ -528,7 +588,7 @@ void Bridge::bind() {
         return Json{{"code", converted.code}, {"toCheck", converted.toCheck}}.dump();
     });
 
-    window_.bind("s2a_code_declarations", [](const std::string& request) {
+    bindSync("s2a_code_declarations", [](const std::string& request) {
         const Json args = Json::parse(request);
         const auto language = project::programLanguageFromId(stringArg(args, 0));
         Json list = Json::array();
@@ -691,7 +751,7 @@ void Bridge::bind() {
         nullptr);
 
     // Settings of the editor: {language ("fr", "en" or "" for the system's), checkUpdates}.
-    window_.bind("s2a_settings", [this](const std::string& /*request*/) {
+    bindSync("s2a_settings", [this](const std::string& /*request*/) {
         userdata::Settings settings;
         {
             const std::lock_guard<std::mutex> lock(userMutex_);
@@ -700,7 +760,7 @@ void Bridge::bind() {
         return Json{{"language", settings.language}, {"checkUpdates", settings.checkUpdates}, {"theme", settings.theme}}
             .dump();
     });
-    window_.bind("s2a_save_settings", [this](const std::string& request) {
+    bindSync("s2a_save_settings", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const Json given = args.is_array() && !args.empty() && args[0].is_object() ? args[0] : Json::object();
         userdata::Settings settings;
@@ -1213,6 +1273,7 @@ void Bridge::bind() {
                     throw UserError{tr("live.sim_upload", language)};
                 }
                 closeMonitor(); // the editor opens it again after the upload
+                waitForLiveClosed(); // a Live session just stopped may still hold the port
             }
             const auto cli = arduinoCli(language);
             return outcomeJson(toolchain::buildProject(cli, project, language, options));
@@ -1220,7 +1281,7 @@ void Bridge::bind() {
     };
     // Live mode: start (async: the session object is created at once, connection runs on its
     // own thread), update the blocks, stop, and read the state (polled by the editor).
-    window_.bind("s2a_live_start", [this](const std::string& request) {
+    bindSync("s2a_live_start", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const Language language = languageArg(args, 2, language_);
         std::string message;
@@ -1233,10 +1294,17 @@ void Bridge::bind() {
             }
             closeMonitor(); // Live mode needs the port; its output is shown instead
             const std::lock_guard<std::mutex> lock(liveMutex_);
-            if (live_) {
-                // Stopping can take a moment (outputs switched off): not on the UI thread.
-                std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
-            }
+            retireLive(); // stopping takes a moment (outputs switched off): not on the UI thread
+            // The new session connects on its own thread: it waits there until the old one has
+            // released the port, so the old "switch everything off" cannot reach the new program.
+            const auto afterClosing = [closing = liveClosing_](live::Session::Opener open) -> live::Session::Opener {
+                return [closing, open = std::move(open)](const std::string& target) {
+                    if (closing.valid()) {
+                        closing.wait();
+                    }
+                    return open(target);
+                };
+            };
             if (sim::isSimulated(port)) {
                 // Simulation: a new virtual board, which the editor draws and whose inputs it changes.
                 simBoard_ = std::make_shared<sim::VirtualBoard>(*board);
@@ -1251,7 +1319,7 @@ void Bridge::bind() {
             }
             // Over Wi-Fi or Bluetooth the firmware cannot be uploaded: the board must already run it.
             live_ = std::make_unique<live::Session>(
-                std::move(project), *board, port, language, live::Session::opener(),
+                std::move(project), *board, port, language, afterClosing(live::Session::opener()),
                 network::isWireless(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port));
             return Json{{"ok", true}}.dump();
         } catch (const UserError& error) {
@@ -1259,7 +1327,7 @@ void Bridge::bind() {
         }
         return Json{{"ok", false}, {"message", message}}.dump();
     });
-    window_.bind("s2a_live_update", [this](const std::string& request) {
+    bindSync("s2a_live_update", [this](const std::string& request) {
         const Json args = Json::parse(request);
         try {
             project::Project project = projectArg(args, 0, language_);
@@ -1272,16 +1340,16 @@ void Bridge::bind() {
         }
         return std::string{};
     });
-    window_.bind("s2a_live_stop", [this](const std::string& /*request*/) {
+    bindSync("s2a_live_stop", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (live_) {
             live_->stop();
-            std::thread([old = std::move(live_)]() mutable { old.reset(); }).detach();
+            retireLive();
         }
         return std::string{};
     });
     // Step-by-step mode: pause (true) or run freely (false), and "Next block" while paused.
-    window_.bind("s2a_live_pause", [this](const std::string& request) {
+    bindSync("s2a_live_pause", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const bool paused = !args.empty() && args[0].is_boolean() && args[0].get<bool>();
         const std::lock_guard<std::mutex> lock(liveMutex_);
@@ -1290,14 +1358,14 @@ void Bridge::bind() {
         }
         return std::string{};
     });
-    window_.bind("s2a_live_step", [this](const std::string& /*request*/) {
+    bindSync("s2a_live_step", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (live_) {
             live_->stepOnce();
         }
         return std::string{};
     });
-    window_.bind("s2a_live_state", [this](const std::string& /*request*/) {
+    bindSync("s2a_live_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!live_) {
             return Json{{"state", "stopped"}}.dump();
@@ -1322,14 +1390,14 @@ void Bridge::bind() {
     // Simulation: what the virtual board shows (polled by the editor), and the inputs the user
     // changes on it: ["press", pin, true], ["analog", pin, 0-1023], ["distance", trig, cm],
     // ["climate", pin, celsius, percent], ["phone", text].
-    window_.bind("s2a_sim_state", [this](const std::string& /*request*/) {
+    bindSync("s2a_sim_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!simBoard_) {
             return Json(nullptr).dump();
         }
         return simulationJson(simBoard_->state());
     });
-    window_.bind("s2a_sim_input", [this](const std::string& request) {
+    bindSync("s2a_sim_input", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!simBoard_ || args.size() < 2 || !args[0].is_string() || !args[1].is_string()) {
@@ -1355,7 +1423,7 @@ void Bridge::bind() {
     });
 
     // Serial monitor (outside Live mode): open, send a line, close, and read (polled).
-    window_.bind("s2a_monitor_open", [this](const std::string& request) {
+    bindSync("s2a_monitor_open", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const Language language = languageArg(args, 2, language_);
         const std::string port = stringArg(args, 0);
@@ -1370,6 +1438,18 @@ void Bridge::bind() {
             return Json{{"ok", false}, {"message", tr("live.sim_monitor", language)}}.dump();
         }
         closeMonitor();
+        {
+            // A Live session just stopped may still hold the port. This runs on the UI thread:
+            // wait a little, never for a whole firmware upload.
+            std::shared_future<void> closing;
+            {
+                const std::lock_guard<std::mutex> lock(liveMutex_);
+                closing = liveClosing_;
+            }
+            if (closing.valid() && closing.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+                return Json{{"ok", false}, {"message", tr(errorMessageKey(ErrorCode::PortFailed), language)}}.dump();
+            }
+        }
         auto opened = serial::Monitor::open(port, baud);
         if (!opened.ok()) {
             return Json{{"ok", false},
@@ -1381,7 +1461,7 @@ void Bridge::bind() {
         monitor_ = std::move(opened).value();
         return Json{{"ok", true}}.dump();
     });
-    window_.bind("s2a_monitor_send", [this](const std::string& request) {
+    bindSync("s2a_monitor_send", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const std::lock_guard<std::mutex> lock(monitorMutex_);
         if (monitor_) {
@@ -1389,11 +1469,11 @@ void Bridge::bind() {
         }
         return std::string{};
     });
-    window_.bind("s2a_monitor_close", [this](const std::string& /*request*/) {
+    bindSync("s2a_monitor_close", [this](const std::string& /*request*/) {
         closeMonitor();
         return std::string{};
     });
-    window_.bind("s2a_monitor_state", [this](const std::string& /*request*/) {
+    bindSync("s2a_monitor_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(monitorMutex_);
         if (!monitor_) {
             return Json{{"open", false}}.dump();

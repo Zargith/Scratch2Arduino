@@ -291,6 +291,8 @@ const fr = {
 	"restore.accept": "Récupérer",
 	"restore.discard": "Non merci",
 	"status.restored": "Projet \"{name}\" récupéré. Pense à l'enregistrer !",
+	"status.autosave_failed":
+		"La copie de secours automatique ne marche pas en ce moment (disque plein ?). Enregistre ton projet pour ne rien perdre.",
 	"library.title": "Mes blocs",
 	"library.save": "Enregistrer dans Mes blocs",
 	"library.prompt": "Nom de ce groupe de blocs :",
@@ -659,6 +661,7 @@ const en: Record<MessageKey, string> = {
 	"restore.accept": "Recover",
 	"restore.discard": "No thanks",
 	"status.restored": "Project \"{name}\" recovered. Remember to save it!",
+	"status.autosave_failed": "The automatic backup copy is not working right now (disk full?). Save your project so that nothing is lost.",
 	"library.title": "My blocks",
 	"library.save": "Save to My blocks",
 	"library.prompt": "Name of this group of blocks:",
