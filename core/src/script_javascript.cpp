@@ -1,6 +1,7 @@
 // JavaScript mode: runs the program with QuickJS-ng (https://github.com/quickjs-ng/quickjs).
 #include "s2a/script.hpp"
 
+#include <charconv>
 #include <quickjs.h>
 
 #include <cmath>
@@ -182,7 +183,12 @@ int interrupt(JSRuntime* /*runtime*/, void* opaque) {
 int lineOf(const std::string& stack) {
     static const std::regex pattern(R"(main\.js:(\d+))");
     std::smatch match;
-    return std::regex_search(stack, match, pattern) ? std::stoi(match[1].str()) : 0;
+    int line = 0; // 0 when unknown, or a number too large for an int
+    if (std::regex_search(stack, match, pattern)) {
+        const std::string digits = match[1].str();
+        (void)std::from_chars(digits.data(), digits.data() + digits.size(), line);
+    }
+    return line;
 }
 
 /// The pending exception, explained.
@@ -238,6 +244,9 @@ struct Engine {
     Engine() {
         if (runtime != nullptr) {
             JS_SetMemoryLimit(runtime, 64U * 1024U * 1024U);
+            // Endless recursion stops with a RangeError well before the end of the thread's stack
+            // (1 MB on Windows), instead of crashing the application (audit #178).
+            JS_SetMaxStackSize(runtime, 256U * 1024U);
         }
     }
     Engine(const Engine&) = delete;

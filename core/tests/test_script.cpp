@@ -3,6 +3,10 @@
 #include <atomic>
 #include <chrono>
 #include <gtest/gtest.h>
+#if !defined(_WIN32)
+#include <pthread.h>
+#endif
+#include <functional>
 #include <map>
 #include <string>
 #include <thread>
@@ -221,6 +225,36 @@ TEST_P(Script, ChecksWhileAProgramRuns) {
     ASSERT_TRUE(checked.has_value());
     EXPECT_FALSE(checked->message.empty());
     EXPECT_LT(waited, 5s);
+}
+
+// Audit 2026-11-24 (#178): endless recursion must give a friendly error, not overflow the
+// stack of the program's thread and crash the application.
+TEST_P(Script, ReportsEndlessRecursion) {
+    std::optional<s2a::script::ScriptError> error;
+    const auto body = [this, &error] {
+        error = run(python() ? "def f(n):\n    return f(n + 1)\nf(0)\n" : "function f(n) { return f(n + 1); }\nf(0);\n");
+    };
+#if defined(_WIN32)
+    std::thread program(body); // 1 MB of stack, as the Live session thread
+    program.join();
+#else
+    // A thread with a small stack, as on Windows (1 MB) or smaller: the limit must hold there too.
+    struct Call {
+        std::function<void()> run;
+    } call{body};
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setstacksize(&attributes, 512 * 1024);
+    pthread_t thread{};
+    ASSERT_EQ(pthread_create(&thread, &attributes, [](void* data) -> void* {
+                  static_cast<Call*>(data)->run();
+                  return nullptr;
+              }, &call), 0);
+    pthread_attr_destroy(&attributes);
+    pthread_join(thread, nullptr);
+#endif
+    ASSERT_TRUE(error.has_value());
+    EXPECT_FALSE(error->message.empty());
 }
 
 TEST_P(Script, StopsALongDelay) {

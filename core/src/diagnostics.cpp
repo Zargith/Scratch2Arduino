@@ -1,5 +1,7 @@
 #include "s2a/diagnostics.hpp"
 
+#include <optional>
+#include <charconv>
 #include <algorithm>
 #include <cctype>
 #include <regex>
@@ -71,10 +73,55 @@ Diagnosis make(Problem problem, const CommandOutcome& outcome) {
 
 } // namespace
 
+namespace {
+
+/// "file:12:5: error: text" read by hand: std::regex recurses once per character in libstdc++
+/// and MSVC, and a long compiler line overflowed a small thread stack (audit #178).
+std::optional<CompilerMessage> parseCompilerLine(const std::string& line) {
+    // The first marker of the line: the text after it may contain another one.
+    static const char* const kKinds[] = {"fatal error", "error", "warning", "note"};
+    std::size_t at = std::string::npos;
+    std::string kind;
+    for (const char* candidate : kKinds) {
+        const std::size_t found = line.find(std::string(": ") + candidate + ": ");
+        if (found < at) {
+            at = found;
+            kind = candidate;
+        }
+    }
+    if (at != std::string::npos) {
+        const std::string marker = ": " + kind + ": ";
+        // Before the marker: "<file>:<line>:<column>".
+        const std::size_t columnStart = at == 0 ? std::string::npos : line.rfind(':', at - 1);
+        if (columnStart == std::string::npos || columnStart == 0) {
+            return std::nullopt;
+        }
+        const std::size_t lineStart = line.rfind(':', columnStart - 1);
+        if (lineStart == std::string::npos || lineStart == 0) {
+            return std::nullopt;
+        }
+        const auto number = [&line](std::size_t from, std::size_t to, int& value) {
+            if (from >= to) {
+                return false;
+            }
+            const auto [last, failure] = std::from_chars(line.data() + from, line.data() + to, value);
+            return failure == std::errc{} && last == line.data() + to;
+        };
+        int lineNumber = 0;
+        int column = 0;
+        if (!number(lineStart + 1, columnStart, lineNumber) || !number(columnStart + 1, at, column)) {
+            return std::nullopt;
+        }
+        return CompilerMessage{line.substr(0, lineStart), lineNumber, column, kind, line.substr(at + marker.size())};
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
 std::vector<CompilerMessage> parseCompilerMessages(std::string_view output) {
     // /path/sketch.ino:12:5: error: 'pinMod' was not declared in this scope
     // C:\path\sketch.ino:12:5: fatal error: Servo.h: No such file or directory
-    static const std::regex pattern(R"(^(.+?):(\d+):(\d+): (fatal error|error|warning|note): (.*)$)");
     std::vector<CompilerMessage> messages;
     std::size_t start = 0;
     while (start < output.size()) {
@@ -86,10 +133,8 @@ std::vector<CompilerMessage> parseCompilerMessages(std::string_view output) {
         if (!line.empty() && line.back() == '\r') {
             line.pop_back();
         }
-        std::smatch match;
-        if (std::regex_match(line, match, pattern)) {
-            messages.push_back({match[1].str(), std::stoi(match[2].str()), std::stoi(match[3].str()), match[4].str(),
-                                match[5].str()});
+        if (auto message = parseCompilerLine(line)) {
+            messages.push_back(std::move(*message));
         }
         start = end + 1;
     }

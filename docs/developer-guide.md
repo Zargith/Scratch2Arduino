@@ -184,6 +184,10 @@ work". Update both languages in the same pull request.
 - **Uninstall leaves nothing of ours**: `cmake/S2AUninstall.cmake.in` removes the installed files, then
   the folders below the prefix that name Scratch2Arduino once they are empty; shared folders (`bin`,
   `share/applications`) always stay. It still needs the build folder (`install_manifest.txt`).
+- **A program never crashes the application**: QuickJS has a memory limit and a stack limit (256 KB,
+  below the 1 MB of a Windows thread); a test runs endless recursion in Python and JavaScript on a 512 KB
+  thread. Text from the compiler is read by hand (no `std::regex`, which recurses once per character) and
+  numbers without `std::stoi` (it throws).
 - **Never replace a file without asking**: save dialogs go through `chooseSaveFile`
   (`apps/webview/src/bridge.cpp`), which asks again when it adds the extension to the typed name.
 - **Nothing downloaded runs unchecked**: each release publishes `SHA256SUMS.txt` (release job of

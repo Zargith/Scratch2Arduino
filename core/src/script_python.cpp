@@ -1,6 +1,7 @@
 // Python mode: runs the program with pocketpy (https://github.com/pocketpy/pocketpy).
 #include "s2a/script.hpp"
 
+#include <charconv>
 #include <pocketpy.h>
 
 #include <cmath>
@@ -246,7 +247,8 @@ int lineOf(const std::string& traceback) {
     int line = 0;
     for (auto it = std::sregex_iterator(traceback.begin(), traceback.end(), pattern); it != std::sregex_iterator();
          ++it) {
-        line = std::stoi((*it)[1].str());
+        const std::string digits = (*it)[1].str();
+        (void)std::from_chars(digits.data(), digits.data() + digits.size(), line); // not std::stoi: it throws
     }
     return line;
 }
