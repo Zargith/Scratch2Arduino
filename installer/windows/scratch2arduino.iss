@@ -823,7 +823,9 @@ begin
     // Stops the installation: Inno Setup rolls back what it installed.
     RaiseException(CustomMessage('BuildCancelled'));
   if not Succeeded then
-    SuppressibleMsgBox(FmtMessage(CustomMessage('BuildFailed'), [LogFile]), mbError, MB_OK, IDOK);
+    // Stops the installation like a cancel: a message box only let setup register a version that
+    // was never built, and silent installs exit with 0 (audit #205).
+    RaiseException(FmtMessage(CustomMessage('BuildFailed'), [LogFile]));
 end;
 
 // Same check as Test-WebView2 in build-and-install.ps1.

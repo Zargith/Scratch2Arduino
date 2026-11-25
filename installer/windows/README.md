@@ -42,7 +42,11 @@ Without `/DPrebuiltDir`, the installer can only build from the sources (below).
      compiler and Windows SDK, the WebView2 runtime) - those already present are kept;
    - copies into `<install dir>\src` only the source files whose content changed;
    - runs CMake configure, build and install, reusing the build tree kept in `<install dir>\build`, so an
-     update recompiles only what changed (if that tree cannot be reused, it rebuilds everything);
+     update recompiles only what changed (if that tree cannot be reused, it rebuilds everything); the
+     Arduino AVR core is bundled as in the prebuilt installation (`S2A_BUNDLE_ARDUINO_CORES=arduino:avr`)
+     and the previous `bin\arduino-seed` is replaced as a whole;
+   - a failed build stops the installation like a cancel (nothing is registered, a silent install exits
+     with an error code) instead of a message box after which setup carried on;
    - removes the files of the previous version that are no longer installed;
 5. **"More boards"** (tasks page, unchecked): one task per optional board package of
    [`resources/board-packages.json`](../../resources/board-packages.json) (Nano Every, Uno R4, Raspberry Pi Pico, ESP32, ESP8266), with its size to
