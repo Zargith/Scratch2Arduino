@@ -297,8 +297,9 @@ step-by-step mode. With several scripts, they take turns. **Resume** (F9) runs t
 again. Step by step works for blocks (also with "My code"), not for a whole program written in Python or
 JavaScript.
 
-The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
-computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
+The first time, Scratch2Arduino offers to install a small program on the board, *S2A live*, which listens
+to the computer's orders (a few seconds): it asks first, because the program already uploaded to the board
+is replaced (you can send it again with **Upload**). Click **Stop** to leave Live mode: the board's outputs are switched
 off. For the board to work on its own, without the computer, use **Upload**.
 
 **Without a board: the virtual board**. No board at hand? Choose the **Virtual board (no hardware)**

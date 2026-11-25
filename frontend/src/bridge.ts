@@ -122,7 +122,8 @@ export interface Outcome {
 	problems?: CodeProblem[];
 }
 
-export type LiveState = "connecting" | "flashing" | "running" | "finished" | "stopped" | "failed";
+/** needs_firmware: the board does not run the Live firmware and the user has not agreed yet to send it. */
+export type LiveState = "connecting" | "flashing" | "running" | "finished" | "stopped" | "failed" | "needs_firmware";
 
 export interface LiveSnapshot {
 	state: LiveState;
@@ -302,7 +303,12 @@ interface HostFunctions {
 	s2a_build(project: Project, language: Language): Promise<Outcome>;
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
-	s2a_live_start(project: Project, port: string, language: Language): Promise<{ ok: boolean; message?: string }>;
+	s2a_live_start(
+		project: Project,
+		port: string,
+		language: Language,
+		mayUploadFirmware: boolean
+	): Promise<{ ok: boolean; message?: string }>;
 	/** ok false: the blocks cannot run yet (half-built); the board keeps the previous ones. */
 	s2a_live_update(project: Project): Promise<{ ok: boolean; message?: string } | undefined>;
 	s2a_live_stop(): Promise<void>;
@@ -411,7 +417,9 @@ export const bridge = {
 	build: (project: Project, language: Language) => host("s2a_build")(project, language),
 	upload: (project: Project, port: string, language: Language) => host("s2a_upload")(project, port, language),
 	setTitle: (title: string) => host("s2a_set_title")(title),
-	liveStart: (project: Project, port: string, language: Language) => host("s2a_live_start")(project, port, language),
+	/** `mayUploadFirmware`: the user agreed to replace the board's program with the Live firmware. */
+	liveStart: (project: Project, port: string, language: Language, mayUploadFirmware = false) =>
+		host("s2a_live_start")(project, port, language, mayUploadFirmware),
 	liveUpdate: (project: Project) => host("s2a_live_update")(project),
 	liveStop: () => host("s2a_live_stop")(),
 	/** Step-by-step mode: pause the blocks (true) or let them run (false). */

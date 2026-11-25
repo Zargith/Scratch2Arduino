@@ -99,7 +99,7 @@ editor with the same look as the other tools.
 ```
 
 - **Upload mode**: blocks -> validated -> Arduino C++ -> compiled and uploaded with the bundled `arduino-cli`. The board runs on its own.
-- **Live mode**: a small *S2A live* firmware (Firmata-like) is flashed once; the computer then drives the pins in real time and streams sensor values back.
+- **Live mode**: a small *S2A live* firmware (Firmata-like) is flashed once, after the user agrees; the computer then drives the pins in real time and streams sensor values back.
 
 ## Repository layout
 
