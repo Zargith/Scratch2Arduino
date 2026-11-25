@@ -475,6 +475,15 @@ void Bridge::waitForLiveClosed() {
 }
 
 Bridge::~Bridge() {
+    // The port calls still queued run first, so that none opens a port after the cleanup below.
+    {
+        const std::lock_guard<std::mutex> lock(portMutex_);
+        portStopping_ = true;
+    }
+    portReady_.notify_one();
+    if (portThread_.joinable()) {
+        portThread_.join();
+    }
     closeMonitor();
     {
         const std::lock_guard<std::mutex> lock(liveMutex_);
@@ -546,6 +555,49 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
         done->store(true);
     });
     workers_.push_back({std::move(thread), std::move(done)});
+}
+
+template <typename Handler> void Bridge::bindPortCall(const std::string& name, Handler handler) {
+    // Opening a port (which resets an Uno) or starting a Live session can take seconds on a slow
+    // USB or Bluetooth port: not on the UI thread (audit #194). One thread, in call order, so that
+    // a close never overtakes the open before it and the monitor and Live never share the port.
+    window_.bind(
+        name,
+        [this, handler = std::move(handler)](const std::string& id, const std::string& request, void* /*arg*/) {
+            {
+                const std::lock_guard<std::mutex> lock(portMutex_);
+                portJobs_.push_back([this, handler, id, request]() {
+                    try {
+                        window_.resolve(id, kResolve, handler(request));
+                    } catch (const UserError& error) {
+                        window_.resolve(id, kReject, Json(error.message).dump());
+                    } catch (const std::exception& error) {
+                        window_.resolve(id, kReject, internalError(error, language_));
+                    }
+                });
+                if (!portThread_.joinable()) {
+                    portThread_ = std::thread([this] { runPortQueue(); });
+                }
+            }
+            portReady_.notify_one();
+        },
+        nullptr);
+}
+
+void Bridge::runPortQueue() {
+    for (;;) {
+        std::function<void()> job;
+        {
+            std::unique_lock<std::mutex> lock(portMutex_);
+            portReady_.wait(lock, [this] { return portStopping_ || !portJobs_.empty(); });
+            if (portJobs_.empty()) {
+                return; // stopping, and nothing left
+            }
+            job = std::move(portJobs_.front());
+            portJobs_.pop_front();
+        }
+        job();
+    }
 }
 
 template <typename Handler> void Bridge::bindSync(const std::string& name, Handler handler) {
@@ -1344,7 +1396,7 @@ void Bridge::bind() {
     };
     // Live mode: start (async: the session object is created at once, connection runs on its
     // own thread), update the blocks, stop, and read the state (polled by the editor).
-    bindSync("s2a_live_start", [this](const std::string& request) {
+    bindPortCall("s2a_live_start", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const Language language = languageArg(args, 2, language_);
         std::string message;
@@ -1405,7 +1457,7 @@ void Bridge::bind() {
         }
         return Json{{"ok", true}}.dump();
     });
-    bindSync("s2a_live_stop", [this](const std::string& /*request*/) {
+    bindPortCall("s2a_live_stop", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (live_) {
             live_->stop();
@@ -1488,7 +1540,7 @@ void Bridge::bind() {
     });
 
     // Serial monitor (outside Live mode): open, send a line, close, and read (polled).
-    bindSync("s2a_monitor_open", [this](const std::string& request) {
+    bindPortCall("s2a_monitor_open", [this](const std::string& request) {
         const Json args = Json::parse(request);
         const Language language = languageArg(args, 2, language_);
         const std::string port = stringArg(args, 0);
@@ -1502,19 +1554,15 @@ void Bridge::bind() {
         if (sim::isSimulated(port)) {
             return Json{{"ok", false}, {"message", tr("live.sim_monitor", language)}}.dump();
         }
-        closeMonitor();
         {
-            // A Live session just stopped may still hold the port. This runs on the UI thread:
-            // wait a little, never for a whole firmware upload.
-            std::shared_future<void> closing;
-            {
-                const std::lock_guard<std::mutex> lock(liveMutex_);
-                closing = liveClosing_;
-            }
-            if (closing.valid() && closing.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+            // A Live session (maybe still connecting) owns the port: its output is shown instead.
+            const std::lock_guard<std::mutex> lock(liveMutex_);
+            if (live_) {
                 return Json{{"ok", false}, {"message", tr(errorMessageKey(ErrorCode::PortFailed), language)}}.dump();
             }
         }
+        closeMonitor();
+        waitForLiveClosed(); // a Live session just stopped may still hold the port (on the port thread)
         auto opened = serial::Monitor::open(port, baud);
         if (!opened.ok()) {
             return Json{{"ok", false},
@@ -1534,7 +1582,7 @@ void Bridge::bind() {
         }
         return std::string{};
     });
-    bindSync("s2a_monitor_close", [this](const std::string& /*request*/) {
+    bindPortCall("s2a_monitor_close", [this](const std::string& /*request*/) {
         closeMonitor();
         return std::string{};
     });

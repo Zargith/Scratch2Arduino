@@ -206,5 +206,6 @@ work". Update both languages in the same pull request.
   English messages fails `EveryRuleHasMessagesInBothLanguages`.
 - **No call from the editor may end the program**: a synchronous bind goes through `Bridge::bindSync`
   (`apps/webview/src/bridge.cpp`), which turns any exception into a rejected promise with a friendly
-  message (details on stderr). A stopped Live session is torn down off the UI thread, and whatever
+  message (details on stderr); a call that can take a while (opening a port, starting or stopping Live)
+  goes through `Bridge::bindPortCall`: one thread runs these calls one after the other, in call order. A stopped Live session is torn down off the UI thread, and whatever
   needs its port again (new Live session, upload, serial monitor) waits for that teardown.

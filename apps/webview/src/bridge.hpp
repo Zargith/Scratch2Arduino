@@ -7,6 +7,9 @@
 #include "s2a/userdata.hpp"
 
 #include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <functional>
 #include <filesystem>
 #include <future>
 #include <list>
@@ -51,6 +54,16 @@ private:
     template <typename Work> void async(const std::string& id, Work work);
     /// Binds a call that answers at once; any exception rejects its promise instead of ending the program.
     template <typename Handler> void bindSync(const std::string& name, Handler handler);
+    /// Binds a call that uses the board's port (serial monitor, Live start and stop): it runs on
+    /// the port thread, one call after the other in the order they were made, off the UI thread.
+    template <typename Handler> void bindPortCall(const std::string& name, Handler handler);
+    /// Runs the queued port calls; ends once stopping and empty.
+    void runPortQueue();
+    std::mutex portMutex_;
+    std::condition_variable portReady_;
+    std::deque<std::function<void()>> portJobs_; ///< Guarded by portMutex_.
+    bool portStopping_ = false;                  ///< Guarded by portMutex_.
+    std::thread portThread_;
 
     ::webview::webview& window_;
     Language language_;
