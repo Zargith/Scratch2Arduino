@@ -178,6 +178,8 @@ work". Update both languages in the same pull request.
   format is refused with an "update" message rather than misread.
 - **Offline first**: the app runs without a network once the board tools are installed.
 - **French first, English second**, for every user-facing text.
+- **Never replace a file without asking**: save dialogs go through `chooseSaveFile`
+  (`apps/webview/src/bridge.cpp`), which asks again when it adds the extension to the typed name.
 - **Nothing downloaded runs unchecked**: each release publishes `SHA256SUMS.txt` (release job of
   `ci.yml`), and the in-app update checks the installer against it (`s2a::integrity::verifyFile`)
   in a new temporary folder before Windows runs it as administrator.

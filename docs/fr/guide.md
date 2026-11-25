@@ -479,7 +479,8 @@ son nom et propose des bibliothèques qui pourraient la contenir.
   exemple ouvert est une copie : enregistre-le pour garder tes changements.
 - **Enregistrer** (Ctrl+S) écrit un fichier **`.s2a`**, rangé par défaut dans
   `Documents/Scratch2Arduino`. Ce fichier contient tout le projet : c'est lui qu'on envoie à quelqu'un,
-  qu'on met sur une clé USB ou qu'on rend à son professeur.
+  qu'on met sur une clé USB ou qu'on rend à son professeur. Si tu tapes un nom sans `.s2a` et qu'un projet
+  porte déjà ce nom, Scratch2Arduino te demande avant de le remplacer.
   C'est une archive zip : renommé en `.zip`, il montre `project.json` (les blocs) et le code tapé
   ("Mon code" dans `my_code.cpp`, `.py` ou `.js` ; un programme écrit en texte dans `program.cpp`,
   `.py` ou `.js`).

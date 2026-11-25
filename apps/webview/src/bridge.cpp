@@ -580,6 +580,34 @@ std::string Bridge::openedJson(const fs::path& path, Language language) {
         .dump();
 }
 
+/// File chosen in a save dialog, with `extension` added when the user typed none, or empty when
+/// cancelled. The dialog asks before replacing a file it shows; a name typed without the
+/// extension is checked here, once the extension is added (audit #192: "robot" replaced robot.s2a).
+fs::path chooseSaveFile(const std::string& title, const fs::path& suggestion, const std::string& filterName,
+                        const std::string& extension, Language language) {
+    const std::string chosen =
+        pfd::save_file(title, suggestion.u8string(), {filterName, "*" + extension}).result();
+    if (chosen.empty()) {
+        return {};
+    }
+    fs::path file = fs::u8path(chosen);
+    std::string typed = file.extension().u8string();
+    std::transform(typed.begin(), typed.end(), typed.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (typed == extension) { // "ROBOT.S2A" is already a project name, not "ROBOT.S2A.s2a"
+        return file;
+    }
+    file += extension;
+    std::error_code error;
+    if (fs::exists(file, error) &&
+        pfd::message(title, tr("webview.replace_file", language, {{"name", file.filename().u8string()}}),
+                     pfd::choice::yes_no, pfd::icon::question)
+                .result() != pfd::button::yes) {
+        return {};
+    }
+    return file;
+}
+
 void Bridge::bind() {
     bindSync("s2a_hello", [this](const std::string& /*request*/) {
         return Json{{"language", std::string(languageCode(language_))},
@@ -697,23 +725,20 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 2, language_);
                 const std::string name = stringArg(args, 0);
-                const std::string data = base64Decode(stringArg(args, 1));
+                const std::string encoded = stringArg(args, 1);
+                constexpr std::size_t kMaxEncodedImage = 64U * 1024U * 1024U; // a diagram is far smaller
+                if (encoded.size() > kMaxEncodedImage) {
+                    throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
+                }
+                const std::string data = base64Decode(encoded);
                 const fs::path suggestion =
                     projectsDirectory() / (codegen::identifier(name.empty() ? "schema" : name) + ".png");
-                const std::string chosen = pfd::save_file(tr("webview.image_title", language), suggestion.u8string(),
-                                                          {tr("webview.image_filter", language), "*.png"},
-                                                          pfd::opt::force_overwrite)
-                                               .result();
-                if (chosen.empty()) {
+                const fs::path file = chooseSaveFile(tr("webview.image_title", language), suggestion,
+                                                     tr("webview.image_filter", language), ".png", language);
+                if (file.empty()) {
                     return "null";
                 }
-                fs::path file = fs::u8path(chosen);
-                if (file.extension() != ".png") {
-                    file += ".png";
-                }
-                std::ofstream out(file, std::ios::binary);
-                out << data;
-                if (!out) {
+                if (const auto written = userdata::writeFileAtomically(file, data); !written.ok()) {
                     throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
                 }
                 return Json(file.u8string()).dump();
@@ -769,16 +794,10 @@ void Bridge::bind() {
                 if (path.empty()) {
                     const fs::path suggestion =
                         projectsDirectory() / (codegen::identifier(project.name.empty() ? "projet" : project.name) + ".s2a");
-                    const std::string chosen = pfd::save_file(tr("webview.save_title", language), suggestion.u8string(),
-                                                              {tr("webview.file_filter", language), "*.s2a"},
-                                                              pfd::opt::force_overwrite)
-                                                   .result();
-                    if (chosen.empty()) {
+                    path = chooseSaveFile(tr("webview.save_title", language), suggestion,
+                                          tr("webview.file_filter", language), ".s2a", language);
+                    if (path.empty()) {
                         return "null";
-                    }
-                    path = fs::u8path(chosen);
-                    if (path.extension() != ".s2a") {
-                        path += ".s2a";
                     }
                 }
                 if (const auto saved = project::save(project, path); !saved.ok()) {
@@ -1056,16 +1075,10 @@ void Bridge::bind() {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const fs::path suggestion = projectsDirectory() / (tr("webview.library_file", language) + ".s2ablocks");
-                const std::string chosen = pfd::save_file(tr("webview.library_export_title", language), suggestion.u8string(),
-                                                          {tr("webview.library_filter", language), "*.s2ablocks"},
-                                                          pfd::opt::force_overwrite)
-                                               .result();
-                if (chosen.empty()) {
+                const fs::path file = chooseSaveFile(tr("webview.library_export_title", language), suggestion,
+                                                     tr("webview.library_filter", language), ".s2ablocks", language);
+                if (file.empty()) {
                     return "null";
-                }
-                fs::path file = fs::u8path(chosen);
-                if (file.extension() != ".s2ablocks") {
-                    file += ".s2ablocks";
                 }
                 const std::lock_guard<std::mutex> lock(userMutex_);
                 if (auto exported = user_.exportLibrary(file); !exported.ok()) {

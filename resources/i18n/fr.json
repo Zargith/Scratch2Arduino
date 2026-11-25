@@ -92,6 +92,7 @@
   },
   "webview": {
     "update_failed": "Impossible de télécharger ou de lancer la mise à jour. Télécharge-la depuis la page de la version.",
+    "replace_file": "\"{name}\" existe déjà. Le remplacer ?",
     "open_title": "Ouvrir un projet",
     "save_title": "Enregistrer le projet",
     "file_filter": "Projets Scratch2Arduino",
