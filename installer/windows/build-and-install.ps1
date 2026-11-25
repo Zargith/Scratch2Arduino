@@ -309,7 +309,9 @@ try {
     $configure = @('-S', $SourceDir, '-B', $BuildDir,
                    "-DCMAKE_INSTALL_PREFIX=$InstallDir",
                    '-DS2A_BUILD_WEBVIEW=ON',
-                   '-DS2A_BUILD_TESTS=OFF')
+                   '-DS2A_BUILD_TESTS=OFF',
+                   # As the prebuilt installation: the Uno, Nano and Mega compile without internet (audit #205).
+                   '-DS2A_BUNDLE_ARDUINO_CORES=arduino:avr')
     # Scratch2Arduino_installer.exe ships the block editor prebuilt: never rebuild it, even when Node.js is installed.
     $prebuiltFrontend = Join-Path $SourceDir 'frontend\dist'
     if (Test-Path (Join-Path $prebuiltFrontend 'index.html')) { $configure += "-DS2A_FRONTEND_DIST=$prebuiltFrontend" }
@@ -341,6 +343,8 @@ try {
             Remove-Item -Recurse -Force -LiteralPath (Join-Path $InstallDir $folder) -ErrorAction SilentlyContinue
         }
     }
+    # The shipped cores are replaced as a whole: files of an older version must not stay behind.
+    Remove-Item -Recurse -Force -LiteralPath (Join-Path $InstallDir 'bin\arduino-seed') -ErrorAction SilentlyContinue
     Say "Installation dans $InstallDir" "Installing into $InstallDir"
     Invoke-Native $cmake @('--install', $BuildDir, '--config', 'Release')
 
