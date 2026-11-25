@@ -6,7 +6,7 @@
 
 > Program real Arduino boards with Scratch-style blocks - no coding experience required.
 
-**Status: every phase of the [roadmap](docs/roadmap.md) is done.** Blocks, Live mode, simulation without a board, wiring diagrams, wireless boards, C++ / Python / JavaScript, tutorials and installers for the three systems are all in place. Uno and Mega 2560 are tested on real hardware; other boards and components are checked by CI and still waiting for a real-board test (see [Tested on real hardware](#tested-on-real-hardware)).
+**Status: every phase of the [roadmap](docs/roadmap.md) is built**; phases 2, 6, 8 and 10 wait for their acceptance on real boards and with newcomers. Blocks, Live mode, simulation without a board, wiring diagrams, wireless boards, C++ / Python / JavaScript, tutorials and installers for the three systems are all in place. Uno and Mega 2560 are tested on real hardware; other boards and components are checked by CI and still waiting for a real-board test (see [Tested on real hardware](#tested-on-real-hardware)).
 
 ---
 
