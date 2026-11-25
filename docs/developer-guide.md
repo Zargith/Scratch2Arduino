@@ -196,7 +196,9 @@ work". Update both languages in the same pull request.
   first operand to `double`, divide already did.
 - **Files the user opens are untrusted**: read JSON with `s2a::detail::parseUntrustedJson`
   (`core/src/json_input.hpp`, refuses text nested too deep), and read each field with `find` plus a type
-  check, never `json::value()`, which throws when a field has another type.
+  check, never `json::value()`, which throws when a field has another type. What can be repaired is repaired
+  rather than refused: a second variable or function with the same id is dropped (the first is kept), a
+  thumbnail too large is left out of the saved file.
 - **Every validator rule has a test**: rules loop up to `Rule::Count`, so a new rule without French and
   English messages fails `EveryRuleHasMessagesInBothLanguages`.
 - **No call from the editor may end the program**: a synchronous bind goes through `Bridge::bindSync`

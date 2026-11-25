@@ -79,12 +79,11 @@ Result<std::string> toArchive(const Project& project) {
     // Enforce the limits fromArchive() applies, so a saved project can always be reopened.
     const detail::ArchiveDocument document = detail::toArchiveDocument(project);
     const std::string& json = document.json;
-    std::uint64_t total = json.size() + project.thumbnail.size();
+    // A picture too large is left out rather than failing the save: loading ignores it anyway (#189).
+    const bool withThumbnail = !project.thumbnail.empty() && project.thumbnail.size() <= kMaxThumbnailSize;
+    std::uint64_t total = json.size() + (withThumbnail ? project.thumbnail.size() : 0);
     if (json.size() > kMaxEntrySize) {
         return Error{ErrorCode::WriteFailed, "project.json is too large"};
-    }
-    if (project.thumbnail.size() > kMaxThumbnailSize) {
-        return Error{ErrorCode::WriteFailed, "the thumbnail is too large"};
     }
     for (const auto& [name, code] : document.files) {
         total += code.size();
@@ -106,7 +105,7 @@ Result<std::string> toArchive(const Project& project) {
             return Error{ErrorCode::WriteFailed, "cannot add '" + name + "': " + zip.lastError()};
         }
     }
-    if (!project.thumbnail.empty() && !add(std::string(kThumbnailEntry), project.thumbnail)) {
+    if (withThumbnail && !add(std::string(kThumbnailEntry), project.thumbnail)) {
         return Error{ErrorCode::WriteFailed, "cannot add the thumbnail: " + zip.lastError()};
     }
     for (const auto& [name, data] : project.assets) {
