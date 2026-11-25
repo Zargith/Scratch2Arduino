@@ -105,7 +105,7 @@ up-to-date list ("Tested on real hardware"). Still to run on a real board:
 
 ### Known limits
 
-- On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected).
+- On AVR boards (Uno, Nano, Mega) the Live firmware reads lines of 48 characters at most: long "send to the phone" texts are cut in Live mode (uploaded programs are not affected); any other command that does not fit is refused ("! too long") rather than run with a part missing. The Live firmware nearly fills the Leonardo and the Micro (about 80 bytes of flash left).
 - The in-app Windows update of 1.3.1 and 1.3.2 can fail ("Could not download or start the update"): these versions download with curl.exe. Download the installer of the newer version from its release page once; from 1.3.3 on, the update uses Windows' own downloader and falls back to the browser.
 - The Windows installer and the macOS application are not signed with a certificate: Windows SmartScreen and macOS Gatekeeper ask for a confirmation the first time.
 - No package for Arch Linux or Raspberry Pi: they build from the sources with `Scratch2Arduino_installer.sh`.

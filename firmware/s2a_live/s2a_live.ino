@@ -59,7 +59,9 @@
 // or Bluetooth connection goes away, every output is switched off.
 //
 // Pins are Arduino pin numbers (A0 is 14 on an Uno). An unknown or malformed command answers
-// "! <command>" so that the computer never waits forever. Each answer goes back to where the
+// "! <command>" so that the computer never waits forever; a line longer than kMaxLine answers
+// "! too long" (except Y, whose text is cut), numbers have at most 9 digits, and pins 0 and 1
+// (the USB link of an Uno, Nano or Mega) are refused. Each answer goes back to where the
 // command came from (USB, Wi-Fi or Bluetooth).
 
 #include <Adafruit_NeoPixel.h>
@@ -107,6 +109,7 @@ struct Input {
   Stream* stream;
   char text[kMaxLine + 1];
   int length;
+  bool tooLong; // characters were dropped: the line is refused, never run cut (audit #184)
 };
 
 Input usb = {&Serial, {0}, 0};
@@ -501,7 +504,11 @@ bool readNumber(const char* text, int* position, long* value) {
     return false;
   }
   long result = 0;
+  int digits = 0;
   while (text[*position] >= '0' && text[*position] <= '9') {
+    if (++digits > 9) {
+      return false; // would overflow a 32-bit long ("D 4294967309 1" wrapped to pin 13, audit #184)
+    }
     result = result * 10 + (text[*position] - '0');
     (*position)++;
   }
@@ -510,6 +517,12 @@ bool readNumber(const char* text, int* position, long* value) {
 }
 
 bool validPin(long pin) {
+#if defined(__AVR__) && !defined(USBCON) && !defined(ARDUINO_ARCH_MEGAAVR)
+  // (the Leonardo and the Micro have their own USB, the Nano Every a USB chip on another serial port)
+  if (pin == 0 || pin == 1) {
+    return false; // RX and TX of the USB link with the computer (Uno, Nano, Mega): taking one cuts Live
+  }
+#endif
 #if defined(ARDUINO_ARCH_ESP8266)
   if (pin == A0) {
     return true; // the only analog input, after the digital pins
@@ -631,6 +644,7 @@ void serveNetwork() {
 #endif
     client.setNoDelay(true);
     network.length = 0;
+  network.tooLong = false;
     clientConnected = true;
     client.println(kHello);
   }
@@ -654,6 +668,7 @@ void serveBluetooth() {
   const bool connected = bluetoothPort.hasClient();
   if (connected && !bluetoothConnected) {
     bluetooth.length = 0;
+  bluetooth.tooLong = false;
     bluetoothComputer = false;
   } else if (!connected && bluetoothConnected) {
     if (bluetoothComputer) {
@@ -727,6 +742,7 @@ bool startModule(long rx, long tx, long baud) {
   }
   module.stream = modulePort;
   module.length = 0;
+  module.tooLong = false;
   output[rx] = false;
   output[tx] = false;
   moduleRx = rx;
@@ -1093,9 +1109,10 @@ void readFrom(Input& input) {
           bluetoothComputer = true; // the Live mode of a computer
         } else {
           if (input.length > 0) {
-            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command
+            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command (cut when too long)
           }
           input.length = 0;
+          input.tooLong = false;
           continue;
         }
       }
@@ -1106,21 +1123,29 @@ void readFrom(Input& input) {
           moduleComputer = true; // the Live mode of a computer
         } else {
           if (input.length > 0) {
-            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command
+            strcpy(phoneMessage, input.text); // a phone: kept for the "B" command (cut when too long)
           }
           input.length = 0;
+          input.tooLong = false;
           continue;
         }
       }
 #endif
-      if (input.length > 0) {
+      // A text for the phone ("Y") may be cut (a known limit on AVR boards); any other command is
+      // refused rather than run with a part missing (a Wi-Fi password saved cut, audit #184).
+      if (input.tooLong && input.text[0] != 'Y') {
+        input.stream->println("! too long");
+      } else if (input.length > 0) {
         out = input.stream;
         execute(input.text);
         out = &Serial;
       }
       input.length = 0;
+      input.tooLong = false;
     } else if (input.length < kMaxLine) {
       input.text[input.length++] = c;
+    } else {
+      input.tooLong = true;
     }
   }
 }
