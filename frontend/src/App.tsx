@@ -157,6 +157,10 @@ function shortcut(key: string): string {
 
 export function App() {
 	const [language, setLanguage] = useState<Language>(detectLanguage);
+	// The page says its language: screen readers and voices read English with English rules (audit #211).
+	useEffect(() => {
+		document.documentElement.lang = language;
+	}, [language]);
 	const t = useCallback(
 		(key: MessageKey, params?: Record<string, string>) => translate(language, key, params),
 		[language]

@@ -41,6 +41,8 @@ function Led({ level, size = 22, label }: { level: number; size?: number; label:
 				width: size,
 				height: size,
 				background: ledColor(level),
+				// Off: an outline, so that it can be told from the background without the colour.
+				outline: level > 0 ? undefined : "1px solid rgba(255, 64, 64, 0.7)",
 				boxShadow: level > 0 ? `0 0 ${4 + (10 * level) / 255}px ${ledColor(level)}` : undefined,
 			}}
 		/>
@@ -229,7 +231,7 @@ export function Simulator({ plan, state, phone, t, onInput, maxHeight = "calc(60
 	const widget = (part: SimPart): ReactNode => {
 		switch (part.kind) {
 			case "led":
-				return <Led level={part.level} label={`${part.name}, ${pinLabel(part.pin)}`} />;
+				return <Led level={part.level} label={`${part.name}, ${pinLabel(part.pin)}, ${t(part.level > 0 ? "sim.led_on" : "sim.led_off")}`} />;
 			case "rgb": {
 				const [red, green, blue] = part.color;
 				const lit = Math.max(red, green, blue);
