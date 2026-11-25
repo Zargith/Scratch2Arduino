@@ -1,8 +1,9 @@
 # Scratch2Arduino roadmap
 
 Phased plan from the empty repository to a release. Each phase has a goal, deliverables and "done when" criteria.
-**Every phase is now done or dropped** (version 0.14.0, 2026-11-13): this file keeps the plan as a history, and the
-[remaining work](#remaining-work) lists what is still to check and what may come next.
+**Every phase is now built or dropped** (version 0.14.0, 2026-11-13). Phases 2, 6, 8 and 10 still wait for
+their acceptance (tests on real boards, a workshop with newcomers): their status says so. This file keeps the
+plan as a history, and the [remaining work](#remaining-work) lists what is still to check and what may come next.
 
 ## Status
 
@@ -10,16 +11,16 @@ Phased plan from the empty repository to a release. Each phase has a goal, deliv
 |---|---|
 | 0 - Setup and tooling | Done |
 | 1 - Core foundations | Done |
-| 2 - Arduino toolchain | Done: compile checked in CI on the 3 OS, upload tested on an Arduino Uno and a Mega 2560 |
+| 2 - Arduino toolchain | Built, acceptance pending (upload on a Nano, and on Linux and macOS): compile checked in CI on the 3 OS, upload tested on an Arduino Uno and a Mega 2560 |
 | 3a - Variant A MVP (webview) | Done: built and tested in CI on the 3 OS, used on real boards |
 | 3b - Variant B MVP (Qt native) | Dropped (built in v0.3.0, removed in favour of the webview application) |
-| 4 - Validation and friendly errors | Done: 10 rules with fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
+| 4 - Validation and friendly errors | Done: 25 rules, each with a test and fr/en messages and hints (blocks not attached to a start block are greyed like comments, not reported), faulty blocks highlighted, compiler errors mapped to blocks |
 | 5 - Live mode and real-time debugging | Done, tested on a Uno: firmware, protocol, interpreter, Live button (running scripts glow, variables and sensors with graphs), serial monitor and "write to the serial monitor" block, program output and errors in a Live console |
-| 6 - Sensors and actuators | Done: every listed component has blocks in upload and Live modes, with automatic library installation, plus joystick, PIR sensor, infrared obstacle sensor, 28BYJ-48 stepper motor and TM1637 display; example projects with wiring diagrams. Part of the components is tested on real hardware (see the README) |
+| 6 - Sensors and actuators | Built, acceptance pending (several components still to test on real hardware, see the README): every listed component has blocks in upload and Live modes, with automatic library installation, plus joystick, PIR sensor, infrared obstacle sensor, 28BYJ-48 stepper motor and TM1637 display; example projects with wiring diagrams. Part of the components is tested on real hardware (see the README) |
 | 7 - Productivity and sharing | Done: "My blocks" library (export/import as `.s2ablocks`); example gallery with wiring diagrams on New; recent projects menu; autosave every 15 s with recovery at start-up; functions with up to 4 number inputs |
-| 8 - Wireless | Done, to be checked on real hardware: ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266 (Live over Wi-Fi), Live mode and Phone blocks through an HC-05 / HC-06 module on Uno, Nano and Mega; wireless examples |
+| 8 - Wireless | Built, acceptance pending (Bluetooth and Wi-Fi on real boards): ESP32 (USB upload, Live over Wi-Fi and Bluetooth), ESP8266 (Live over Wi-Fi), Live mode and Phone blocks through an HC-05 / HC-06 module on Uno, Nano and Mega; wireless examples |
 | 9 - Text programming languages | Done (official feature since 2026-11-11): "My code" file beside the blocks (C++, Python or JavaScript) whose functions and variables become blocks, Blocks / Code views; expert mode for whole programs in C++ (compiled and uploaded), Python (pocketpy) and JavaScript (QuickJS-ng) in Live mode; CodeMirror 6 editor, friendly errors on their lines; conversion between the three languages (`s2a-cli convert`) |
-| 10 - Documentation and education | Done: user guide, 8 step-by-step tutorials and teacher / workshop kit in French and English (`docs/fr`, `docs/en`), shown in the editor ("Tutorials and help" panel); novice / advanced variants of the progression examples; interactive tutorial "My doorbell" checking each step by itself; developer guide (`docs/developer-guide.md`). A workshop with newcomers is still to run (see [remaining work](#remaining-work)) |
+| 10 - Documentation and education | Built, acceptance pending (the workshop with a newcomer): user guide, 8 step-by-step tutorials and teacher / workshop kit in French and English (`docs/fr`, `docs/en`), shown in the editor ("Tutorials and help" panel); novice / advanced variants of the progression examples; interactive tutorial "My doorbell" checking each step by itself; developer guide (`docs/developer-guide.md`). A workshop with newcomers is still to run (see [remaining work](#remaining-work)) |
 | 11 - Packaging and release | Done (no code signing yet): every green push to `main` publishes a GitHub release with the Windows installer (`.exe`, incremental updates), `.deb` and `.rpm` packages (udev rule for the serial ports) and a macOS `.dmg`, each installed and checked by CI; release notes with install steps; check for new versions in the Settings, with "save before update"; issue forms and a *Report a problem* button |
 | 12 - Variant comparison | Dropped (only the webview application is kept) |
 | 13 - Automatic wiring diagram | Done: components and pins computed from the blocks and from code (`wiring::plan`, `wiring::componentsInCode`, `s2a-cli wiring`), warnings (pin used twice, I2C pins taken, USB power), SVG diagram drawn by the core for every board (Uno, Nano, Mega, ESP32, ESP8266) with PNG export. Examples keep their hand-drawn breadboard pictures, shown first (decision of 2026-11-10) |
@@ -146,7 +147,7 @@ Branches: `main` holds released states, `dev` integrates the work, each feature 
   - live protocol talking to the *S2A live* firmware (`firmware/`, Firmata-like) for real-time control and debugging;
   - "My blocks" user library (saved block groups, no new block types);
   - i18n: French (default) and English.
-- **Text languages**: read-only view of generated C++ first, then a C++ mode (sketch typed by the user, same toolchain as the blocks), Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS-ng`) driving the board through the live protocol. A project stores its language and code (format version 2, written only for text projects so that block projects stay readable by older versions).
+- **Text languages**: read-only view of generated C++ first, then a C++ mode (sketch typed by the user, same toolchain as the blocks), Python (embedded `pocketpy`) and JavaScript (embedded `QuickJS-ng`) driving the board through the live protocol in Live mode; the "My code" of a block project is translated to C++ to be uploaded with the blocks. A project stores its language and code (format version 2, written only for text projects so that block projects stay readable by older versions).
 - **Install**: release packages made by CI (`.deb` and `.rpm` with CPack, macOS `.dmg`, `cmake/S2APackaging.cmake`); Windows `Scratch2Arduino_installer.exe` (`installer/windows/`) that copies the programs prebuilt by the CI with the Arduino AVR core shipped (since 1.2.0, decided on 2026-11-17 after a classroom test with 30 PCs on the same Wi-Fi), offers the optional board packages as tasks (1.3.0), and as an expert option installs the missing prerequisites and runs CMake configure/build/install, updating an existing installation incrementally (only changed sources are rebuilt); Linux/macOS `Scratch2Arduino_installer.sh` + top-level `Makefile` (`make`, `make install`, `make uninstall`) wrapping CMake.
 - Project overview and layout: [README](../README.md).
 
@@ -192,12 +193,12 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 
 ### Phase 6 - Sensors and actuators
 - **Goal**: cover the usual beginner kits.
-- **Deliverables**: block sets with wiring help images for LEDs, RGB LED, buttons, potentiometer, light sensor, buzzer, servo, DC motor (driver), ultrasonic HC-SR04, DHT11/22, LCD 16x2 (I2C module or 16 pins), OLED SSD1306, NeoPixel, LED matrix; automatic Arduino library installation via `arduino-cli`; support in both upload and live modes.
+- **Deliverables** (the wiring help images became the automatic wiring diagram of Phase 13): block sets for LEDs, RGB LED, buttons, potentiometer, light sensor, buzzer, servo, DC motor (driver), ultrasonic HC-SR04, DHT11/22, LCD 16x2 (I2C module or 16 pins), OLED SSD1306, NeoPixel, LED matrix; automatic Arduino library installation via `arduino-cli`; support in both upload and live modes.
 - **Done when**: each component has at least one example project tested on real hardware.
 
 ### Phase 7 - Productivity and sharing
 - **Goal**: reuse and learn from others.
-- **Deliverables**: "My blocks" library (save a selection, reuse, export/import); example project gallery; project export / import (`.s2a`) and templates; autosave and recent projects.
+- **Deliverables**: "My blocks" library (save a selection, reuse, export/import); example project gallery (it serves as the templates: a gallery project opens as a new, unsaved project); project export / import (`.s2a`); autosave and recent projects.
 - **Done when**: a saved block group can be reused in another project and survives export/import.
 
 ### Phase 8 - Wireless
@@ -231,7 +232,7 @@ Each phase lists its **goal**, **deliverables** and **done when** criteria.
 - **Requested on 2026-11-09** by the user: the diagram of any project, not only of the examples.
 - **Goal**: show the wiring a project needs, computed from its blocks.
 - **Deliverables**: component and pin list extracted from the blocks by the core (the code generator already knows which component uses which pins); a description of each component (pins, parts that blocks do not tell - LED resistor, button to GND with pull-up, potentiometer on V0 of a 16-pin LCD, power) shared with `tools/wiring/wiring.py`; automatic placement on a breadboard and wire routing for Uno, Nano and Mega; a "Wiring" view in the editor that updates with the blocks, with a component / pin table for when the drawing gets crowded; warnings for pins used twice, I2C pins (SDA/SCL) taken by other blocks, too many components for the 5V supply; export as an image.
-- **Done when**: the diagram of every example project is generated from its blocks (no hand-written description left in `tools/wiring/wiring.py`) and a project with a component of each kind gives a readable diagram.
+- **Done when**: the diagram of every example project is generated from its blocks and a project with a component of each kind gives a readable diagram. (First written as "no hand-written description left in `tools/wiring/wiring.py`"; on 2026-11-10 the user chose to keep the hand-drawn breadboard pictures of the examples, shown first, next to the generated diagram.)
 
 ## Learner progression (example projects)
 
