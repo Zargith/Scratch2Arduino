@@ -213,3 +213,6 @@ work". Update both languages in the same pull request.
   message (details on stderr); a call that can take a while (opening a port, starting or stopping Live)
   goes through `Bridge::bindPortCall`: one thread runs these calls one after the other, in call order. A stopped Live session is torn down off the UI thread, and whatever
   needs its port again (new Live session, upload, serial monitor) waits for that teardown.
+- **Text that is not UTF-8 never throws**: JSON written for files or for the editor is dumped with
+  `error_handler_t::replace` (a Latin-1 name, board output or compiler text becomes U+FFFD). Environment
+  paths are read with `s2a::process::environmentPath` (UTF-16 on Windows, so an accented user name works).

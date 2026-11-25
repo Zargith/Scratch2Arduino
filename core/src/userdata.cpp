@@ -53,7 +53,6 @@ std::string cleanName(std::string name) {
     return name;
 }
 
-
 /// Content of a small text file, or nothing when it is missing, too big or unreadable.
 std::optional<std::string> readSmallFile(const fs::path& path, std::uintmax_t maxSize = kMaxJsonSize) {
     std::error_code error;

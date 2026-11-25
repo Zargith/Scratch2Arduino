@@ -90,6 +90,16 @@ TEST(LineBuffer, KeepsACarriageReturnAtTheCutForTheNextPiece) {
     EXPECT_EQ(buffer.take(), "next");
 }
 
+TEST(LineBuffer, NeverCutsAUtf8Character) {
+    s2a::serial::LineBuffer buffer;
+    buffer.append(std::string(s2a::serial::LineBuffer::kMaxLine - 1, 'x') + "\xc3\xa9"); // "é" across the cut
+    const auto first = buffer.take();
+    ASSERT_TRUE(first.has_value());
+    EXPECT_EQ(first->size(), s2a::serial::LineBuffer::kMaxLine - 1);
+    buffer.append("end\n");
+    EXPECT_EQ(buffer.take(), "\xc3\xa9" "end");
+}
+
 TEST(LineBuffer, ReadsManyLinesQuickly) {
     s2a::serial::LineBuffer buffer;
     std::string many;

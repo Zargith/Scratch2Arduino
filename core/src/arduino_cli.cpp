@@ -24,7 +24,6 @@ constexpr auto kCompileTimeout = 10min;
 constexpr auto kUploadTimeout = 3min;
 constexpr auto kInstallTimeout = 30min;
 
-
 std::string stringOr(const Json& node, const char* key) {
     return node.contains(key) && node.at(key).is_string() ? node.at(key).get<std::string>() : std::string{};
 }
