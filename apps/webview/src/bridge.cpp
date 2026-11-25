@@ -1398,10 +1398,12 @@ void Bridge::bind() {
             if (live_) {
                 live_->update(std::move(project));
             }
-        } catch (const UserError&) {
-            // Half-built blocks are simply ignored until they make a valid project.
+        } catch (const UserError& error) {
+            // Half-built blocks: the board keeps the previous ones, and the editor says why (as a
+            // hint, not an error: the child is still editing, audit #179).
+            return Json{{"ok", false}, {"message", error.message}}.dump();
         }
-        return std::string{};
+        return Json{{"ok", true}}.dump();
     });
     bindSync("s2a_live_stop", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);

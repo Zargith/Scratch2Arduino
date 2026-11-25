@@ -274,7 +274,9 @@ see the effect of a change at once, without uploading:
 - the running scripts **glow**;
 - the right panel shows the **variables** and the **sensors** read by the blocks, with a graph of the
   last 30 seconds;
-- change a block (a number, a pin, an added block...): the board follows immediately.
+- change a block (a number, a pin, an added block...): the board follows immediately. While a block is
+  incomplete (an empty slot, a pin the board does not have), the board keeps the previous blocks and a
+  message says why; as soon as the blocks are complete, they are sent.
 
 **Program output**: what your program writes (the *write ... to the serial monitor* block, `print()` in
 Python or JavaScript) shows in the serial monitor panel, which opens by itself at the first line. To debug,

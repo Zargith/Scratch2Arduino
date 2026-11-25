@@ -102,6 +102,7 @@ import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
 import { codeThumbnail } from "@/thumbnail";
+import { notAppliedHint } from "@/liveUpdate";
 import { AutosaveTracker } from "@/autosave";
 import {
 	isScript,
@@ -245,6 +246,30 @@ export function App() {
 	const liveMessage = useRef("");
 	const [variableNames, setVariableNames] = useState<Map<string, string>>(new Map());
 	const liveUpdate = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/** Live mode is starting (the firmware may be uploading): a second click waits (audit #180). */
+	const [liveStarting, setLiveStarting] = useState(false);
+	/** Why the last edit is not on the board yet; the Live status waits until the blocks run. */
+	const notApplied = useRef<string | null>(null);
+	/** Changes at each Live start and stop: an answer for an older session is dropped. */
+	const liveSession = useRef(0);
+	const cancelLiveUpdate = () => {
+		if (liveUpdate.current) clearTimeout(liveUpdate.current);
+		liveUpdate.current = null;
+	};
+	// Live stopped (by the user, an error or the end) or the editor closed: no update is left to send.
+	useEffect(() => {
+		liveSession.current += 1;
+		if (live) return;
+		notApplied.current = null;
+		if (liveUpdate.current) clearTimeout(liveUpdate.current);
+		liveUpdate.current = null;
+	}, [live]);
+	useEffect(
+		() => () => {
+			if (liveUpdate.current) clearTimeout(liveUpdate.current);
+		},
+		[]
+	);
 	/** Last values of each variable ("var:<id>") and sensor ("pin:<label>"), for the graphs. */
 	const history = useRef<Map<string, number[]>>(new Map());
 	const [monitorShown, setMonitorShown] = useState(false);
@@ -1078,7 +1103,9 @@ export function App() {
 	}, [simulated]);
 
 	const toggleLive = async () => {
+		if (liveStarting) return;
 		if (live) {
+			cancelLiveUpdate(); // an update sent after Stop would reach no session
 			await bridge.liveStop().catch(fail);
 			setLive(false);
 			editor.current?.showRunning([]);
@@ -1095,6 +1122,7 @@ export function App() {
 		// The virtual board needs no board tools.
 		if (!isSimPort(port) && packageMissing(() => void toggleLive())) return;
 		showProblems([]);
+		setLiveStarting(true);
 		try {
 			const started = await bridge.liveStart(currentProject(), port, language);
 			if (!started.ok) {
@@ -1111,6 +1139,8 @@ export function App() {
 			setLive(true);
 		} catch (error) {
 			fail(error);
+		} finally {
+			setLiveStarting(false);
 		}
 	};
 
@@ -1118,10 +1148,15 @@ export function App() {
 	useEffect(() => {
 		if (!live) return;
 		liveMessage.current = "";
-		const timer = setInterval(() => {
+		// Each poll starts once the previous one answered (never two in flight), and the first
+		// failure stops Live with one message instead of repeating it (audit #179, #180).
+		let stopped = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const poll = () => {
 			void bridge
 				.liveState()
 				.then((snapshot) => {
+					if (stopped) return; // an answer that arrived after Stop
 					const record = (key: string, value: number) => {
 						const values = history.current.get(key) ?? [];
 						values.push(value);
@@ -1150,13 +1185,28 @@ export function App() {
 						setLive(false);
 					} else {
 						const message = snapshot.paused && snapshot.state === "running" ? t("live.paused") : (snapshot.message ?? "");
-						if (message && message !== liveMessage.current) setStatus({ kind: "info", message });
-						liveMessage.current = message;
+						if (!notApplied.current) {
+							if (message && message !== liveMessage.current) setStatus({ kind: "info", message });
+							liveMessage.current = message;
+						}
 					}
 				})
-				.catch(fail);
-		}, 200);
-		return () => clearInterval(timer);
+				.catch((error: unknown) => {
+					if (stopped) return;
+					stopped = true;
+					void bridge.liveStop().catch(() => undefined); // the board loop stops with the panel
+					setLive(false);
+					fail(error);
+				})
+				.finally(() => {
+					if (!stopped) timer = setTimeout(poll, 200);
+				});
+		};
+		timer = setTimeout(poll, 200);
+		return () => {
+			stopped = true;
+			clearTimeout(timer);
+		};
 		// t: the status follows the language at the next poll anyway.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [live, fail]);
@@ -1421,6 +1471,7 @@ export function App() {
 								aria-label={t(live ? "toolbar.stop_live" : "toolbar.live")}
 								px={compact ? "xs" : undefined}
 								disabled={program === "cpp"}
+								loading={liveStarting}
 								onClick={() => void toggleLive()}
 							>
 								{compact ? (
@@ -1557,7 +1608,21 @@ export function App() {
 								// Live mode: send the new blocks once the child stops dragging for a moment.
 								if (liveUpdate.current) clearTimeout(liveUpdate.current);
 								liveUpdate.current = setTimeout(() => {
-									void bridge.liveUpdate(currentProject()).catch(fail);
+									liveUpdate.current = null;
+									const session = liveSession.current;
+									void bridge
+										.liveUpdate(currentProject())
+										.then((result) => {
+											if (session !== liveSession.current) return; // Live stopped meanwhile
+											const hint = notAppliedHint(result, t);
+											if (hint && hint !== notApplied.current) setStatus({ kind: "info", message: hint });
+											notApplied.current = hint;
+											// The blocks run again: the next poll shows the Live status again.
+											if (!hint) liveMessage.current = "";
+										})
+										.catch((error: unknown) => {
+											if (session === liveSession.current) fail(error);
+										});
 									if (isSimPort(port)) refreshSimPlan();
 								}, 300);
 							}}
