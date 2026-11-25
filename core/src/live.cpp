@@ -1710,6 +1710,9 @@ script::Host Session::scriptHost(LiveLink& link, std::optional<Error>& linkError
         const std::lock_guard<std::mutex> lock(mutex_);
         snapshot_.readings[label] = value;
     };
+    // A loop without delay stops too when the board is lost (audit #183). The error stays in the
+    // link: the session takes it to show it, and every later request fails at once meanwhile.
+    host.lost = [this, &link]() { return stopping_.load() || link.hasError(); };
     // Waits in short steps: Stop is felt at once, and an unplugged board stops the program.
     host.sleep = [this, &link, &linkError](milliseconds duration) {
         const auto end = std::chrono::steady_clock::now() + duration;

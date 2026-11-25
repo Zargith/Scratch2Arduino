@@ -240,6 +240,7 @@
     "not_a_script": "Ce programme n'est pas écrit en Python ou en JavaScript.",
     "at_line": "Ligne {line} : {message}",
     "python_indentation": "Le décalage (l'indentation) n'est pas bon : les lignes d'un même bloc doivent commencer à la même distance du bord, et la ligne après \":\" doit être décalée.",
+    "python_busy": "Un programme Python tourne déjà en mode Live : arrête-le (bouton Stop) pour vérifier ce programme.",
     "python_syntax": "Python ne comprend pas cette ligne : vérifie les parenthèses, les guillemets et les \":\" à la fin des if, while, for et def. ({message})",
     "javascript_syntax": "JavaScript ne comprend pas cette ligne : vérifie les parenthèses, les accolades et les guillemets. ({message})",
     "division_by_zero": "Division par zéro : on ne peut pas diviser par 0.",

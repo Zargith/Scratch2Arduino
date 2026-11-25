@@ -85,7 +85,7 @@ private:
     explicit SocketConnection(std::unique_ptr<Socket> socket);
 
     std::unique_ptr<Socket> socket_;
-    std::string buffer_; ///< Bytes received after the last complete line.
+    serial::LineBuffer buffer_; ///< Bytes received after the last complete line.
 };
 
 } // namespace s2a::network

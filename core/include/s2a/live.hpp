@@ -158,6 +158,8 @@ public:
 
     /// First communication error since the last call (the board was unplugged...), if any.
     [[nodiscard]] std::optional<Error> takeError();
+    /// Whether an error waits for takeError() (it stays there).
+    [[nodiscard]] bool hasError() const noexcept { return error_.has_value(); }
 
     /// Wi-Fi state of an ESP32: its own network and its address on the joined one ("" if none).
     struct NetworkState {

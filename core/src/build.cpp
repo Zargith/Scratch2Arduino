@@ -108,7 +108,9 @@ BuildResult checkScript(const project::Project& project, Language language, bool
     }
     if (const auto error = script::check(project.language, project.code, language)) {
         BuildResult result = failure(script::describe(*error, language), error->details);
-        result.problems.push_back({error->line, 0, error->message, ""});
+        if (error->line > 0) { // no line ("a Python program already runs"): nothing to highlight
+            result.problems.push_back({error->line, 0, error->message, ""});
+        }
         return result;
     }
     BuildResult result;

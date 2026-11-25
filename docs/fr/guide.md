@@ -339,7 +339,8 @@ reçoit pas de programme : pour **Téléverser**, branche une vraie carte et cho
 ## 8. Le moniteur série
 
 Le bouton **Moniteur série** ouvre un panneau qui affiche ce que la carte écrit avec le bloc
-*écrire ... sur le moniteur série*. Téléverse ton programme, puis clique sur **Connecter** (vitesse 9600).
+*écrire ... sur le moniteur série*. Téléverse ton programme, puis clique sur **Connecter** (vitesse 9600 ; pour un programme écrit en C++, choisis la vitesse de son
+`Serial.begin` : 9600, 19200, 57600 ou 115200).
 Une ligne tapée en bas est envoyée à la carte. Pendant un téléversement le moniteur se met en pause puis
 se reconnecte. En mode Live, le panneau montre ce que les blocs écrivent.
 
@@ -546,6 +547,7 @@ Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touche
 | "Les outils de cette carte ont besoin de Rosetta" (Mac à puce Apple) | Clique sur *Installer Rosetta* dans le message (ou tape `softwareupdate --install-rosetta --agree-to-license` dans le Terminal), puis réessaie. |
 | macOS : la liste des ports montre `/dev/cu.debug-console` ou `Bluetooth-Incoming-Port` | Ces ports appartiennent à macOS, pas à une carte : passe à la version 1.3.2 ou plus récente, qui les cache. Sans carte branchée, choisis *Carte virtuelle*. |
 | "Impossible d'utiliser le port de la carte" | Un autre programme utilise la carte : ferme l'Arduino IDE ou un autre moniteur série, puis réessaie. |
+| "Un programme Python tourne déjà en mode Live" (Vérifier) | Arrête le mode Live (bouton Stop), puis vérifie de nouveau. |
 | "La carte ne répond pas" | Débranche la carte, rebranche-la, choisis de nouveau son port, puis réessaie. Vérifie que la bonne carte est choisie (Uno, Nano...). |
 | Le premier téléversement est long | Normal : les outils de la carte se téléchargent une seule fois (il faut Internet). |
 | Le programme est envoyé mais rien ne se passe | Ouvre le *Schéma de câblage* et compare avec ton montage : une LED montée à l'envers (patte longue = +), un fil dans la mauvaise colonne de la platine, un GND oublié... |

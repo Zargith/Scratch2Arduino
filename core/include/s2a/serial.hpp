@@ -17,6 +17,24 @@
 /// Serial port of a board, used by the Live mode (uploads go through arduino-cli).
 namespace s2a::serial {
 
+/// Bytes received from a board, cut into lines. A line longer than kMaxLine (a board sending
+/// binary data, or no newline at all) is given in pieces so the memory stays bounded.
+class LineBuffer {
+public:
+    static constexpr std::size_t kMaxLine = 4096;
+
+    void append(std::string_view bytes);
+    /// Next line without "\r\n", or nothing until a newline (or kMaxLine bytes) arrived.
+    [[nodiscard]] std::optional<std::string> take();
+
+private:
+    std::string data_;
+    std::size_t start_ = 0; ///< Bytes before it were already taken (dropped from time to time).
+};
+
+/// Speeds the serial ports accept (the standard ones, 300 to 230400 bauds).
+[[nodiscard]] bool isSupportedBaud(int baud) noexcept;
+
 /// Line-based text connection. SerialPort implements it; tests use fakes.
 class LineTransport {
 public:
@@ -48,7 +66,7 @@ private:
     explicit SerialPort(std::unique_ptr<Handle> handle);
 
     std::unique_ptr<Handle> handle_;
-    std::string buffer_; ///< Bytes received after the last complete line.
+    LineBuffer buffer_; ///< Bytes received after the last complete line.
 };
 
 /// Serial monitor: reads the lines a board prints (Serial.println) on a background thread and

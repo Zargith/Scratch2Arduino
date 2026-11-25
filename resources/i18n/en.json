@@ -240,6 +240,7 @@
     "not_a_script": "This program is not written in Python or JavaScript.",
     "at_line": "Line {line}: {message}",
     "python_indentation": "The indentation is wrong: the lines of a block must start at the same distance from the edge, and the line after a \":\" must be indented.",
+    "python_busy": "A Python program is already running in Live mode: stop it (Stop button) to check this program.",
     "python_syntax": "Python does not understand this line: check the brackets, the quotes and the \":\" at the end of if, while, for and def. ({message})",
     "javascript_syntax": "JavaScript does not understand this line: check the brackets, the braces and the quotes. ({message})",
     "division_by_zero": "Division by zero: nothing can be divided by 0.",
