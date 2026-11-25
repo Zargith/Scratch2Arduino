@@ -138,6 +138,7 @@ Result<std::string> sha256File(const std::filesystem::path& path) {
 }
 
 std::optional<std::string> expectedHash(std::string_view sums, std::string_view fileName) {
+    std::optional<std::string> found;
     std::istringstream lines{std::string(sums)};
     for (std::string line; std::getline(lines, line);) {
         if (!line.empty() && line.back() == '\r') {
@@ -159,10 +160,13 @@ std::optional<std::string> expectedHash(std::string_view sums, std::string_view 
             for (char& c : digest) {
                 c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             }
-            return digest;
+            if (found && *found != digest) {
+                return std::nullopt; // two different hashes: trust neither
+            }
+            found = digest;
         }
     }
-    return std::nullopt;
+    return found;
 }
 
 Status verifyFile(const std::filesystem::path& file, std::string_view sums, std::string_view fileName) {

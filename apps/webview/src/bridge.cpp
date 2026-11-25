@@ -247,7 +247,8 @@ bool downloadReleaseFile(const std::string& url, const fs::path& target, bool (*
     fs::remove(target, error);
     process::Command download;
     download.program = "curl.exe"; // part of Windows 10 and 11
-    download.args = {"--location", "--fail", "--silent", "--show-error", "--ssl-revoke-best-effort",
+    download.args = {"--location", "--proto", "=https", "--proto-redir", "=https", "--fail", "--silent",
+                     "--show-error", "--ssl-revoke-best-effort",
                      "--retry", "2", "--output", target.u8string(), url};
     download.timeout = std::chrono::minutes(15);
     const auto result = process::run(download);
@@ -259,9 +260,22 @@ bool downloadReleaseFile(const std::string& url, const fs::path& target, bool (*
     return accept(target);
 }
 
-bool anyFile(const fs::path& file) {
+/// A SHA256SUMS.txt: a small file (a few lines), not an error page or something else.
+bool smallFile(const fs::path& file) {
     std::error_code error;
-    return fs::is_regular_file(file, error);
+    return fs::is_regular_file(file, error) && fs::file_size(file, error) <= 64 * 1024 && !error;
+}
+
+/// Removes the folders of earlier updates (the installer they hold is no longer needed).
+void removeOldUpdateFolders(const fs::path& temp) {
+    std::error_code error;
+    for (fs::directory_iterator it(temp, error), end; !error && it != end; it.increment(error)) {
+        const std::string name = it->path().filename().u8string();
+        if (name.rfind("Scratch2Arduino-update", 0) == 0) {
+            std::error_code ignored;
+            fs::remove_all(it->path(), ignored);
+        }
+    }
 }
 
 /// Downloads the installer at `url` into `folder` and checks it against the SHA256SUMS.txt of the
@@ -271,7 +285,7 @@ std::optional<fs::path> downloadVerifiedInstaller(const std::string& url, const 
     const std::string fileName = url.substr(slash + 1);
     const fs::path installer = folder / "Scratch2Arduino_installer.exe";
     const fs::path sumsFile = folder / "SHA256SUMS.txt";
-    if (!downloadReleaseFile(url.substr(0, slash + 1) + "SHA256SUMS.txt", sumsFile, anyFile) ||
+    if (!downloadReleaseFile(url.substr(0, slash + 1) + "SHA256SUMS.txt", sumsFile, smallFile) ||
         !downloadReleaseFile(url, installer, isProgramFile)) {
         return std::nullopt;
     }
@@ -797,15 +811,14 @@ void Bridge::bind() {
                 if (error || temp.empty()) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
+                removeOldUpdateFolders(temp);
                 const fs::path folder = temp / ("Scratch2Arduino-update-" + project::newId());
                 if (!fs::create_directories(folder, error) || error) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
                 const auto installer = downloadVerifiedInstaller(url, folder);
-                if (!installer) {
-                    throw UserError{tr("webview.update_failed", language)};
-                }
-                if (!startInstaller(*installer)) {
+                if (!installer || !startInstaller(*installer)) {
+                    fs::remove_all(folder, error); // the browser downloads it instead
                     throw UserError{tr("webview.update_failed", language)};
                 }
                 // The installer waits for the program to close (AppMutex): close it.
