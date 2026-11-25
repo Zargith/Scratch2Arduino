@@ -11,6 +11,10 @@
 
 namespace s2a::process {
 
+/// Path held by the environment variable `name`, or empty. Read in UTF-16 on Windows: getenv gives
+/// the ANSI code page, which spoils a user name with an accent (audit #187).
+[[nodiscard]] std::filesystem::path environmentPath(const char* name);
+
 /// An external program to run (arduino-cli, ...).
 struct Command {
     std::filesystem::path program;

@@ -130,17 +130,13 @@ std::string stringArg(const Json& args, std::size_t index) {
     return index < args.size() && args[index].is_string() ? args[index].get<std::string>() : std::string{};
 }
 
-fs::path environmentPath(const char* name) {
-    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
-    return value != nullptr ? fs::u8path(value) : fs::path{};
-}
 
 /// Documents/Scratch2Arduino, created on first use: where dialogs open by default.
 fs::path projectsDirectory() {
 #ifdef _WIN32
-    const fs::path home = environmentPath("USERPROFILE");
+    const fs::path home = process::environmentPath("USERPROFILE");
 #else
-    const fs::path home = environmentPath("HOME");
+    const fs::path home = process::environmentPath("HOME");
 #endif
     std::error_code error;
     fs::path documents = home / "Documents";
@@ -1755,7 +1751,7 @@ void Bridge::bind() {
 fs::path locateFrontend() {
     std::error_code error;
     std::vector<fs::path> candidates;
-    if (const fs::path configured = environmentPath("S2A_FRONTEND_DIR"); !configured.empty()) {
+    if (const fs::path configured = process::environmentPath("S2A_FRONTEND_DIR"); !configured.empty()) {
         candidates.push_back(configured);
     }
     if (const fs::path directory = process::executableDirectory(); !directory.empty()) {
