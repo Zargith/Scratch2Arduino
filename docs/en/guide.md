@@ -134,7 +134,9 @@ version found, without checking again; you can also check there, or switch this 
 - Windows: *Download and install* starts the installer of the new version and closes Scratch2Arduino; if
   your project is not saved, a question first offers to save it, ignore the changes or cancel. The button
   turns into a spinner while the installer downloads. If the download fails (proxy, antivirus, filtered
-  network), your browser downloads the installer instead: run it once downloaded.
+  network), your browser downloads the installer instead: run it once downloaded. Before running it,
+  Scratch2Arduino checks that the downloaded installer is the one published (SHA-256 hash from the
+  `SHA256SUMS.txt` list of the release); if not, the browser is used too.
 - macOS: *Download* gets the `.dmg` for your Mac in the browser; open it and drag Scratch2Arduino to
   Applications like the first time.
 - Linux: *Download* opens the release page: download the new `.deb` or `.rpm` and install it like the

@@ -6,6 +6,7 @@
 #include "s2a/codegen.hpp"
 #include "s2a/convert.hpp"
 #include "s2a/diagnostics.hpp"
+#include "s2a/integrity.hpp"
 #include "s2a/live.hpp"
 #include "s2a/network.hpp"
 #include "s2a/process.hpp"
@@ -25,6 +26,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -226,17 +228,18 @@ bool isProgramFile(const fs::path& file) {
     return in.read(magic, 2) && magic[0] == 'M' && magic[1] == 'Z';
 }
 
-/// Downloads a release installer to `target`. First with Windows' own downloader (system proxy,
+/// Downloads a file of a release to `target`. First with Windows' own downloader (system proxy,
 /// certificate checks as in the browser), then with curl.exe, which fails on many networks when
 /// the certificate revocation server cannot be reached (hence --ssl-revoke-best-effort).
-bool downloadInstaller(const std::string& url, const fs::path& target) {
+/// `accept` checks what Windows' downloader gave (an HTML error page is not the file).
+bool downloadReleaseFile(const std::string& url, const fs::path& target, bool (*accept)(const fs::path&)) {
     std::error_code error;
     fs::remove(target, error);
     {
         const ComScope com;
         const std::wstring wideUrl(url.begin(), url.end()); // ASCII only, checked by isReleaseInstaller
         if (SUCCEEDED(URLDownloadToFileW(nullptr, wideUrl.c_str(), target.wstring().c_str(), 0, nullptr)) &&
-            isProgramFile(target)) {
+            accept(target)) {
             return true;
         }
     }
@@ -253,7 +256,34 @@ bool downloadInstaller(const std::string& url, const fs::path& target) {
                   << (result.ok() ? result.value().err : result.error().detail) << '\n';
         return false;
     }
-    return isProgramFile(target);
+    return accept(target);
+}
+
+bool anyFile(const fs::path& file) {
+    std::error_code error;
+    return fs::is_regular_file(file, error);
+}
+
+/// Downloads the installer at `url` into `folder` and checks it against the SHA256SUMS.txt of the
+/// same release (audit #174): a truncated, cached or swapped file is never run as administrator.
+std::optional<fs::path> downloadVerifiedInstaller(const std::string& url, const fs::path& folder) {
+    const std::size_t slash = url.rfind('/');
+    const std::string fileName = url.substr(slash + 1);
+    const fs::path installer = folder / "Scratch2Arduino_installer.exe";
+    const fs::path sumsFile = folder / "SHA256SUMS.txt";
+    if (!downloadReleaseFile(url.substr(0, slash + 1) + "SHA256SUMS.txt", sumsFile, anyFile) ||
+        !downloadReleaseFile(url, installer, isProgramFile)) {
+        return std::nullopt;
+    }
+    std::ifstream in(sumsFile, std::ios::binary);
+    const std::string sums((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (const auto verified = integrity::verifyFile(installer, sums, fileName); !verified.ok()) {
+        std::cerr << "Scratch2Arduino: the downloaded installer is refused: " << verified.error().detail << '\n';
+        std::error_code error;
+        fs::remove(installer, error);
+        return std::nullopt;
+    }
+    return installer;
 }
 
 /// Starts the downloaded installer (Windows asks for the administrator rights).
@@ -761,14 +791,21 @@ void Bridge::bind() {
                 if (!isReleaseInstaller(url)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
+                // A new folder for each update: no other program can prepare a file at a known path.
                 std::error_code error;
-                const fs::path folder = fs::temp_directory_path(error) / "Scratch2Arduino-update";
-                fs::create_directories(folder, error);
-                const fs::path installer = folder / "Scratch2Arduino_installer.exe";
-                if (!downloadInstaller(url, installer)) {
+                const fs::path temp = fs::temp_directory_path(error);
+                if (error || temp.empty()) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
-                if (!startInstaller(installer)) {
+                const fs::path folder = temp / ("Scratch2Arduino-update-" + project::newId());
+                if (!fs::create_directories(folder, error) || error) {
+                    throw UserError{tr("webview.update_failed", language)};
+                }
+                const auto installer = downloadVerifiedInstaller(url, folder);
+                if (!installer) {
+                    throw UserError{tr("webview.update_failed", language)};
+                }
+                if (!startInstaller(*installer)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
                 // The installer waits for the program to close (AppMutex): close it.
