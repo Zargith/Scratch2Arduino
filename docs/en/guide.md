@@ -453,6 +453,8 @@ libraries that may contain it.
   copy: save it to keep your changes.
 - **Save** (Ctrl+S) writes a **`.s2a`** file, stored by default in `Documents/Scratch2Arduino`. That file
   holds the whole project: it is what you send to someone, copy to a USB stick or hand in to your teacher.
+  If you type a name without `.s2a` and a project already has that name, Scratch2Arduino asks before
+  replacing it.
   It is a zip archive: renamed to `.zip`, it shows `project.json` (the blocks) and the code you typed
   ("My code" in `my_code.cpp`, `.py` or `.js`; a program written as text in `program.cpp`, `.py` or `.js`).
 - **Open** reads a `.s2a` back. On Windows, double-clicking a `.s2a` opens it too, and a project can be
