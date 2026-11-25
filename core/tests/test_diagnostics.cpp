@@ -212,7 +212,7 @@ TEST(ExplainCompilerMessage, ExplainsCommonMistakesOfTypedCode) {
 // very long lines (recursive in libstdc++ and MSVC).
 TEST(CompilerMessages, IgnoresAbsurdNumbersAndHugeLines) {
     std::vector<s2a::toolchain::CompilerMessage> messages;
-    const std::string output = "/s/sketch.ino:99999999999999999999:5: error: too big\n" +
+    const std::string output = std::string("/s/sketch.ino:99999999999999999999:5: error: too big\n") +
                                "/s/sketch.ino:12:5: error: 'pinMod' was not declared in this scope\n" +
                                "/s/sketch.ino:3:1: warning: a long one " + std::string(200000, 'x') + ": error: inside\n";
     // A line of 200 KB is read by hand: the regex used before recursed once per character and
