@@ -6,6 +6,7 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <portable-file-dialogs.h>
 #include <string>
 #include <webview/webview.h>
 
@@ -33,9 +34,17 @@ void maximize(webview::webview& window) {
 #endif
 }
 
+/// The window could not open (no WebView2 on Windows, no WebKitGTK on Linux): said in a message box,
+/// since a program without a console shows nothing else (audit #193).
+void tellCannotStart(s2a::Language language, const std::string& details) {
+    std::cerr << "Scratch2Arduino: " << details << '\n';
+    const std::string text = s2a::tr("webview.cannot_start", language, {{"details", details}});
+    (void)pfd::message(s2a::tr("app.title", language), text, pfd::choice::ok, pfd::icon::error).result();
+}
+
 int run(const std::filesystem::path& startupFile) {
+    const s2a::Language language = s2a::detectSystemLanguage();
     try {
-        const s2a::Language language = s2a::detectSystemLanguage();
         const std::string title = s2a::tr("app.title", language);
 
         webview::webview window(false, nullptr);
@@ -57,7 +66,10 @@ int run(const std::filesystem::path& startupFile) {
         window.run();
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "Scratch2Arduino: " << error.what() << '\n';
+        tellCannotStart(language, error.what());
+        return 1;
+    } catch (...) {
+        tellCannotStart(language, "unknown error");
         return 1;
     }
 }
