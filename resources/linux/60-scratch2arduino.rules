@@ -1,4 +1,4 @@
-# Scratch2Arduino: the person logged in may use the USB serial port of Arduino and ESP boards, without
+# Scratch2Arduino: the person logged in may use the USB serial port of Arduino, ESP and Pico boards, without
 # joining the "dialout" group (uaccess, applied by systemd-logind). Installed by the .deb and .rpm
 # packages in /usr/lib/udev/rules.d; numbered below 73 so that uaccess is still applied.
 
@@ -13,3 +13,6 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", TAG+="uaccess"
 # Espressif (boards with USB built into the chip)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", TAG+="uaccess"
+# Raspberry Pi (Pico, Pico W): the serial port, and the BOOTSEL device the upload goes through
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", TAG+="uaccess"

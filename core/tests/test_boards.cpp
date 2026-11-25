@@ -1,6 +1,9 @@
 #include "s2a/boards.hpp"
 
+#include <cstdio>
+#include <fstream>
 #include <gtest/gtest.h>
+#include <iterator>
 #include <string>
 
 namespace {
@@ -231,3 +234,21 @@ TEST(BuiltinBoards, NamesTheNodeMcuPinsAsPrintedOnIt) {
 }
 
 } // namespace
+
+// Audit 2026-11-24 (#206): the Linux rule let the user reach Arduino and ESP boards without the
+// "dialout" group, but not the Raspberry Pi Pico added in 1.3.0.
+TEST(Boards, EveryUsbVendorIsInTheLinuxRule) {
+    std::ifstream in(S2A_UDEV_RULES);
+    ASSERT_TRUE(in) << S2A_UDEV_RULES;
+    const std::string rules((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    for (const auto& board : s2a::BoardDatabase::builtin().boards()) {
+        for (const auto& id : board.usbIds) {
+            char vendor[5] = {};
+            std::snprintf(vendor, sizeof(vendor), "%04x", id.vendor);
+            const std::string rule = std::string("SUBSYSTEM==\"tty\", ATTRS{idVendor}==\"") + vendor + "\"";
+            EXPECT_NE(rules.find(rule), std::string::npos) << board.id << ": " << rule;
+        }
+    }
+    // The Pico is uploaded through its BOOTSEL USB device, which is not a serial port.
+    EXPECT_NE(rules.find("SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"2e8a\""), std::string::npos);
+}

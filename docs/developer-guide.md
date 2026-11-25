@@ -137,7 +137,10 @@ The editor needs no change: the palette, the menus and the tooltips are built fr
    installing it in an empty folder: `s2a-cli board install <id>` then `s2a-cli board list`). The Windows
    installer offers it as a task (`installer/windows/board-packages.cmake`), the settings and `s2a-cli
    board` list it. Only the Arduino AVR package is `shipped` (its archives come with the installers).
-3. Make sure `firmware/s2a_live` compiles for it, and add it to the CI compile steps.
+3. Make sure `firmware/s2a_live` compiles for it, and add it to the CI compile steps. A new USB vendor goes
+   into the Linux rule `resources/linux/60-scratch2arduino.rules` (a test checks every `usb` vendor is
+   there), plus a `usb` subsystem line when the upload goes through a USB device that is not a serial port
+   (Pico BOOTSEL).
 4. Add tests in `core/tests/test_boards.cpp` and, for a new family, an example project.
 
 ### Translate
