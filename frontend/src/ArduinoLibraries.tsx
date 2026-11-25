@@ -40,6 +40,8 @@ interface ArduinoLibrariesProps {
 	usesCpp: boolean;
 	onChange(libraries: ProjectLibrary[]): void;
 	onClose(): void;
+	/** A call failed (a link that does not open): told to the user. */
+	onError(error: unknown): void;
 }
 
 type Tab = "project" | "search" | "installed";
@@ -69,7 +71,7 @@ function errorText(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-export function ArduinoLibraries({ opened, language, t, libraries, usesCpp, onChange, onClose }: ArduinoLibrariesProps) {
+export function ArduinoLibraries({ opened, language, t, libraries, usesCpp, onChange, onClose, onError }: ArduinoLibrariesProps) {
 	const [tab, setTab] = useState<Tab>("project");
 	const [installed, setInstalled] = useState<InstalledLibrary[]>([]);
 	const [query, setQuery] = useState("");
@@ -254,7 +256,7 @@ export function ArduinoLibraries({ opened, language, t, libraries, usesCpp, onCh
 					onClick={(event) => {
 						// In the application, the link opens in the browser, not in the editor's window.
 						event.preventDefault();
-						void bridge.openUrl(LIBRARIES_SOURCE_URL).catch(() => undefined);
+						void bridge.openUrl(LIBRARIES_SOURCE_URL).catch(onError);
 					}}
 				>
 					docs.arduino.cc/libraries

@@ -37,6 +37,8 @@ interface SettingsProps {
 	/** Downloads and starts the installer (asks first to save the project). */
 	onInstall(release: Release): void;
 	onClose(): void;
+	/** A call failed (a link that does not open): told to the user instead of a button doing nothing. */
+	onError(error: unknown): void;
 }
 
 type Check =
@@ -64,6 +66,7 @@ export function Settings({
 	installError,
 	onInstall,
 	onClose,
+	onError,
 }: SettingsProps) {
 	const [check, setCheck] = useState<Check>({ kind: "idle" });
 	const windows = platform(navigator.userAgent) === "windows";
@@ -145,11 +148,11 @@ export function Settings({
 									</Button>
 								)}
 								{!windows && found.download.endsWith(".dmg") && (
-									<Button onClick={() => void bridge.openUrl(found.download).catch(() => undefined)}>
+									<Button onClick={() => void bridge.openUrl(found.download).catch(onError)}>
 										{t("update.download")}
 									</Button>
 								)}
-								<Button variant="default" onClick={() => void bridge.openUrl(found.page).catch(() => undefined)}>
+								<Button variant="default" onClick={() => void bridge.openUrl(found.page).catch(onError)}>
 									{t("update.notes")}
 								</Button>
 							</Group>
@@ -184,7 +187,7 @@ export function Settings({
 					<Group gap="sm">
 						<Button
 							variant="default"
-							onClick={() => void bridge.openUrl(reportUrl({ version, board }, navigator.userAgent)).catch(() => undefined)}
+							onClick={() => void bridge.openUrl(reportUrl({ version, board }, navigator.userAgent)).catch(onError)}
 						>
 							{t("settings.report")}
 						</Button>

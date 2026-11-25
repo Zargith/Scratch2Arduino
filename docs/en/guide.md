@@ -177,7 +177,8 @@ computer.
    drive), then click Upload; later uploads work without the button. On a Pico the pins are named GP0 to
    GP28 (as printed on the board) and the on-board LED is the pin "LED".
 3. Choose the **Port**: the list shows the plugged-in boards. If it is empty, click
-   **Look for plugged-in boards** (the circular arrow next to it).
+   **Look for plugged-in boards** (the circular arrow next to it). When a recognised board replaces the
+   one you had chosen, or when the chosen board is unplugged, a message says so.
 
 > Always unplug the board before changing wires, and check the circuit before plugging it back in.
 

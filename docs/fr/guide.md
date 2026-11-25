@@ -187,7 +187,8 @@ ordinateur.
    du bouton. Sur une Pico, les broches s'appellent GP0 à GP28 (comme sur la carte) et la LED de la carte est
    la broche "LED".
 3. Choisis le **Port** : la liste montre les cartes branchées. Si elle est vide, clique sur
-   **Chercher les cartes branchées** (la flèche qui tourne, à côté).
+   **Chercher les cartes branchées** (la flèche qui tourne, à côté). Quand une carte reconnue remplace
+   celle que tu avais choisie, ou quand la carte choisie est débranchée, un message le dit.
 
 > Débranche toujours la carte avant de modifier les fils, et vérifie le montage avant de la rebrancher.
 

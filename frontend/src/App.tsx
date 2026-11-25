@@ -103,6 +103,7 @@ import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wi
 import { Sparkline } from "@/Sparkline";
 import { codeThumbnail } from "@/thumbnail";
 import { notAppliedHint } from "@/liveUpdate";
+import { choosePort, detectedBoard } from "@/ports";
 import { AutosaveTracker } from "@/autosave";
 import {
 	isScript,
@@ -215,6 +216,9 @@ export function App() {
 	const [dirty, setDirty] = useState(false);
 	const [ports, setPorts] = useState<Port[]>([]);
 	const [port, setPort] = useState<string | null>(null);
+	/** The chosen port and board, read by the port detection (which keeps a stable identity). */
+	const choice = useRef({ port: null as string | null, boardId: defaultBoardId });
+	choice.current = { port, boardId };
 	/** Addresses of boards found on the home Wi-Fi (ESP32), offered as ports. */
 	const [wifiAddresses, setWifiAddresses] = useState<string[]>(rememberedAddresses);
 	const [wifiShown, setWifiShown] = useState(false);
@@ -401,23 +405,27 @@ export function App() {
 		try {
 			const found = await bridge.ports();
 			setPorts(found);
-			// A Wi-Fi or Bluetooth port, or the virtual board, stays chosen: it is not in the list of
-			// plugged-in boards. Without any board, the virtual one is chosen.
-			setPort((current) =>
-				current &&
-				(isWifiPort(current) ||
-					current.startsWith("bt:") ||
-					(isSimPort(current) && found.length === 0) ||
-					found.some((candidate) => candidate.address === current))
-					? current
-					: (found[0]?.address ?? SIM_PORT)
-			);
-			const detected = found[0]?.boardId;
-			if (detected && findBoard(detected)) setBoardId(detected);
+			// Changes the child did not make are told (audit #191): a board plugged in instead of the
+			// chosen one, a cable pulled out.
+			const { port: nextPort, lost } = choosePort(choice.current.port, found);
+			const { boardId: nextBoard, replaced } = detectedBoard(choice.current.boardId, found);
+			setPort(nextPort);
+			setBoardId(nextBoard);
+			const notices = [
+				lost ? t("status.port_lost", { port: lost }) : "",
+				// Not at start-up (no port chosen yet): the first detection only sets the default.
+				replaced && choice.current.port !== null
+					? t("status.board_detected", {
+							board: findBoard(nextBoard)?.name ?? nextBoard,
+							previous: findBoard(replaced)?.name ?? replaced,
+						})
+					: "",
+			].filter(Boolean);
+			if (notices.length > 0) setStatus({ kind: "info", message: notices.join(" ") });
 		} catch (error) {
 			fail(error);
 		}
-	}, [fail]);
+	}, [fail, t]);
 
 
 	useEffect(() => {
@@ -440,7 +448,8 @@ export function App() {
 	/** Applies and saves the settings (outside the application they only last until it closes). */
 	const changeSettings = (next: SavedSettings) => {
 		setSettings(next);
-		if (hasHost()) void bridge.saveSettings(next).catch(() => undefined);
+		// A failed save is told: otherwise the settings silently come back at the next start (#190).
+		if (hasHost()) void bridge.saveSettings(next).catch(fail);
 	};
 
 	// Once, at start-up: the host tells the system language. Later language changes are the
@@ -1828,6 +1837,7 @@ export function App() {
 				installError={updateError}
 				onInstall={(release) => void startUpdate(release)}
 				onClose={() => setSettingsShown(false)}
+				onError={fail}
 			/>
 			<BoardPackageDialog
 				language={language}
@@ -1986,6 +1996,7 @@ export function App() {
 					markDirty();
 				}}
 				onClose={() => setLibrariesShown(false)}
+				onError={fail}
 			/>
 			<Library
 				opened={libraryShown}

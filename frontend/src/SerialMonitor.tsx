@@ -108,8 +108,13 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 
 	const send = () => {
 		if (!connected || input === "") return;
-		void bridge.monitorSend(input).catch(() => undefined);
+		const text = input;
 		setInput("");
+		// Not sent: the text comes back so that it is not lost, and the reason is told (#190).
+		void bridge.monitorSend(text).catch((error: unknown) => {
+			setInput((current) => (current === "" ? text : current));
+			report.current(error instanceof Error ? error.message : String(error));
+		});
 	};
 
 	return (
