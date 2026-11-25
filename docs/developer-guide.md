@@ -181,6 +181,11 @@ work". Update both languages in the same pull request.
 - **Nothing downloaded runs unchecked**: each release publishes `SHA256SUMS.txt` (release job of
   `ci.yml`), and the in-app update checks the installer against it (`s2a::integrity::verifyFile`)
   in a new temporary folder before Windows runs it as administrator.
+- **Accessible to every child**: the page language follows the chosen one (`<html lang>`), a state is never
+  told by colour only (the LEDs of the virtual board say "on" or "off" in their name and have an outline
+  when off), text that keeps arriving is a live region (the serial monitor is a `role="log"`).
+- **Tutorial locks hold**: locking a block clears Blockly's undo history (`frontend/src/locks.ts`), since
+  undo replays edits whatever the locks.
 - **Generated code computes in `double`**, as Scratch does: an `int` is 16 bits on AVR boards (Uno, Nano,
   Mega), so `analogRead(A0) * 100` would wrap to a negative number. Add, subtract and multiply cast their
   first operand to `double`, divide already did.

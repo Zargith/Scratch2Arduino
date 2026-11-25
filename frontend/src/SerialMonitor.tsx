@@ -165,14 +165,23 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 					{t("monitor.paused")}
 				</Text>
 			)}
-			<ScrollArea h={220} viewportRef={viewport} type="auto" style={{ background: "var(--mantine-color-default-hover)", borderRadius: 4 }}>
-				{shown.length === 0 ? (
-					<Text size="xs" c="dimmed" p="xs">
-						{t("monitor.empty")}
-					</Text>
-				) : (
-					<Text size="xs" p="xs" style={{ fontFamily: "Space Mono, monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-						{shown.map((line, index) =>
+			<ScrollArea h={220} viewportRef={viewport} viewportProps={{ tabIndex: 0 }} type="auto" style={{ background: "var(--mantine-color-default-hover)", borderRadius: 4 }}>
+				{/* One log, always there (a live region added with its first lines is often not read), that
+				   announces new lines only (audit #211). */}
+				<Text
+					role="log"
+					aria-label={t("monitor.title")}
+					aria-relevant="additions"
+					size="xs"
+					p="xs"
+					style={{ fontFamily: "Space Mono, monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+				>
+					{shown.length === 0 ? (
+						<Text span size="xs" c="dimmed" style={{ fontFamily: "inherit" }}>
+							{t("monitor.empty")}
+						</Text>
+					) : (
+						shown.map((line, index) =>
 							line.error ? (
 								// The error output: red, and marked so that it is not told by the colour only.
 								<span key={index} style={{ color: "var(--mantine-color-red-text)", display: "block" }}>
@@ -183,9 +192,9 @@ export function SerialMonitor({ t, language, port, live, liveLines, busy, onErro
 									{line.text}
 								</span>
 							)
-						)}
-					</Text>
-				)}
+						)
+					)}
+				</Text>
 			</ScrollArea>
 			{!live && (
 				<Group gap="xs" wrap="nowrap">

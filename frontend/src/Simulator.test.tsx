@@ -44,6 +44,43 @@ const state: SimState = {
 	climates: {},
 };
 
+// Audit 2026-11-24 (#211): an LED was on or off only by a faint colour, not in its name.
+describe("LEDs of the virtual board", () => {
+	it("say whether they are on", async () => {
+		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+		window.matchMedia ??= (() => ({
+			matches: false,
+			addEventListener() {},
+			removeEventListener() {},
+			addListener() {},
+			removeListener() {},
+		})) as never;
+		const ledPlan: WiringPlan = {
+			components: [
+				{ kind: "output", name: "LED rouge", connections: [{ componentPin: "+", boardPin: "13", via: "", role: "PIN" }], note: "", blockIds: [] },
+				{ kind: "output", name: "LED verte", connections: [{ componentPin: "+", boardPin: "12", via: "", role: "PIN" }], note: "", blockIds: [] },
+			],
+			warnings: [],
+		};
+		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
+		const container = document.createElement("div");
+		document.body.append(container);
+		const root = createRoot(container);
+		await act(async () =>
+			root.render(
+				<MantineProvider>
+					<Simulator plan={ledPlan} state={state} phone={false} t={t} onInput={vi.fn()} />
+				</MantineProvider>
+			)
+		);
+		const label = (name: string) => container.querySelector(`[aria-label^="${name}"]`)?.getAttribute("aria-label") ?? "";
+		expect(label("LED rouge")).toContain(translate("fr", "sim.led_on"));
+		expect(label("LED verte")).toContain(translate("fr", "sim.led_off"));
+		await act(async () => root.unmount());
+		container.remove();
+	}, 30_000); // rendering Mantine is slow on a busy machine
+});
+
 describe("virtual board panel", () => {
 	it("shows the outputs and sends the inputs", async () => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
