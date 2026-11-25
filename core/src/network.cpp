@@ -100,8 +100,19 @@ bool wait(Native socket, bool forWriting, std::chrono::milliseconds timeout) {
     timeval limit{};
     limit.tv_sec = static_cast<long>(timeout.count() / 1000);
     limit.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
+    fd_set* failed = nullptr;
+#ifdef _WIN32
+    // Winsock reports a failed non-blocking connect() in the except set, not as writable: without
+    // it a refused connection waited for the whole timeout (audit #186).
+    fd_set exceptions;
+    FD_ZERO(&exceptions);
+    if (forWriting) {
+        FD_SET(socket, &exceptions);
+        failed = &exceptions;
+    }
+#endif
     const int status = ::select(static_cast<int>(socket + 1), forWriting ? nullptr : &set,
-                                forWriting ? &set : nullptr, nullptr, &limit);
+                                forWriting ? &set : nullptr, failed, &limit);
     return status > 0;
 }
 
@@ -364,7 +375,9 @@ Result<std::unique_ptr<SocketConnection>> SocketConnection::openBluetooth(const 
         }
     }
 #elif defined(_WIN32)
-    (void)timeout; // Windows looks the serial service up itself and has its own time limit
+    // Blocking: whether the Microsoft stack supports a non-blocking RFCOMM connect is not verified
+    // on hardware yet (audit #186 keeps this part open), so Windows' own time limit still applies.
+    (void)timeout;
     const Native native = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
     if (native == kInvalid) {
         return networkError(*checked, "Bluetooth is off or missing (" + describe(lastError()) + ")");
@@ -407,13 +420,22 @@ Result<std::unique_ptr<SocketConnection>> SocketConnection::openTcp(const std::s
     }
     const auto deadline = Clock::now() + timeout;
     std::string failure = "no answer";
+    int candidatesLeft = 0;
     for (const addrinfo* candidate = found; candidate != nullptr; candidate = candidate->ai_next) {
+        ++candidatesLeft;
+    }
+    for (const addrinfo* candidate = found; candidate != nullptr; candidate = candidate->ai_next, --candidatesLeft) {
         const Native native = ::socket(candidate->ai_family, candidate->ai_socktype, candidate->ai_protocol);
         if (native == kInvalid) {
             failure = describe(lastError());
             continue;
         }
-        if (!connectBefore(native, candidate->ai_addr, static_cast<int>(candidate->ai_addrlen), deadline, failure)) {
+        // Each address gets its share of the time: an unreachable IPv6 address no longer leaves
+        // nothing for the IPv4 one after it (audit #186).
+        const auto share = (deadline - Clock::now()) / std::max(candidatesLeft, 1);
+        const auto candidateDeadline = Clock::now() + std::max<Clock::duration>(share, std::chrono::milliseconds(500));
+        if (!connectBefore(native, candidate->ai_addr, static_cast<int>(candidate->ai_addrlen),
+                           std::min(candidateDeadline, deadline), failure)) {
             continue;
         }
         int enabled = 1; // short command lines: send them at once

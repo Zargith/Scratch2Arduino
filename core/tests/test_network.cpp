@@ -101,6 +101,31 @@ namespace {
 
 using s2a::network::BluetoothDevice;
 
+#ifndef _WIN32 // sockets of the test itself (the fix is for Winsock, checked by its CI build)
+// Audit 2026-11-24 (#186): on Windows a refused connection waited for the whole timeout and was
+// reported as "no answer". It must fail at once, with the real reason, on every system.
+TEST(SocketConnection, ReportsARefusedConnectionAtOnce) {
+    // A port nothing listens on: bound, then closed, so that it is free.
+    int unused = 0;
+    {
+        const int probe = ::socket(AF_INET, SOCK_STREAM, 0);
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        ::bind(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address));
+        socklen_t size = sizeof(address);
+        ::getsockname(probe, reinterpret_cast<sockaddr*>(&address), &size);
+        unused = ntohs(address.sin_port);
+        ::close(probe);
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto opened = s2a::network::SocketConnection::openTcp("127.0.0.1", unused, milliseconds(5000));
+    ASSERT_FALSE(opened.ok());
+    EXPECT_LT(std::chrono::steady_clock::now() - started, milliseconds(2500));
+    EXPECT_EQ(opened.error().detail.find("no answer"), std::string::npos) << opened.error().detail;
+}
+#endif
+
 TEST(Bluetooth, ReadsTheAddressOfABluetoothPort) {
     EXPECT_EQ(s2a::network::bluetoothAddress("bt:24:6f:28:aa:bb:cc"), std::optional<std::string>("24:6F:28:AA:BB:CC"));
     EXPECT_FALSE(s2a::network::bluetoothAddress("bt:24:6F:28:AA:BB").has_value());
