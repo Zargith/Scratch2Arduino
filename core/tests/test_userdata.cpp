@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <iterator>
+#include <vector>
 #include <string>
 
 namespace {
@@ -284,6 +286,26 @@ TEST(UserData, LibraryNestedTooDeepIsRefused) {
     EXPECT_EQ(store.importLibrary(dir.path() / "deep.s2ablocks").error().code, s2a::ErrorCode::InvalidJson);
     write(dir.path() / "library.json", deep);
     EXPECT_TRUE(store.library().empty());
+}
+
+// Audit 2026-11-24 (#190): an unreadable library.json looked empty, and the next saved group
+// replaced it: every saved group was lost. It is kept aside first.
+TEST(UserData, KeepsAnUnreadableLibraryAsideBeforeWriting) {
+    const TempDir dir;
+    Store store(dir.path());
+    write(dir.path() / "library.json", "{ damaged");
+    EXPECT_TRUE(store.library().empty());
+    ASSERT_TRUE(store.addToLibrary("new", group()).ok());
+    std::vector<fs::path> backups;
+    for (const auto& entry : fs::directory_iterator(dir.path())) {
+        if (entry.path().filename().u8string().rfind("library.damaged", 0) == 0) {
+            backups.push_back(entry.path());
+        }
+    }
+    ASSERT_EQ(backups.size(), 1U);
+    std::ifstream in(backups[0], std::ios::binary);
+    EXPECT_EQ(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), "{ damaged");
+    EXPECT_EQ(store.library().size(), 1U);
 }
 
 TEST(UserData, DefaultDirectoryIsNamedAfterTheProgram) {
