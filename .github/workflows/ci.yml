@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never on main: a second push there cancelled a run while it uploaded the release files, which
+  # left a release with missing files that later runs skipped (audit #203).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
@@ -158,7 +160,19 @@ jobs:
       - name: Packages (.deb and .rpm on Linux, .dmg on macOS)
         if: runner.os != 'Windows'
         working-directory: build
-        run: cpack -C Release
+        run: |
+          # hdiutil sometimes fails with "Resource busy" on the macOS runners (1.3.4 release): try
+          # again after detaching what a failed attempt left mounted (audit #203).
+          for attempt in 1 2 3; do
+            if cpack -C Release; then exit 0; fi
+            if [ "$RUNNER_OS" != macOS ]; then exit 1; fi
+            echo "::warning::cpack failed (attempt $attempt), trying again"
+            for disk in $(hdiutil info | awk '/\/dev\/disk[0-9]+/ && /Scratch2Arduino/ {print $1}'); do
+              hdiutil detach -force "$disk" || true
+            done
+            sleep 10
+          done
+          exit 1
 
       - name: Install the .deb and check it (Linux)
         if: runner.os == 'Linux'
@@ -225,6 +239,26 @@ jobs:
       - uses: actions/checkout@v7
       - name: Validate block catalogs
         run: pipx run check-jsonschema --schemafile blocks/schema/catalog.schema.json blocks/catalog/*.json
+
+  version:
+    name: Version bumped (PR to main)
+    # A merge into main without a new VERSION was green and published nothing (audit #203).
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: VERSION is newer than the last release
+        run: |
+          version=$(sed -n 's/^ *VERSION \([0-9][0-9.]*\)$/\1/p' CMakeLists.txt | head -n 1)
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1 | sed 's/^v//')
+          echo "VERSION $version, last release ${latest:-none}"
+          newest=$(printf '%s\n%s\n' "$latest" "$version" | sort -V | tail -n 1)
+          if [ -n "$latest" ] && { [ "$version" = "$latest" ] || [ "$newest" != "$version" ]; }; then
+            echo "::error::bump VERSION in CMakeLists.txt above $latest before merging into main"
+            exit 1
+          fi
 
   sanitizers:
     name: Core tests (ASan and UBSan)
@@ -540,10 +574,16 @@ jobs:
 
       - name: Read version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -n 's/^ *VERSION \([0-9][0-9.]*\)$/\1/p' CMakeLists.txt | head -n 1)
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A release left as a draft by a cancelled run is removed and published again.
+          if gh release view "v$version" --json isDraft --jq .isDraft 2>/dev/null | grep -q true; then
+            gh release delete "v$version" --yes
+          fi
           if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "::notice::v$version is already released: bump VERSION in CMakeLists.txt to publish a new release."
@@ -592,4 +632,7 @@ jobs:
             --title "Scratch2Arduino $VERSION" \
             --notes-file release-notes.md \
             --generate-notes \
-            --prerelease=$([ "${VERSION%%.*}" = 0 ] && echo true || echo false)
+            --prerelease=$([ "${VERSION%%.*}" = 0 ] && echo true || echo false) \
+            --draft
+          # Published (and the tag created) only once every file is uploaded (audit #203).
+          gh release edit "v$VERSION" --draft=false
