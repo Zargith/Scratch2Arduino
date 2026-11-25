@@ -313,7 +313,23 @@ std::vector<SavedBlocks> Store::library() const {
 }
 
 Status Store::writeLibrary(const std::vector<SavedBlocks>& groups) const {
-    return writeFileAtomically(directory_ / kLibraryFile, libraryToJson(groups));
+    // A library.json that cannot be read looked empty: writing over it would lose every saved group.
+    // It is kept aside first (audit #190).
+    const fs::path file = directory_ / kLibraryFile;
+    std::error_code error;
+    if (fs::exists(file, error)) {
+        const auto bytes = readSmallFile(file, kMaxLibrarySize);
+        if (!bytes || !libraryFromJson(*bytes).ok()) {
+            const auto stamp = std::chrono::duration_cast<std::chrono::seconds>(
+                                   std::chrono::system_clock::now().time_since_epoch())
+                                   .count();
+            fs::rename(file, directory_ / ("library.damaged-" + std::to_string(stamp) + ".json"), error);
+            if (error) {
+                return Error{ErrorCode::WriteFailed, "cannot keep the damaged library aside: " + error.message()};
+            }
+        }
+    }
+    return writeFileAtomically(file, libraryToJson(groups));
 }
 
 Result<SavedBlocks> Store::addToLibrary(std::string name, project::Project blocks) {
