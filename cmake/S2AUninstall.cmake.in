@@ -1,10 +1,16 @@
-# Removes every file listed in install_manifest.txt (written by `cmake --install`).
+# Removes every file listed in install_manifest.txt (written by `cmake --install`), then the
+# folders of Scratch2Arduino left empty (Scratch2Arduino.app on macOS, share/scratch2arduino...):
+# an empty .app stayed in Applications and in Launchpad (audit #207). Only folders whose path below
+# the prefix names Scratch2Arduino are removed, and only when empty: shared folders such as bin or
+# share/applications stay, even when this program was their only user.
 set(manifest "@CMAKE_BINARY_DIR@/install_manifest.txt")
+set(prefix "$ENV{DESTDIR}@CMAKE_INSTALL_PREFIX@")
 if(NOT EXISTS "${manifest}")
     message(FATAL_ERROR "Nothing to uninstall: ${manifest} not found (run the install step first).")
 endif()
 
 file(STRINGS "${manifest}" installed_files)
+set(folders "")
 foreach(installed_file IN LISTS installed_files)
     set(path "$ENV{DESTDIR}${installed_file}")
     if(IS_SYMLINK "${path}" OR EXISTS "${path}")
@@ -13,5 +19,34 @@ foreach(installed_file IN LISTS installed_files)
     else()
         message(STATUS "Already removed: ${path}")
     endif()
+    # Every folder between the file and the root, deepest first, for the pruning below.
+    get_filename_component(folder "${path}" DIRECTORY)
+    while(folder AND NOT folder STREQUAL "/" AND NOT folder MATCHES "^[A-Za-z]:/?$")
+        list(APPEND folders "${folder}")
+        get_filename_component(parent "${folder}" DIRECTORY)
+        if(parent STREQUAL folder)
+            break()
+        endif()
+        set(folder "${parent}")
+    endwhile()
 endforeach()
 file(REMOVE "${manifest}")
+
+list(REMOVE_DUPLICATES folders)
+# Deepest folders first, so that a parent is checked once its children are gone.
+list(SORT folders)
+list(REVERSE folders)
+foreach(folder IN LISTS folders)
+    # Only below the prefix, and only a folder whose own path below it names Scratch2Arduino.
+    file(RELATIVE_PATH below "${prefix}" "${folder}")
+    string(TOLOWER "${below}" lower)
+    if(below STREQUAL "" OR below MATCHES "^\\.\\." OR IS_ABSOLUTE "${below}" OR NOT lower MATCHES "scratch2arduino"
+       OR NOT IS_DIRECTORY "${folder}")
+        continue()
+    endif()
+    file(GLOB children LIST_DIRECTORIES true "${folder}/*" "${folder}/.*")
+    if(NOT children)
+        message(STATUS "Removing empty folder ${folder}")
+        file(REMOVE_RECURSE "${folder}") # empty: checked just above
+    endif()
+endforeach()

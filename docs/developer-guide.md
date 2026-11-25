@@ -181,6 +181,9 @@ work". Update both languages in the same pull request.
   format is refused with an "update" message rather than misread.
 - **Offline first**: the app runs without a network once the board tools are installed.
 - **French first, English second**, for every user-facing text.
+- **Uninstall leaves nothing of ours**: `cmake/S2AUninstall.cmake.in` removes the installed files, then
+  the folders below the prefix that name Scratch2Arduino once they are empty; shared folders (`bin`,
+  `share/applications`) always stay. It still needs the build folder (`install_manifest.txt`).
 - **Never replace a file without asking**: save dialogs go through `chooseSaveFile`
   (`apps/webview/src/bridge.cpp`), which asks again when it adds the extension to the typed name.
 - **Nothing downloaded runs unchecked**: each release publishes `SHA256SUMS.txt` (release job of

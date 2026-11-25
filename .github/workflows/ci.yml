@@ -320,6 +320,9 @@ jobs:
           test -x "$RUNNER_TEMP/make-prefix/bin/scratch2arduino"
           make uninstall
           test ! -e "$RUNNER_TEMP/make-prefix/bin/scratch2arduino"
+          # Audit #207: the folders of Scratch2Arduino go too (an empty .app stayed on macOS).
+          left=$(find "$RUNNER_TEMP/make-prefix" -iname '*scratch2arduino*')
+          if [ -n "$left" ]; then echo "left after uninstall: $left"; exit 1; fi
 
   windows-installer:
     name: Scratch2Arduino_installer.exe (Windows)
