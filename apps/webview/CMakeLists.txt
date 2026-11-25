@@ -29,6 +29,7 @@ set(WEBVIEW_BUILD_STATIC_LIBRARY OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(webview
     URL https://github.com/webview/webview/archive/refs/tags/0.12.0.tar.gz
+    URL_HASH SHA256=e2c8d0bed3fcd13e624074448b7d3b1d0b0d03546a15839f17ee0013f2cba1db
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SYSTEM
 )
