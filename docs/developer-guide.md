@@ -66,6 +66,16 @@ cmake --preset debug && cmake --build --preset debug                            
 cd frontend && pnpm install && pnpm test && pnpm dev   # editor in a browser (host calls report they need the app)
 ```
 
+To catch memory errors and undefined behaviour (a time computation that overflowed in the Live handshake
+was only found this way), run the core tests under the sanitizers from time to time:
+
+```bash
+cmake -S . -B build/san -DS2A_BUILD_WEBVIEW=OFF -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build/san && ctest --test-dir build/san
+```
+
 The core-only build downloads `arduino-cli` next to `s2a-cli`
 (`build/core-only/tools/s2a-cli/`), so `s2a-cli compile <project.json> --board uno` compiles locally.
 CI (`.github/workflows/ci.yml`) builds and tests the three OS, validates the block catalogs against
@@ -168,3 +178,11 @@ work". Update both languages in the same pull request.
   format is refused with an "update" message rather than misread.
 - **Offline first**: the app runs without a network once the board tools are installed.
 - **French first, English second**, for every user-facing text.
+- **Generated code computes in `double`**, as Scratch does: an `int` is 16 bits on AVR boards (Uno, Nano,
+  Mega), so `analogRead(A0) * 100` would wrap to a negative number. Add, subtract and multiply cast their
+  first operand to `double`, divide already did.
+- **Files the user opens are untrusted**: read JSON with `s2a::detail::parseUntrustedJson`
+  (`core/src/json_input.hpp`, refuses text nested too deep), and read each field with `find` plus a type
+  check, never `json::value()`, which throws when a field has another type.
+- **Every validator rule has a test**: rules loop up to `Rule::Count`, so a new rule without French and
+  English messages fails `EveryRuleHasMessagesInBothLanguages`.

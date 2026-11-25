@@ -4,6 +4,8 @@
 #include "s2a/version.hpp"
 
 #include <array>
+#include "json_input.hpp"
+
 #include <nlohmann/json.hpp>
 #include <random>
 #include <stdexcept>
@@ -203,7 +205,7 @@ Project projectFromJson(Json json, const Files* files) {
         throw FormatError("$.format", "not a Scratch2Arduino project");
     }
     const Json& version = member(json, "formatVersion", root);
-    if (!version.is_number_integer() || version.get<int>() < 1) {
+    if (!version.is_number_integer() || version.get<long long>() < 1 || version.get<long long>() > kFormatVersion) {
         throw FormatError("$.formatVersion", "must be a positive integer");
     }
     migrate(json, version.get<int>());
@@ -433,7 +435,7 @@ Json projectDocument(const Project& project, CodeStorage storage, Files* files) 
 
 /// Parses project.json; `files` are the archive entries (nullptr for a bare project.json).
 Result<Project> parse(std::string_view text, const Files* files) {
-    Json json = Json::parse(text, nullptr, /*allow_exceptions=*/false);
+    Json json = s2a::detail::parseUntrustedJson(text);
     if (json.is_discarded()) {
         return Error{ErrorCode::InvalidJson, "project.json is not valid JSON"};
     }

@@ -212,7 +212,8 @@ Status LiveLink::handshake(milliseconds timeout) {
     // port resets most boards, and their bootloader swallows what is sent during the next
     // second or two. So the board must also answer a "?" before the blocks start.
     const auto deadline = std::chrono::steady_clock::now() + timeout;
-    auto lastAsk = std::chrono::steady_clock::time_point::min();
+    // Empty until the first "?": a silent board is asked at once (time_point::min() overflowed).
+    std::optional<std::chrono::steady_clock::time_point> lastAsk;
     while (std::chrono::steady_clock::now() < deadline) {
         auto line = transport_.readLine(milliseconds(300));
         if (!line.ok()) {
@@ -229,7 +230,7 @@ Status LiveLink::handshake(milliseconds timeout) {
             lastAsk = std::chrono::steady_clock::now();
             continue; // restarting: its own greeting will come
         }
-        if (!line.value() && std::chrono::steady_clock::now() - lastAsk >= milliseconds(1000)) {
+        if (!line.value() && (!lastAsk || std::chrono::steady_clock::now() - *lastAsk >= milliseconds(1000))) {
             // Silent board: it did not restart, or the bootloader swallowed the last "?".
             if (auto sent = transport_.writeLine("?"); !sent.ok()) {
                 return sent.error();

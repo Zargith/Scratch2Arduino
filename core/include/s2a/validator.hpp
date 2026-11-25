@@ -44,6 +44,7 @@ enum class Rule {
     UserCodeNoValue,    ///< The result of a "My code" function that gives no value.
     UserCodeReadOnly,   ///< Setting a constant of "My code".
     UserCodeOwned,      ///< Setting a variable that the functions of "My code" change themselves.
+    Count,              ///< Not a rule: the number of rules (keep it last, tests loop up to it).
 };
 
 struct Issue {
