@@ -67,7 +67,14 @@ function Test-Responsive {
     }
 }
 
+# A stuck installer used to keep the runner for the 6-hour default (audit #204).
+$limit = [TimeSpan]::FromMinutes(75)
 while (-not $process.WaitForExit(5000)) {
+    if ($watch.Elapsed -gt $limit) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "::error::the installer was still running after $($limit.TotalMinutes) minutes"
+        exit 1
+    }
     if ($CheckResponsive) { Test-Responsive }
     Show-NewLines
     $elapsed = [int]$watch.Elapsed.TotalSeconds
