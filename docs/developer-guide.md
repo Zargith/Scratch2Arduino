@@ -78,8 +78,8 @@ cmake --build build/san && ctest --test-dir build/san
 
 The core-only build downloads `arduino-cli` next to `s2a-cli`
 (`build/core-only/tools/s2a-cli/`), so `s2a-cli compile <project.json> --board uno` compiles locally.
-CI (`.github/workflows/ci.yml`) builds and tests the three OS, validates the block catalogs against
-their JSON schema, runs the frontend tests, compiles every example and the firmware for every board, and
+CI (`.github/workflows/ci.yml`) builds and tests the three OS, runs the core tests under ASan and UBSan,
+validates the block catalogs against their JSON schema, runs the frontend tests, compiles every example and the firmware for every board, and
 builds both installers.
 
 ## 3. Recipes
