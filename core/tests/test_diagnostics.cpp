@@ -207,3 +207,19 @@ TEST(ExplainCompilerMessage, ExplainsCommonMistakesOfTypedCode) {
 }
 
 } // namespace
+
+// Audit 2026-11-24 (#178): std::stoi threw on a line number too large, and the regex walked
+// very long lines (recursive in libstdc++ and MSVC).
+TEST(CompilerMessages, IgnoresAbsurdNumbersAndHugeLines) {
+    std::vector<s2a::toolchain::CompilerMessage> messages;
+    const std::string output = std::string("/s/sketch.ino:99999999999999999999:5: error: too big\n") +
+                               "/s/sketch.ino:12:5: error: 'pinMod' was not declared in this scope\n" +
+                               "/s/sketch.ino:3:1: warning: a long one " + std::string(200000, 'x') + ": error: inside\n";
+    // A line of 200 KB is read by hand: the regex used before recursed once per character and
+    // overflowed the 1 MB stack of a Windows thread on lines of a few KB.
+    ASSERT_NO_THROW(messages = s2a::toolchain::parseCompilerMessages(output));
+    ASSERT_EQ(messages.size(), 2U);
+    EXPECT_EQ(messages[0].line, 12);
+    EXPECT_EQ(messages[1].severity, "warning"); // the first marker wins, not ": error:" in the text
+    EXPECT_EQ(messages[1].line, 3);
+}
