@@ -40,13 +40,16 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install ninja
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
       - uses: pnpm/action-setup@v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Configure
         shell: bash
@@ -221,6 +224,7 @@ jobs:
   data:
     name: Data files (JSON schema)
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - name: Validate block catalogs
@@ -249,15 +253,19 @@ jobs:
   frontend:
     name: Block editor (frontend)
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
       - uses: pnpm/action-setup@v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install
         run: pnpm --dir frontend install --frozen-lockfile
@@ -284,13 +292,16 @@ jobs:
 
       - uses: ./.github/actions/setup-apt
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
       - uses: pnpm/action-setup@v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Scratch2Arduino_installer.sh --user
         run: ./Scratch2Arduino_installer.sh --user --yes
@@ -327,6 +338,7 @@ jobs:
   windows-installer:
     name: Scratch2Arduino_installer.exe (Windows)
     runs-on: windows-latest
+    timeout-minutes: 90
     env:
       # Code signing (Windows SmartScreen): set the secrets WINDOWS_CERTIFICATE (base64 of a .pfx)
       # and WINDOWS_CERTIFICATE_PASSWORD to sign the installer; without them it stays unsigned.
@@ -334,13 +346,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
       - uses: pnpm/action-setup@v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Build the block editor (shipped prebuilt in Scratch2Arduino_installer.exe)
         run: |
@@ -531,6 +546,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build, data, sanitizers, frontend, install-scripts, windows-installer]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
