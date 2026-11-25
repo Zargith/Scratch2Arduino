@@ -12,6 +12,7 @@
 #include "s2a/wiring.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <array>
 #include <cctype>
 #include <cmath>
@@ -323,7 +324,9 @@ void LiveLink::servoWrite(int pin, int angle) {
 void LiveLink::stepper(const std::array<int, 4>& pins, long steps, int rpm) {
     // The firmware answers once the motor has turned: wait for the move (plus some margin).
     rpm = std::clamp(rpm, 1, 15);
-    const auto move = milliseconds(std::abs(steps) * 60000 / (static_cast<long>(rpm) * kStepsPerTurn));
+    // In 64 bits: abs(steps) * 60000 overflowed a 32-bit long on Windows (audit #184); at most an hour.
+    const long long turnMs = std::llabs(static_cast<long long>(steps)) * 60000LL / (static_cast<long long>(rpm) * kStepsPerTurn);
+    const auto move = milliseconds(std::min(turnMs, 3600LL * 1000LL));
     std::string command = "Q";
     for (const int pin : pins) {
         command += " " + std::to_string(pin);
