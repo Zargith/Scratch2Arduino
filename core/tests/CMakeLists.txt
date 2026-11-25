@@ -50,7 +50,8 @@ if(WIN32)
 endif()
 add_dependencies(s2a_core_tests s2a_process_helper)
 target_compile_definitions(s2a_core_tests PRIVATE S2A_PROCESS_HELPER="$<TARGET_FILE:s2a_process_helper>"
-    S2A_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples/projects")
+    S2A_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples/projects"
+    S2A_UDEV_RULES="${PROJECT_SOURCE_DIR}/resources/linux/60-scratch2arduino.rules")
 if(S2A_ARDUINO_CLI_EXECUTABLE)
     target_compile_definitions(s2a_core_tests PRIVATE
         S2A_BUNDLED_ARDUINO_CLI="${S2A_ARDUINO_CLI_EXECUTABLE}"
