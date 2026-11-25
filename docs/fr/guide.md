@@ -290,7 +290,9 @@ câble. Tu vois tout de suite l'effet d'un changement, sans téléverser :
 - les scripts qui tournent sont **éclairés** ;
 - le panneau de droite montre les **variables** et les **capteurs** lus par les blocs, avec un graphique
   des 30 dernières secondes ;
-- modifie un bloc (un nombre, une broche, un bloc ajouté...) : la carte suit immédiatement.
+- modifie un bloc (un nombre, une broche, un bloc ajouté...) : la carte suit immédiatement. Tant qu'un
+  bloc est incomplet (une case vide, une broche qui n'existe pas), la carte garde les blocs d'avant et un
+  message explique pourquoi ; dès que les blocs sont complets, ils sont envoyés.
 
 **Sorties du programme** : ce que ton programme écrit (bloc *écrire ... sur le moniteur série*, `print()`
 en Python ou JavaScript) s'affiche dans le panneau du moniteur série, qui s'ouvre tout seul à la première

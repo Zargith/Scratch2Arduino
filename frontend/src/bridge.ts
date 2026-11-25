@@ -303,7 +303,8 @@ interface HostFunctions {
 	s2a_upload(project: Project, port: string, language: Language): Promise<Outcome>;
 	s2a_set_title(title: string): Promise<void>;
 	s2a_live_start(project: Project, port: string, language: Language): Promise<{ ok: boolean; message?: string }>;
-	s2a_live_update(project: Project): Promise<void>;
+	/** ok false: the blocks cannot run yet (half-built); the board keeps the previous ones. */
+	s2a_live_update(project: Project): Promise<{ ok: boolean; message?: string } | undefined>;
 	s2a_live_stop(): Promise<void>;
 	s2a_live_pause(paused: boolean): Promise<void>;
 	s2a_live_step(): Promise<void>;
