@@ -1,8 +1,11 @@
 /* Message of the last action: over the workspace, between the palette and the zoom/trash controls. */
 .s2a-status {
 	position: fixed;
-	left: var(--s2a-status-left, 16px);
-	right: var(--s2a-status-right, 16px);
+	/* Beside the palette and the right-hand panels, but never narrower than 360 px: in a medium
+	   window the offsets shrink (the box goes over the panels) rather than crush the message. */
+	--s2a-status-right-kept: max(16px, min(var(--s2a-status-right, 16px), calc(100vw - 376px)));
+	right: var(--s2a-status-right-kept);
+	left: max(16px, min(var(--s2a-status-left, 16px), calc(100vw - var(--s2a-status-right-kept) - 360px)));
 	bottom: var(--s2a-status-bottom, 16px);
 	z-index: 150;
 	max-height: 50vh;

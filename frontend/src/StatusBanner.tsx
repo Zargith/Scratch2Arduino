@@ -36,6 +36,18 @@ const look = {
 	info: { color: "blue", Icon: IconInfoCircle, title: "status.kind_info" },
 } as const satisfies Record<Status["kind"], { color: string; Icon: unknown; title: MessageKey }>;
 
+/** A number per message: a new message, even with the same words, is a new alert to announce. */
+const messageIds = new WeakMap<Status, number>();
+let lastMessageId = 0;
+function messageId(status: Status): number {
+	let id = messageIds.get(status);
+	if (id === undefined) {
+		id = ++lastMessageId;
+		messageIds.set(status, id);
+	}
+	return id;
+}
+
 export function StatusBanner({ status, busy, space, t, onClose }: StatusBannerProps) {
 	const { color, Icon, title } = look[status.kind];
 	// The offsets are CSS variables: StatusBanner.css drops them when the window is narrow (zoom).
@@ -47,6 +59,9 @@ export function StatusBanner({ status, busy, space, t, onClose }: StatusBannerPr
 	return (
 		<div className="s2a-status" style={place}>
 			<Alert
+				// Remounted for each message: screen readers announce a live region reliably when it
+				// appears, not when its role changes (info -> error) or the same words come again.
+				key={messageId(status)}
 				color={color}
 				// An error interrupts the screen reader; other messages wait for it to finish.
 				role={status.kind === "error" ? "alert" : "status"}
@@ -54,7 +69,7 @@ export function StatusBanner({ status, busy, space, t, onClose }: StatusBannerPr
 				withCloseButton
 				closeButtonLabel={t("status.close")}
 				onClose={onClose}
-				icon={busy ? <Loader size="xs" /> : <Icon size={20} aria-hidden />}
+				icon={busy ? <Loader size="xs" aria-hidden /> : <Icon size={20} aria-hidden />}
 			>
 				<Text size="sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
 					{status.message}

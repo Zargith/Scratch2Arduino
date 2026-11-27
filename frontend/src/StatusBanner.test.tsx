@@ -28,7 +28,7 @@ describe("StatusBanner", () => {
 		expect(alert).not.toBeNull();
 		expect(alert.textContent).toContain(t("status.kind_error"));
 		expect(alert.textContent).toContain("Le bloc \"répéter\" est vide.");
-		expect(alert.querySelector("svg")).not.toBeNull();
+		expect(alert.querySelector(".mantine-Alert-icon svg")).not.toBeNull(); // the state icon, not the close X
 	});
 
 	it("tells a success and an information apart without colour, politely", () => {
@@ -40,6 +40,28 @@ describe("StatusBanner", () => {
 		show({ kind: "info", message: "Projet ouvert." });
 		expect(document.querySelector('[role="status"]')?.textContent).toContain(t("status.kind_info"));
 		expect(t("status.kind_info")).not.toBe(t("status.kind_success"));
+	});
+
+	it("gives each new message a fresh alert, even with the same words, so it is announced again", () => {
+		const onClose = vi.fn();
+		const banner = (status: Status) => <StatusBanner status={status} busy={false} space={space} t={t} onClose={onClose} />;
+		rendered = renderUi(banner({ kind: "info", message: "Vérification du programme..." }));
+		const first = document.querySelector('[role="status"]');
+		rendered.update(banner({ kind: "error", message: "Le bloc est vide." }));
+		const error = document.querySelector('[role="alert"]');
+		expect(error?.textContent).toContain("Le bloc est vide.");
+		expect(first?.isConnected).toBe(false);
+		rendered.update(banner({ kind: "error", message: "Le bloc est vide." }));
+		expect(error?.isConnected).toBe(false);
+		expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1);
+	});
+
+	it("puts the technical details in a folded part, not in the message", () => {
+		// jsdom lays nothing out, so the spoiler's "show" button (shown when the content is taller
+		// than the fold) cannot appear here: the test checks where the details go.
+		const { box } = show({ kind: "error", message: "Le téléversement a échoué.", details: "avrdude: stk500_recv(): programmer is not responding" });
+		expect(box.querySelector(".mantine-Spoiler-root")?.textContent).toContain("stk500_recv");
+		expect(box.querySelector(".mantine-Text-root")?.textContent).toBe("Le téléversement a échoué.");
 	});
 
 	it("shows a spinner while the action runs", () => {
