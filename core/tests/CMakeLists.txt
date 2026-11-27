@@ -1,18 +1,4 @@
-find_package(GTest 1.12 CONFIG QUIET)
-if(NOT GTest_FOUND)
-    include(FetchContent)
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        SYSTEM
-        EXCLUDE_FROM_ALL
-    )
-    FetchContent_MakeAvailable(googletest)
-endif()
-
+# GoogleTest is found (or downloaded) by the top-level CMakeLists.txt, for every test target.
 add_executable(s2a_core_tests
     test_arduino_cli.cpp
     test_board_packages.cpp

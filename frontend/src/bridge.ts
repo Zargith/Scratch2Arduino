@@ -1,4 +1,4 @@
-// Calls into the native C++ host (apps/webview/src/bridge.cpp). The host binds each
+// Calls into the native C++ host (apps/webview/bridge/bridge.cpp). The host binds each
 // function with webview::bind; every call returns a promise. When the page runs in a
 // plain browser (pnpm dev) the host is missing and calls report it instead of throwing.
 import type { Language } from "@/catalog";

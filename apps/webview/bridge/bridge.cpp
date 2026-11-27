@@ -1,4 +1,3 @@
-// Core headers first: webview.h (via bridge.hpp) brings X11 macros on Linux.
 #include "s2a/arduino_cli.hpp"
 #include "s2a/board_packages.hpp"
 #include "s2a/boards.hpp"
@@ -18,6 +17,7 @@
 #include "s2a/wiring.hpp"
 
 #include "bridge.hpp"
+#include "bridge_helpers.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -33,7 +33,6 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <portable-file-dialogs.h>
-#include <webview/webview.h>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -55,9 +54,6 @@ using Json = nlohmann::json;
 // Every dump() below replaces bytes that are not UTF-8 (a Latin-1 file name, board output, compiler
 // text) instead of throwing, which failed the call or, inside a catch handler, ended the program
 // (audit #187).
-
-constexpr int kResolve = 0;
-constexpr int kReject = 1;
 
 /// Thrown by a call to reject its promise with a message for the user.
 struct UserError {
@@ -87,48 +83,6 @@ project::Project projectArg(const Json& args, std::size_t index, Language langua
     return std::move(parsed).value();
 }
 
-/// Bytes of a base64 text (a "data:...;base64," prefix is skipped); invalid characters are ignored.
-std::string base64Decode(std::string_view text) {
-    if (const auto comma = text.find(','); text.substr(0, 5) == "data:" && comma != std::string_view::npos) {
-        text.remove_prefix(comma + 1);
-    }
-    static constexpr std::string_view kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::string bytes;
-    unsigned int buffer = 0;
-    int bits = 0;
-    for (const char c : text) {
-        const auto value = kAlphabet.find(c);
-        if (value == std::string_view::npos) {
-            continue; // padding, line breaks
-        }
-        buffer = (buffer << 6) | static_cast<unsigned int>(value);
-        bits += 6;
-        if (bits >= 8) {
-            bits -= 8;
-            bytes.push_back(static_cast<char>((buffer >> bits) & 0xFF));
-        }
-    }
-    return bytes;
-}
-
-/// Base64 text of some bytes (with padding).
-std::string base64Encode(std::string_view bytes) {
-    static constexpr std::string_view kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::string text;
-    text.reserve((bytes.size() + 2) / 3 * 4);
-    for (std::size_t i = 0; i < bytes.size(); i += 3) {
-        const std::size_t count = std::min<std::size_t>(3, bytes.size() - i);
-        unsigned int chunk = 0;
-        for (std::size_t j = 0; j < 3; ++j) {
-            chunk = (chunk << 8) | (j < count ? static_cast<unsigned char>(bytes[i + j]) : 0U);
-        }
-        for (std::size_t j = 0; j < 4; ++j) {
-            text.push_back(j <= count ? kAlphabet[(chunk >> (18 - 6 * j)) & 0x3F] : '=');
-        }
-    }
-    return text;
-}
-
 std::string stringArg(const Json& args, std::size_t index) {
     return index < args.size() && args[index].is_string() ? args[index].get<std::string>() : std::string{};
 }
@@ -153,16 +107,8 @@ fs::path projectsDirectory() {
 /// Opens a page of the project's repository (a release, its installer) in the user's browser.
 /// Only those pages: the editor cannot make the program open anything else.
 bool openProjectPage(const std::string& url) {
-    static const std::string kRepository = "https://github.com/Zargith/Scratch2Arduino/";
-    if (url.rfind(kRepository, 0) != 0 || url.size() > 512) {
+    if (!detail::isProjectPage(url)) {
         return false;
-    }
-    for (const char c : url) {
-        const bool safe = std::isalnum(static_cast<unsigned char>(c)) != 0 ||
-                          std::string_view("/:.-_~%?=&#+").find(c) != std::string_view::npos;
-        if (!safe) {
-            return false;
-        }
     }
 #ifdef _WIN32
     const std::wstring wide(url.begin(), url.end()); // ASCII only, checked above
@@ -197,21 +143,6 @@ std::string_view hostSystemName() {
     }
     return "linux";
 }
-
-#ifdef _WIN32
-/// An installer of a release of the project ("https://github.com/Zargith/Scratch2Arduino/releases/
-/// download/v0.11.1/Scratch2Arduino_installer.exe"): the only files the update downloads.
-bool isReleaseInstaller(const std::string& url) {
-    static const std::string kDownloads = "https://github.com/Zargith/Scratch2Arduino/releases/download/";
-    if (url.rfind(kDownloads, 0) != 0 || url.size() > 300 || url.size() < 5 ||
-        url.compare(url.size() - 4, 4, ".exe") != 0 || url.find("..") != std::string::npos) {
-        return false;
-    }
-    return std::all_of(url.begin(), url.end(), [](char c) {
-        return std::isalnum(static_cast<unsigned char>(c)) != 0 || std::string_view("/:.-_").find(c) != std::string_view::npos;
-    });
-}
-#endif
 
 #ifdef _WIN32
 /// COM for the calling thread (the bridge's worker threads), released at the end of the scope.
@@ -368,7 +299,7 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
 
 } // namespace
 
-Bridge::Bridge(::webview::webview& window, Language language)
+Bridge::Bridge(HostWindow& window, Language language)
     : window_(window), language_(language), user_(userdata::defaultDirectory()) {
     // The language chosen in the settings wins over the system's.
     const std::string chosen = user_.settings().language;
@@ -548,11 +479,11 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
     auto done = std::make_shared<std::atomic<bool>>(false);
     std::thread thread([this, id, done, task = std::move(work)]() {
         try {
-            window_.resolve(id, kResolve, task());
+            window_.resolve(id, true, task());
         } catch (const UserError& error) {
-            window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
+            window_.resolve(id, false, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
         } catch (const std::exception& error) {
-            window_.resolve(id, kReject, internalError(error, language_));
+            window_.resolve(id, false, internalError(error, language_));
         }
         done->store(true);
     });
@@ -565,16 +496,16 @@ template <typename Handler> void Bridge::bindPortCall(const std::string& name, H
     // a close never overtakes the open before it and the monitor and Live never share the port.
     window_.bind(
         name,
-        [this, handler = std::move(handler)](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this, handler = std::move(handler)](const std::string& id, const std::string& request) {
             {
                 const std::lock_guard<std::mutex> lock(portMutex_);
                 portJobs_.push_back([this, handler, id, request]() {
                     try {
-                        window_.resolve(id, kResolve, handler(request));
+                        window_.resolve(id, true, handler(request));
                     } catch (const UserError& error) {
-                        window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
+                        window_.resolve(id, false, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
                     } catch (const std::exception& error) {
-                        window_.resolve(id, kReject, internalError(error, language_));
+                        window_.resolve(id, false, internalError(error, language_));
                     }
                 });
                 if (!portThread_.joinable()) {
@@ -582,8 +513,7 @@ template <typename Handler> void Bridge::bindPortCall(const std::string& name, H
                 }
             }
             portReady_.notify_one();
-        },
-        nullptr);
+        });
 }
 
 void Bridge::runPortQueue() {
@@ -607,16 +537,15 @@ template <typename Handler> void Bridge::bindSync(const std::string& name, Handl
     // the program (std::terminate on GTK and Cocoa): unsaved blocks would be lost (audit #168).
     window_.bind(
         name,
-        [this, handler = std::move(handler)](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this, handler = std::move(handler)](const std::string& id, const std::string& request) {
             try {
-                window_.resolve(id, kResolve, handler(request));
+                window_.resolve(id, true, handler(request));
             } catch (const UserError& error) {
-                window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
+                window_.resolve(id, false, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
             } catch (const std::exception& error) {
-                window_.resolve(id, kReject, internalError(error, language_));
+                window_.resolve(id, false, internalError(error, language_));
             }
-        },
-        nullptr);
+        });
 }
 
 std::string Bridge::openedJson(const fs::path& path, Language language) {
@@ -671,32 +600,30 @@ void Bridge::bind() {
     });
 
     bindSync("s2a_set_title", [this](const std::string& request) {
-        window_.set_title(stringArg(Json::parse(request), 0));
+        window_.setTitle(stringArg(Json::parse(request), 0));
         return std::string{};
     });
 
     window_.bind(
         "s2a_generate",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
                 return Json(codegen::generate(project).source).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Where the expert C++ mode starts from: "My code" (in C++) followed by the code of the blocks.
     window_.bind(
         "s2a_expert_sketch",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
                 return Json(codegen::singleFileSketch(project)).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Functions and variables of a "My code" file, for its palette category: (language, code).
     // Quick and never failing: called each time the user goes back to the blocks.
@@ -736,7 +663,7 @@ void Bridge::bind() {
     // Wiring of the project (components, connections, warnings), from its blocks.
     window_.bind(
         "s2a_wiring",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 1, language_);
@@ -768,13 +695,12 @@ void Bridge::bind() {
                 }
                 return result.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // A picture made by the editor (the wiring diagram as PNG), saved where the user chooses.
     window_.bind(
         "s2a_save_image",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() -> std::string {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 2, language_);
@@ -784,7 +710,7 @@ void Bridge::bind() {
                 if (encoded.size() > kMaxEncodedImage) {
                     throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
                 }
-                const std::string data = base64Decode(encoded);
+                const std::string data = detail::base64Decode(encoded);
                 const fs::path suggestion =
                     projectsDirectory() / (codegen::identifier(name.empty() ? "schema" : name) + ".png");
                 const fs::path file = chooseSaveFile(tr("webview.image_title", language), suggestion,
@@ -797,12 +723,11 @@ void Bridge::bind() {
                 }
                 return Json(file.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     window_.bind(
         "s2a_open",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto files = pfd::open_file(tr("webview.open_title", language), projectsDirectory().u8string(),
@@ -813,12 +738,11 @@ void Bridge::bind() {
                 }
                 return openedJson(fs::u8path(files.front()), language);
             });
-        },
-        nullptr);
+        });
     // Project given on the command line, handed to the editor once (null afterwards).
     window_.bind(
         "s2a_startup_project",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             fs::path path;
             std::swap(path, startupFile_);
             async(id, [request, path, this]() -> std::string {
@@ -827,19 +751,18 @@ void Bridge::bind() {
                 }
                 return openedJson(path, languageArg(Json::parse(request), 0, language_));
             });
-        },
-        nullptr);
+        });
 
     window_.bind(
         "s2a_save",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() -> std::string {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 2, language_);
                 project::Project project = projectArg(args, 0, language);
                 // Optional picture of the project (PNG data URL); one that is too big is left out.
                 if (args.size() > 3 && args[3].is_string()) {
-                    std::string thumbnail = base64Decode(args[3].get<std::string>());
+                    std::string thumbnail = detail::base64Decode(args[3].get<std::string>());
                     if (thumbnail.size() <= project::kMaxThumbnailSize) {
                         project.thumbnail = std::move(thumbnail);
                     }
@@ -864,8 +787,7 @@ void Bridge::bind() {
                 }
                 return Json(path.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Settings of the editor: {language ("fr", "en" or "" for the system's), checkUpdates}.
     bindSync("s2a_settings", [this](const std::string& /*request*/) {
@@ -890,16 +812,15 @@ void Bridge::bind() {
     // Opens a page of the project's GitHub repository (new release) in the browser.
     window_.bind(
         "s2a_open_url",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request]() { return Json(openProjectPage(stringArg(Json::parse(request), 0))).dump(-1, ' ', false, Json::error_handler_t::replace); });
-        },
-        nullptr);
+        });
 
     // Rosetta (Mac with an Apple chip): the board compilers need it. State: {missing, message};
     // install: {ok, message} once macOS's password prompt and Apple's download are done.
     window_.bind(
         "s2a_rosetta_state",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const bool missing = rosetta::missing();
@@ -909,11 +830,10 @@ void Bridge::bind() {
                                                 : std::string{}}}
                     .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_rosetta_install",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto result = rosetta::install();
@@ -922,20 +842,19 @@ void Bridge::bind() {
                                            {{"command", std::string(rosetta::kInstallCommand)}})}}
                     .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Update from the settings (Windows): downloads the installer of a release, starts it and
     // closes the program so that the installer can replace it. Resolves to false elsewhere.
     window_.bind(
         "s2a_install_update",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const std::string url = stringArg(args, 0);
                 const Language language = languageArg(args, 1, language_);
 #ifdef _WIN32
-                if (!isReleaseInstaller(url)) {
+                if (!detail::isReleaseInstaller(url)) {
                     throw UserError{tr("webview.update_failed", language)};
                 }
                 // A new folder for each update: no other program can prepare a file at a known path.
@@ -964,13 +883,12 @@ void Bridge::bind() {
                 return Json(false).dump(-1, ' ', false, Json::error_handler_t::replace);
 #endif
             });
-        },
-        nullptr);
+        });
 
     // Recent projects, newest first: [{path, name, thumbnail?}] (thumbnail: PNG data URL).
     window_.bind(
         "s2a_recent",
-        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+        [this](const std::string& id, const std::string& /*request*/) {
             async(id, [this]() {
                 std::vector<fs::path> paths;
                 {
@@ -981,19 +899,18 @@ void Bridge::bind() {
                 for (const fs::path& path : paths) {
                     Json entry{{"path", path.u8string()}, {"name", path.stem().u8string()}};
                     if (const std::string thumbnail = project::thumbnailOf(path); !thumbnail.empty()) {
-                        entry["thumbnail"] = "data:image/png;base64," + base64Encode(thumbnail);
+                        entry["thumbnail"] = "data:image/png;base64," + detail::base64Encode(thumbnail);
                     }
                     list.push_back(std::move(entry));
                 }
                 return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     // Reopens a recent project. Only paths of the list are accepted: the page cannot make
     // the program read any other file.
     window_.bind(
         "s2a_open_recent",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 1, language_);
@@ -1008,12 +925,11 @@ void Bridge::bind() {
                 }
                 return openedJson(path, language);
             });
-        },
-        nullptr);
+        });
     // Copy of the project being edited, kept until it is saved: (project, path where it was saved).
     window_.bind(
         "s2a_autosave",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
@@ -1023,12 +939,11 @@ void Bridge::bind() {
                 }
                 return std::string("null");
             });
-        },
-        nullptr);
+        });
     // The autosaved project, if any: {project, path, savedAt}.
     window_.bind(
         "s2a_autosaved",
-        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+        [this](const std::string& id, const std::string& /*request*/) {
             async(id, [this]() -> std::string {
                 std::optional<userdata::Store::Autosaved> autosaved;
                 {
@@ -1046,18 +961,16 @@ void Bridge::bind() {
                             {"savedAt", autosaved->savedAt}}
                     .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_autosave_clear",
-        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+        [this](const std::string& id, const std::string& /*request*/) {
             async(id, [this]() {
                 const std::lock_guard<std::mutex> lock(userMutex_);
                 user_.clearAutosave();
                 return std::string("null");
             });
-        },
-        nullptr);
+        });
 
     // "My blocks": groups of blocks saved by the user, shared by all their projects.
     const auto groupJson = [](const userdata::SavedBlocks& group) {
@@ -1065,7 +978,7 @@ void Bridge::bind() {
     };
     window_.bind(
         "s2a_library",
-        [this, groupJson](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+        [this, groupJson](const std::string& id, const std::string& /*request*/) {
             async(id, [this, groupJson]() {
                 std::vector<userdata::SavedBlocks> groups;
                 {
@@ -1078,12 +991,11 @@ void Bridge::bind() {
                 }
                 return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     // (name, blocks as a project) -> the saved group.
     window_.bind(
         "s2a_library_add",
-        [this, groupJson](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this, groupJson](const std::string& id, const std::string& request) {
             async(id, [request, this, groupJson]() {
                 const Json args = Json::parse(request);
                 project::Project blocks = projectArg(args, 1, language_);
@@ -1094,11 +1006,10 @@ void Bridge::bind() {
                 }
                 return groupJson(added.value()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_library_rename",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const std::lock_guard<std::mutex> lock(userMutex_);
@@ -1107,11 +1018,10 @@ void Bridge::bind() {
                 }
                 return std::string("null");
             });
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_library_remove",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const std::lock_guard<std::mutex> lock(userMutex_);
@@ -1120,12 +1030,11 @@ void Bridge::bind() {
                 }
                 return std::string("null");
             });
-        },
-        nullptr);
+        });
     // Asks where to write the library; resolves to the file, or null when cancelled.
     window_.bind(
         "s2a_library_export",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const fs::path suggestion = projectsDirectory() / (tr("webview.library_file", language) + ".s2ablocks");
@@ -1140,12 +1049,11 @@ void Bridge::bind() {
                 }
                 return Json(file.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     // Asks for a .s2ablocks file and adds its groups; resolves to how many, or null when cancelled.
     window_.bind(
         "s2a_library_import",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() -> std::string {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto files = pfd::open_file(tr("webview.library_import_title", language), projectsDirectory().u8string(),
@@ -1161,12 +1069,11 @@ void Bridge::bind() {
                 }
                 return Json(imported.value()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     window_.bind(
         "s2a_ports",
-        [this](const std::string& id, const std::string& /*request*/, void* /*arg*/) {
+        [this](const std::string& id, const std::string& /*request*/) {
             async(id, [this]() {
                 Json ports = Json::array();
                 const auto cli = arduinoCli(language_);
@@ -1199,14 +1106,13 @@ void Bridge::bind() {
                 }
                 return ports.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Library manager: the installed libraries, a search in the Arduino registry, install and
     // remove. The editor keeps the project's own list (Project::libraries).
     window_.bind(
         "s2a_libraries_installed",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto cli = arduinoCli(language);
@@ -1227,11 +1133,10 @@ void Bridge::bind() {
                 }
                 return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_libraries_search",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 1, language_);
@@ -1267,8 +1172,7 @@ void Bridge::bind() {
                 }
                 return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     const auto libraryChange = [this](const std::string& id, const std::string& request, bool install) {
         async(id, [request, install, this]() {
             const Json args = Json::parse(request);
@@ -1295,22 +1199,20 @@ void Bridge::bind() {
     };
     window_.bind(
         "s2a_library_install",
-        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+        [libraryChange](const std::string& id, const std::string& request) {
             libraryChange(id, request, true);
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_library_uninstall",
-        [libraryChange](const std::string& id, const std::string& request, void* /*arg*/) {
+        [libraryChange](const std::string& id, const std::string& request) {
             libraryChange(id, request, false);
-        },
-        nullptr);
+        });
 
     // Optional board packages (ESP32, ESP8266...): listed with their size, installed and removed
     // from the settings or when a board that needs one is chosen.
     window_.bind(
         "s2a_board_packages",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Language language = languageArg(Json::parse(request), 0, language_);
                 const auto cli = arduinoCli(language);
@@ -1332,8 +1234,7 @@ void Bridge::bind() {
                 }
                 return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
     const auto packageChange = [this](const std::string& id, const std::string& request, bool install) {
         async(id, [request, install, this]() {
             const Json args = Json::parse(request);
@@ -1364,16 +1265,14 @@ void Bridge::bind() {
     };
     window_.bind(
         "s2a_board_package_install",
-        [packageChange](const std::string& id, const std::string& request, void* /*arg*/) {
+        [packageChange](const std::string& id, const std::string& request) {
             packageChange(id, request, true);
-        },
-        nullptr);
+        });
     window_.bind(
         "s2a_board_package_remove",
-        [packageChange](const std::string& id, const std::string& request, void* /*arg*/) {
+        [packageChange](const std::string& id, const std::string& request) {
             packageChange(id, request, false);
-        },
-        nullptr);
+        });
 
     const auto build = [this](const std::string& id, const std::string& request, bool upload) {
         async(id, [request, upload, this]() {
@@ -1609,7 +1508,7 @@ void Bridge::bind() {
     // firmware is uploaded first if needed), then waits until it joined it.
     window_.bind(
         "s2a_wifi_setup",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 4, language_);
@@ -1653,14 +1552,13 @@ void Bridge::bind() {
                                                            {"access_point", state.accessPoint}})}};
                 return result.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // HC-05 / HC-06 module of an Arduino board, over its USB cable: saves its pins and speed on
     // the board (the Live firmware is uploaded first if needed); null forgets it.
     window_.bind(
         "s2a_bluetooth_module",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 3, language_);
@@ -1718,13 +1616,12 @@ void Bridge::bind() {
                 }
                 return Json{{"ok", true}, {"message", message}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     // Bluetooth boards around the computer (a search takes about 8 s).
     window_.bind(
         "s2a_bluetooth_search",
-        [this](const std::string& id, const std::string& request, void* /*arg*/) {
+        [this](const std::string& id, const std::string& request) {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 0, language_);
@@ -1744,17 +1641,14 @@ void Bridge::bind() {
                 }
                 return Json{{"ok", true}, {"byAddress", true}, {"devices", devices}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
-        },
-        nullptr);
+        });
 
     window_.bind(
         "s2a_build",
-        [build](const std::string& id, const std::string& request, void* /*arg*/) { build(id, request, false); },
-        nullptr);
+        [build](const std::string& id, const std::string& request) { build(id, request, false); });
     window_.bind(
         "s2a_upload",
-        [build](const std::string& id, const std::string& request, void* /*arg*/) { build(id, request, true); },
-        nullptr);
+        [build](const std::string& id, const std::string& request) { build(id, request, true); });
 }
 
 fs::path locateFrontend() {

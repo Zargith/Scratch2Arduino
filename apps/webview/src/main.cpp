@@ -5,6 +5,7 @@
 
 #include <exception>
 #include <filesystem>
+#include <functional>
 #include <iostream>
 #include <portable-file-dialogs.h>
 #include <string>
@@ -34,6 +35,30 @@ void maximize(webview::webview& window) {
 #endif
 }
 
+/// The bridge's window: the system webview (audit #197: the bridge itself no longer needs webview.h).
+class WebviewWindow final : public s2a::webview::HostWindow {
+public:
+    explicit WebviewWindow(webview::webview& window) : window_(window) {}
+
+    void bind(const std::string& name, Callback callback) override {
+        window_.bind(
+            name,
+            [callback = std::move(callback)](const std::string& id, const std::string& request, void* /*arg*/) {
+                callback(id, request);
+            },
+            nullptr);
+    }
+    void resolve(const std::string& id, bool ok, const std::string& result) override {
+        window_.resolve(id, ok ? 0 : 1, result);
+    }
+    void setTitle(const std::string& title) override { window_.set_title(title); }
+    void dispatch(std::function<void()> work) override { window_.dispatch(std::move(work)); }
+    void terminate() override { window_.terminate(); }
+
+private:
+    webview::webview& window_;
+};
+
 /// The window could not open (no WebView2 on Windows, no WebKitGTK on Linux): said in a message box,
 /// since a program without a console shows nothing else (audit #193).
 void tellCannotStart(s2a::Language language, const std::string& details) {
@@ -53,7 +78,8 @@ int run(const std::filesystem::path& startupFile) {
         window.set_size(960, 600, WEBVIEW_HINT_MIN);
         maximize(window);
 
-        s2a::webview::Bridge bridge(window, language);
+        WebviewWindow host(window);
+        s2a::webview::Bridge bridge(host, language);
         bridge.bind();
         if (!startupFile.empty()) {
             bridge.setStartupFile(startupFile);

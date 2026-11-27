@@ -35,14 +35,6 @@ FetchContent_Declare(webview
 )
 FetchContent_MakeAvailable(webview)
 
-# portable-file-dialogs - native open/save dialogs (WTFPL, header only). Linux uses zenity or kdialog.
-FetchContent_Declare(portable_file_dialogs
-    URL https://github.com/samhocevar/portable-file-dialogs/archive/c12ea8c9a727f5320a2b4570aee863bbede2a204.zip
-    URL_HASH SHA256=49271b213d08588646e34b8020019d43167fb98ee66e00d41aa2365e926d4320
-    SOURCE_SUBDIR no-cmake  # header only: do not run its CMakeLists (examples)
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_MakeAvailable(portable_file_dialogs)
 
 include(S2AFrontend)
 find_package(Threads REQUIRED)
@@ -60,18 +52,16 @@ elseif(APPLE)
 endif()
 
 add_executable(scratch2arduino WIN32 MACOSX_BUNDLE
-    src/bridge.cpp
     src/main.cpp
     src/welcome_page.cpp
     ${_s2a_icon_sources}
 )
 target_include_directories(scratch2arduino PRIVATE src)
-target_include_directories(scratch2arduino SYSTEM PRIVATE "${portable_file_dialogs_SOURCE_DIR}")
-target_link_libraries(scratch2arduino PRIVATE s2a::core webview::core nlohmann_json::nlohmann_json Threads::Threads)
+target_link_libraries(scratch2arduino PRIVATE s2a_bridge webview::core)
 if(WIN32)
     target_compile_definitions(scratch2arduino PRIVATE NOMINMAX)
-    # CommandLineToArgvW: the project dropped on the icon; URLDownloadToFileW, COM: the update.
-    target_link_libraries(scratch2arduino PRIVATE shell32 urlmon ole32)
+    # CommandLineToArgvW: the project dropped on the icon.
+    target_link_libraries(scratch2arduino PRIVATE shell32)
 endif()
 s2a_set_warnings(scratch2arduino)
 
