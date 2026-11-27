@@ -181,6 +181,8 @@ work". Update both languages in the same pull request.
   format is refused with an "update" message rather than misread.
 - **Offline first**: the app runs without a network once the board tools are installed.
 - **French first, English second**, for every user-facing text.
+- **A board that is off fails fast**: network connections wait on the write set and, on Windows, the
+  except set (Winsock reports a refused connect there); each address gets its share of the time.
 - **Uninstall leaves nothing of ours**: `cmake/S2AUninstall.cmake.in` removes the installed files, then
   the folders below the prefix that name Scratch2Arduino once they are empty; shared folders (`bin`,
   `share/applications`) always stay. It still needs the build folder (`install_manifest.txt`).
