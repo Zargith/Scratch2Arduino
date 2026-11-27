@@ -55,7 +55,8 @@ Without `/DPrebuiltDir`, the installer can only build from the sources (below).
    `board-*.isi` (not in git; without them the installer has no board tasks). At the end of the installation,
    the ticked packages are downloaded with `s2a-cli board install`, shown in the window like the build, with a
    **Cancel** that only stops the download (Scratch2Arduino stays installed); a failure (no internet) only
-   says that they can be installed later in the Settings. The download runs with `ExecAsOriginalUser`: the
+   says that they can be installed later in the Settings. What `s2a-cli` printed is copied to the setup log
+   (`/LOG=<file>`; the CI keeps it), lines starting with `s2a-cli: `. The download runs with `ExecAsOriginalUser`: the
    installer is elevated, the packages go in the `%LOCALAPPDATA%` of the user who started it. Packages already
    installed (an update, or installed from the application) show "(already installed)", ticked and greyed, and
    are not downloaded again. Inno Setup rebuilds the tasks list each time the page is shown, so the sizes
