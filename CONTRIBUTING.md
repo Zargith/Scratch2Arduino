@@ -47,6 +47,12 @@ cmake --build --preset core-only && ctest --preset core-only
 - One branch per change: `feature/...`, `fix/...`, `docs/...`, `ci/...`, merged into `dev`.
 - `dev` is merged into `main` when its CI is green, for each release.
 
+## CI dependencies
+
+The GitHub Actions of `.github/workflows/ci.yml` are pinned by commit SHA (the tag in a comment), and
+Dependabot proposes their updates to `dev` once a month. Downloaded sources (FetchContent) carry a
+SHA-256 hash. The workflow is read-only by default; only the release job may write.
+
 ## Releases
 
 Every push to `main` whose CI passes publishes the GitHub release `vX.Y.Z`, where `X.Y.Z` is the
