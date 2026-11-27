@@ -374,6 +374,8 @@ A function gives a name to a group of blocks to reuse it (like Scratch's "My Blo
 *Functions* category, click **Make a function**, attach blocks under **define ...**, then use **call ...** as
 many times as you like. A function does not run on its own at start-up, and it cannot call itself.
 Right-click *define* to rename or delete it. Example: the [traffic light](tutorials/02-traffic-light.md).
+When several scripts run side by side, each *call* writes the function's blocks out again: functions
+that call other functions many times can become too big, and *Check* then says which call to change.
 
 A function can also have **inputs** (up to 4): numbers that each *call* gives it. For instance a
 *beep* function with the inputs *times* and *length* can beep 3 times quickly or once for a long time.

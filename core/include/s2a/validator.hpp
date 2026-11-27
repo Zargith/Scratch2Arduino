@@ -44,6 +44,8 @@ enum class Rule {
     UserCodeNoValue,    ///< The result of a "My code" function that gives no value.
     UserCodeReadOnly,   ///< Setting a constant of "My code".
     UserCodeOwned,      ///< Setting a variable that the functions of "My code" change themselves.
+    TooManyInputs,      ///< A function with more inputs than project::kMaxFunctionParameters.
+    FunctionTooBig,     ///< Scripts side by side: a call that writes out too many blocks (nested calls).
     Count,              ///< Not a rule: the number of rules (keep it last, tests loop up to it).
 };
 
