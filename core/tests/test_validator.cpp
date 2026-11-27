@@ -195,6 +195,100 @@ TEST(Validator, RecursiveFunction) {
     EXPECT_EQ(issues[1].blockId, "cf");
 }
 
+// Audit 2026-11-24 (#189): a function with more than 4 inputs (an old or hand-edited file) passed
+// the checks, and its 5th input compiled to 0.
+TEST(Validator, TooManyInputs) {
+    Project project = withFunctions({hat(), call("c", "f")}, {{define("d", "f"), led()}});
+    project.functions[0].parameters = {"a", "b", "c", "d", "e"};
+    const Issue issue = single(check(project));
+    EXPECT_EQ(issue.rule, Rule::TooManyInputs);
+    EXPECT_EQ(issue.blockId, "d");
+    EXPECT_NE(s2a::validation::describe(issue, Language::English).find("4"), std::string::npos);
+}
+
+TEST(Validator, FourInputsAreFine) {
+    Project project = withFunctions({hat(), call("c", "f")}, {{define("d", "f"), led()}});
+    project.functions[0].parameters = {"a", "b", "c", "d"};
+    EXPECT_TRUE(check(project).empty());
+}
+
+/// Functions f0 ... f<count-1>, each calling the next one twice: written out, the last call
+/// holds 2^count blocks.
+std::vector<Stack> doublingFunctions(Project& project, int count) {
+    std::vector<Stack> definitions;
+    project.functions.clear();
+    for (int i = 0; i < count; ++i) {
+        const std::string id = "f" + std::to_string(i);
+        project.functions.push_back({id, "step" + std::to_string(i), {}});
+        Stack stack{define("d" + id, id)};
+        if (i + 1 < count) {
+            const std::string next = "f" + std::to_string(i + 1);
+            stack.push_back(call("a" + id, next));
+            stack.push_back(call("b" + id, next));
+        } else {
+            stack.push_back(led("led" + id));
+        }
+        definitions.push_back(std::move(stack));
+    }
+    return definitions;
+}
+
+// Audit 2026-11-24 (#189): with several scripts side by side, each call writes the function's
+// blocks out again: nested calls grew the sketch exponentially, up to a raw compiler failure.
+TEST(Validator, FunctionTooBigSideBySide) {
+    Project project = program({hat(), call("c", "f0")});
+    for (Stack& stack : doublingFunctions(project, 14)) {
+        project.scripts.push_back({300, 0, std::move(stack)});
+    }
+    project.scripts.push_back({0, 300, {block("hat2", "events_when_program_starts"), led("other")}});
+    const Issue issue = single(check(project));
+    EXPECT_EQ(issue.rule, Rule::FunctionTooBig);
+    EXPECT_EQ(issue.severity, Severity::Error);
+    EXPECT_EQ(issue.blockId, "c"); // the call in the script, not the calls inside the functions
+}
+
+/// A program of two scripts side by side; the first calls f0 `calls` times inside "forever".
+Project sideBySideCalls(int calls) {
+    Block forever = block("loop", "control_forever");
+    for (int i = 1; i <= calls; ++i) {
+        forever.statements["SUBSTACK"].push_back(call("c" + std::to_string(i), "f0"));
+    }
+    Project project = program({hat(), forever});
+    // 8 functions: a call of f0 writes out 382 blocks.
+    for (Stack& stack : doublingFunctions(project, 8)) {
+        project.scripts.push_back({300, 0, std::move(stack)});
+    }
+    project.scripts.push_back({0, 300, {block("hat2", "events_when_program_starts"), led("other")}});
+    return project;
+}
+
+TEST(Validator, FunctionTooBigCountsEveryCall) {
+    // 5 calls (1910 blocks) fit; the 6th goes past the limit and is the one reported.
+    EXPECT_TRUE(check(sideBySideCalls(5)).empty());
+    const Issue issue = single(check(sideBySideCalls(6)));
+    EXPECT_EQ(issue.rule, Rule::FunctionTooBig);
+    EXPECT_EQ(issue.blockId, "c6");
+}
+
+TEST(Validator, RecursionIsNotCountedAsSize) {
+    // f and g call each other: reported as recursion only, whichever is called first.
+    Project project = withFunctions({hat(), call("c", "f"), call("c2", "g")},
+                                    {{define("d1", "f"), call("cg", "g")}, {define("d2", "g"), call("cf", "f")}});
+    project.scripts.push_back({0, 300, {block("hat2", "events_when_program_starts"), led("other")}});
+    for (const Issue& issue : check(project)) {
+        EXPECT_EQ(issue.rule, Rule::RecursiveFunction) << issue.blockId;
+    }
+}
+
+TEST(Validator, BigFunctionsAreFineInASingleScript) {
+    // One script: functions stay C++ functions, nothing is written out again.
+    Project project = program({hat(), call("c", "f0")});
+    for (Stack& stack : doublingFunctions(project, 14)) {
+        project.scripts.push_back({300, 0, std::move(stack)});
+    }
+    EXPECT_TRUE(check(project).empty());
+}
+
 TEST(Validator, EmptyScript) {
     const Issue issue = single(check(program({hat()})));
     EXPECT_EQ(issue.rule, Rule::EmptyScript);

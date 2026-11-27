@@ -397,6 +397,9 @@ Dans la famille *Fonctions*, clique sur **Créer une fonction**, accroche des bl
 puis utilise **appeler ...** autant de fois que tu veux. Une fonction ne s'exécute pas toute seule au
 démarrage, et elle ne peut pas s'appeler elle-même. Clic droit sur *définir* pour la renommer ou la
 supprimer. Exemple : le [Feu tricolore](tutorials/02-traffic-light.md).
+Quand plusieurs scripts tournent en même temps, chaque *appeler* recopie les blocs de la fonction : des
+fonctions qui en appellent d'autres de nombreuses fois peuvent devenir trop grosses, et *Vérifier* dit
+alors quel appel changer.
 
 Une fonction peut aussi avoir des **entrées** (jusqu'à 4) : des nombres que chaque *appeler* lui donne.
 Par exemple une fonction *biper* avec les entrées *fois* et *durée* peut biper 3 fois vite ou une seule

@@ -160,7 +160,11 @@
     "usercode_read_only": "\"{name}\" est une constante : un bloc ne peut pas la changer.",
     "usercode_read_only_hint": "Enlève \"const\" dans ton code si elle doit changer.",
     "usercode_owned": "\"{name}\" est changée par une fonction de \"Mon code\" : les blocs peuvent la lire, pas la changer (ils dérangeraient ton code).",
-    "usercode_owned_hint": "Change-la dans ton code, ou écris dans \"Mon code\" une fonction qui la change et appelle-la avec un bloc."
+    "usercode_owned_hint": "Change-la dans ton code, ou écris dans \"Mon code\" une fonction qui la change et appelle-la avec un bloc.",
+    "too_many_inputs": "La fonction \"{function}\" a plus de {max} entrées : les blocs n'en gèrent que {max}.",
+    "too_many_inputs_hint": "Enlève des entrées de \"définir {function}\" jusqu'à n'en garder que {max}, ou coupe-la en deux fonctions.",
+    "function_too_big": "La fonction \"{function}\" devient trop grosse : quand plusieurs scripts tournent en même temps, chaque appel recopie tous ses blocs, et les fonctions qu'elle appelle font pareil.",
+    "function_too_big_hint": "Appelle moins de fonctions dans \"{function}\", ou mets les blocs de tes scripts sous un seul bloc \"quand le programme démarre\"."
   },
   "editor": {
     "new": "Nouveau",
