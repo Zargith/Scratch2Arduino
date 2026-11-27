@@ -7,7 +7,7 @@ import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 
-import { createTheme, v8CssVariablesResolver, virtualColor, type CSSVariablesResolver } from "@mantine/core";
+import { Badge, createTheme, v8CssVariablesResolver, virtualColor, type CSSVariablesResolver } from "@mantine/core";
 
 import { EpitechColorRamps, EpitechPrimaryShade } from "@/theme/colors";
 
@@ -37,6 +37,16 @@ export const theme = createTheme({
 	fontFamily: "IBM Plex Sans, sans-serif",
 	fontFamilyMonospace: "Space Mono, monospace",
 	autoContrast: true,
+	// The smallest text (size="xs": hints, labels, panel lines) is 14px, as the rest: 12px was too
+	// small for children of 8 to 14 (audit #211). Hierarchy comes from colour and weight instead.
+	fontSizes: { xs: "0.875rem" },
+	components: {
+		// Badges have their own scale (9 to 11 px, capitals) that ignores fontSizes: same 14 px instead.
+		Badge: Badge.extend({
+			defaultProps: { size: "lg", tt: "none" },
+			vars: () => ({ root: { "--badge-fz": "var(--mantine-font-size-sm)" } }),
+		}),
+	},
 });
 
 export const cssVariablesResolver: CSSVariablesResolver = (resolvedTheme) => {

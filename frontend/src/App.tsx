@@ -1,6 +1,5 @@
 import {
 	ActionIcon,
-	Alert,
 	AppShell,
 	Button,
 	Card,
@@ -10,10 +9,8 @@ import {
 	LoadingOverlay,
 	Menu,
 	Modal,
-	ScrollArea,
 	SegmentedControl,
 	Select,
-	Spoiler,
 	Stack,
 	Text,
 	TextInput,
@@ -101,6 +98,7 @@ import { UnsavedChanges, type UnsavedChoice } from "@/UnsavedChanges";
 import { WifiDialog } from "@/WifiDialog";
 import { hasWifi, isWifiPort, rememberAddress, rememberedAddresses, wifiPort, wifiPorts } from "@/wifi";
 import { Sparkline } from "@/Sparkline";
+import { StatusBanner, type Status } from "@/StatusBanner";
 import { codeThumbnail } from "@/thumbnail";
 import { notAppliedHint } from "@/liveUpdate";
 import { choosePort, detectedBoard } from "@/ports";
@@ -136,12 +134,6 @@ const autosaveInterval = 15_000;
 
 /** Points kept per graph: 30 s at one snapshot every 200 ms. */
 const historyLength = 150;
-
-interface Status {
-	kind: "info" | "success" | "error";
-	message: string;
-	details?: string;
-}
 
 /** Name of a text language in messages ("C++", "Python"...). */
 const programName = (program: ProgramLanguage, blocks: string): string =>
@@ -1787,40 +1779,20 @@ export function App() {
 			)}
 
 			{status && (
-				// Over the workspace, between the palette and the zoom/trash controls.
-				<div
-					style={{
-						position: "fixed",
+				<StatusBanner
+					status={status}
+					busy={busy}
+					t={t}
+					space={{
 						left: view === "blocks" ? 330 : 64,
-						// Beside the panels on the right (live values, virtual board...), not over them.
-						right: sidePanels ? 400 : 110,
+						// Beside the panels on the right, not over them: the tutorials are 440 px wide (+ 24 margin),
+						// the others (live values, virtual board...) 360 px at most.
+						right: tutorialPage !== null ? 480 : sidePanels ? 400 : 110,
 						// Above the virtual board's panel when it is open.
-						bottom: boardShown ? `calc(${boardHeight} + 16px)` : 16,
-						zIndex: 150,
-						maxHeight: "50vh",
-						overflowY: "auto",
+						bottom: boardShown ? `calc(${boardHeight} + 16px)` : "16px",
 					}}
-				>
-					<Alert
-						color={status.kind === "error" ? "orange" : status.kind === "success" ? "green" : "blue"}
-						withCloseButton
-						onClose={() => setStatus(null)}
-						icon={busy ? <Loader size="xs" /> : undefined}
-					>
-						<Text size="sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-							{status.message}
-						</Text>
-						{status.details && (
-							<Spoiler maxHeight={0} showLabel={t("status.details")} hideLabel={t("status.details")}>
-								<ScrollArea.Autosize mah={160}>
-									<Code block style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-										{status.details}
-									</Code>
-								</ScrollArea.Autosize>
-							</Spoiler>
-						)}
-					</Alert>
-				</div>
+					onClose={() => setStatus(null)}
+				/>
 			)}
 
 			{tourStep !== null && tourContext && (
