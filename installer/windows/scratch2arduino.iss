@@ -683,6 +683,22 @@ begin
     Shown := Count;
 end;
 
+// Copies the lines of FileName to the setup log (/LOG, and the log kept by the CI), each after
+// Prefix: what a program printed stays readable once its temporary file is deleted.
+procedure LogFileLines(const Prefix, FileName: String);
+var
+  Lines: TArrayOfString;
+  I: Integer;
+begin
+  if not LoadStringsFromLockedFile(FileName, Lines) then
+  begin
+    Log(Prefix + '(no output)');
+    Exit;
+  end;
+  for I := 0 to GetArrayLength(Lines) - 1 do
+    Log(Prefix + Lines[I]);
+end;
+
 // Number written in a small text file (PID, exit code), or -1.
 function ReadNumberFile(const FileName: String): Integer;
 var
@@ -935,6 +951,9 @@ begin
   finally
     WizardForm.CancelButton.OnClick := SavedCancelClick;
     WizardForm.ProgressGauge.Style := npbstNormal;
+    // s2a-cli's messages (downloads, errors) in the setup log: a failure can be understood from
+    // the log alone (an ESP8266 install ended with code 259 in the CI on 2026-11-27, no output kept).
+    LogFileLines('s2a-cli: ', BoardsFile('boards-output.txt'));
     DeleteFile(BoardsFile('boards-output.txt'));
   end;
   Log('Board packages: exit code ' + IntToStr(ExitCode));
