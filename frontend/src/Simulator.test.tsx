@@ -47,14 +47,6 @@ const state: SimState = {
 // Audit 2026-11-24 (#211): an LED was on or off only by a faint colour, not in its name.
 describe("LEDs of the virtual board", () => {
 	it("say whether they are on", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		const ledPlan: WiringPlan = {
 			components: [
 				{ kind: "output", name: "LED rouge", connections: [{ componentPin: "+", boardPin: "13", via: "", role: "PIN" }], note: "", blockIds: [] },
@@ -83,14 +75,6 @@ describe("LEDs of the virtual board", () => {
 
 describe("virtual board panel", () => {
 	it("shows the outputs and sends the inputs", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		const onInput = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
 		const container = document.createElement("div");

@@ -36,19 +36,6 @@ describe("library manager window", () => {
 	});
 
 	it("finds a library and adds it to the project once installed", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
-		globalThis.ResizeObserver ??= class {
-			observe() {}
-			unobserve() {}
-			disconnect() {}
-		} as never;
 		const found: RegistryLibrary = {
 			name: "ArduinoJson",
 			author: "Benoit",

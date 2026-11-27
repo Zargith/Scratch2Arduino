@@ -7,7 +7,6 @@ import { starterCode } from "@/program";
 
 describe("code editor", () => {
 	it("shows the code, reports edits, and marks problems only when asked", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		// jsdom has no layout: CodeMirror measures text with these.
 		const noRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
 		Range.prototype.getClientRects ??= noRects;

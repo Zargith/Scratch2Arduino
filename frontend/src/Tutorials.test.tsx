@@ -8,14 +8,6 @@ import { Tutorials } from "@/Tutorials";
 
 describe("tutorials panel", () => {
 	it("shows a tutorial, follows its links inside the panel and opens its example", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		Element.prototype.scrollIntoView ??= () => undefined;
 		const onNavigate = vi.fn();
 		const onOpenExample = vi.fn();

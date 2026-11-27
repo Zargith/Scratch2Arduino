@@ -76,6 +76,11 @@ cmake -S . -B build/san -DS2A_BUILD_WEBVIEW=OFF -DCMAKE_BUILD_TYPE=Debug \
 cmake --build build/san && ctest --test-dir build/san
 ```
 
+Frontend tests run in jsdom. `frontend/src/test/setup.ts` fills what jsdom lacks (and replaces its
+`getComputedStyle`, which made mounting Blockly take minutes); `frontend/src/test/app.tsx` mounts the
+whole editor against a fake host (`defaultHost()`, `installHost()`, `mountApp()`) and waits on
+conditions (`waitUntil`) rather than fixed delays. Flows of the whole editor go in `App.flows.test.tsx`.
+
 The core-only build downloads `arduino-cli` next to `s2a-cli`
 (`build/core-only/tools/s2a-cli/`), so `s2a-cli compile <project.json> --board uno` compiles locally.
 CI (`.github/workflows/ci.yml`) builds and tests the three OS, runs the core tests under ASan and UBSan,

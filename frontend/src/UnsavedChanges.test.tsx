@@ -8,14 +8,6 @@ import { UnsavedChanges } from "@/UnsavedChanges";
 
 describe("unsaved changes question", () => {
 	it("offers to save, ignore or cancel", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		const onChoice = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
 		const container = document.createElement("div");

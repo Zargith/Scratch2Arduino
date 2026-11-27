@@ -35,14 +35,6 @@ afterEach(() => {
 
 /** The card at step `first`, its Next and Back buttons changing the step. */
 function show(first = 0) {
-	(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-	window.matchMedia ??= (() => ({
-		matches: false,
-		addEventListener() {},
-		removeEventListener() {},
-		addListener() {},
-		removeListener() {},
-	})) as never;
 	container = document.createElement("div");
 	document.body.appendChild(container);
 	function Shown() {
