@@ -79,10 +79,13 @@ cmake -S . -B build/san -DS2A_BUILD_WEBVIEW=OFF -DCMAKE_BUILD_TYPE=Debug \
 cmake --build build/san && ctest --test-dir build/san
 ```
 
-Frontend tests run in jsdom. `frontend/src/test/setup.ts` fills what jsdom lacks (and replaces its
-`getComputedStyle`, which made mounting Blockly take minutes); `frontend/src/test/app.tsx` mounts the
-whole editor against a fake host (`defaultHost()`, `installHost()`, `mountApp()`) and waits on
-conditions (`waitUntil`) rather than fixed delays. Flows of the whole editor go in `App.flows.test.tsx`.
+Frontend tests run in jsdom. `frontend/src/test/setup.ts` fills what jsdom lacks; `frontend/src/test/app.tsx`
+mounts the whole editor against a fake host (`defaultHost()`, `installHost()`, `mountApp()`) and waits on
+conditions (`waitUntil`) rather than fixed delays. `mountApp()` replaces `getComputedStyle` with the inline
+style only while the editor is mounted (jsdom takes minutes to compute the cascade for Blockly), so a test of
+the whole editor cannot check a value that comes from a stylesheet; only one editor can be mounted at a time.
+Use `mounted.workspace()` for the Blockly editor of that mount, not the global `Blockly.getMainWorkspace()`.
+Flows of the whole editor go in `App.flows.test.tsx`.
 
 The core-only build downloads `arduino-cli` next to `s2a-cli`
 (`build/core-only/tools/s2a-cli/`), so `s2a-cli compile <project.json> --board uno` compiles locally.
