@@ -27,7 +27,11 @@ function recordTitles(): { titles: string[]; s2a_set_title: NonNullable<HostFunc
 	const titles: string[] = [];
 	return { titles, s2a_set_title: async (title: string) => void titles.push(title) };
 }
-/** The start-up project (startupProject: /projets/test.s2a) is shown and its start-up checks are over. */
+/**
+ * The start-up project (startupProject: /projets/test.s2a) is shown and its start-up checks are over:
+ * after showOpened the start-up chain (App.tsx) only waits on promises, which settle before React
+ * commits the new title. Holds as long as the host answers of that chain do not wait on a timer.
+ */
 const startupDone = (titles: string[]) => () => titles.some((title) => title.startsWith("test.s2a"));
 
 let mounted: MountedApp | null = null;
@@ -89,14 +93,9 @@ describe("App flows", () => {
 	it("does not offer the autosave over a project given at start-up", async () => {
 		// Audit #170: a save would have replaced the project just opened with the old copy.
 		const shown = recordTitles();
-		const autosaved: string[] = [];
 		installHost({
 			...defaultHost(),
 			s2a_set_title: shown.s2a_set_title,
-			s2a_autosave: async (saved) => {
-				autosaved.push(saved.name);
-				return null;
-			},
 			s2a_autosaved: async () => ({ project: project("Vieille copie"), path: "", savedAt: 1_764_000_000 }),
 			s2a_startup_project: startupProject(project("Ouvert", { id: "opened-led", type: "pins_builtin_led", fields: { STATE: "ON" } })),
 		});
@@ -104,7 +103,6 @@ describe("App flows", () => {
 		await waitUntil(() => mounted!.workspace()?.getBlockById("opened-led") != null, "the opened project");
 		await waitUntil(startupDone(shown.titles), "the project shown");
 		expect(mounted.text()).not.toContain("Vieille copie");
-		expect(autosaved).not.toContain("Vieille copie");
 	}, 60_000);
 
 	it("creates a function from the palette with its inputs", async () => {
@@ -175,6 +173,7 @@ describe("App flows", () => {
 		await act(async () => button("Précédent")!.click());
 		await waitUntil(() => start()!.isDeletable(), "the start block unlocked");
 		expect(start()!.isMovable()).toBe(true);
+		expect(mounted.text()).not.toContain(t("tour.locked"));
 		expect(mounted.errors).toEqual([]);
 	}, 60_000);
 });

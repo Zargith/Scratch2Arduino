@@ -60,7 +60,8 @@ export async function waitUntil(ready: () => boolean, what = "the condition", ti
 // returns the inline style only: a test of the whole editor cannot check a value that comes from a
 // stylesheet (display, visibility...). The other tests keep the real one.
 const realComputedStyle = window.getComputedStyle;
-const inlineStyleOnly = ((element: Element) => (element as HTMLElement).style) as typeof window.getComputedStyle;
+const emptyStyle = document.createElement("div").style;
+const inlineStyleOnly = ((element: Element) => (element as HTMLElement).style ?? emptyStyle) as typeof window.getComputedStyle;
 
 export interface MountedApp {
 	container: HTMLDivElement;
@@ -81,6 +82,8 @@ export async function mountApp(): Promise<MountedApp> {
 	document.body.appendChild(container);
 	const errors: unknown[] = [];
 	let root: Root | null = null;
+	// One editor at a time: a second mount would get the real getComputedStyle back on the first unmount.
+	if (window.getComputedStyle === inlineStyleOnly) throw new Error("mountApp: an editor is already mounted (unmount it first)");
 	window.getComputedStyle = inlineStyleOnly;
 	try {
 		await act(async () => {
@@ -93,10 +96,13 @@ export async function mountApp(): Promise<MountedApp> {
 		});
 	} catch (error) {
 		// Nothing would unmount it: leave no editor, page node or host behind for the next test.
-		await act(async () => (root as Root | null)?.unmount());
-		container.remove();
-		clearHost();
-		window.getComputedStyle = realComputedStyle;
+		try {
+			await act(async () => (root as Root | null)?.unmount());
+		} finally {
+			container.remove();
+			clearHost();
+			window.getComputedStyle = realComputedStyle;
+		}
 		throw error;
 	}
 	const find = (text: string) =>
@@ -117,10 +123,13 @@ export async function mountApp(): Promise<MountedApp> {
 			return main && container.contains(main.getInjectionDiv()) ? main : null;
 		},
 		async unmount() {
-			await act(async () => root?.unmount());
-			container.remove();
-			clearHost();
-			window.getComputedStyle = realComputedStyle;
+			try {
+				await act(async () => root?.unmount());
+			} finally {
+				container.remove();
+				clearHost();
+				window.getComputedStyle = realComputedStyle;
+			}
 		},
 	};
 }
