@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 
 import { EditorView } from "@codemirror/view";
 import { act } from "react";
-import * as Blockly from "scratch-blocks";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { Language } from "@/catalog";
@@ -25,7 +24,7 @@ describe("application start-up", () => {
 		installHost({ ...defaultHost(), s2a_startup_project: startupProject(project) });
 
 		mounted = await mountApp();
-		await waitUntil(() => (Blockly.getMainWorkspace()?.getAllBlocks(false).length ?? 0) > 10);
+		await waitUntil(() => (mounted!.workspace()?.getAllBlocks(false).length ?? 0) > 10);
 		expect(mounted.errors).toEqual([]);
 		expect(mounted.container.innerHTML).not.toBe("");
 	}, 60_000);
@@ -72,7 +71,7 @@ describe("application start-up", () => {
 			await app.click("Mon code");
 			await waitUntil(() => mine() !== null);
 		};
-		await waitUntil(() => Blockly.getMainWorkspace()?.getBlockById("mycode-start") != null);
+		await waitUntil(() => mounted!.workspace()?.getBlockById("mycode-start") != null);
 		await app.click("Code");
 		await showMine();
 		expect(mine()?.state.doc.toString()).toBe("vitesse = 1\n");
@@ -83,7 +82,7 @@ describe("application start-up", () => {
 		expect(mine()?.state.doc.toString()).toBe("# à moi\nvitesse = 1\n");
 
 		await app.click("Blocs");
-		await waitUntil(() => Blockly.getMainWorkspace()?.getBlockById("mycode-start") != null);
+		await waitUntil(() => mounted!.workspace()?.getBlockById("mycode-start") != null);
 		await app.click("Code");
 		await showMine();
 		expect(mine()?.state.doc.toString()).toBe("# à moi\nvitesse = 1\n");
