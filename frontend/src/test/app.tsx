@@ -4,11 +4,13 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { App } from "@/App";
+import type { HostFunctions, OpenedProject } from "@/bridge";
 
-type HostFunction = (...args: never[]) => Promise<unknown>;
+/** Host functions a test answers: typed against the real contract (bridge.ts), so drift fails tsc. */
+export type FakeHost = Partial<HostFunctions>;
 
 /** What the editor calls at start-up, answered as a host with nothing saved would. */
-export function defaultHost(): Record<string, HostFunction> {
+export function defaultHost(): FakeHost {
 	return {
 		s2a_hello: async () => ({ language: "fr", version: "test" }),
 		s2a_settings: async () => ({ language: "fr", checkUpdates: false, theme: "light" }),
@@ -32,13 +34,13 @@ export function clearHost(): void {
 }
 
 /** Installs the host functions on window (and removes those of a previous test). */
-export function installHost(functions: Record<string, HostFunction>): void {
+export function installHost(functions: FakeHost): void {
 	clearHost();
 	Object.assign(window as unknown as Record<string, unknown>, functions);
 }
 
 /** A project given at start-up (double-clicked file), as the host returns it. */
-export function startupProject(project: unknown): HostFunction {
+export function startupProject(project: OpenedProject["project"]): NonNullable<FakeHost["s2a_startup_project"]> {
 	return async () => ({ path: "/projets/test.s2a", name: "/projets/test.s2a", project });
 }
 
@@ -65,14 +67,22 @@ export async function mountApp(): Promise<MountedApp> {
 	document.body.appendChild(container);
 	const errors: unknown[] = [];
 	let root: Root | null = null;
-	await act(async () => {
-		root = createRoot(container, { onUncaughtError: (error) => errors.push(error) });
-		root.render(
-			<MantineProvider>
-				<App />
-			</MantineProvider>
-		);
-	});
+	try {
+		await act(async () => {
+			root = createRoot(container, { onUncaughtError: (error) => errors.push(error) });
+			root.render(
+				<MantineProvider>
+					<App />
+				</MantineProvider>
+			);
+		});
+	} catch (error) {
+		// Nothing would unmount it: leave no editor, page node or host behind for the next test.
+		await act(async () => (root as Root | null)?.unmount());
+		container.remove();
+		clearHost();
+		throw error;
+	}
 	const find = (text: string) =>
 		[...document.querySelectorAll<HTMLElement>("label, button")].find((node) => {
 			const label = node.textContent?.trim() ?? "";

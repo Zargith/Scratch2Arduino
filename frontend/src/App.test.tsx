@@ -6,6 +6,8 @@ import { act } from "react";
 import * as Blockly from "scratch-blocks";
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { Language } from "@/catalog";
+import type { Project } from "@/project/convert";
 import { defaultHost, installHost, mountApp, startupProject, waitUntil, type MountedApp } from "@/test/app";
 
 let mounted: MountedApp | null = null;
@@ -34,7 +36,7 @@ describe("application start-up", () => {
 		installHost({
 			...defaultHost(),
 			s2a_rosetta_state: async () => ({ missing: true, message: "Ce Mac a besoin de Rosetta." }),
-			s2a_rosetta_install: async (language: never) => {
+			s2a_rosetta_install: async (language: Language) => {
 				installed.push(language);
 				return { ok: true, message: "Rosetta est installé." };
 			},
@@ -49,7 +51,7 @@ describe("application start-up", () => {
 	// Regression: what was typed in "My code" came back as the starter code after going to the
 	// blocks (or to the other tab) and back, until the project was saved and opened again.
 	it("keeps what was typed in My code when switching tabs and views", async () => {
-		const project = {
+		const project: Project = {
 			format: "scratch2arduino-project",
 			formatVersion: 2,
 			name: "Mon code",

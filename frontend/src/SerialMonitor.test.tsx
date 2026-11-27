@@ -1,6 +1,7 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { HostFunctions } from "@/bridge";
 import { translate, type MessageKey } from "@/i18n";
 import { SerialMonitor } from "@/SerialMonitor";
 import { clearHost, installHost, waitUntil } from "@/test/app";
@@ -17,22 +18,20 @@ const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", 
 
 /** A board on COM3 that has printed `lines`; what the editor sends is kept in `sent`. */
 function board(lines: string[], options: { openMessage?: string; sendFails?: boolean } = {}) {
-	const calls = { opened: [] as unknown[][], sent: [] as string[], closed: 0 };
+	const calls = { opened: [] as Parameters<HostFunctions["s2a_monitor_open"]>[], sent: [] as string[], closed: 0 };
 	installHost({
 		s2a_hello: async () => ({ language: "fr", version: "test" }),
-		s2a_monitor_open: async (...args: never[]) => {
+		s2a_monitor_open: async (...args: Parameters<HostFunctions["s2a_monitor_open"]>) => {
 			calls.opened.push(args);
 			return options.openMessage ? { ok: false, message: options.openMessage } : { ok: true };
 		},
 		s2a_monitor_state: async () => ({ open: true, lines }),
-		s2a_monitor_send: async (line: never) => {
+		s2a_monitor_send: async (line: string) => {
 			if (options.sendFails) throw new Error("Le port est fermé.");
 			calls.sent.push(line);
-			return null;
 		},
 		s2a_monitor_close: async () => {
 			calls.closed += 1;
-			return null;
 		},
 	});
 	return calls;

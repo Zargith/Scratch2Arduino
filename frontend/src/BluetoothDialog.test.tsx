@@ -1,6 +1,7 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { HostFunctions } from "@/bridge";
 import { BluetoothDialog } from "@/BluetoothDialog";
 import { translate, type MessageKey } from "@/i18n";
 import { clearHost, installHost, waitUntil } from "@/test/app";
@@ -51,9 +52,9 @@ describe("BluetoothDialog", () => {
 	});
 
 	it("saves the HC-05 pins on an Arduino board over USB", async () => {
-		const saved: unknown[][] = [];
+		const saved: Parameters<HostFunctions["s2a_bluetooth_module"]>[] = [];
 		show("uno", "COM3", {
-			s2a_bluetooth_module: async (...args: never[]) => {
+			s2a_bluetooth_module: async (...args: Parameters<HostFunctions["s2a_bluetooth_module"]>) => {
 				saved.push(args);
 				return { ok: true, message: "Module enregistré sur la carte." };
 			},

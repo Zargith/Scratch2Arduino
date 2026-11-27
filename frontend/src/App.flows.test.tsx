@@ -3,9 +3,10 @@ import { act } from "react";
 import * as Blockly from "scratch-blocks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Outcome } from "@/bridge";
+import type { HostFunctions, Outcome } from "@/bridge";
 import type { Project } from "@/project/convert";
 import { CREATE_FUNCTION_CALLBACK } from "@/blocks/definitions";
+import { functionParameters } from "@/blocks/functions";
 import { defaultHost, installHost, mountApp, startupProject, waitUntil, type MountedApp } from "@/test/app";
 import { button, input, typeInto } from "@/test/render";
 
@@ -29,12 +30,12 @@ describe("App flows", () => {
 	// CLAUDE.md: "The interface must not throw errors when the user is building his project, but
 	// only when the user is trying to build/run it."
 	it("says nothing about a broken program until Check, then shows the faulty block", async () => {
-		const builds: unknown[] = [];
+		const builds: Parameters<HostFunctions["s2a_build"]>[] = [];
 		const outcome: Outcome = { ok: false, message: "Le bloc \"répéter\" est vide.", blockIds: ["rep"] };
 		installHost({
 			...defaultHost(),
 			s2a_startup_project: startupProject(project("Cassé", { id: "rep", type: "control_repeat" })),
-			s2a_build: async (...args: never[]) => {
+			s2a_build: async (...args: Parameters<HostFunctions["s2a_build"]>) => {
 				builds.push(args);
 				return outcome;
 			},
@@ -100,15 +101,17 @@ describe("App flows", () => {
 			() => workspace.getVariableMap().getVariablesOfType("function").some((variable) => variable.getName() === "biper"),
 			"the new function"
 		);
+		const biper = workspace.getVariableMap().getVariablesOfType("function").find((variable) => variable.getName() === "biper")!;
+		expect(functionParameters(biper.getId())).toEqual(["fois"]);
 		expect(mounted.errors).toEqual([]);
 	}, 60_000);
 
 	it("saves blocks to My blocks under the name typed", async () => {
-		const added: unknown[][] = [];
+		const added: Parameters<HostFunctions["s2a_library_add"]>[] = [];
 		installHost({
 			...defaultHost(),
 			s2a_startup_project: startupProject(project("Groupe", { id: "group-led", type: "pins_builtin_led", fields: { STATE: "ON" } })),
-			s2a_library_add: async (...args: never[]) => {
+			s2a_library_add: async (...args: Parameters<HostFunctions["s2a_library_add"]>) => {
 				added.push(args);
 				return { id: "g1", name: "Allumer", blocks: args[1] };
 			},
