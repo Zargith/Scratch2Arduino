@@ -160,7 +160,11 @@
     "usercode_read_only": "\"{name}\" is a constant: a block cannot change it.",
     "usercode_read_only_hint": "Remove \"const\" in your code if it must change.",
     "usercode_owned": "\"{name}\" is changed by a function of \"My code\": blocks can read it, not change it (they would disturb your code).",
-    "usercode_owned_hint": "Change it in your code, or write in \"My code\" a function that changes it and call it with a block."
+    "usercode_owned_hint": "Change it in your code, or write in \"My code\" a function that changes it and call it with a block.",
+    "too_many_inputs": "The \"{function}\" function has more than {max} inputs: the blocks only handle {max}.",
+    "too_many_inputs_hint": "Remove inputs from \"define {function}\" until {max} are left, or split it into two functions.",
+    "function_too_big": "The \"{function}\" function becomes too big: with several scripts running side by side, every call writes all its blocks out again, and the functions it calls do the same.",
+    "function_too_big_hint": "Call fewer functions inside \"{function}\", or put the blocks of your scripts under a single \"when the program starts\" block."
   },
   "editor": {
     "new": "New",

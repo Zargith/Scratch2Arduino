@@ -41,6 +41,7 @@ public:
 
     std::vector<Issue> run() {
         collectFunctions();
+        sideBySide_ = countStartScripts() > 1;
         collectModules();
         collectPullUpPins();
         bool hasStart = false;
@@ -55,6 +56,7 @@ public:
             }
             if (first.type == kDefine) {
                 checkBlock(first);
+                checkInputCount(first);
                 const auto& defined = definitions_[functionOf(first)];
                 if (!defined.empty() && defined.front() != &first) {
                     add(Rule::FunctionDefinedTwice, Severity::Error, first, {{"function", functionName(first)}});
@@ -221,6 +223,92 @@ private:
         }
         if (!currentFunction_.empty() && reaches(id, currentFunction_)) {
             add(Rule::RecursiveFunction, Severity::Error, block, {{"function", functionName(block)}});
+            return;
+        }
+        // Side by side, every call writes the function's blocks out again (the code generator
+        // inlines it so that its waits let the other scripts run): checked once, where a script
+        // that runs makes the outermost call.
+        // The whole program counts: every outermost call adds what it writes out, and the call that
+        // goes past the limit is the one reported. Approximate: braces and the globals holding the
+        // inputs are not counted, the limit leaves room for them.
+        if (sideBySide_ && currentFunction_.empty() && !tooBigReported_) {
+            writtenSoFar_ = std::min(writtenSoFar_ + writtenOut(id), kMaxWrittenOut + 1);
+            if (writtenSoFar_ > kMaxWrittenOut) {
+                tooBigReported_ = true;
+                add(Rule::FunctionTooBig, Severity::Error, block, {{"function", functionName(block)}});
+            }
+        }
+    }
+
+    /// Number of scripts that start on their own (hats other than "define"), as the code generator
+    /// counts them: more than one and they run side by side.
+    std::size_t countStartScripts() const {
+        std::size_t count = 0;
+        for (const project::Script& script : project_.scripts) {
+            if (script.blocks.empty() || script.blocks.front().type == kDefine) {
+                continue;
+            }
+            const BlockDefinition* definition = catalog_.find(script.blocks.front().type);
+            count += definition != nullptr && definition->shape == BlockShape::Hat ? 1 : 0;
+        }
+        return count;
+    }
+
+    /// Blocks a call of `id` writes out once every call inside is written out too, capped just
+    /// above kMaxWrittenOut (no overflow). A recursive call counts as nothing (reported apart), and
+    /// a total met through one is not remembered.
+    std::size_t writtenOut(const std::string& id) {
+        if (const auto known = writtenOut_.find(id); known != writtenOut_.end()) {
+            return known->second;
+        }
+        const auto defined = definitions_.find(id);
+        if (defined == definitions_.end() || defined->second.empty()) {
+            return 0;
+        }
+        if (!expanding_.insert(id).second) {
+            cycleSeen_ = true; // the totals being worked out are partial: not remembered
+            return 0;
+        }
+        const bool outerCycle = cycleSeen_;
+        cycleSeen_ = false;
+        std::size_t total = 0;
+        const project::Stack* stack = scriptOf(defined->second.front());
+        if (stack != nullptr) {
+            project::forEachBlock(*stack, [&](const Block& block) {
+                if (&block == defined->second.front()) {
+                    return; // the "define" hat itself
+                }
+                total = std::min(total + 1, kMaxWrittenOut + 1);
+                if (block.type == kCall) {
+                    total = std::min(total + writtenOut(functionOf(block)), kMaxWrittenOut + 1);
+                }
+            });
+        }
+        expanding_.erase(id);
+        if (!cycleSeen_) {
+            writtenOut_[id] = total;
+        }
+        cycleSeen_ = outerCycle || cycleSeen_;
+        return total;
+    }
+
+    /// The stack whose first block is `hat`.
+    const project::Stack* scriptOf(const Block* hat) const {
+        for (const project::Script& script : project_.scripts) {
+            if (!script.blocks.empty() && &script.blocks.front() == hat) {
+                return &script.blocks;
+            }
+        }
+        return nullptr;
+    }
+
+    void checkInputCount(const Block& define) {
+        const std::string id = functionOf(define);
+        for (const project::Function& function : project_.functions) {
+            if (function.id == id && function.parameters.size() > project::kMaxFunctionParameters) {
+                add(Rule::TooManyInputs, Severity::Error, define,
+                    {{"function", function.name}, {"max", std::to_string(project::kMaxFunctionParameters)}});
+            }
         }
     }
 
@@ -458,6 +546,15 @@ private:
     std::vector<const Block*> modules_; ///< "Bluetooth module" blocks that run, in the order of the scripts.
     std::map<std::string, std::set<std::string>> calls_;          ///< Function id -> functions it calls.
     std::string currentFunction_;                                 ///< Function whose body is checked.
+    /// Most blocks a call may write out when scripts run side by side (an AVR sketch of that size
+    /// is already far past the board's memory).
+    static constexpr std::size_t kMaxWrittenOut = 2000;
+    bool sideBySide_ = false;                          ///< Several scripts start: functions are inlined.
+    std::map<std::string, std::size_t> writtenOut_;    ///< Function id -> blocks a call writes out.
+    std::set<std::string> expanding_;                  ///< Functions being counted (recursion guard).
+    bool cycleSeen_ = false;          ///< A recursive call was met while counting (totals partial).
+    std::size_t writtenSoFar_ = 0;    ///< Blocks written out by the outermost calls checked so far.
+    bool tooBigReported_ = false;     ///< FunctionTooBig is reported once, at the call past the limit.
 };
 
 } // namespace
@@ -527,6 +624,10 @@ std::string_view ruleKey(Rule rule) noexcept {
         return "validation.usercode_read_only";
     case Rule::UserCodeOwned:
         return "validation.usercode_owned";
+    case Rule::TooManyInputs:
+        return "validation.too_many_inputs";
+    case Rule::FunctionTooBig:
+        return "validation.function_too_big";
     case Rule::Count:
         break;
     }

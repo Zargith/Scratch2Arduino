@@ -1,5 +1,6 @@
 #include "s2a/process.hpp"
 
+#include <cstring>
 #include <algorithm>
 #include <cstdlib>
 #include <cwchar>
@@ -27,6 +28,17 @@ extern char** environ; // NOLINT(readability-redundant-declaration): not declare
 #endif
 
 namespace s2a::process {
+
+std::filesystem::path environmentPath(const char* name) {
+#ifdef _WIN32
+    const std::wstring wide(name, name + std::strlen(name));
+    const wchar_t* value = _wgetenv(wide.c_str()); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
+    return value != nullptr && *value != L'\0' ? std::filesystem::path(value) : std::filesystem::path{};
+#else
+    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
+    return value != nullptr && *value != '\0' ? std::filesystem::u8path(value) : std::filesystem::path{};
+#endif
+}
 
 namespace {
 

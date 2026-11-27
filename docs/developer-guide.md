@@ -219,3 +219,6 @@ work". Update both languages in the same pull request.
   showing another one answers the open one with "cancel". A second request while one is asked (unsaved
   changes before an update) waits for the same answer, and module-level handlers are only cleared by the
   editor that set them.
+- **Text that is not UTF-8 never throws**: JSON written for files or for the editor is dumped with
+  `error_handler_t::replace` (a Latin-1 name, board output or compiler text becomes U+FFFD). Environment
+  paths are read with `s2a::process::environmentPath` (UTF-16 on Windows, so an accented user name works).

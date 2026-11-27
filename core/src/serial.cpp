@@ -47,7 +47,11 @@ std::optional<std::string> LineBuffer::take() {
             return std::nullopt;
         }
         // A "\r" at the cut stays for the next piece: "\r\n" split here gives no extra empty line.
-        const std::size_t size = data_[start_ + kMaxLine - 1] == '\r' ? kMaxLine - 1 : kMaxLine;
+        std::size_t size = data_[start_ + kMaxLine - 1] == '\r' ? kMaxLine - 1 : kMaxLine;
+        // Not in the middle of a UTF-8 character either: its bytes stay together in the next piece.
+        while (size > 1 && (static_cast<unsigned char>(data_[start_ + size]) & 0xC0) == 0x80) {
+            --size;
+        }
         std::string piece = data_.substr(start_, size);
         start_ += size;
         return piece;
