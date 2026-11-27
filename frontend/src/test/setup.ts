@@ -17,6 +17,9 @@ globalThis.ResizeObserver ??= class {
 	disconnect() {}
 } as never;
 
+// Panels scroll to their last line (serial monitor, Live output).
+Element.prototype.scrollTo ??= function scrollTo() {} as never;
+
 // CodeMirror measures text ranges, which jsdom does not lay out.
 Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect ??= () => new DOMRect();
