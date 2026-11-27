@@ -92,6 +92,7 @@
   },
   "webview": {
     "update_failed": "Could not download or start the update. Download it from the release page.",
+    "cannot_start": "Scratch2Arduino cannot open its window ({details}). On Windows, install Microsoft Edge WebView2 (https://go.microsoft.com/fwlink/p/?LinkId=2124703), then start Scratch2Arduino again. On Linux, install the WebKitGTK package (libwebkit2gtk-4.1).",
     "replace_file": "\"{name}\" already exists. Replace it?",
     "open_title": "Open a project",
     "save_title": "Save the project",
