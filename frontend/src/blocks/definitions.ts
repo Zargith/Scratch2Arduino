@@ -113,6 +113,11 @@ export function setEditFunctionHandler(handler: ((id: string) => void) | null): 
 	editFunction = handler;
 }
 
+/** Forgets `handler` if it is still the one set (an older editor must not clear a newer one's). */
+export function clearEditFunctionHandler(handler: (id: string) => void): void {
+	if (editFunction === handler) editFunction = null;
+}
+
 function registerFunctionField(): void {
 	if (Blockly.registry.hasItem(Blockly.registry.Type.FIELD, "field_s2a_function")) return;
 	const Base = Blockly.registry.getClass(Blockly.registry.Type.FIELD, "field_variable") as unknown as typeof Blockly.FieldVariable;

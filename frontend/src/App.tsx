@@ -676,21 +676,31 @@ export function App() {
 	/** Asked before the update installer closes Scratch2Arduino: save, ignore or cancel. */
 	const [unsavedAsked, setUnsavedAsked] = useState(false);
 	const unsavedAnswer = useRef<((choice: UnsavedChoice) => void) | null>(null);
+	/** The question being asked: a second call waits for the same answer instead of replacing it (audit #196). */
+	const closing = useRef<Promise<boolean> | null>(null);
 	/** True when Scratch2Arduino may close now (nothing to save, saved, or changes ignored). */
-	const readyToClose = async () => {
-		if (!dirty) return true;
-		const choice = await new Promise<UnsavedChoice>((resolve) => {
-			unsavedAnswer.current = resolve;
-			setUnsavedAsked(true);
+	const readyToClose = (): Promise<boolean> => {
+		if (!dirty) return Promise.resolve(true);
+		if (closing.current) return closing.current;
+		const asked = (async () => {
+			const choice = await new Promise<UnsavedChoice>((resolve) => {
+				unsavedAnswer.current = resolve;
+				setUnsavedAsked(true);
+			});
+			if (choice === "cancel") return false;
+			return choice === "discard" || (await saveProject());
+		})().finally(() => {
+			closing.current = null;
 		});
-		if (choice === "cancel") return false;
-		return choice === "discard" || (await saveProject());
+		closing.current = asked;
+		return asked;
 	};
 	const answerUnsaved = (choice: UnsavedChoice) => {
 		setUnsavedAsked(false);
 		unsavedAnswer.current?.(choice);
 		unsavedAnswer.current = null;
 	};
+	const updating = useRef(false);
 	/** Only the Windows installer closes the program; elsewhere the link is just opened. */
 	const installCloses = (download: string) => platform(navigator.userAgent) === "windows" && download.endsWith(".exe");
 	/**
@@ -702,13 +712,17 @@ export function App() {
 			await bridge.openUrl(release.download).catch(fail);
 			return;
 		}
-		if (installingUpdate || !(await readyToClose())) return;
-		setInstallingUpdate(true);
-		setUpdateError("");
+		// A second click while the first is asking or installing does nothing (audit #196).
+		if (updating.current) return;
+		updating.current = true;
 		try {
+			if (!(await readyToClose())) return;
+			setInstallingUpdate(true);
+			setUpdateError("");
 			setUpdateError(await installRelease(release, language, t));
 		} finally {
 			setInstallingUpdate(false);
+			updating.current = false;
 		}
 	};
 
