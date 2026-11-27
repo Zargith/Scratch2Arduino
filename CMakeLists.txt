@@ -33,12 +33,33 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
 if(S2A_BUILD_TESTS)
     enable_testing()
+    # Here, not in core/tests: an installed GoogleTest gives imported targets that only this
+    # directory and the ones below it see (core and bridge tests both need them).
+    find_package(GTest 1.12 CONFIG QUIET)
+    if(NOT GTest_FOUND)
+        include(FetchContent)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+        set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(googletest
+            URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+            SYSTEM
+            EXCLUDE_FROM_ALL
+        )
+        FetchContent_MakeAvailable(googletest)
+    endif()
 endif()
 
 add_subdirectory(core)
 
 if(S2A_BUILD_CLI)
     add_subdirectory(tools/s2a-cli)
+endif()
+
+# The bridge is tested without the webview (core-only builds with tests included).
+if(S2A_BUILD_WEBVIEW OR S2A_BUILD_TESTS)
+    add_subdirectory(apps/webview/bridge)
 endif()
 
 if(S2A_BUILD_WEBVIEW)

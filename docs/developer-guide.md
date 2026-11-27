@@ -19,8 +19,11 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
   `scratch-blocks` / Blockly 12. It is built with pnpm + Vite into one offline bundle the app loads from
   disk. It never does the real work: it converts the workspace to a project and calls the host.
 - **`apps/webview/`** is the native application: a [webview](https://github.com/webview/webview) window
-  that loads the bundle and binds the `s2a_*` functions (`src/bridge.cpp`, mirrored by
-  `frontend/src/bridge.ts`). Long tasks run on worker threads and answer the promise when done.
+  that loads the bundle (`src/main.cpp`). The `s2a_*` functions, mirrored by `frontend/src/bridge.ts`,
+  live in the `s2a_bridge` library (`bridge/bridge.cpp`), which only sees the window through
+  `HostWindow` (`bridge/host_window.hpp`): `s2a_bridge_tests` drives it with a fake window, without a
+  webview, and checks that every function of `bridge.ts` is bound. Long tasks run on worker threads
+  and answer the promise when done.
 - **`core/`** (`s2a_core`, C++17, no GUI) holds everything else and is unit-tested with GoogleTest.
 - **`tools/s2a-cli/`** exposes the core on the command line (`generate`, `compile`, `upload`, `live`,
   `wiring`, `ports`, `setup`...): handy to test without the GUI.
@@ -60,7 +63,7 @@ frontend/ (React + scratch-blocks)  ──bridge──▶  apps/webview (C++ hos
 ## 2. Build and test
 
 ```bash
-cmake --preset core-only && cmake --build --preset core-only && ctest --preset core-only   # core + s2a-cli
+cmake --preset core-only && cmake --build --preset core-only && ctest --preset core-only   # core, bridge, s2a-cli
 cmake --preset debug && cmake --build --preset debug                                      # the app (WebKitGTK 4.1 on Linux)
 
 cd frontend && pnpm install && pnpm test && pnpm dev   # editor in a browser (host calls report they need the app)
@@ -105,6 +108,15 @@ The catalog format and its rules are described in [docs/block-catalog.md](block-
 7. Document it in the user guide's block table if it opens a new possibility.
 
 The editor needs no change: the palette, the menus and the tooltips are built from the catalog.
+
+### Add a call from the editor to the program
+
+1. Bind it in `Bridge::bind()` (`apps/webview/bridge/bridge.cpp`): `bindSync` for a quick answer,
+   `window_.bind` + `async` for slow work (dialogs, arduino-cli), `bindPortCall` when it uses the
+   board's port. Throw `UserError` for a message the child should read.
+2. Add it to `HostFunctions` and `bridge` in `frontend/src/bridge.ts`.
+3. Test it in `apps/webview/bridge/tests/test_bridge.cpp` (`window_.call("s2a_...", args)`). The
+   contract test fails while a function is in one file and not the other.
 
 ### Add a component (for the wiring diagram)
 
@@ -191,7 +203,7 @@ work". Update both languages in the same pull request.
   thread. Text from the compiler is read by hand (no `std::regex`, which recurses once per character) and
   numbers without `std::stoi` (it throws).
 - **Never replace a file without asking**: save dialogs go through `chooseSaveFile`
-  (`apps/webview/src/bridge.cpp`), which asks again when it adds the extension to the typed name.
+  (`apps/webview/bridge/bridge.cpp`), which asks again when it adds the extension to the typed name.
 - **Nothing downloaded runs unchecked**: each release publishes `SHA256SUMS.txt` (release job of
   `ci.yml`), and the in-app update checks the installer against it (`s2a::integrity::verifyFile`)
   in a new temporary folder before Windows runs it as administrator.
@@ -211,7 +223,7 @@ work". Update both languages in the same pull request.
 - **Every validator rule has a test**: rules loop up to `Rule::Count`, so a new rule without French and
   English messages fails `EveryRuleHasMessagesInBothLanguages`.
 - **No call from the editor may end the program**: a synchronous bind goes through `Bridge::bindSync`
-  (`apps/webview/src/bridge.cpp`), which turns any exception into a rejected promise with a friendly
+  (`apps/webview/bridge/bridge.cpp`), which turns any exception into a rejected promise with a friendly
   message (details on stderr); a call that can take a while (opening a port, starting or stopping Live)
   goes through `Bridge::bindPortCall`: one thread runs these calls one after the other, in call order. A stopped Live session is torn down off the UI thread, and whatever
   needs its port again (new Live session, upload, serial monitor) waits for that teardown.

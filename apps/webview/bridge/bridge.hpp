@@ -18,13 +18,7 @@
 #include <string>
 #include <thread>
 
-#include <webview/webview.h>
-// On Linux webview.h pulls in GTK, hence X11, whose macros clash with ordinary names
-// (s2a::Status, Problem::None...).
-#undef Bool
-#undef None
-#undef Status
-#undef Success
+#include "host_window.hpp"
 
 namespace s2a::webview {
 
@@ -32,7 +26,7 @@ namespace s2a::webview {
 /// (dialogs, arduino-cli) run on worker threads and resolve their promise when done.
 class Bridge {
 public:
-    Bridge(::webview::webview& window, Language language);
+    Bridge(HostWindow& window, Language language);
     Bridge(const Bridge&) = delete;
     Bridge& operator=(const Bridge&) = delete;
     Bridge(Bridge&&) = delete;
@@ -65,7 +59,7 @@ private:
     bool portStopping_ = false;                  ///< Guarded by portMutex_.
     std::thread portThread_;
 
-    ::webview::webview& window_;
+    HostWindow& window_;
     Language language_;
     struct Worker {
         std::thread thread;
