@@ -47,7 +47,7 @@ répéter indéfiniment
 ## 3. Envoie-le dans la carte
 
 1. Clique sur **Vérifier** (vert) : Scratch2Arduino contrôle ton programme. S'il manque quelque chose,
-   la barre d'état en bas te dit quoi corriger et le bloc concerné est mis en évidence.
+   le message d'état en bas te dit quoi corriger et le bloc concerné est mis en évidence.
 2. Clique sur **Téléverser** (orange). La première fois, c'est un peu long : les outils de la carte se
    téléchargent (il faut Internet).
 3. La LED **L** clignote : une seconde allumée, une seconde éteinte. Bravo, c'est ton premier programme !

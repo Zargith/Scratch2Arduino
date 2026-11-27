@@ -193,7 +193,7 @@ computer.
 - **Workspace** (centre): where you put the blocks together. The wheel scrolls; the **+**, **−** and
   **=** buttons (bottom right) zoom; the **trash can** throws away the blocks dropped on it.
 - **Panels** (right, when open): the live values of Live mode, the serial monitor.
-- **Status bar** (bottom): what is going on ("Checking the program...") and the problems to fix.
+- **Status message** (bottom): what is going on ("Checking the program...") and the problems to fix. Each message starts with its state in words and an icon: "Problem", "Done" or "Info". It stays clear of the panels and the tutorials, and its cross button closes it.
 
 ![The Scratch2Arduino window with the Blink example: the top bar, the palette of block categories on the left and the program in the workspace](../images/en/editor-blink.png)
 
@@ -258,7 +258,7 @@ list is in the [block catalog](../block-catalog.md).
 
 ![The Code view: the Arduino code (C++) made from the blocks of the Blink example, with setup() and loop()](../images/en/code-view.png)
 
-When something is wrong, the status bar explains **what is wrong** and **how to fix it**, and the block
+When something is wrong, the status message explains **what is wrong** and **how to fix it**, and the block
 concerned is highlighted in the workspace. For example:
 
 - "Your program does not start anywhere." -> add *when the program starts* and attach your blocks below it;
@@ -266,7 +266,9 @@ concerned is highlighted in the workspace. For example:
 - "Pin 7 of the Arduino Uno board cannot do "PWM output"." -> choose one of the pins offered (those marked with
   a `~` on the board).
 
-![An error after Check: the condition was pulled out of the "if ... then ... else" block, which is framed in red, and the status bar explains that a condition is missing and how to put one back](../images/en/check-error.png)
+Its title gives the state in words, **Problem**, **Done** or **Info**, and a screen reader announces a problem at once.
+
+![An error after Check: the condition was pulled out of the "if ... then ... else" block, which is framed in red, and the status message explains that a condition is missing and how to put one back](../images/en/check-error.png)
 
 ## 7. Live mode
 
