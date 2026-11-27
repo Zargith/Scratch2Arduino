@@ -204,8 +204,8 @@ ordinateur.
 - **Zone de travail** (au centre) : là où tu assembles les blocs. La molette fait défiler ; les boutons
   **+**, **−** et **=** (en bas à droite) zooment ; la **poubelle** jette les blocs qu'on y dépose.
 - **Panneaux** (à droite, quand ils sont ouverts) : les valeurs en direct du mode Live, le moniteur série.
-- **Barre d'état** (en bas) : ce qui se passe ("Vérification du programme...") et les problèmes à
-  corriger.
+- **Message d'état** (en bas) : ce qui se passe ("Vérification du programme...") et les problèmes à
+  corriger. Chaque message commence par son état en mots et une icône : "Problème", "C'est fait" ou "Info". Il reste à l'écart des panneaux et du tutoriel, et sa croix le ferme.
 
 ![La fenêtre de Scratch2Arduino avec l'exemple Clignotant : la barre du haut, la palette des familles de blocs à gauche et le programme dans la zone de travail](../images/fr/editor-blink.png)
 
@@ -272,7 +272,7 @@ composant**. La liste complète est dans le [catalogue des blocs](../block-catal
 
 ![La vue Code : le code Arduino (C++) fabriqué à partir des blocs de l'exemple Clignotant, avec setup() et loop()](../images/fr/code-view.png)
 
-Quand il y a un problème, la barre d'état explique **ce qui ne va pas** et **comment le corriger**, et
+Quand il y a un problème, le message d'état explique **ce qui ne va pas** et **comment le corriger**, et
 le bloc concerné est mis en évidence dans la zone de travail. Exemples :
 
 - "Ton programme ne commence nulle part." -> ajoute *quand le programme démarre* et accroche tes blocs
@@ -281,7 +281,9 @@ le bloc concerné est mis en évidence dans la zone de travail. Exemples :
 - "La broche 7 de la carte Arduino Uno ne sait pas faire "sortie PWM" (bloc "...")." -> choisis une des broches
   proposées (celles marquées d'un `~` sur la carte).
 
-![Une erreur après Vérifier : la condition a été retirée du bloc "si ... alors ... sinon", qui est encadré en rouge, et la barre d'état explique qu'il manque une condition et comment la remettre](../images/fr/check-error.png)
+Son titre donne l'état en mots, **Problème**, **C'est fait** ou **Info**, avec une icône ; un lecteur d'écran annonce tout de suite un problème.
+
+![Une erreur après Vérifier : la condition a été retirée du bloc "si ... alors ... sinon", qui est encadré en rouge, et le message d'état explique qu'il manque une condition et comment la remettre](../images/fr/check-error.png)
 
 ## 7. Le mode Live
 

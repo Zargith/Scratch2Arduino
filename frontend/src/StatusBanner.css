@@ -1,0 +1,25 @@
+/* Message of the last action: over the workspace, between the palette and the zoom/trash controls. */
+.s2a-status {
+	position: fixed;
+	/* Beside the palette and the right-hand panels, but never narrower than 360 px: in a medium
+	   window the offsets shrink (the box goes over the panels) rather than crush the message. */
+	--s2a-status-right-kept: max(16px, min(var(--s2a-status-right, 16px), calc(100vw - 376px)));
+	right: var(--s2a-status-right-kept);
+	left: max(16px, min(var(--s2a-status-left, 16px), calc(100vw - var(--s2a-status-right-kept) - 360px)));
+	bottom: var(--s2a-status-bottom, 16px);
+	z-index: 150;
+	max-height: 50vh;
+	overflow-y: auto;
+	/* The alert's light colour is see-through: blocks or panels behind would mix with the text. */
+	background: var(--mantine-color-body);
+	border-radius: var(--mantine-radius-xs);
+}
+
+/* Narrow window, or a page zoomed in (em follows the zoom): the fixed offsets would leave no room,
+   so the message takes the whole width (audit #211, WCAG 1.4.10). */
+@media (max-width: 60em) {
+	.s2a-status {
+		left: 16px;
+		right: 16px;
+	}
+}

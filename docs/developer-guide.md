@@ -216,8 +216,8 @@ work". Update both languages in the same pull request.
   `ci.yml`), and the in-app update checks the installer against it (`s2a::integrity::verifyFile`)
   in a new temporary folder before Windows runs it as administrator.
 - **Accessible to every child**: the page language follows the chosen one (`<html lang>`), a state is never
-  told by colour only (the LEDs of the virtual board say "on" or "off" in their name and have an outline
-  when off), text that keeps arriving is a live region (the serial monitor is a `role="log"`).
+  told by colour only (the status message has an icon and a title word, Problem, Done or Info; the LEDs of the
+  virtual board say "on" or "off" in their name and have an outline when off), text that keeps arriving is a live region (the serial monitor is a `role="log"`).
 - **Tutorial locks hold**: locking a block clears Blockly's undo history (`frontend/src/locks.ts`), since
   undo replays edits whatever the locks.
 - **Generated code computes in `double`**, as Scratch does: an `int` is 16 bits on AVR boards (Uno, Nano,

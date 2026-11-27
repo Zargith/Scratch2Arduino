@@ -125,7 +125,7 @@ export function BoardPackageList({ language, t, packages, onChanged }: BoardPack
 										{found.name}
 									</Text>
 									{installed && !found.shipped && (
-										<Badge size="xs" color="green" variant="light">
+										<Badge color="green" variant="light">
 											{t("packages.badge_installed")}
 										</Badge>
 									)}

@@ -44,7 +44,7 @@ forever
 
 ## 3. Send it to the board
 
-1. Click **Check** (green): Scratch2Arduino checks your program. If something is missing, the status bar
+1. Click **Check** (green): Scratch2Arduino checks your program. If something is missing, the status message
    at the bottom tells you what to fix and the block concerned is highlighted.
 2. Click **Upload** (orange). The first time takes a while: the board's tools are downloaded (Internet
    needed).
