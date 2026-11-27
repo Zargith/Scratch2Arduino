@@ -119,10 +119,11 @@ describe("App flows", () => {
 		const item = Blockly.ContextMenuRegistry.registry.getItem("s2a_save_to_library");
 		expect(item).not.toBeNull();
 		await act(async () => (item as unknown as { callback: (scope: { block: Blockly.BlockSvg }) => void }).callback({ block }));
-		await waitUntil(() => document.querySelector<HTMLInputElement>("[data-autofocus]") !== null, "the name prompt");
-		typeInto(document.querySelector<HTMLInputElement>("[data-autofocus]")!, "Allumer");
+		await waitUntil(() => document.querySelector<HTMLInputElement>("input[data-autofocus]") !== null, "the name prompt");
+		typeInto(document.querySelector<HTMLInputElement>("input[data-autofocus]")!, "Allumer");
 		await act(async () => button("Valider")!.click());
 		await waitUntil(() => added.length > 0, "the group saved");
 		expect(added[0]![0]).toBe("Allumer");
+		expect(JSON.stringify(added[0]![1])).toContain("pins_builtin_led");
 	}, 60_000);
 });

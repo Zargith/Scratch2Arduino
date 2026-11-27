@@ -38,12 +38,13 @@ describe("BluetoothDialog", () => {
 		expect(onClose).toHaveBeenCalled();
 	});
 
-	it("says when no board answers, and why a search failed", async () => {
+	it("says when no board answers", async () => {
 		show("esp32", null, { s2a_bluetooth_search: async () => ({ ok: true, devices: [] }) });
 		act(() => button("Chercher les cartes")!.click());
 		await waitUntil(() => document.body.textContent!.includes(t("bluetooth.none")), "the empty result");
+	});
 
-		rendered?.unmount();
+	it("says why a search failed", async () => {
 		show("esp32", null, { s2a_bluetooth_search: async () => ({ ok: false, message: "Le Bluetooth est éteint." }) });
 		act(() => button("Chercher les cartes")!.click());
 		await waitUntil(() => document.body.textContent!.includes("Le Bluetooth est éteint."), "the failure");

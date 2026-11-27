@@ -108,8 +108,11 @@ describe("SerialMonitor", () => {
 	});
 
 	it("frees the port when it is closed", async () => {
-		const calls = board([]);
+		const calls = board(["connectée"]);
 		show();
+		act(() => button("Connecter")!.click());
+		await waitUntil(() => document.body.textContent!.includes("connectée"), "the connection");
+		expect(calls.closed).toBe(0);
 		rendered?.unmount();
 		rendered = null;
 		await waitUntil(() => calls.closed > 0, "the port closed");
