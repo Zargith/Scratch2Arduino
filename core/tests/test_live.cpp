@@ -992,11 +992,85 @@ TEST(Session, UploadsTheFirmwareWhenTheBoardDoesNotAnswer) {
         [&flashes](std::string&) {
             ++flashes;
             return s2a::success();
-        });
+        },
+        /*mayUploadFirmware=*/true);
     // The silent board is probed for a few seconds before the firmware is uploaded.
-    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }, 80));
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }, 140));
     EXPECT_EQ(flashes, 1);
     EXPECT_EQ(opened, 2);
+}
+
+/// A board whose bootloader keeps it silent for a while, then answers normally.
+struct SlowFirmware final : s2a::serial::LineTransport {
+    std::shared_ptr<FakeFirmware> firmware = std::make_shared<FakeFirmware>();
+    std::chrono::steady_clock::time_point awake = std::chrono::steady_clock::now() + std::chrono::milliseconds(4500);
+    SlowFirmware() { firmware->pending.clear(); }
+    s2a::Status writeLine(std::string_view line) override {
+        return std::chrono::steady_clock::now() < awake ? s2a::success() : firmware->writeLine(line);
+    }
+    s2a::Result<std::optional<std::string>> readLine(milliseconds timeout) override {
+        if (std::chrono::steady_clock::now() < awake) {
+            std::this_thread::sleep_for(std::min(timeout, milliseconds(50)));
+            return std::optional<std::string>();
+        }
+        return firmware->readLine(timeout);
+    }
+};
+
+// Audit 2026-11-24 (#181): a slow bootloader gets a second chance before the firmware is
+// considered missing.
+TEST(Session, WaitsForASlowBoardBeforeAskingForTheFirmware) {
+    int flashes = 0;
+    Session session(
+        blink(), uno(), "/dev/ttyACM0", s2a::Language::English,
+        [](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SlowFirmware>());
+        },
+        [&flashes](std::string&) {
+            ++flashes;
+            return s2a::success();
+        });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Running; }, 140));
+    EXPECT_EQ(flashes, 0);
+}
+
+/// A link that breaks (the cable is pulled out) during the greeting.
+struct BrokenLink final : s2a::serial::LineTransport {
+    s2a::Status writeLine(std::string_view /*line*/) override { return s2a::success(); }
+    s2a::Result<std::optional<std::string>> readLine(milliseconds /*timeout*/) override {
+        return s2a::Error{s2a::ErrorCode::PortFailed, "the board was unplugged"};
+    }
+};
+
+TEST(Session, ReportsABrokenLinkInsteadOfAskingForTheFirmware) {
+    Session session(
+        blink(), uno(), "/dev/ttyACM0", s2a::Language::English,
+        [](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<BrokenLink>());
+        },
+        [](std::string&) { return s2a::success(); });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::Failed; }, 50));
+}
+
+// Audit 2026-11-24 (#181): the program uploaded by the child was replaced by the Live firmware
+// without asking. Without the user's agreement, the session stops and says the firmware is needed.
+TEST(Session, AsksBeforeUploadingTheFirmware) {
+    auto silent = std::make_shared<FakeFirmware>();
+    silent->pending.clear();
+    silent->silent = true;
+    int flashes = 0;
+    Session session(
+        blink(), uno(), "/dev/ttyACM0", s2a::Language::English,
+        [&](const std::string&) -> s2a::Result<std::unique_ptr<s2a::serial::LineTransport>> {
+            return std::unique_ptr<s2a::serial::LineTransport>(std::make_unique<SharedFirmware>(silent));
+        },
+        [&flashes](std::string&) {
+            ++flashes;
+            return s2a::success();
+        });
+    ASSERT_TRUE(waitFor([&] { return session.snapshot().state == Session::State::NeedsFirmware; }, 140));
+    EXPECT_EQ(flashes, 0);
+    EXPECT_NE(session.snapshot().message.find("Uno"), std::string::npos) << session.snapshot().message;
 }
 
 TEST(Session, RefusesBlocksWithMistakes) {

@@ -422,6 +422,8 @@ const char* stateName(live::Session::State state) {
         return "finished";
     case live::Session::State::Stopped:
         return "stopped";
+    case live::Session::State::NeedsFirmware:
+        return "needs_firmware";
     case live::Session::State::Failed:
         return "failed";
     }
@@ -512,7 +514,9 @@ std::unique_ptr<serial::SerialPort> Bridge::openLiveOverUsb(const Board& board, 
         throw failure(opened.error());
     }
     std::unique_ptr<serial::SerialPort> connection = std::move(opened).value();
-    if (live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok()) {
+    // A slow bootloader (Mega, some clones) gets a second chance before the firmware is installed.
+    if (live::LiveLink(*connection).handshake(std::chrono::milliseconds(3500)).ok() ||
+        live::LiveLink(*connection).handshake(std::chrono::milliseconds(4000)).ok()) {
         return connection;
     }
     connection.reset(); // no Live firmware yet: install it, then connect again
@@ -1431,9 +1435,12 @@ void Bridge::bind() {
                 return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             }
             // Over Wi-Fi or Bluetooth the firmware cannot be uploaded: the board must already run it.
+            // The 4th argument: the user agreed to replace the board's program with the Live firmware.
+            const bool mayUploadFirmware = args.size() > 3 && args[3].is_boolean() && args[3].get<bool>();
             live_ = std::make_unique<live::Session>(
                 std::move(project), *board, port, language, afterClosing(live::Session::opener()),
-                network::isWireless(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port));
+                network::isWireless(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port),
+                mayUploadFirmware);
             return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         } catch (const UserError& error) {
             message = error.message;

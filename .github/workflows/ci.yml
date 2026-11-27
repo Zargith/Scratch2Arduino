@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only by default: only the release job asks to write (audit #176).
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Never on main: a second push there cancelled a run while it uploaded the release files, which
@@ -24,7 +28,7 @@ jobs:
         # macos-latest: Apple chip (arm64 .dmg); macos-15-intel: Intel Macs (x86_64 .dmg).
         os: [ubuntu-24.04, macos-latest, macos-15-intel, windows-latest]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: ./.github/actions/setup-apt
         if: runner.os == 'Linux'
@@ -42,13 +46,16 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install ninja
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Configure
         shell: bash
@@ -218,7 +225,7 @@ jobs:
 
       - name: Upload the Linux packages
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: packages-linux
           path: |
@@ -227,7 +234,7 @@ jobs:
 
       - name: Upload the macOS disk image
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-macos-${{ runner.arch }}
           path: build/Scratch2Arduino-*.dmg
@@ -235,8 +242,9 @@ jobs:
   data:
     name: Data files (JSON schema)
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Validate block catalogs
         run: pipx run check-jsonschema --schemafile blocks/schema/catalog.schema.json blocks/catalog/*.json
 
@@ -246,7 +254,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: VERSION is newer than the last release
@@ -267,7 +275,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build the core with the sanitizers
         run: |
           cmake -S . -B build-san -DS2A_BUILD_WEBVIEW=OFF -DCMAKE_BUILD_TYPE=Debug \
@@ -283,15 +291,19 @@ jobs:
   frontend:
     name: Block editor (frontend)
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install
         run: pnpm --dir frontend install --frozen-lockfile
@@ -303,7 +315,7 @@ jobs:
         run: |
           pnpm --dir frontend exec vite build
           (cd frontend/dist && zip -qr ../../scratch2arduino-frontend.zip .)
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: frontend
           path: scratch2arduino-frontend.zip
@@ -314,17 +326,20 @@ jobs:
     # Usually about 5 minutes.
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: ./.github/actions/setup-apt
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Scratch2Arduino_installer.sh --user
         run: ./Scratch2Arduino_installer.sh --user --yes
@@ -361,20 +376,24 @@ jobs:
   windows-installer:
     name: Scratch2Arduino_installer.exe (Windows)
     runs-on: windows-latest
+    timeout-minutes: 90
     env:
       # Code signing (Windows SmartScreen): set the secrets WINDOWS_CERTIFICATE (base64 of a .pfx)
       # and WINDOWS_CERTIFICATE_PASSWORD to sign the installer; without them it stays unsigned.
       HAS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.20.0
+
+      # pnpm first, so that setup-node caches its store between runs (audit #204).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Build the block editor (shipped prebuilt in Scratch2Arduino_installer.exe)
         run: |
@@ -538,7 +557,7 @@ jobs:
           if (-not (Test-Path $other)) { throw 'the uninstaller deleted a file that is not ours' }
 
       - name: Upload Scratch2Arduino_installer.exe
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: installer-windows
           path: installer/windows/Output/Scratch2Arduino_installer.exe
@@ -553,7 +572,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: installer-logs
           path: installer-logs
@@ -565,10 +584,11 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build, data, sanitizers, frontend, install-scripts, windows-installer]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -593,21 +613,21 @@ jobs:
 
       - name: Download Scratch2Arduino_installer.exe
         if: steps.version.outputs.exists == 'false'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: installer-windows
           path: dist
 
       - name: Download the prebuilt block editor
         if: steps.version.outputs.exists == 'false'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: frontend
           path: dist
 
       - name: Download the Linux packages and the macOS disk image
         if: steps.version.outputs.exists == 'false'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: package*-*
           path: dist

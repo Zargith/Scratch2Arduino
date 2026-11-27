@@ -92,6 +92,7 @@
   },
   "webview": {
     "update_failed": "Impossible de télécharger ou de lancer la mise à jour. Télécharge-la depuis la page de la version.",
+    "cannot_start": "Scratch2Arduino ne peut pas ouvrir sa fenêtre ({details}). Sous Windows, installe Microsoft Edge WebView2 (https://go.microsoft.com/fwlink/p/?LinkId=2124703), puis relance Scratch2Arduino. Sous Linux, installe le paquet WebKitGTK (libwebkit2gtk-4.1).",
     "replace_file": "\"{name}\" existe déjà. Le remplacer ?",
     "open_title": "Ouvrir un projet",
     "save_title": "Enregistrer le projet",
@@ -198,6 +199,7 @@
     "wiring_dht": "Le capteur {model} de la broche {pin} ne répond pas. Vérifie son fil de données sur la broche {pin}, VCC et GND, et le modèle choisi dans le bloc (DHT11 ou DHT22).",
     "connecting": "Connexion à la carte ({port})...",
     "flashing": "Installation du programme Live sur la carte {board} (une seule fois, quelques secondes)...",
+    "needs_firmware": "La carte {board} ne fait pas encore tourner le programme du mode Live. Pour utiliser le mode Live, il faut l'envoyer sur la carte : le programme qui y est déjà sera remplacé (tu pourras le renvoyer avec Téléverser).",
     "running": "Mode Live : tes blocs s'exécutent sur la carte. Modifie-les, la carte suit !",
     "finished": "Tous les blocs ont été exécutés. Modifie-les pour relancer.",
     "stopped": "Mode Live arrêté.",

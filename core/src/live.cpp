@@ -207,7 +207,7 @@ std::string formatValue(double value) {
 
 // --- LiveLink ----------------------------------------------------------------------------
 
-Status LiveLink::handshake(milliseconds timeout) {
+Status LiveLink::handshake(milliseconds timeout, const std::atomic<bool>* cancel) {
     // A greeting proves that the firmware runs, but it may be an old one still waiting in the
     // port (sent before an upload ended, for example) while the board restarts: opening the
     // port resets most boards, and their bootloader swallows what is sent during the next
@@ -215,7 +215,7 @@ Status LiveLink::handshake(milliseconds timeout) {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     // Empty until the first "?": a silent board is asked at once (time_point::min() overflowed).
     std::optional<std::chrono::steady_clock::time_point> lastAsk;
-    while (std::chrono::steady_clock::now() < deadline) {
+    while (std::chrono::steady_clock::now() < deadline && (cancel == nullptr || !cancel->load())) {
         auto line = transport_.readLine(milliseconds(300));
         if (!line.ok()) {
             return line.error();
@@ -1424,9 +1424,9 @@ void Interpreter::update(project::Project project) {
 // --- Session -----------------------------------------------------------------------------
 
 Session::Session(project::Project project, const Board& board, std::string port, Language language, Opener opener,
-                 Flasher flasher)
+                 Flasher flasher, bool mayUploadFirmware)
     : board_(board), port_(std::move(port)), language_(language), opener_(std::move(opener)),
-      flasher_(std::move(flasher)) {
+      flasher_(std::move(flasher)), mayUploadFirmware_(mayUploadFirmware) {
     snapshot_.message = tr("live.connecting", language_, {{"port", port_}});
     thread_ = std::thread([this, project = std::move(project)]() mutable { run(std::move(project)); });
 }
@@ -1535,8 +1535,18 @@ void Session::run(project::Project project) {
         return;
     }
     std::unique_ptr<serial::LineTransport> connection = std::move(transport).value();
-    // No firmware yet answers within a few seconds: the reset by the port lasts 1 to 2 s.
-    if (!LiveLink(*connection).handshake(milliseconds(3500)).ok()) {
+    // No firmware yet answers within a few seconds: the reset by the port lasts 1 to 2 s. A slow
+    // bootloader (Mega, some clones) gets a second chance before the firmware is considered missing.
+    // Stop interrupts the waits; a broken link (unplugged) is an error, not a missing firmware.
+    auto greeted = LiveLink(*connection).handshake(milliseconds(3500), &stopping_);
+    if (!greeted.ok() && greeted.error().code == ErrorCode::BoardNotResponding && !stopping_) {
+        greeted = LiveLink(*connection).handshake(milliseconds(4000), &stopping_);
+    }
+    if (!greeted.ok()) {
+        if (!stopping_ && greeted.error().code != ErrorCode::BoardNotResponding) {
+            fail(greeted.error());
+            return;
+        }
         if (stopping_) {
             set(State::Stopped, tr("live.stopped", language_));
             return;
@@ -1546,6 +1556,11 @@ void Session::run(project::Project project) {
         if (!flasher_) {
             set(State::Failed, tr(network::bluetoothAddress(port_) ? "live.bluetooth_no_firmware" : "live.wifi_no_firmware",
                                   language_));
+            return;
+        }
+        if (!mayUploadFirmware_) {
+            // The board may hold the child's own program: replaced only once the user agrees (#181).
+            set(State::NeedsFirmware, tr("live.needs_firmware", language_, {{"board", board_.name}}));
             return;
         }
         set(State::Flashing, tr("live.flashing", language_, {{"board", board_.name}}));

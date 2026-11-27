@@ -297,8 +297,9 @@ step-by-step mode. With several scripts, they take turns. **Resume** (F9) runs t
 again. Step by step works for blocks (also with "My code"), not for a whole program written in Python or
 JavaScript.
 
-The first time, Scratch2Arduino installs a small program on the board, *S2A live*, which listens to the
-computer's orders (a few seconds). Click **Stop** to leave Live mode: the board's outputs are switched
+The first time, Scratch2Arduino offers to install a small program on the board, *S2A live*, which listens
+to the computer's orders (a few seconds): it asks first, because the program already uploaded to the board
+is replaced (you can send it again with **Upload**). Click **Stop** to leave Live mode: the board's outputs are switched
 off. For the board to work on its own, without the computer, use **Upload**.
 
 **Without a board: the virtual board**. No board at hand? Choose the **Virtual board (no hardware)**
@@ -527,6 +528,7 @@ While typing in a slot (a number, a text, the project name), these keys act on t
 | macOS: the port list shows `/dev/cu.debug-console` or `Bluetooth-Incoming-Port` | These ports belong to macOS, not to a board: update to 1.3.2 or newer, which hides them. With no board plugged in, choose *Virtual board*. |
 | "The board's port cannot be used" | Another program uses the board: close the Arduino IDE or another serial monitor, then try again. |
 | "A Python program is already running in Live mode" (Check) | Stop the Live mode (Stop button), then check again. |
+| "Scratch2Arduino cannot open its window" at start-up | On Windows, install Microsoft Edge WebView2 (the link is in the message), then start again. On Linux, install the WebKitGTK package (`libwebkit2gtk-4.1`). |
 | "The board does not answer" | Unplug the board, plug it back in, choose its port again, then try again. Check that the right board is chosen (Uno, Nano...). |
 | The first upload is slow | Normal: the board's tools are downloaded once (Internet needed). |
 | The program is sent but nothing happens | Open the *Wiring diagram* and compare it with your circuit: an LED the wrong way round (long leg = +), a wire in the wrong breadboard column, a missing GND... |

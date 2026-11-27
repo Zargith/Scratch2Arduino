@@ -1,0 +1,10 @@
+# Keeps the GitHub Actions pinned by commit SHA in ci.yml up to date (audit #176).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

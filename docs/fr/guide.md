@@ -314,8 +314,9 @@ Les blocs *attendre* ne font plus attendre en pas à pas. Avec plusieurs scripts
 tour. **Reprendre** (F9) relance le programme à vitesse normale. Le pas à pas marche pour les blocs (même
 avec "Mon code"), pas pour un programme entier écrit en Python ou en JavaScript.
 
-La première fois, Scratch2Arduino installe sur la carte un petit programme, *S2A live*, qui écoute les
-ordres de l'ordinateur (quelques secondes). Clique sur **Arrêter** pour quitter le mode Live : les
+La première fois, Scratch2Arduino propose d'installer sur la carte un petit programme, *S2A live*, qui
+écoute les ordres de l'ordinateur (quelques secondes) : il demande d'abord ton accord, car le programme
+déjà téléversé sur la carte est remplacé (tu pourras le renvoyer avec **Téléverser**). Clique sur **Arrêter** pour quitter le mode Live : les
 sorties de la carte sont éteintes. Pour que la carte fonctionne seule, sans ordinateur, utilise
 **Téléverser**.
 
@@ -558,6 +559,7 @@ Quand tu tapes dans une case (un nombre, un texte, le nom du projet), ces touche
 | macOS : la liste des ports montre `/dev/cu.debug-console` ou `Bluetooth-Incoming-Port` | Ces ports appartiennent à macOS, pas à une carte : passe à la version 1.3.2 ou plus récente, qui les cache. Sans carte branchée, choisis *Carte virtuelle*. |
 | "Impossible d'utiliser le port de la carte" | Un autre programme utilise la carte : ferme l'Arduino IDE ou un autre moniteur série, puis réessaie. |
 | "Un programme Python tourne déjà en mode Live" (Vérifier) | Arrête le mode Live (bouton Stop), puis vérifie de nouveau. |
+| "Scratch2Arduino ne peut pas ouvrir sa fenêtre" au démarrage | Sous Windows, installe Microsoft Edge WebView2 (le lien est dans le message), puis relance. Sous Linux, installe le paquet WebKitGTK (`libwebkit2gtk-4.1`). |
 | "La carte ne répond pas" | Débranche la carte, rebranche-la, choisis de nouveau son port, puis réessaie. Vérifie que la bonne carte est choisie (Uno, Nano...). |
 | Le premier téléversement est long | Normal : les outils de la carte se téléchargent une seule fois (il faut Internet). |
 | Le programme est envoyé mais rien ne se passe | Ouvre le *Schéma de câblage* et compare avec ton montage : une LED montée à l'envers (patte longue = +), un fil dans la mauvaise colonne de la platine, un GND oublié... |

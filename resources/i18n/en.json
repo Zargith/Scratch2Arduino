@@ -92,6 +92,7 @@
   },
   "webview": {
     "update_failed": "Could not download or start the update. Download it from the release page.",
+    "cannot_start": "Scratch2Arduino cannot open its window ({details}). On Windows, install Microsoft Edge WebView2 (https://go.microsoft.com/fwlink/p/?LinkId=2124703), then start Scratch2Arduino again. On Linux, install the WebKitGTK package (libwebkit2gtk-4.1).",
     "replace_file": "\"{name}\" already exists. Replace it?",
     "open_title": "Open a project",
     "save_title": "Save the project",
@@ -198,6 +199,7 @@
     "wiring_dht": "The {model} sensor on pin {pin} does not answer. Check its data wire on pin {pin}, VCC and GND, and the model chosen in the block (DHT11 or DHT22).",
     "connecting": "Connecting to the board ({port})...",
     "flashing": "Installing the Live program on the {board} board (only once, a few seconds)...",
+    "needs_firmware": "The {board} does not run the Live mode program yet. To use Live mode it must be sent to the board: the program already on it will be replaced (you can send it again with Upload).",
     "running": "Live mode: your blocks are running on the board. Change them and the board follows!",
     "finished": "Every block has run. Change them to start again.",
     "stopped": "Live mode stopped.",
