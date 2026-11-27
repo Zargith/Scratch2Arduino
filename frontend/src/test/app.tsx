@@ -2,6 +2,7 @@
 import { MantineProvider } from "@mantine/core";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import * as Blockly from "scratch-blocks";
 
 import { App } from "@/App";
 import type { HostFunctions, OpenedProject } from "@/bridge";
@@ -53,12 +54,26 @@ export async function waitUntil(ready: () => boolean, what = "the condition", ti
 	}
 }
 
+// jsdom works out the whole CSS cascade (Mantine + Blockly sheets) on every getComputedStyle call,
+// and Blockly calls it for each block it measures: mounting the editor took ten minutes and more
+// (audit #201). jsdom lays nothing out anyway, so while the editor is mounted getComputedStyle
+// returns the inline style only: a test of the whole editor cannot check a value that comes from a
+// stylesheet (display, visibility...). The other tests keep the real one.
+const realComputedStyle = window.getComputedStyle;
+const emptyStyle = document.createElement("div").style;
+const inlineStyleOnly = ((element: Element) => (element as HTMLElement).style ?? emptyStyle) as typeof window.getComputedStyle;
+
 export interface MountedApp {
 	container: HTMLDivElement;
 	errors: unknown[];
 	/** Clicks the button or label whose text is `text` (or starts with "`text` ("). */
 	click(text: string): Promise<void>;
 	text(): string;
+	/**
+	 * The block editor of this mount, or null. Blockly.getMainWorkspace() is global: it can still
+	 * point at the editor of an earlier test, whose block ids may be the same ("start").
+	 */
+	workspace(): Blockly.WorkspaceSvg | null;
 	unmount(): Promise<void>;
 }
 
@@ -67,6 +82,9 @@ export async function mountApp(): Promise<MountedApp> {
 	document.body.appendChild(container);
 	const errors: unknown[] = [];
 	let root: Root | null = null;
+	// One editor at a time: a second mount would get the real getComputedStyle back on the first unmount.
+	if (window.getComputedStyle === inlineStyleOnly) throw new Error("mountApp: an editor is already mounted (unmount it first)");
+	window.getComputedStyle = inlineStyleOnly;
 	try {
 		await act(async () => {
 			root = createRoot(container, { onUncaughtError: (error) => errors.push(error) });
@@ -78,9 +96,13 @@ export async function mountApp(): Promise<MountedApp> {
 		});
 	} catch (error) {
 		// Nothing would unmount it: leave no editor, page node or host behind for the next test.
-		await act(async () => (root as Root | null)?.unmount());
-		container.remove();
-		clearHost();
+		try {
+			await act(async () => (root as Root | null)?.unmount());
+		} finally {
+			container.remove();
+			clearHost();
+			window.getComputedStyle = realComputedStyle;
+		}
 		throw error;
 	}
 	const find = (text: string) =>
@@ -96,10 +118,18 @@ export async function mountApp(): Promise<MountedApp> {
 			await act(async () => find(text)!.click());
 		},
 		text: () => document.body.textContent ?? "",
+		workspace() {
+			const main = Blockly.getMainWorkspace() as Blockly.WorkspaceSvg | null;
+			return main && container.contains(main.getInjectionDiv()) ? main : null;
+		},
 		async unmount() {
-			await act(async () => root?.unmount());
-			container.remove();
-			clearHost();
+			try {
+				await act(async () => root?.unmount());
+			} finally {
+				container.remove();
+				clearHost();
+				window.getComputedStyle = realComputedStyle;
+			}
 		},
 	};
 }

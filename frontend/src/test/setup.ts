@@ -24,13 +24,6 @@ Element.prototype.scrollTo ??= function scrollTo() {} as never;
 Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect ??= () => new DOMRect();
 
-// jsdom works out the whole CSS cascade (Mantine + Blockly sheets) on every getComputedStyle call,
-// and Blockly calls it for each block it measures: mounting the editor took a minute or more
-// (audit #201). jsdom lays nothing out anyway, so the inline style is all a test can rely on.
-// A test can therefore not check a value that comes from a stylesheet (display, visibility...).
-const emptyStyle = document.createElement("div").style;
-window.getComputedStyle = ((element: Element) => (element as HTMLElement).style ?? emptyStyle) as never;
-
 // Mantine keeps the colour scheme in localStorage, which jsdom leaves undefined without a URL.
 if (typeof window.localStorage === "undefined" || window.localStorage === null) {
 	const items = new Map<string, string>();
