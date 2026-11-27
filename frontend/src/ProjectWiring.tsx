@@ -91,7 +91,7 @@ export function ProjectWiring({ opened, example, language, project, t, onShowBlo
 				<Tabs.Panel value="diagram">
 					{svg ? (
 						<Stack gap="xs">
-							<ZoomableImage src={svgUrl(svg)} height="65vh" alt={t("wiring.project_title")} t={t} />
+							<ZoomableImage src={svgUrl(svg)} height="65vh" alt={t("wiring.diagram_alt")} t={t} />
 							<Group justify="space-between">
 								<Text size="sm" c="dimmed">
 									{t("wiring.diagram_help")}

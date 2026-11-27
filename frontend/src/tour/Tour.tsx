@@ -1,6 +1,6 @@
 // Card of the interactive tutorial: the current step, a ring around what to use, and the Next
 // button that turns on once the step sees that it is done.
-import { ActionIcon, Badge, Button, Group, Paper, Progress, Stack, Text, Title } from "@mantine/core";
+import { ActionIcon, Badge, Button, Group, Paper, Progress, Stack, Text, Title, VisuallyHidden } from "@mantine/core";
 import { IconCheck, IconChevronDown, IconChevronUp, IconLock, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -73,11 +73,47 @@ export function Tour({ language, context, step, onStep, onAction, locked = false
 	const done = current.done(context, memory.current, start.current);
 	const ring = useRing(folded ? undefined : current.target, language);
 	const last = step >= steps.length - 1;
+	const showDone = done && step > 0 && !last;
+	const card = useRef<HTMLDivElement>(null);
+	const title = useRef<HTMLHeadingElement>(null);
+	/** Focus was in the card when the step changed (Next, Back): it goes to the new step's title (audit #211). */
+	const focusInCard = useRef(false);
+	useEffect(() => {
+		if (focusInCard.current) title.current?.focus();
+		focusInCard.current = false;
+	}, [step]);
+	const changeStep = (next: number) => {
+		focusInCard.current = card.current?.contains(document.activeElement) ?? false;
+		onStep(next);
+	};
 
 	return (
 		<>
 			{ring && <div className="s2a-tour-ring" style={{ left: ring.left - 6, top: ring.top - 6, width: ring.width + 12, height: ring.height + 12 }} />}
-			<Paper className="s2a-tour-card" shadow="lg" radius="md" p="md" withBorder role="dialog" aria-label={t("tour.title")}>
+			<Paper
+				ref={card}
+				className="s2a-tour-card"
+				shadow="lg"
+				radius="md"
+				p="md"
+				withBorder
+				role="dialog"
+				aria-label={t("tour.title")}
+				onKeyDown={(event) => {
+					// Escape folds the card (quitting would lose the tutorial's progress).
+					if (event.key === "Escape" && !folded) {
+						event.stopPropagation();
+						setFolded(true);
+					}
+				}}
+			>
+				{/* Read out when the step changes, and apart when it is done: the card is not where the child works. */}
+				<VisuallyHidden role="status" aria-live="polite">
+					{`${t("tour.progress", { step: String(step + 1), total: String(steps.length) })}: ${current.title[language]}.`}
+				</VisuallyHidden>
+				<VisuallyHidden role="status" aria-live="polite">
+					{showDone ? t("tour.step_done") : ""}
+				</VisuallyHidden>
 				<Stack gap="xs">
 					<Group justify="space-between" wrap="nowrap" gap="xs">
 						<Badge variant="light">{t("tour.progress", { step: String(step + 1), total: String(steps.length) })}</Badge>
@@ -91,7 +127,9 @@ export function Tour({ language, context, step, onStep, onAction, locked = false
 						</Group>
 					</Group>
 					<Progress value={((step + (done ? 1 : 0)) * 100) / steps.length} size="xs" />
-					<Title order={5}>{current.title[language]}</Title>
+					<Title order={5} ref={title} tabIndex={-1}>
+						{current.title[language]}
+					</Title>
 					{!folded && (
 						<>
 							<Text size="sm">{current.text[language]}</Text>
@@ -105,7 +143,7 @@ export function Tour({ language, context, step, onStep, onAction, locked = false
 									<IconLock size={12} style={{ verticalAlign: "middle" }} /> {t("tour.locked")}
 								</Text>
 							)}
-							{done && step > 0 && !last && (
+							{showDone && (
 								<Text size="sm" c="green" fw={500}>
 									<IconCheck size={14} style={{ verticalAlign: "middle" }} /> {t("tour.step_done")}
 								</Text>
@@ -113,7 +151,7 @@ export function Tour({ language, context, step, onStep, onAction, locked = false
 						</>
 					)}
 					<Group justify="space-between">
-						<Button variant="default" size="xs" disabled={step === 0} onClick={() => onStep(step - 1)}>
+						<Button variant="default" size="xs" disabled={step === 0} onClick={() => changeStep(step - 1)}>
 							{t("tour.back")}
 						</Button>
 						{last ? (
@@ -121,7 +159,7 @@ export function Tour({ language, context, step, onStep, onAction, locked = false
 								{t("tour.finish")}
 							</Button>
 						) : (
-							<Button size="xs" disabled={!done} onClick={() => onStep(step + 1)}>
+							<Button size="xs" disabled={!done} onClick={() => changeStep(step + 1)}>
 								{t("tour.next")}
 							</Button>
 						)}

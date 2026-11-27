@@ -1,12 +1,14 @@
 import { ActionIcon, Box, Group, Text, Tooltip } from "@mantine/core";
 import { IconZoomIn, IconZoomOut, IconZoomReset } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { MessageKey } from "@/i18n";
 
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 6;
 const STEP = 1.5;
+/** Pixels moved by an arrow key. */
+const KEY_MOVE = 40;
 
 export interface View {
 	zoom: number;
@@ -60,6 +62,12 @@ export function ZoomableImage({ src, alt, height, t }: ZoomableImageProps) {
 		setView((current) => zoomAt(current, zoom, box.width / 2, box.height / 2, box.width, box.height));
 	};
 
+	/** Zoom by `factor` around the centre, from the view as it is now (keys held down repeat). */
+	const zoomCentreBy = (factor: number) => {
+		const box = measure();
+		setView((current) => zoomAt(current, current.zoom * factor, box.width / 2, box.height / 2, box.width, box.height));
+	};
+
 	// The wheel zooms: a native listener, so that the dialog does not scroll at the same time.
 	const onWheel = useCallback((event: WheelEvent) => {
 		event.preventDefault();
@@ -97,6 +105,33 @@ export function ZoomableImage({ src, alt, height, t }: ZoomableImageProps) {
 	};
 
 	const zoomed = view.zoom > MIN_ZOOM;
+
+	/** The keyboard does what the wheel and the pointer do (audit #211): + and - zoom, arrows move, 0 fits. */
+	const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+		// Ctrl/Cmd + - 0 zoom the whole window, Alt+arrows go back: left to the system.
+		if (event.ctrlKey || event.metaKey || event.altKey) return;
+		const moves: Record<string, [number, number]> = {
+			ArrowLeft: [KEY_MOVE, 0],
+			ArrowRight: [-KEY_MOVE, 0],
+			ArrowUp: [0, KEY_MOVE],
+			ArrowDown: [0, -KEY_MOVE],
+		};
+		const move = moves[event.key];
+		if (move) {
+			if (view.zoom <= MIN_ZOOM) return; // nothing to move: the arrows scroll the page
+			const box = measure();
+			setView((current) => clamp({ ...current, x: current.x + move[0], y: current.y + move[1] }, box.width, box.height));
+		} else if (event.key === "+" || event.key === "=") {
+			zoomCentreBy(STEP);
+		} else if (event.key === "-") {
+			zoomCentreBy(1 / STEP);
+		} else if (event.key === "0") {
+			setView(FIT);
+		} else {
+			return;
+		}
+		event.preventDefault();
+	};
 	return (
 		<Box>
 			<Group gap="xs" mb="xs">
@@ -135,6 +170,10 @@ export function ZoomableImage({ src, alt, height, t }: ZoomableImageProps) {
 			<Box
 				ref={frame}
 				h={height}
+				tabIndex={0}
+				role="group"
+				aria-label={`${alt}. ${t("zoom.help")}`}
+				onKeyDown={onKeyDown}
 				onPointerDown={onPointerDown}
 				onPointerMove={onPointerMove}
 				onPointerUp={onPointerUp}

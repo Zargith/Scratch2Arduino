@@ -10,7 +10,8 @@ For a very first try, without hardware, the same panel offers the **interactive 
 box guides you step by step (blocks, wiring diagram, virtual board, a little C++ code translated into
 Python) and sees by itself when each step is done. Once you click *Next*, the blocks of the finished step
 are locked: they cannot be moved, thrown away or changed by mistake, so the next steps stay possible. *Back*
-unlocks them, and they are all unlocked when the tutorial is closed.
+unlocks them, and they are all unlocked when the tutorial is closed. *Escape* folds the box (a screen reader
+reads each new step out).
 
 ![The interactive tutorial "My doorbell": a box at the top right shows step 2 of 16, circles the Events category in the palette and says the step is done](../images/en/interactive-tutorial.png)
 
@@ -338,7 +339,8 @@ The **Wiring diagram** button (in the Blocks view as in the Code view) shows how
 by your blocks**:
 
 - **Wiring diagram**: the board, a breadboard and the parts, with one coloured wire per connection
-  (wheel or double-click to zoom, drag to move around, *Save the image* to print it);
+  (wheel or double-click to zoom, drag to move around; with the keyboard + and - zoom, the arrows move;
+  *Save the image* to print it);
 - **Components to wire**: the same wiring as a table - each leg of each part, the board pin it goes to
   and what to put in between (for example the 220 Ω resistor of an LED); *Show the blocks* highlights the
   blocks concerned;

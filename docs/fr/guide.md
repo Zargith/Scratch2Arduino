@@ -11,7 +11,7 @@ un cadre te guide étape par étape (blocs, schéma de câblage, carte virtuelle
 Python) et voit tout seul quand chaque étape est faite. Dès que tu cliques sur *Suivant*, les blocs de
 l'étape réussie sont verrouillés : impossible de les déplacer, de les jeter ou de les changer par erreur, et
 les étapes suivantes restent faisables. *Précédent* les déverrouille, et tout est déverrouillé quand le
-tutoriel est fermé.
+tutoriel est fermé. *Échap* réduit le cadre (un lecteur d'écran lit chaque nouvelle étape).
 
 ![Le tutoriel interactif "Ma sonnette" : un cadre en haut à droite affiche l'étape 2 sur 16, entoure la famille Événements dans la palette et indique que l'étape est réussie](../images/fr/interactive-tutorial.png)
 
@@ -357,8 +357,8 @@ Le bouton **Schéma de câblage** (dans la vue Blocs comme dans la vue Code) mon
 composants **utilisés par tes blocs** :
 
 - **Schéma de câblage** : la carte, une platine d'essai et les composants, avec un fil de couleur par
-  branchement (molette ou double-clic pour zoomer, glisser pour se déplacer, *Enregistrer l'image* pour
-  l'imprimer) ;
+  branchement (molette ou double-clic pour zoomer, glisser pour se déplacer ; au clavier + et - zooment, les
+  flèches déplacent ; *Enregistrer l'image* pour l'imprimer) ;
 - **Composants à brancher** : le même câblage en tableau - chaque patte de chaque composant, la broche
   de la carte où elle va et ce qu'il faut mettre entre les deux (par exemple la résistance de 220 Ω d'une
   LED) ; *Voir les blocs* montre les blocs concernés ;
