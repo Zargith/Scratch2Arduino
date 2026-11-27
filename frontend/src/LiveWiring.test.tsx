@@ -8,14 +8,6 @@ import { LiveWiring } from "@/LiveWiring";
 
 describe("wiring check of the Live mode", () => {
 	it("lists the hints and shows the blocks of one", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		const onShowBlocks = vi.fn();
 		const onClose = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);

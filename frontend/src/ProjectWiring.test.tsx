@@ -28,19 +28,6 @@ const plan: WiringPlan = {
 
 describe("project wiring window", () => {
 	it("shows the components, their pins and the warnings computed by the core", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
-		globalThis.ResizeObserver ??= class {
-			observe() {}
-			unobserve() {}
-			disconnect() {}
-		} as never;
 		const host = window as unknown as Record<string, unknown>;
 		host.s2a_hello = async () => ({ language: "en", version: "test" });
 		const asked = vi.fn(async () => plan);

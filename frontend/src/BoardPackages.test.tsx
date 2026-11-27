@@ -1,7 +1,7 @@
 import { MantineProvider } from "@mantine/core";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BoardPackageDialog, BoardPackageList, formatSize, needsPackage, packageOf } from "@/BoardPackages";
 import { bridge, type BoardPackage } from "@/bridge";
@@ -41,22 +41,6 @@ const esp8266: BoardPackage = {
 };
 
 let root: Root | null = null;
-
-beforeAll(() => {
-	(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-	window.matchMedia ??= (() => ({
-		matches: false,
-		addEventListener() {},
-		removeEventListener() {},
-		addListener() {},
-		removeListener() {},
-	})) as never;
-	globalThis.ResizeObserver ??= class {
-		observe() {}
-		unobserve() {}
-		disconnect() {}
-	} as never;
-});
 
 afterEach(async () => {
 	vi.restoreAllMocks();

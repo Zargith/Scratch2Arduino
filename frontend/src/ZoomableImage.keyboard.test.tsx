@@ -16,14 +16,6 @@ afterEach(() => {
 });
 
 function show() {
-	(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-	window.matchMedia ??= (() => ({
-		matches: false,
-		addEventListener() {},
-		removeEventListener() {},
-		addListener() {},
-		removeListener() {},
-	})) as never;
 	container = document.createElement("div");
 	document.body.appendChild(container);
 	const t = (key: MessageKey) => translate("en", key);

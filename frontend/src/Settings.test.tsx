@@ -17,19 +17,6 @@ const onError = vi.fn();
 
 describe("settings window", () => {
 	it("changes the language and the update check at start-up", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
-		globalThis.ResizeObserver ??= class {
-			observe() {}
-			unobserve() {}
-			disconnect() {}
-		} as never;
 		const onLanguage = vi.fn();
 		const onSettings = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
@@ -87,7 +74,6 @@ describe("settings window", () => {
 	});
 
 	it("installs the release found by Check now", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		const onInstall = vi.fn();
 		const onUpdate = vi.fn();
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
@@ -130,7 +116,6 @@ describe("settings window", () => {
 	});
 
 	it("shows the release already found without checking again", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		const t = (key: MessageKey, params?: Record<string, string>) => translate("fr", key, params);
 		const container = document.createElement("div");
 		document.body.append(container);

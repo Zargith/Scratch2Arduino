@@ -256,7 +256,7 @@ export interface BoardPackage {
 	diskBytes: number;
 }
 
-interface HostFunctions {
+export interface HostFunctions {
 	s2a_hello(): Promise<HostInfo>;
 	s2a_generate(project: Project): Promise<string>;
 	s2a_expert_sketch(project: Project): Promise<string>;

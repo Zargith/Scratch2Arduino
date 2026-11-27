@@ -35,5 +35,8 @@ export default defineConfig({
 	test: {
 		environment: "jsdom",
 		include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+		setupFiles: ["src/test/setup.ts"],
+		// Above waitUntil's 20 s (src/test/app.tsx), so a stuck test says what it was waiting for.
+		testTimeout: 30_000,
 	},
 });

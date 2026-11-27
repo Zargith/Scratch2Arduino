@@ -16,14 +16,6 @@ function Probe({ theme }: { theme: "" | "light" | "dark" }) {
 
 describe("saved appearance", () => {
 	it("is applied when it changes, not at every render", async () => {
-		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-		window.matchMedia ??= (() => ({
-			matches: false,
-			addEventListener() {},
-			removeEventListener() {},
-			addListener() {},
-			removeListener() {},
-		})) as never;
 		// Mantine adds this style each time the scheme is set (transitions off for a moment).
 		let applied = 0;
 		const observer = new MutationObserver((records) => {
