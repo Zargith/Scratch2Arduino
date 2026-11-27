@@ -1,4 +1,5 @@
 #include "s2a/userdata.hpp"
+#include "s2a/process.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -52,11 +53,6 @@ std::string cleanName(std::string name) {
     return name;
 }
 
-fs::path environmentPath(const char* name) {
-    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
-    return value != nullptr && *value != '\0' ? fs::u8path(value) : fs::path{};
-}
-
 /// Content of a small text file, or nothing when it is missing, too big or unreadable.
 std::optional<std::string> readSmallFile(const fs::path& path, std::uintmax_t maxSize = kMaxJsonSize) {
     std::error_code error;
@@ -97,21 +93,21 @@ fs::path normalized(const fs::path& path) {
 } // namespace
 
 fs::path defaultDirectory() {
-    if (fs::path custom = environmentPath("S2A_USER_DIR"); !custom.empty()) {
+    if (fs::path custom = process::environmentPath("S2A_USER_DIR"); !custom.empty()) {
         return custom;
     }
 #if defined(_WIN32)
-    fs::path base = environmentPath("APPDATA");
+    fs::path base = process::environmentPath("APPDATA");
     if (base.empty()) {
-        base = environmentPath("USERPROFILE") / "AppData" / "Roaming";
+        base = process::environmentPath("USERPROFILE") / "AppData" / "Roaming";
     }
     return base / "Scratch2Arduino";
 #elif defined(__APPLE__)
-    return environmentPath("HOME") / "Library" / "Application Support" / "Scratch2Arduino";
+    return process::environmentPath("HOME") / "Library" / "Application Support" / "Scratch2Arduino";
 #else
-    fs::path base = environmentPath("XDG_CONFIG_HOME");
+    fs::path base = process::environmentPath("XDG_CONFIG_HOME");
     if (base.empty()) {
-        base = environmentPath("HOME") / ".config";
+        base = process::environmentPath("HOME") / ".config";
     }
     return base / "scratch2arduino";
 #endif
@@ -191,7 +187,7 @@ Status Store::addRecentProject(const fs::path& project) {
     for (const fs::path& path : paths) {
         list.push_back(path.u8string());
     }
-    return writeFileAtomically(directory_ / kRecentFile, Json{{"recent", list}}.dump(2) + "\n");
+    return writeFileAtomically(directory_ / kRecentFile, Json{{"recent", list}}.dump(2, ' ', false, Json::error_handler_t::replace) + "\n");
 }
 
 bool Store::isRecentProject(const fs::path& project) const {
@@ -214,7 +210,7 @@ Status Store::autosave(const project::Project& project, const fs::path& original
     const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
     const Json info{{"originalPath", originalPath.empty() ? std::string{} : normalized(originalPath).u8string()},
                     {"savedAt", static_cast<std::int64_t>(now.count())}};
-    return writeFileAtomically(directory_ / kAutosaveInfoFile, info.dump(2) + "\n");
+    return writeFileAtomically(directory_ / kAutosaveInfoFile, info.dump(2, ' ', false, Json::error_handler_t::replace) + "\n");
 }
 
 std::optional<Store::Autosaved> Store::autosaved() const {
@@ -255,7 +251,7 @@ std::string libraryToJson(const std::vector<SavedBlocks>& groups) {
     const Json document{{"format", std::string(kLibraryFormatName)},
                         {"formatVersion", kLibraryFormatVersion},
                         {"groups", items}};
-    return document.dump(2) + "\n";
+    return document.dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
 }
 
 namespace {
@@ -437,7 +433,7 @@ Status Store::saveSettings(const Settings& settings) const {
     const Json json{{"language", knownLanguage(settings.language) ? settings.language : std::string{}},
                     {"checkUpdates", settings.checkUpdates},
                     {"theme", knownTheme(settings.theme) ? settings.theme : std::string{}}};
-    return writeFileAtomically(directory_ / kSettingsFile, json.dump(2) + "\n");
+    return writeFileAtomically(directory_ / kSettingsFile, json.dump(2, ' ', false, Json::error_handler_t::replace) + "\n");
 }
 
 } // namespace s2a::userdata

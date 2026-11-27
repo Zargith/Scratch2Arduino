@@ -484,12 +484,13 @@ std::string codeFileName(CodeFile file, ProgramLanguage language) {
 }
 
 std::string toJson(const Project& project) {
-    return projectDocument(project, CodeStorage::Inline, nullptr).dump(2) + "\n";
+    return projectDocument(project, CodeStorage::Inline, nullptr).dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
 }
 
 detail::ArchiveDocument detail::toArchiveDocument(const Project& project) {
     ArchiveDocument document;
-    document.json = projectDocument(project, CodeStorage::InArchive, &document.files).dump(2) + "\n";
+    // Text that is not UTF-8 (a Latin-1 name or code file) is replaced, not thrown (audit #187).
+    document.json = projectDocument(project, CodeStorage::InArchive, &document.files).dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
     return document;
 }
 

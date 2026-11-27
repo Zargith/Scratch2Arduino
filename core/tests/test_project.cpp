@@ -154,6 +154,20 @@ TEST(ProjectJson, RefusesJsonNestedTooDeep) {
     EXPECT_EQ(parsed.error().code, s2a::ErrorCode::InvalidJson);
 }
 
+// Audit 2026-11-24 (#187): json::dump() threw on text that is not UTF-8 (a Latin-1 name or code
+// file), out of Save and autosave. The bytes are replaced instead.
+TEST(ProjectJson, SavesTextThatIsNotUtf8) {
+    Project project = blink();
+    project.name = "Proj\xe9t"; // "Projét" in Latin-1
+    project.userCode = UserCode{ProgramLanguage::Cpp, "// caf\xe9\nvoid setup() {}\n"};
+    std::string json;
+    ASSERT_NO_THROW(json = toJson(project));
+    const auto reopened = fromJson(json);
+    ASSERT_TRUE(reopened.ok()) << reopened.error().detail;
+    EXPECT_EQ(reopened.value().name, "Proj\xef\xbf\xbdt"); // U+FFFD
+    ASSERT_NO_THROW((void)toArchive(project));
+}
+
 TEST(ProjectJson, RoundTripsExactly) {
     const std::string json = toJson(blink());
     const auto parsed = fromJson(json);

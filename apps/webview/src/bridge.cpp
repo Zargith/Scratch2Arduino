@@ -52,6 +52,9 @@ namespace {
 
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
+// Every dump() below replaces bytes that are not UTF-8 (a Latin-1 file name, board output, compiler
+// text) instead of throwing, which failed the call or, inside a catch handler, ended the program
+// (audit #187).
 
 constexpr int kResolve = 0;
 constexpr int kReject = 1;
@@ -65,7 +68,7 @@ struct UserError {
 /// technical details on stderr for whoever helps.
 std::string internalError(const std::exception& error, Language language) {
     std::cerr << "Scratch2Arduino: unexpected error in a call from the editor: " << error.what() << '\n';
-    return Json(tr("error.unknown", language)).dump();
+    return Json(tr("error.unknown", language)).dump(-1, ' ', false, Json::error_handler_t::replace);
 }
 
 Language languageArg(const Json& args, std::size_t index, Language fallback) {
@@ -77,7 +80,7 @@ project::Project projectArg(const Json& args, std::size_t index, Language langua
     if (index >= args.size()) {
         throw UserError{tr(errorMessageKey(ErrorCode::InvalidJson), language)};
     }
-    auto parsed = project::fromJson(args[index].dump());
+    auto parsed = project::fromJson(args[index].dump(-1, ' ', false, Json::error_handler_t::replace));
     if (!parsed.ok()) {
         throw UserError{tr(errorMessageKey(parsed.error().code), language) + " (" + parsed.error().detail + ")"};
     }
@@ -130,17 +133,12 @@ std::string stringArg(const Json& args, std::size_t index) {
     return index < args.size() && args[index].is_string() ? args[index].get<std::string>() : std::string{};
 }
 
-fs::path environmentPath(const char* name) {
-    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe): nothing calls setenv
-    return value != nullptr ? fs::u8path(value) : fs::path{};
-}
-
 /// Documents/Scratch2Arduino, created on first use: where dialogs open by default.
 fs::path projectsDirectory() {
 #ifdef _WIN32
-    const fs::path home = environmentPath("USERPROFILE");
+    const fs::path home = process::environmentPath("USERPROFILE");
 #else
-    const fs::path home = environmentPath("HOME");
+    const fs::path home = process::environmentPath("HOME");
 #endif
     std::error_code error;
     fs::path documents = home / "Documents";
@@ -365,7 +363,7 @@ std::string outcomeJson(const toolchain::BuildResult& result) {
                 {"blockIds", result.blockIds},
                 {"warnings", result.warnings},
                 {"warningBlockIds", result.warningBlockIds}}
-        .dump();
+        .dump(-1, ' ', false, Json::error_handler_t::replace);
 }
 
 } // namespace
@@ -409,7 +407,7 @@ std::string simulationJson(const sim::VirtualBoard::State& state) {
                 {"analog", state.analog},
                 {"distances", state.distances},
                 {"climates", climates}}
-        .dump();
+        .dump(-1, ' ', false, Json::error_handler_t::replace);
 }
 
 const char* stateName(live::Session::State state) {
@@ -552,7 +550,7 @@ template <typename Work> void Bridge::async(const std::string& id, Work work) {
         try {
             window_.resolve(id, kResolve, task());
         } catch (const UserError& error) {
-            window_.resolve(id, kReject, Json(error.message).dump());
+            window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
         } catch (const std::exception& error) {
             window_.resolve(id, kReject, internalError(error, language_));
         }
@@ -574,7 +572,7 @@ template <typename Handler> void Bridge::bindPortCall(const std::string& name, H
                     try {
                         window_.resolve(id, kResolve, handler(request));
                     } catch (const UserError& error) {
-                        window_.resolve(id, kReject, Json(error.message).dump());
+                        window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
                     } catch (const std::exception& error) {
                         window_.resolve(id, kReject, internalError(error, language_));
                     }
@@ -613,7 +611,7 @@ template <typename Handler> void Bridge::bindSync(const std::string& name, Handl
             try {
                 window_.resolve(id, kResolve, handler(request));
             } catch (const UserError& error) {
-                window_.resolve(id, kReject, Json(error.message).dump());
+                window_.resolve(id, kReject, Json(error.message).dump(-1, ' ', false, Json::error_handler_t::replace));
             } catch (const std::exception& error) {
                 window_.resolve(id, kReject, internalError(error, language_));
             }
@@ -633,7 +631,7 @@ std::string Bridge::openedJson(const fs::path& path, Language language) {
     // A project.json (an example) is never overwritten: the first save asks for a .s2a file.
     const std::string savePath = path.extension() == ".s2a" ? path.u8string() : std::string{};
     return Json{{"path", savePath}, {"name", path.u8string()}, {"project", Json::parse(project::toJson(loaded.value()))}}
-        .dump();
+        .dump(-1, ' ', false, Json::error_handler_t::replace);
 }
 
 /// File chosen in a save dialog, with `extension` added when the user typed none, or empty when
@@ -669,7 +667,7 @@ void Bridge::bind() {
         return Json{{"language", std::string(languageCode(language_))},
                     {"version", std::string(version::kString)},
                     {"system", std::string(hostSystemName())}}
-            .dump();
+            .dump(-1, ' ', false, Json::error_handler_t::replace);
     });
 
     bindSync("s2a_set_title", [this](const std::string& request) {
@@ -683,7 +681,7 @@ void Bridge::bind() {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
-                return Json(codegen::generate(project).source).dump();
+                return Json(codegen::generate(project).source).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -695,7 +693,7 @@ void Bridge::bind() {
             async(id, [request, this]() {
                 const Json args = Json::parse(request);
                 const project::Project project = projectArg(args, 0, language_);
-                return Json(codegen::singleFileSketch(project)).dump();
+                return Json(codegen::singleFileSketch(project)).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -710,10 +708,10 @@ void Bridge::bind() {
         const auto to = project::programLanguageFromId(stringArg(args, 2));
         const std::string code = stringArg(args, 0);
         if (!from || !to) {
-            return Json{{"code", code}, {"toCheck", Json::array()}}.dump();
+            return Json{{"code", code}, {"toCheck", Json::array()}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         const auto converted = convert::convert(code, *from, *to);
-        return Json{{"code", converted.code}, {"toCheck", converted.toCheck}}.dump();
+        return Json{{"code", converted.code}, {"toCheck", converted.toCheck}}.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
 
     bindSync("s2a_code_declarations", [](const std::string& request) {
@@ -721,7 +719,7 @@ void Bridge::bind() {
         const auto language = project::programLanguageFromId(stringArg(args, 0));
         Json list = Json::array();
         if (!language) {
-            return list.dump();
+            return list.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         for (const auto& declaration : usercode::declarations(*language, stringArg(args, 1))) {
             list.push_back({{"kind", declaration.kind == usercode::Declaration::Kind::Function ? "function" : "variable"},
@@ -732,7 +730,7 @@ void Bridge::bind() {
                             {"changedByCode", declaration.changedByCode},
                             {"line", declaration.line}});
         }
-        return list.dump();
+        return list.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
 
     // Wiring of the project (components, connections, warnings), from its blocks.
@@ -768,7 +766,7 @@ void Bridge::bind() {
                 if (board != nullptr) {
                     result["svg"] = wiring::svg(plan, *board, project.name + " - " + board->name);
                 }
-                return result.dump();
+                return result.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -797,7 +795,7 @@ void Bridge::bind() {
                 if (const auto written = userdata::writeFileAtomically(file, data); !written.ok()) {
                     throw UserError{tr(errorMessageKey(ErrorCode::WriteFailed), language)};
                 }
-                return Json(file.u8string()).dump();
+                return Json(file.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -864,7 +862,7 @@ void Bridge::bind() {
                     (void)user_.addRecentProject(path);
                     user_.clearAutosave(); // the work is safe in its own file now
                 }
-                return Json(path.u8string()).dump();
+                return Json(path.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -877,7 +875,7 @@ void Bridge::bind() {
             settings = user_.settings();
         }
         return Json{{"language", settings.language}, {"checkUpdates", settings.checkUpdates}, {"theme", settings.theme}}
-            .dump();
+            .dump(-1, ' ', false, Json::error_handler_t::replace);
     });
     bindSync("s2a_save_settings", [this](const std::string& request) {
         const Json args = Json::parse(request);
@@ -887,13 +885,13 @@ void Bridge::bind() {
         settings.checkUpdates = given.value("checkUpdates", true);
         settings.theme = given.value("theme", std::string{});
         const std::lock_guard<std::mutex> lock(userMutex_);
-        return Json(user_.saveSettings(settings).ok()).dump();
+        return Json(user_.saveSettings(settings).ok()).dump(-1, ' ', false, Json::error_handler_t::replace);
     });
     // Opens a page of the project's GitHub repository (new release) in the browser.
     window_.bind(
         "s2a_open_url",
         [this](const std::string& id, const std::string& request, void* /*arg*/) {
-            async(id, [request]() { return Json(openProjectPage(stringArg(Json::parse(request), 0))).dump(); });
+            async(id, [request]() { return Json(openProjectPage(stringArg(Json::parse(request), 0))).dump(-1, ' ', false, Json::error_handler_t::replace); });
         },
         nullptr);
 
@@ -909,7 +907,7 @@ void Bridge::bind() {
                             {"message", missing ? tr("rosetta.needed", language,
                                                      {{"command", std::string(rosetta::kInstallCommand)}})
                                                 : std::string{}}}
-                    .dump();
+                    .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -922,7 +920,7 @@ void Bridge::bind() {
                 return Json{{"ok", result == rosetta::InstallResult::Installed},
                             {"message", tr(rosetta::messageKey(result), language,
                                            {{"command", std::string(rosetta::kInstallCommand)}})}}
-                    .dump();
+                    .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -958,12 +956,12 @@ void Bridge::bind() {
                 }
                 // The installer waits for the program to close (AppMutex): close it.
                 window_.dispatch([this]() { window_.terminate(); });
-                return Json(true).dump();
+                return Json(true).dump(-1, ' ', false, Json::error_handler_t::replace);
 #else
                 // macOS and Linux: the editor opens the .dmg or the release page in the browser.
                 (void)url;
                 (void)language;
-                return Json(false).dump();
+                return Json(false).dump(-1, ' ', false, Json::error_handler_t::replace);
 #endif
             });
         },
@@ -987,7 +985,7 @@ void Bridge::bind() {
                     }
                     list.push_back(std::move(entry));
                 }
-                return list.dump();
+                return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1046,7 +1044,7 @@ void Bridge::bind() {
                 return Json{{"project", Json::parse(project::toJson(autosaved->project))},
                             {"path", path},
                             {"savedAt", autosaved->savedAt}}
-                    .dump();
+                    .dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1078,7 +1076,7 @@ void Bridge::bind() {
                 for (const auto& group : groups) {
                     list.push_back(groupJson(group));
                 }
-                return list.dump();
+                return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1094,7 +1092,7 @@ void Bridge::bind() {
                 if (!added.ok()) {
                     throw UserError{tr(errorMessageKey(added.error().code), language_)};
                 }
-                return groupJson(added.value()).dump();
+                return groupJson(added.value()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1140,7 +1138,7 @@ void Bridge::bind() {
                 if (auto exported = user_.exportLibrary(file); !exported.ok()) {
                     throw UserError{tr(errorMessageKey(exported.error().code), language)};
                 }
-                return Json(file.u8string()).dump();
+                return Json(file.u8string()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1161,7 +1159,7 @@ void Bridge::bind() {
                 if (!imported.ok()) {
                     throw UserError{tr(errorMessageKey(imported.error().code), language)};
                 }
-                return Json(imported.value()).dump();
+                return Json(imported.value()).dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1199,7 +1197,7 @@ void Bridge::bind() {
                     }
                     ports.push_back(std::move(entry));
                 }
-                return ports.dump();
+                return ports.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1227,7 +1225,7 @@ void Bridge::bind() {
                                     {"includes", library.includes},
                                     {"builtIn", library.builtIn}});
                 }
-                return list.dump();
+                return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1267,7 +1265,7 @@ void Bridge::bind() {
                                     {"versions", library.versions},
                                     {"architectures", library.architectures}});
                 }
-                return list.dump();
+                return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1287,12 +1285,12 @@ void Bridge::bind() {
                 return Json{{"ok", false},
                             {"message", toolchain::describe(diagnosis, language)},
                             {"details", diagnosis.technical}}
-                    .dump();
+                    .dump(-1, ' ', false, Json::error_handler_t::replace);
             }
             return Json{{"ok", outcome.value().success},
                         {"message", outcome.value().success ? std::string{} : outcome.value().error},
                         {"details", outcome.value().out + outcome.value().err}}
-                .dump();
+                .dump(-1, ' ', false, Json::error_handler_t::replace);
         });
     };
     window_.bind(
@@ -1332,7 +1330,7 @@ void Bridge::bind() {
                                     {"downloadBytes", state.downloadBytes},
                                     {"diskBytes", state.diskBytes}});
                 }
-                return list.dump();
+                return list.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1356,12 +1354,12 @@ void Bridge::bind() {
                 return Json{{"ok", false},
                             {"message", toolchain::describe(diagnosis, language)},
                             {"details", diagnosis.technical}}
-                    .dump();
+                    .dump(-1, ' ', false, Json::error_handler_t::replace);
             }
             return Json{{"ok", outcome.value().success},
                         {"message", outcome.value().success ? std::string{} : outcome.value().error},
                         {"details", outcome.value().out + outcome.value().err}}
-                .dump();
+                .dump(-1, ' ', false, Json::error_handler_t::replace);
         });
     };
     window_.bind(
@@ -1409,7 +1407,7 @@ void Bridge::bind() {
             const Board* board = BoardDatabase::builtin().find(project.boardId);
             const std::string port = stringArg(args, 1);
             if (board == nullptr || port.empty()) {
-                return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
+                return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             }
             closeMonitor(); // Live mode needs the port; its output is shown instead
             const std::lock_guard<std::mutex> lock(liveMutex_);
@@ -1434,7 +1432,7 @@ void Bridge::bind() {
                         return std::unique_ptr<serial::LineTransport>(std::make_unique<sim::Connection>(simulated));
                     },
                     live::Session::Flasher{});
-                return Json{{"ok", true}}.dump();
+                return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             }
             // Over Wi-Fi or Bluetooth the firmware cannot be uploaded: the board must already run it.
             // The 4th argument: the user agreed to replace the board's program with the Live firmware.
@@ -1443,11 +1441,11 @@ void Bridge::bind() {
                 std::move(project), *board, port, language, afterClosing(live::Session::opener()),
                 network::isWireless(port) ? live::Session::Flasher{} : live::Session::arduinoCliFlasher(*board, port),
                 mayUploadFirmware);
-            return Json{{"ok", true}}.dump();
+            return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         } catch (const UserError& error) {
             message = error.message;
         }
-        return Json{{"ok", false}, {"message", message}}.dump();
+        return Json{{"ok", false}, {"message", message}}.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
     bindSync("s2a_live_update", [this](const std::string& request) {
         const Json args = Json::parse(request);
@@ -1460,9 +1458,9 @@ void Bridge::bind() {
         } catch (const UserError& error) {
             // Half-built blocks: the board keeps the previous ones, and the editor says why (as a
             // hint, not an error: the child is still editing, audit #179).
-            return Json{{"ok", false}, {"message", error.message}}.dump();
+            return Json{{"ok", false}, {"message", error.message}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
-        return Json{{"ok", true}}.dump();
+        return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
     bindPortCall("s2a_live_stop", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
@@ -1492,7 +1490,7 @@ void Bridge::bind() {
     bindSync("s2a_live_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!live_) {
-            return Json{{"state", "stopped"}}.dump();
+            return Json{{"state", "stopped"}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         const auto snapshot = live_->snapshot();
         return Json{{"state", stateName(snapshot.state)},
@@ -1508,7 +1506,7 @@ void Bridge::bind() {
                     {"outputCount", snapshot.outputCount},
                     {"line", snapshot.errorLine},
                     {"file", snapshot.errorFile}}
-            .dump();
+            .dump(-1, ' ', false, Json::error_handler_t::replace);
     });
 
     // Simulation: what the virtual board shows (polled by the editor), and the inputs the user
@@ -1517,7 +1515,7 @@ void Bridge::bind() {
     bindSync("s2a_sim_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(liveMutex_);
         if (!simBoard_) {
-            return Json(nullptr).dump();
+            return Json(nullptr).dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         return simulationJson(simBoard_->state());
     });
@@ -1553,19 +1551,19 @@ void Bridge::bind() {
         const std::string port = stringArg(args, 0);
         const int baud = args.size() > 1 && args[1].is_number_integer() ? args[1].get<int>() : codegen::kSerialBaud;
         if (port.empty()) {
-            return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump();
+            return Json{{"ok", false}, {"message", tr("editor.no_port", language)}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         if (network::isWireless(port)) {
-            return Json{{"ok", false}, {"message", tr("live.wifi_monitor", language)}}.dump();
+            return Json{{"ok", false}, {"message", tr("live.wifi_monitor", language)}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         if (sim::isSimulated(port)) {
-            return Json{{"ok", false}, {"message", tr("live.sim_monitor", language)}}.dump();
+            return Json{{"ok", false}, {"message", tr("live.sim_monitor", language)}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         {
             // A Live session (maybe still connecting) owns the port: its output is shown instead.
             const std::lock_guard<std::mutex> lock(liveMutex_);
             if (live_) {
-                return Json{{"ok", false}, {"message", tr(errorMessageKey(ErrorCode::PortFailed), language)}}.dump();
+                return Json{{"ok", false}, {"message", tr(errorMessageKey(ErrorCode::PortFailed), language)}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             }
         }
         closeMonitor();
@@ -1575,11 +1573,11 @@ void Bridge::bind() {
             return Json{{"ok", false},
                         {"message", tr(errorMessageKey(opened.error().code), language)},
                         {"details", opened.error().detail}}
-                .dump();
+                .dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         const std::lock_guard<std::mutex> lock(monitorMutex_);
         monitor_ = std::move(opened).value();
-        return Json{{"ok", true}}.dump();
+        return Json{{"ok", true}}.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
     bindSync("s2a_monitor_send", [this](const std::string& request) {
         const Json args = Json::parse(request);
@@ -1596,7 +1594,7 @@ void Bridge::bind() {
     bindSync("s2a_monitor_state", [this](const std::string& /*request*/) {
         const std::lock_guard<std::mutex> lock(monitorMutex_);
         if (!monitor_) {
-            return Json{{"open", false}}.dump();
+            return Json{{"open", false}}.dump(-1, ' ', false, Json::error_handler_t::replace);
         }
         const auto snapshot = monitor_->snapshot();
         Json state{{"open", snapshot.open}, {"lines", snapshot.lines}, {"count", snapshot.count}};
@@ -1604,7 +1602,7 @@ void Bridge::bind() {
             state["message"] = tr(errorMessageKey(snapshot.error->code), language_);
             state["details"] = snapshot.error->detail;
         }
-        return state.dump();
+        return state.dump(-1, ' ', false, Json::error_handler_t::replace);
     });
 
     // Wi-Fi of an ESP32, over its USB cable: saves the home network on the board (the Live
@@ -1653,7 +1651,7 @@ void Bridge::bind() {
                             {"address", state.address},
                             {"message", tr(key, language, {{"network", name}, {"address", state.address},
                                                            {"access_point", state.accessPoint}})}};
-                return result.dump();
+                return result.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1718,7 +1716,7 @@ void Bridge::bind() {
                     message = tr(key, language, {{"rx", label(wanted->rx)}, {"tx", label(wanted->tx)},
                                                  {"baud", std::to_string(wanted->baud)}});
                 }
-                return Json{{"ok", true}, {"message", message}}.dump();
+                return Json{{"ok", true}, {"message", message}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1731,20 +1729,20 @@ void Bridge::bind() {
                 const Json args = Json::parse(request);
                 const Language language = languageArg(args, 0, language_);
                 if (!network::bluetoothByAddress()) {
-                    return Json{{"ok", true}, {"byAddress", false}, {"devices", Json::array()}}.dump();
+                    return Json{{"ok", true}, {"byAddress", false}, {"devices", Json::array()}}.dump(-1, ' ', false, Json::error_handler_t::replace);
                 }
                 const auto found = network::findBluetoothBoards(std::chrono::seconds(8));
                 if (!found.ok()) {
                     return Json{{"ok", false},
                                 {"message", tr("live.bluetooth_off", language)},
                                 {"details", found.error().detail}}
-                        .dump();
+                        .dump(-1, ' ', false, Json::error_handler_t::replace);
                 }
                 Json devices = Json::array();
                 for (const auto& device : found.value()) {
                     devices.push_back({{"name", device.name}, {"address", device.address}});
                 }
-                return Json{{"ok", true}, {"byAddress", true}, {"devices", devices}}.dump();
+                return Json{{"ok", true}, {"byAddress", true}, {"devices", devices}}.dump(-1, ' ', false, Json::error_handler_t::replace);
             });
         },
         nullptr);
@@ -1762,7 +1760,7 @@ void Bridge::bind() {
 fs::path locateFrontend() {
     std::error_code error;
     std::vector<fs::path> candidates;
-    if (const fs::path configured = environmentPath("S2A_FRONTEND_DIR"); !configured.empty()) {
+    if (const fs::path configured = process::environmentPath("S2A_FRONTEND_DIR"); !configured.empty()) {
         candidates.push_back(configured);
     }
     if (const fs::path directory = process::executableDirectory(); !directory.empty()) {

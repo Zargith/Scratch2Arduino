@@ -308,6 +308,15 @@ TEST(UserData, KeepsAnUnreadableLibraryAsideBeforeWriting) {
     EXPECT_EQ(store.library().size(), 1U);
 }
 
+// Audit 2026-11-24 (#187): a file name in Latin-1 (Linux) threw out of the recent projects.
+TEST(UserData, RemembersAFileNameThatIsNotUtf8) {
+    const TempDir dir;
+    Store store(dir.path());
+    const fs::path file = dir.path() / std::string("caf\xe9.s2a");
+    touch(file);
+    EXPECT_NO_THROW((void)store.addRecentProject(file));
+}
+
 TEST(UserData, DefaultDirectoryIsNamedAfterTheProgram) {
     const fs::path dir = s2a::userdata::defaultDirectory();
     EXPECT_FALSE(dir.empty());

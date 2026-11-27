@@ -1,10 +1,12 @@
 #include "s2a/arduino_cli.hpp"
+#include "s2a/process.hpp"
 
 #include "s2a/board_packages.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <set>
 #include <nlohmann/json.hpp>
@@ -21,11 +23,6 @@ constexpr auto kQuickTimeout = 60s;
 constexpr auto kCompileTimeout = 10min;
 constexpr auto kUploadTimeout = 3min;
 constexpr auto kInstallTimeout = 30min;
-
-fs::path environmentPath(const char* name) {
-    const char* value = std::getenv(name); // NOLINT(concurrency-mt-unsafe)
-    return value != nullptr && *value != '\0' ? fs::u8path(value) : fs::path{};
-}
 
 std::string stringOr(const Json& node, const char* key) {
     return node.contains(key) && node.at(key).is_string() ? node.at(key).get<std::string>() : std::string{};
@@ -117,19 +114,19 @@ bool isSystemSerialPort(std::string_view address) {
 
 fs::path userDataDirectory() {
 #ifdef _WIN32
-    fs::path base = environmentPath("LOCALAPPDATA");
+    fs::path base = process::environmentPath("LOCALAPPDATA");
     if (base.empty()) {
-        base = environmentPath("APPDATA");
+        base = process::environmentPath("APPDATA");
     }
 #elif defined(__APPLE__)
-    fs::path base = environmentPath("HOME");
+    fs::path base = process::environmentPath("HOME");
     if (!base.empty()) {
         base /= "Library/Application Support";
     }
 #else
-    fs::path base = environmentPath("XDG_DATA_HOME");
-    if (base.empty() && !environmentPath("HOME").empty()) {
-        base = environmentPath("HOME") / ".local/share";
+    fs::path base = process::environmentPath("XDG_DATA_HOME");
+    if (base.empty() && !process::environmentPath("HOME").empty()) {
+        base = process::environmentPath("HOME") / ".local/share";
     }
 #endif
     if (base.empty()) {
@@ -150,7 +147,7 @@ fs::path locateArduinoCli() {
     const std::string name = "arduino-cli";
 #endif
     std::error_code error;
-    if (const fs::path configured = environmentPath("S2A_ARDUINO_CLI");
+    if (const fs::path configured = process::environmentPath("S2A_ARDUINO_CLI");
         !configured.empty() && fs::is_regular_file(configured, error)) {
         return configured;
     }
