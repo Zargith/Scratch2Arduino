@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Outcome } from "@/bridge";
 import type { Project } from "@/project/convert";
+import { CREATE_FUNCTION_CALLBACK } from "@/blocks/definitions";
 import { defaultHost, installHost, mountApp, startupProject, waitUntil, type MountedApp } from "@/test/app";
+import { button, input, typeInto } from "@/test/render";
 
 const project = (name: string, ...blocks: Project["scripts"][number]["blocks"]): Project => ({
 	format: "scratch2arduino-project",
@@ -81,5 +83,46 @@ describe("App flows", () => {
 		await waitUntil(() => Blockly.getMainWorkspace()?.getBlockById("opened-led") != null, "the opened project");
 		await act(async () => new Promise((done) => setTimeout(done, 300)));
 		expect(mounted.text()).not.toContain("Vieille copie");
+	}, 60_000);
+
+	it("creates a function from the palette with its inputs", async () => {
+		installHost({ ...defaultHost(), s2a_startup_project: startupProject(project("Fonctions", { id: "fn-led", type: "pins_builtin_led", fields: { STATE: "ON" } })) });
+		mounted = await mountApp();
+		await waitUntil(() => Blockly.getMainWorkspace()?.getBlockById("fn-led") != null, "the project");
+		const workspace = Blockly.getMainWorkspace() as Blockly.WorkspaceSvg;
+		await act(async () => workspace.getButtonCallback(CREATE_FUNCTION_CALLBACK)?.(undefined as never));
+		await waitUntil(() => input("Nom de la fonction") !== undefined, "the function window");
+		typeInto(input("Nom de la fonction")!, "biper");
+		await act(async () => button("Ajouter une entrée")!.click());
+		typeInto(input("Entrée 1")!, "fois");
+		await act(async () => button("Valider")!.click());
+		await waitUntil(
+			() => workspace.getVariableMap().getVariablesOfType("function").some((variable) => variable.getName() === "biper"),
+			"the new function"
+		);
+		expect(mounted.errors).toEqual([]);
+	}, 60_000);
+
+	it("saves blocks to My blocks under the name typed", async () => {
+		const added: unknown[][] = [];
+		installHost({
+			...defaultHost(),
+			s2a_startup_project: startupProject(project("Groupe", { id: "group-led", type: "pins_builtin_led", fields: { STATE: "ON" } })),
+			s2a_library_add: async (...args: never[]) => {
+				added.push(args);
+				return { id: "g1", name: "Allumer", blocks: args[1] };
+			},
+		});
+		mounted = await mountApp();
+		await waitUntil(() => Blockly.getMainWorkspace()?.getBlockById("group-led") != null, "the project");
+		const block = Blockly.getMainWorkspace()!.getBlockById("group-led") as Blockly.BlockSvg;
+		const item = Blockly.ContextMenuRegistry.registry.getItem("s2a_save_to_library");
+		expect(item).not.toBeNull();
+		await act(async () => (item as unknown as { callback: (scope: { block: Blockly.BlockSvg }) => void }).callback({ block }));
+		await waitUntil(() => document.querySelector<HTMLInputElement>("[data-autofocus]") !== null, "the name prompt");
+		typeInto(document.querySelector<HTMLInputElement>("[data-autofocus]")!, "Allumer");
+		await act(async () => button("Valider")!.click());
+		await waitUntil(() => added.length > 0, "the group saved");
+		expect(added[0]![0]).toBe("Allumer");
 	}, 60_000);
 });
