@@ -13,6 +13,7 @@ import {
 	OPEN_CODE_CALLBACK,
 	setCurrentBoard,
 	setEditFunctionHandler,
+	clearEditFunctionHandler,
 	setUserDeclarations,
 	toolbox,
 	type UserDeclaration,
@@ -26,6 +27,7 @@ import {
 } from "@/blocks/functions";
 import type { Board, Language } from "@/catalog";
 import { FunctionDialog, type FunctionDraft } from "@/FunctionDialog";
+import { promptSlot } from "@/promptSlot";
 import { translate } from "@/i18n";
 import { groupToBlocks, stackToGroup, type SavedGroup, type VariableInfo } from "@/myBlocks";
 import { blocksThumbnail } from "@/thumbnail";
@@ -221,6 +223,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	onOpenCodeRef.current = onOpenCode;
 	const refreshToolbox = useRef<(() => void) | null>(null);
 	const [prompt, setPrompt] = useState<PromptRequest | null>(null);
+	/** The question shown, outside React state: a second one cancels it at once (audit #196). */
+	const questions = useRef(promptSlot<PromptRequest>());
+	const ask = (request: PromptRequest) => {
+		questions.current.show(request);
+		setPrompt(request);
+	};
 	/** Function window: the function changed (its id), or "" for a new one; null when closed. */
 	const [functionWindow, setFunctionWindow] = useState<{ id: string; draft: FunctionDraft | null } | null>(null);
 	const glowing = useRef<Set<string>>(new Set());
@@ -307,11 +315,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		registerGroupButtons();
 		menuLanguage = language;
 		registerSaveToLibrary();
-		saveToLibrary = (block) => {
+		const saveHere = (block: Blockly.BlockSvg) => {
 			const state = Blockly.serialization.blocks.save(block, { addCoordinates: false, addNextBlocks: true });
 			if (!state) return;
 			const group = stackToGroup(state as unknown as BlockState, variablesOf(created));
-			setPrompt({
+			ask({
 				message: translate(language, "library.prompt"),
 				value: "",
 				resolve: (name) => {
@@ -319,8 +327,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 				},
 			});
 		};
+		saveToLibrary = saveHere;
 		Blockly.ScratchVariables.setPromptHandler((message, defaultValue, callback, _title, type) => {
-			setPrompt({
+			ask({
 				message:
 					type !== FUNCTION_TYPE
 						? message || translate(language, "variables.prompt")
@@ -416,9 +425,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 		return () => {
 			document.removeEventListener("keydown", forwardShortcut);
 			resize.disconnect();
-			saveToLibrary = null;
-			openFunctionWindow = null;
-			setEditFunctionHandler(null);
+			// Only this editor's own handlers: a newer editor may have set its own already (audit #196).
+			if (saveToLibrary === saveHere) saveToLibrary = null;
+			if (openFunctionWindow === editFunction) openFunctionWindow = null;
+			clearEditFunctionHandler(editFunction);
+			setPrompt(null);
+			questions.current.answer(null);
 			refreshToolbox.current = null;
 			created.dispose();
 			workspace.current = null;
@@ -484,8 +496,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 	};
 
 	const close = (value: string | null) => {
-		prompt?.resolve(value);
 		setPrompt(null);
+		questions.current.answer(value);
 	};
 
 	return (

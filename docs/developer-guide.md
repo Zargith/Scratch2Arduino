@@ -215,3 +215,7 @@ work". Update both languages in the same pull request.
   message (details on stderr); a call that can take a while (opening a port, starting or stopping Live)
   goes through `Bridge::bindPortCall`: one thread runs these calls one after the other, in call order. A stopped Live session is torn down off the UI thread, and whatever
   needs its port again (new Live session, upload, serial monitor) waits for that teardown.
+- **No question is left unanswered**: one question at a time in the editor (`frontend/src/promptSlot.ts`):
+  showing another one answers the open one with "cancel". A second request while one is asked (unsaved
+  changes before an update) waits for the same answer, and module-level handlers are only cleared by the
+  editor that set them.
